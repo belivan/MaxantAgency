@@ -14,6 +14,7 @@ if (fs.existsSync(analyzerEnv)) dotenv.config({ path: analyzerEnv, override: fal
 
 import { buildProspectPrompt, buildDomainInferencePrompt } from './prompts.js';
 import { completeJSON } from './llm.js';
+import { findCompaniesWithGrok } from './grok-prospector.js';
 import { analyzeWebsites } from '../website-audit-tool/analyzer.js';
 import { upsertProspects, hasSupabase, markProspectStatus } from './supabase.js';
 
@@ -113,8 +114,16 @@ export async function runProspector(options) {
   const brief = briefData || readJSON(briefPath);
   const seedUrls = [...seeds, ...(brief.seeds || [])].map(normalizeUrl).filter(Boolean);
 
-  const prompt = buildProspectPrompt({ studio: brief.studio, icp: brief.icp, geo: brief.geo, count, cityHint: city });
-  const json = await completeJSON({ prompt, model });
+  // Use Grok with web search for real companies, or GPT for fast generation
+  let json;
+  if (model === 'grok-beta') {
+    console.log('🔍 Using Grok with web search to find REAL companies...');
+    json = await findCompaniesWithGrok({ brief, count, city });
+  } else {
+    console.log(`📋 Using ${model} to generate prospect list...`);
+    const prompt = buildProspectPrompt({ studio: brief.studio, icp: brief.icp, geo: brief.geo, count, cityHint: city });
+    json = await completeJSON({ prompt, model });
+  }
 
   let companies = Array.isArray(json?.companies) ? json.companies : [];
   const missing = companies.filter((c) => !c.website);

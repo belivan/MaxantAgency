@@ -33,7 +33,7 @@ export default function UnifiedDashboard() {
     count: 20,
     city: '',
     verify: true,
-    model: 'gpt-4o-mini'
+    model: 'grok-beta'
   });
   const [loadingBrief, setLoadingBrief] = useState(true);
   const [loadingProspects, setLoadingProspects] = useState(false);
