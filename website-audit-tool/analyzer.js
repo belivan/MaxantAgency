@@ -32,6 +32,51 @@ const anthropic = new Anthropic({
 // [REMOVED] generateEmail function - email generation moved to separate app
 
 
+function extractContactInfo(websiteData) {
+  const bodyText = websiteData.bodyText || '';
+  const title = websiteData.title || '';
+  
+  // Try to find "About" or "Team" section
+  const aboutMatch = bodyText.match(/(?:About|Team|Meet|Founder|Owner|CEO|President)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+  
+  // Try to find email addresses (often near names)
+  const emailMatch = bodyText.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[@\-\s]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  
+  // Try to extract from title (often "FirstName LastName | Company")
+  const titleMatch = title.match(/^([A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?\s*[|\-]/);
+  
+  // Try common patterns like "Contact John Smith" or "Email: john.smith@..."
+  const contactMatch = bodyText.match(/(?:Contact|Email|Call|Reach)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+  
+  let fullName = null;
+  let firstName = null;
+  
+  // Priority: aboutMatch > emailMatch > titleMatch > contactMatch
+  if (aboutMatch) {
+    fullName = aboutMatch[1].trim();
+  } else if (emailMatch) {
+    fullName = emailMatch[1].trim();
+  } else if (titleMatch) {
+    fullName = titleMatch[1].trim();
+  } else if (contactMatch) {
+    fullName = contactMatch[1].trim();
+  }
+  
+  // Extract first name
+  if (fullName) {
+    firstName = fullName.split(/\s+/)[0];
+  }
+  
+  // Extract email if found
+  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const email = bodyText.match(emailPattern)?.[0] || null;
+  
+  return {
+    firstName: firstName || null,
+    fullName: fullName || null,
+    email: email || null
+  };
+}
 /**
  * Analyze multiple websites one at a time with progress updates
  */
