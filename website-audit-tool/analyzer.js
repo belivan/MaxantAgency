@@ -32,6 +32,243 @@ const anthropic = new Anthropic({
 // [REMOVED] generateEmail function - email generation moved to separate app
 
 
+async function saveAnalysisResults(result) {
+  try {
+    // Extract domain from URL (e.g., "maksant.com")
+    const domain = new URL(result.url).hostname.replace('www.', '');
+
+    // Create timestamp folder (e.g., "2025-10-18_14-30-45")
+    const timestamp = new Date().toISOString()
+      .replace(/:/g, '-')
+      .replace(/\..+/, '')
+      .replace('T', '_');
+
+    // ═══════════════════════════════════════════════════════════════
+    // FOLDER ORGANIZATION: Use LEAD GRADE (from QA Agent)
+    // ═══════════════════════════════════════════════════════════════
+    const leadGrade = result.emailQA?.leadGrade || result.emailQA?.grade || 'C'; // Default to C if QA failed
+    const folderPath = path.join(__dirname, 'analysis-results', `lead-${leadGrade}`, domain, timestamp);
+    await fs.mkdir(folderPath, { recursive: true });
+
+    // ═══════════════════════════════════════════════════════════════
+    // WEBSITE GRADE: Calculate based on ALL analysis modules
+    // ═══════════════════════════════════════════════════════════════
+    const grokData = result.grokData;
+
+    // Check if we have contact info (EMAIL is most important!)
+    const hasEmail = !!(grokData?.contactInfo?.email || result.contact?.email);
+    const hasPhone = !!(grokData?.contactInfo?.phone || result.contact?.phone);
+    const hasContact = hasEmail || hasPhone;
+
+    let websiteScore = 0;
+    let websiteGrade = 'F';
+
+    // Base scoring: Data extraction (40 points max)
+    if (hasEmail) websiteScore += 15;  // Email is CRITICAL
+    if (hasPhone) websiteScore += 10;  // Phone is valuable
+    if (grokData?.companyInfo?.name) websiteScore += 5;
+    if (grokData?.companyInfo?.industry) websiteScore += 5;
+    if (grokData?.companyInfo?.location) websiteScore += 5;
+
+    // Analysis modules scoring (60 points max - based on what modules were run)
+    const modulesUsed = result.modulesUsed || [];
+
+    // Basic analysis always runs (15 points)
+    if (modulesUsed.includes('basic')) {
+      const basicCritiques = result.critiques?.basic || [];
+      if (basicCritiques.length > 0) websiteScore += 15; // Found issues to analyze
+    }
+
+    // Industry analysis (15 points if enabled)
+    if (modulesUsed.includes('industry')) {
+      const industryCritiques = result.critiques?.industry || [];
+      if (industryCritiques.length > 0) websiteScore += 15;
+    }
+
+    // SEO analysis (10 points if enabled)
+    if (modulesUsed.includes('seo')) {
+      if (result.seo) websiteScore += 10;
+    }
+
+    // Visual analysis (10 points if enabled)
+    if (modulesUsed.includes('visual')) {
+      const visualCritiques = result.critiques?.visual || [];
+      if (visualCritiques.length > 0) websiteScore += 10;
+    }
+
+    // Competitor analysis (10 points if enabled)
+    if (modulesUsed.includes('competitor')) {
+      if (result.competitor) websiteScore += 10;
+    }
+
+    // Calculate website grade (based on comprehensiveness of analysis)
+    if (!hasContact) {
+      websiteGrade = 'F';  // No contact = F regardless of analysis
+    } else if (websiteScore >= 70) {
+      websiteGrade = 'A';  // Comprehensive analysis with contact info
+    } else if (websiteScore >= 50) {
+      websiteGrade = 'B';  // Good analysis with contact info
+    } else if (websiteScore >= 30) {
+      websiteGrade = 'C';  // Basic analysis or missing some modules
+    } else if (websiteScore >= 10) {
+      websiteGrade = 'D';  // Minimal analysis
+    } else {
+      websiteGrade = 'F';  // Almost no analysis
+    }
+
+    // Store both grades in result
+    result.websiteScore = websiteScore;
+    result.websiteGrade = websiteGrade;
+    result.leadGrade = leadGrade; // From QA Agent
+
+    // 1. Save full analysis data as JSON (now includes BOTH grades!)
+    const analysisData = {
+      url: result.url,
+      companyName: result.companyName,
+      industry: result.industry,
+      timestamp: new Date().toISOString(),
+      // TWO SEPARATE GRADES:
+      websiteScore: websiteScore,      // How comprehensive the analysis was
+      websiteGrade: websiteGrade,      // A-F based on modules run + data extracted
+      leadGrade: leadGrade,            // A-F from QA Agent (email quality)
+      contact: result.contact,
+      extractedContact: result.extractedContact,
+      grokData: result.grokData,
+      critiques: result.critiques,
+      seo: result.seo,
+      visual: result.visual,
+      competitor: result.competitor,
+      summary: result.summary,
+      loadTime: result.loadTime,
+      pagesAnalyzed: result.pagesAnalyzed,
+      modulesUsed: result.modulesUsed,
+      emailQA: result.emailQA || null  // QA review data (NEW!)
+    };
+
+    await fs.writeFile(
+      path.join(folderPath, 'analysis-data.json'),
+      JSON.stringify(analysisData, null, 2),
+      'utf8'
+    );
+    
+    // 2. Save formatted critiques as readable text
+    const critiquesText = formatCritiquesAsText(result);
+    await fs.writeFile(
+      path.join(folderPath, 'critiques.txt'),
+      critiquesText,
+      'utf8'
+    );
+
+    // 3. Save email content
+    if (result.email) {
+      const emailContent = `Subject: ${result.email.subject}\n\n${result.email.body}`;
+      await fs.writeFile(
+        path.join(folderPath, 'email.txt'),
+        emailContent,
+        'utf8'
+      );
+
+      // 3b. Save critique reasoning (explains WHY each critique was made)
+      if (result.critiqueReasoning) {
+        await fs.writeFile(
+          path.join(folderPath, 'critique-reasoning.txt'),
+          result.critiqueReasoning,
+          'utf8'
+        );
+      }
+
+      // 3c. Save QA review (lead quality assessment)
+      if (result.emailQA) {
+        const qaText = `LEAD QUALITY REVIEW (QA Agent)
+═══════════════════════════════════════════════════════════════
+
+LEAD GRADE: ${result.emailQA.leadGrade || result.emailQA.grade}
+Ready to Contact: ${result.emailQA.passed ? 'YES' : 'NO'}
+
+NOTE: Lead Grade is separate from Website Grade
+- Website Grade (${websiteGrade}): How comprehensive the analysis was (modules run + data quality)
+- Lead Grade (${result.emailQA.leadGrade || result.emailQA.grade}): How good the outreach email is (this grade)
+
+═══════════════════════════════════════════════════════════════
+
+Summary: ${result.emailQA.summary}
+
+${result.emailQA.issues && result.emailQA.issues.length > 0 ? `
+❌ CRITICAL ISSUES (Lead Grade F - DO NOT CONTACT):
+${result.emailQA.issues.map((issue, i) => `   ${i + 1}. ${issue}`).join('\n')}
+` : ''}
+${result.emailQA.warnings && result.emailQA.warnings.length > 0 ? `
+⚠️  WARNINGS (Lead Grade B/C - review before contacting):
+${result.emailQA.warnings.map((warning, i) => `   ${i + 1}. ${warning}`).join('\n')}
+` : ''}
+${result.emailQA.suggestions && result.emailQA.suggestions.length > 0 ? `
+💡 SUGGESTIONS (Lead Grade A - nice-to-haves):
+${result.emailQA.suggestions.map((suggestion, i) => `   ${i + 1}. ${suggestion}`).join('\n')}
+` : ''}`;
+
+        await fs.writeFile(
+          path.join(folderPath, 'qa-review.txt'),
+          qaText,
+          'utf8'
+        );
+      }
+    }
+
+    // 4. Save client info summary (including blog posts for outreach hooks)
+    const latestPost = grokData?.contentInfo?.recentPosts?.[0];
+    const clientInfo = {
+      companyName: result.companyName,
+      url: result.url,
+      industry: result.industry?.specific || grokData?.companyInfo?.industry || 'Unknown',
+      location: grokData?.companyInfo?.location || 'Unknown',
+      websiteScore: websiteScore,
+      websiteGrade: websiteGrade,
+      leadGrade: leadGrade,
+      contact: {
+        name: result.contact?.name || 'Unknown',
+        email: result.contact?.email || grokData?.contactInfo?.email || 'Not found',
+        phone: result.contact?.phone || grokData?.contactInfo?.phone || 'Not found',
+        title: result.contact?.title || ''
+      },
+      recentBlogPost: latestPost ? {
+        title: latestPost.title,
+        date: latestPost.date,
+        url: latestPost.url,
+        summary: latestPost.summary
+      } : null,
+      hasActiveBlog: grokData?.contentInfo?.hasActiveBlog || false,
+      socialProfiles: grokData?.socialProfiles || {},
+      analyzedDate: new Date().toISOString(),
+      emailSent: result.draft ? 'Draft created in Gmail' : 'Not sent'
+    };
+    
+    await fs.writeFile(
+      path.join(folderPath, 'client-info.json'),
+      JSON.stringify(clientInfo, null, 2),
+      'utf8'
+    );
+
+    // 5. Copy screenshot if it exists
+    if (result.screenshot) {
+      const screenshotName = path.basename(result.screenshot);
+      const destPath = path.join(folderPath, screenshotName);
+      try {
+        await fs.copyFile(result.screenshot, destPath);
+      } catch (err) {
+        console.log('⚠️ Could not copy screenshot:', err.message);
+      }
+    }
+    
+    console.log(`\n💾 Analysis saved to: ${folderPath}`);
+    console.log(`   📁 Folder: lead-${leadGrade}/${domain}/${timestamp}`);
+    console.log(`   🎯 Lead Grade: ${leadGrade} | Website Grade: ${websiteGrade}`);
+    return folderPath;
+    
+  } catch (error) {
+    console.error('❌ Error saving analysis results:', error);
+    return null;
+  }
+}
 function extractContactInfo(websiteData) {
   const bodyText = websiteData.bodyText || '';
   const title = websiteData.title || '';
