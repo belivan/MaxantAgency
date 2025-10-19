@@ -21,7 +21,7 @@ type Props = {
 };
 
 const models = [
-  { value: 'grok-beta', label: 'Grok Web Search (Recommended - Real Companies)' },
+  { value: 'grok-4-fast', label: 'Grok 4 Fast (Recommended - Real Companies via Web Search)' },
   { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast but may generate fake companies)' },
   { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
   { value: 'claude-sonnet-4-5', label: 'Claude Sonnet' }

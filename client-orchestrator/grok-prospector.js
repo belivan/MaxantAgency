@@ -73,7 +73,7 @@ Return ONLY valid JSON in this exact format:
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'grok-beta',
+      model: 'grok-4-fast',
       messages: [
         {
           role: 'system',

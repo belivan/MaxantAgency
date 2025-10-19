@@ -116,7 +116,7 @@ export async function runProspector(options) {
 
   // Use Grok with web search for real companies, or GPT for fast generation
   let json;
-  if (model === 'grok-beta') {
+  if (model === 'grok-4-fast' || model === 'grok-beta') {
     console.log('🔍 Using Grok with web search to find REAL companies...');
     json = await findCompaniesWithGrok({ brief, count, city });
   } else {

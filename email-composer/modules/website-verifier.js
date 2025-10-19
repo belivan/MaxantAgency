@@ -38,7 +38,7 @@ export async function verifyWebsite(url, existingData = {}) {
     const page = await context.newPage();
 
     // Navigate to URL with timeout
-    console.log('  œ Loading page...');
+    console.log('  ï¿½ Loading page...');
     const loadStart = Date.now();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     const loadTime = (Date.now() - loadStart) / 1000;
@@ -91,7 +91,7 @@ export async function verifyWebsite(url, existingData = {}) {
  * Use Grok AI to verify key facts from HTML
  */
 async function verifyWithGrok(url, html, title, existingData) {
-  console.log('  œ Verifying with Grok AI...');
+  console.log('  ï¿½ Verifying with Grok AI...');
 
   // Truncate HTML to reasonable size (Grok has context limits)
   const truncatedHtml = html.substring(0, 50000);
@@ -133,7 +133,7 @@ Return ONLY valid JSON in this format:
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'grok-2-latest',
+      model: 'grok-4-fast',
       messages: [{
         role: 'user',
         content: prompt,
@@ -157,7 +157,7 @@ Return ONLY valid JSON in this format:
     throw new Error('Could not parse JSON from Grok response');
 
   } catch (error) {
-    console.error('    Grok verification failed:', error.message);
+    console.error('  ï¿½ Grok verification failed:', error.message);
     return {
       companyNameVerified: true, // Assume existing data is still valid
       industryVerified: true,
