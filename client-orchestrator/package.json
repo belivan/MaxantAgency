@@ -1,0 +1,16 @@
+{
+  "name": "client-orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Prospect generator + analyzer orchestrator for website-audit-tool",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "openai": "^4.75.0"
+  }
+}
+

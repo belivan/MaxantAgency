@@ -1,0 +1,29 @@
+{
+  "name": "maksant-website-audit-tool",
+  "version": "1.0.0",
+  "description": "AI-powered website audit tool for personalized outreach emails",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "website-audit",
+    "ai",
+    "playwright",
+    "outreach"
+  ],
+  "author": "Maksant",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@supabase/supabase-js": "^2.75.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "googleapis": "^121.0.0",
+    "openai": "^4.75.0",
+    "playwright": "^1.40.0"
+  }
+}

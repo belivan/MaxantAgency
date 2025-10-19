@@ -1,0 +1,120 @@
+====================================================================================
+PATCH FOR /api/compose ENDPOINT
+====================================================================================
+
+FIND THIS SECTION (around line 288):
+
+    // 5. Return result
+    console.log(`\n✅ Email composition complete!\n`);
+
+    res.json({
+      success: true,
+      lead: {
+        url: lead.url,
+        company: lead.company_name,
+        industry: lead.industry,
+        grade: lead.lead_grade,
+      },
+      email: emailResult,
+      validation: validationResults,
+      verification: verificationResult,
+      generatedAt: new Date().toISOString(),
+    });
+
+====================================================================================
+
+REPLACE IT WITH:
+
+    // 5. Calculate quality score
+    let qualityScore = 0;
+    if (emailResult.subjects && emailResult.bodies) {
+      const recSubject = emailResult.recommended?.subject || 0;
+      const recBody = emailResult.recommended?.body || 0;
+      qualityScore = validateEmail({
+        subject: emailResult.subjects[recSubject],
+        body: emailResult.bodies[recBody]
+      }).score;
+    } else {
+      qualityScore = validationResults.score;
+    }
+
+    // 6. Generate technical reasoning
+    console.log('\n5️⃣ Generating technical reasoning...');
+    const email = emailResult.subjects ? {
+      subject: emailResult.subjects[emailResult.recommended?.subject || 0],
+      body: emailResult.bodies[emailResult.recommended?.body || 0],
+    } : emailResult;
+
+    const reasoning = await generateCompleteReasoning(lead, email, {});
+    console.log('   ✓ Reasoning complete');
+
+    // 7. Save to Supabase composed_emails table
+    console.log('\n6️⃣ Saving to Supabase...');
+    const composedEmail = await saveComposedEmail({
+      lead_id: lead.id,
+      url: lead.url,
+      company_name: lead.company_name,
+      contact_email: lead.contact_email,
+      contact_name: lead.contact_name,
+      contact_title: lead.contact_title,
+      industry: lead.industry,
+
+      email_subject: email.subject,
+      email_body: email.body,
+      email_strategy: strategy,
+
+      has_variants: !!emailResult.subjects,
+      subject_variants: emailResult.subjects || null,
+      body_variants: emailResult.bodies || null,
+      recommended_variant: emailResult.recommended || null,
+      variant_reasoning: emailResult.reasoning || null,
+
+      technical_reasoning: reasoning.technical_reasoning,
+      business_summary: reasoning.business_summary,
+      verification_checklist: reasoning.verification_checklist,
+      screenshot_urls: null,
+
+      website_verified: !!verificationResult?.success,
+      verification_data: verificationResult || null,
+
+      ai_model: process.env.DEFAULT_EMAIL_MODEL || 'claude-sonnet-4-5',
+      quality_score: qualityScore,
+      validation_issues: validationResults.issues || null,
+    });
+
+    console.log(`   ✓ Saved to Supabase: ${composedEmail.id}`);
+
+    // 8. Sync to Notion
+    console.log('\n7️⃣ Syncing to Notion...');
+    let notionPageId = null;
+    try {
+      notionPageId = await syncToNotion(composedEmail);
+      if (notionPageId) {
+        console.log(`   ✓ Synced to Notion: ${notionPageId}`);
+      }
+    } catch (error) {
+      console.warn(`   ⚠️  Notion sync failed: ${error.message}`);
+    }
+
+    // 9. Return result
+    console.log(`\n✅ Email composition complete!\n`);
+
+    res.json({
+      success: true,
+      lead: {
+        url: lead.url,
+        company: lead.company_name,
+        industry: lead.industry,
+        grade: lead.lead_grade,
+      },
+      email: emailResult,
+      validation: validationResults,
+      verification: verificationResult,
+      supabase_id: composedEmail.id,
+      notion_page_id: notionPageId,
+      generatedAt: new Date().toISOString(),
+    });
+
+====================================================================================
+DONE! Save the file and restart the server.
+====================================================================================

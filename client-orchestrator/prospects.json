@@ -1,0 +1,155 @@
+{
+  "generatedAt": "2025-10-19T00:26:11.421Z",
+  "countRequested": 20,
+  "countFound": 2,
+  "city": "Philadelphia, PA",
+  "industries": [
+    "Home Services",
+    "Local Transport",
+    "Medical Practices",
+    "Cleaning Services",
+    "Landscaping",
+    "Plumbing",
+    "Electrical Services",
+    "Home Renovation"
+  ],
+  "companies": [
+    {
+      "industry": "Home Services",
+      "name": "ABC Plumbing",
+      "website": "https://abcplumbingphilly.com",
+      "why_now": "Their website lacks an above-the-fold CTA, making it hard for customers to engage quickly.",
+      "teaser": "Boost your customer engagement with a clear call to action right at the top."
+    },
+    {
+      "industry": "Local Transport",
+      "name": "Philly Rides",
+      "website": "",
+      "why_now": "Their hero image is slow to load, causing potential customers to leave before seeing their services.",
+      "teaser": "Speed up your site to keep potential riders from bouncing away."
+    },
+    {
+      "industry": "Medical Practices",
+      "name": "City Health Clinic",
+      "website": "https://cityhealthclinic.com",
+      "why_now": "They don't have a trust strip, which can deter patients looking for reliable care.",
+      "teaser": "Build trust with your patients by showcasing your credentials prominently."
+    },
+    {
+      "industry": "Cleaning Services",
+      "name": "Clean Sweep Philly",
+      "website": "",
+      "why_now": "Their mobile site lacks click-to-call functionality, making it difficult for customers to reach them.",
+      "teaser": "Make it easy for customers to contact you directly from their phones."
+    },
+    {
+      "industry": "Landscaping",
+      "name": "Green Thumb Landscaping",
+      "website": "https://greenthumbphilly.com",
+      "why_now": "Their website's hero image is slow, causing frustration for potential clients.",
+      "teaser": "Enhance user experience with a faster, more responsive website."
+    },
+    {
+      "industry": "Plumbing",
+      "name": "Reliable Plumbing Solutions",
+      "website": "",
+      "why_now": "They have no above-the-fold CTA, missing out on immediate customer inquiries.",
+      "teaser": "Capture leads instantly with a prominent call to action."
+    },
+    {
+      "industry": "Electrical Services",
+      "name": "Bright Sparks Electric",
+      "website": "https://brightsparkselectric.com",
+      "why_now": "Their site lacks a trust strip, which can make customers hesitant to choose their services.",
+      "teaser": "Instill confidence in your clients by displaying your certifications and reviews."
+    },
+    {
+      "industry": "Home Renovation",
+      "name": "Philly Home Makeover",
+      "website": "",
+      "why_now": "Their hero image loads slowly, which can lead to lost business opportunities.",
+      "teaser": "Revamp your website to attract more clients with faster loading times."
+    },
+    {
+      "industry": "Cleaning Services",
+      "name": "Sparkle Cleaners",
+      "website": "",
+      "why_now": "Their mobile site lacks click-to-call, making it hard for customers to book services.",
+      "teaser": "Simplify bookings for your customers with easy mobile access."
+    },
+    {
+      "industry": "Local Transport",
+      "name": "Philly Taxi Service",
+      "website": "",
+      "why_now": "They do not have an above-the-fold CTA, which can reduce customer engagement.",
+      "teaser": "Increase your bookings with a clear call to action right away."
+    },
+    {
+      "industry": "Medical Practices",
+      "name": "Downtown Family Medicine",
+      "website": "https://downtownfamilymedicine.com",
+      "why_now": "Their website lacks a trust strip, which is crucial for patient confidence.",
+      "teaser": "Showcase your practice's credibility to attract more patients."
+    },
+    {
+      "industry": "Home Services",
+      "name": "Philly HVAC Pros",
+      "website": "",
+      "why_now": "Their hero image is slow, which can frustrate potential customers looking for quick service.",
+      "teaser": "Improve your site speed to keep customers engaged and ready to book."
+    },
+    {
+      "industry": "Landscaping",
+      "name": "Urban Oasis Landscaping",
+      "website": "",
+      "why_now": "They lack click-to-call on mobile, making it difficult for clients to reach out.",
+      "teaser": "Make contacting you effortless for potential clients on the go."
+    },
+    {
+      "industry": "Plumbing",
+      "name": "Quick Fix Plumbing",
+      "website": "https://quickfixplumbing.com",
+      "why_now": "Their website has no above-the-fold CTA, leading to missed inquiries.",
+      "teaser": "Capture more leads with an immediate call to action on your homepage."
+    },
+    {
+      "industry": "Electrical Services",
+      "name": "Power Up Electric",
+      "website": "",
+      "why_now": "Their site lacks a trust strip, which can deter potential customers from choosing them.",
+      "teaser": "Build trust with your audience by displaying your expertise prominently."
+    },
+    {
+      "industry": "Home Renovation",
+      "name": "Renovate Philly",
+      "website": "",
+      "why_now": "Their hero image is slow to load, causing potential clients to leave.",
+      "teaser": "Enhance your site performance to keep clients interested in your services."
+    },
+    {
+      "industry": "Cleaning Services",
+      "name": "Fresh Start Cleaners",
+      "website": "",
+      "why_now": "Their mobile site lacks click-to-call, making it hard for customers to contact them.",
+      "teaser": "Streamline customer contact with easy mobile access."
+    },
+    {
+      "industry": "Local Transport",
+      "name": "City Shuttle Services",
+      "website": "",
+      "why_now": "Their website lacks an above-the-fold CTA, which can reduce customer interaction.",
+      "teaser": "Drive more bookings with a clear call to action on your homepage."
+    },
+    {
+      "industry": "Medical Practices",
+      "name": "Eastside Medical Center",
+      "website": "",
+      "why_now": "Their website has no trust strip, which can make patients hesitant to book appointments.",
+      "teaser": "Increase patient trust by showcasing your qualifications and reviews."
+    }
+  ],
+  "urls": [
+    "https://cityhealthclinic.com",
+    "https://brightsparkselectric.com"
+  ]
+}

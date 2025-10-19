@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Maksant Website Audit Tool</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Maksant Website Audit Tool</h1>
+      <p class="subtitle">AI-powered website analysis for personalized outreach</p>
+    </header>
+
+    <!-- AI Agents Breakdown -->
+    <section class="ai-agents-section">
+      <h2>🤖 Multi-Agent AI System</h2>
+      <p class="intro-text">This tool uses multiple specialized AI agents working together to analyze websites and generate personalized outreach emails:</p>
+
+      <div class="agents-grid">
+        <!-- Agent 1: Data Extraction -->
+        <div class="agent-card">
+          <div class="agent-number">1</div>
+          <div class="agent-icon">🔍</div>
+          <h3>Grok AI (xAI)</h3>
+          <p class="agent-role">Data Extraction Agent</p>
+          <p class="agent-desc">Extracts email, phone, company info, services, blog posts, social profiles, and <strong>platform/tech stack</strong> from website HTML.</p>
+          <span class="agent-cost">Cost: $0.015/site • Always runs</span>
+        </div>
+
+        <!-- Agent 2: Basic Analysis -->
+        <div class="agent-card">
+          <div class="agent-number">2</div>
+          <div class="agent-icon">📊</div>
+          <h3>GPT-5 Mini / Claude Haiku</h3>
+          <p class="agent-role">Basic Analysis Agent</p>
+          <p class="agent-desc">Analyzes website structure, HTML, SEO, performance, and missing CTAs. NO visual critiques (strict boundaries).</p>
+          <span class="agent-cost">Cost: $0.002-0.015/site (model dependent) • Always runs</span>
+        </div>
+
+        <!-- Agent 3: Industry-Specific -->
+        <div class="agent-card">
+          <div class="agent-number">3</div>
+          <div class="agent-icon">🏢</div>
+          <h3>GPT-5 Mini / Claude Haiku</h3>
+          <p class="agent-role">Industry-Specific Agent</p>
+          <p class="agent-desc">Detects industry (healthcare, HVAC, restaurant, etc.) and provides tailored recommendations specific to that business type.</p>
+          <span class="agent-cost">Cost: $0.003/site • Optional</span>
+        </div>
+
+        <!-- Agent 4: SEO Analysis -->
+        <div class="agent-card">
+          <div class="agent-number">4</div>
+          <div class="agent-icon">🔎</div>
+          <h3>GPT-5 Mini / Claude Haiku</h3>
+          <p class="agent-role">SEO Analysis Agent</p>
+          <p class="agent-desc">Deep-dive technical SEO: sitemaps, robots.txt, structured data, meta tags, and alt tags for image SEO.</p>
+          <span class="agent-cost">Cost: $0.002/site • Optional</span>
+        </div>
+
+        <!-- Agent 5: Visual Design -->
+        <div class="agent-card">
+          <div class="agent-number">5</div>
+          <div class="agent-icon">👁️</div>
+          <h3>GPT-4o Vision</h3>
+          <p class="agent-role">Visual Design Agent</p>
+          <p class="agent-desc">Analyzes screenshots for color contrast, typography, layout, visual hierarchy, and button placement.</p>
+          <span class="agent-cost">Cost: $0.004-0.020/image (model dependent) • Optional</span>
+        </div>
+
+        <!-- Agent 6: Competitor Discovery -->
+        <div class="agent-card">
+          <div class="agent-number">6</div>
+          <div class="agent-icon">📈</div>
+          <h3>Grok with Web Search</h3>
+          <p class="agent-role">Competitor Discovery Agent</p>
+          <p class="agent-desc">Discovers 3 competitors using live web search and provides comparison analysis for competitive insights.</p>
+          <span class="agent-cost">Cost: $0.030/site • Optional</span>
+        </div>      </div>
+
+      <div class="workflow-summary">
+        <h4>⚡ How It Works (8 Steps):</h4>
+        <ol>
+          <li><strong>Extract Data</strong> - Company info, contact (email/phone), services, blog posts, social profiles, <strong>platform/tech stack</strong> (Grok AI)</li>
+          <li><strong>Analyze Structure</strong> - HTML, SEO, performance, missing CTAs (Basic Analysis Agent)</li>
+          <li><strong>Analyze Industry</strong> - Detect industry and provide tailored recommendations (Industry Agent - Optional)</li>
+          <li><strong>Analyze SEO</strong> - Technical SEO deep-dive: sitemaps, metadata, structured data (SEO Agent - Optional)</li>
+          <li><strong>Analyze Design</strong> - Screenshots for color, typography, layout, visual hierarchy (Vision Agent - Optional)</li>
+          <li><strong>Discover Competitors</strong> - Live web search to find 3 competitors with comparison (Competitor Agent - Optional)</li>
+          <li><strong>Save Results</strong> - Organized by Website Grade in folders: <code>grade-A/</code>, <code>grade-B/</code>, etc.</li>
+        </ol>
+      </div>
+
+      <!-- Dual Grading System Explanation -->
+      <div class="grading-explanation">
+        <h3>📊 Dual Grading System</h3>
+        <p class="grading-intro">Every analysis produces TWO separate grades:</p>
+
+        <div class="grade-cards">
+          <div class="grade-card website-grade-card">
+            <div class="grade-header">
+              <span class="grade-icon">🌐</span>
+              <h4>Website Grade (A-F)</h4>
+            </div>
+            <p class="grade-meaning"><strong>What it measures:</strong> How comprehensive OUR analysis was</p>
+            <ul class="grade-factors">
+              <li>✅ Data extracted (email, phone, services, location)</li>
+              <li>✅ Analysis modules run (basic, industry, SEO, visual, competitor)</li>
+            </ul>
+            <p class="grade-example">Grade A = We got all the data + ran all modules</p>
+          </div>
+
+          <div class="grade-card lead-grade-card primary">
+            <div class="grade-header">
+              <span class="grade-icon">🎯</span>
+              <h4>Website Grade (A-F)</h4>
+            </div>
+            <p class="grade-meaning"><strong>What it measures:</strong> How good the outreach email is</p>
+            <ul class="grade-factors">
+              <li>✅ Has recipient email (can't contact without it!)</li>
+              <li>✅ Honest personalization (no fake "Love your Instagram")</li>
+              <li>✅ No visual critiques when visual module was OFF</li>
+              <li>✅ Subject line personalized</li>
+            </ul>
+            <p class="grade-example primary">Grade A = Ready to contact immediately! 🚀</p>
+          </div>
+        </div>
+
+        <div class="folder-organization">
+          <strong>📁 Folder Organization:</strong> Results saved by LEAD grade
+          <div class="folder-list">
+            <span class="folder-item"><code>grade-A/</code> Contact immediately! 🚀</span>
+            <span class="folder-item"><code>grade-B/</code> Review then contact</span>
+            <span class="folder-item"><code>grade-C/</code> Needs editing before sending</span>
+            <span class="folder-item"><code>grade-D/</code> Major rewrite needed</span>
+            <span class="folder-item"><code>grade-F/</code> Do not contact (missing email or critical issues)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <main>
+      <section class="input-section">
+        <div class="form-group">
+          <label for="urls">Enter Website URLs (one per line, max 10)</label>
+          <textarea
+            id="urls"
+            placeholder="https://example.com&#10;https://anothersite.com&#10;https://business.com"
+            rows="6"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="emailType">Email Type</label>
+          <select id="emailType">
+            <option value="local">Local/Philadelphia (High-touch)</option>
+            <option value="national">National (Broad outreach)</option>
+          </select>
+        </div>
+
+        <div class="section-divider">
+          <h3>🤖 AI Model Selection</h3>
+        </div>
+
+        <div class="model-selection">
+          <div class="form-group">
+            <label for="textModel">Text Analysis Model</label>
+            <select id="textModel">
+              <option value="gpt-5-mini" selected>GPT-5 Mini (Recommended) - $0.003/site</option>
+              <option value="gpt-5">GPT-5 - $0.011/site</option>
+              <option value="gpt-4o">GPT-4o - $0.015/site</option>
+              <option value="claude-sonnet-4-5">Claude Sonnet 4.5 - $0.013/site</option>
+              <option value="claude-haiku-4-5">Claude Haiku 4.5 (Cheapest) - $0.002/site</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="visionModel">Vision Analysis Model (for design critique)</label>
+            <select id="visionModel">
+              <option value="gpt-4o" selected>GPT-4o (Recommended) - $0.004/image</option>
+              <option value="gpt-5">GPT-5 - $0.011/image</option>
+              <option value="claude-sonnet-4-5">Claude Sonnet 4.5 - $0.020/image</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <h3>📊 Analysis Depth</h3>
+        </div>
+
+        <div class="modules-selection depth-selection">
+          <p class="depth-instruction">
+            Choose how many pages to analyze per website:
+          </p>
+
+          <div class="module-option depth-tier">
+            <label>
+              <input type="radio" name="analysisDepth" id="depthTier1" value="tier1" checked>
+              <div class="module-info">
+                <strong>Tier I: Quick Analysis (1 Page)</strong>
+                <span class="module-desc">Homepage only - Fast scan for mass outreach</span>
+                <span class="module-cost">Base cost • ~45 seconds • 3-4 critiques</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="module-option depth-tier recommended">
+            <label>
+              <input type="radio" name="analysisDepth" id="depthTier2" value="tier2">
+              <div class="module-info">
+                <strong>Tier II: Deep Analysis (3 Pages) ⭐ RECOMMENDED</strong>
+                <span class="module-desc">Homepage + Services + Contact - Best for quality outreach</span>
+                <span class="module-cost">+$0.006/site • ~2 minutes • 5-7 critiques</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="module-option depth-tier">
+            <label>
+              <input type="radio" name="analysisDepth" id="depthTier3" value="tier3">
+              <div class="module-info">
+                <strong>Tier III: Comprehensive Audit (5-10 Pages)</strong>
+                <span class="module-desc">Full site crawl - For paid audits & detailed proposals</span>
+                <span class="module-cost">+$0.020/site • ~5 minutes • 8+ critiques</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="section-divider">
+          <h3>📋 Analysis Modules</h3>
+        </div>
+
+        <div class="modules-selection">
+          <div class="module-option">
+            <label>
+              <input type="checkbox" id="moduleBasic" checked disabled>
+              <div class="module-info">
+                <strong>Basic Analysis</strong>
+                <span class="module-desc">Load time • SEO • CTAs • Mobile responsiveness</span>
+                <span class="module-cost">Required - Always included</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="module-option recommended">
+            <label>
+              <input type="checkbox" id="moduleIndustry" checked>
+              <div class="module-info">
+                <strong>Industry-Specific Insights ⭐</strong>
+                <span class="module-desc">AI detects industry and provides tailored recommendations</span>
+                <span class="module-cost">+$0.003/site</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="module-option recommended">
+            <label>
+              <input type="checkbox" id="moduleVisual" checked>
+              <div class="module-info">
+                <strong>Visual Design Review ⭐</strong>
+                <span class="module-desc">Color contrast • Typography • Layout • Visual hierarchy</span>
+                <span class="module-cost">+$0.004/site</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="module-option">
+            <label>
+              <input type="checkbox" id="moduleSEO">
+              <div class="module-info">
+                <strong>Technical SEO Deep Dive</strong>
+                <span class="module-desc">Sitemaps • Robots.txt • Structured data • Alt tags</span>
+                <span class="module-cost">+$0.002/site</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="module-option highlight">
+            <label>
+              <input type="checkbox" id="moduleCompetitor">
+              <div class="module-info">
+                <strong>AI Competitor Discovery 🔥 NEW</strong>
+                <span class="module-desc">Auto-discovers 3 competitors and provides comparison analysis</span>
+                <span class="module-cost">+$0.030/site (uses Grok with live web search)</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <h3>Email & Database Options</h3>
+        <div class="module-grid">
+          <div class="module-option">
+            <label>
+              <input type="checkbox" id="saveToGmailDrafts" checked>
+              <div class="module-info">
+                <strong>Save to Gmail Drafts ✉️</strong>
+                <span class="module-desc">Automatically create Gmail draft with recipient email filled in</span>
+                <span class="module-cost">Requires Gmail OAuth setup</span>
+              </div>
+            </label>
+          </div>
+
+          <div class="module-option recommended">
+            <label>
+              <input type="checkbox" id="saveToSupabase" checked>
+              <div class="module-info">
+                <strong>Save to Supabase Database 🗄️ ⭐</strong>
+                <span class="module-desc">Auto-save all leads to PostgreSQL database for querying by grade, platform, location</span>
+                <span class="module-cost">Requires Supabase project setup (see docs/SUPABASE-SETUP.md)</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="cost-estimate" id="costEstimate">
+          <div class="cost-row">
+            <span>Estimated Cost:</span>
+            <strong id="totalCost">$0.006</strong>
+          </div>
+          <div class="cost-row">
+            <span>Analysis Time:</span>
+            <strong id="totalTime">~60 seconds</strong>
+          </div>
+          <div class="cost-row">
+            <span>Critiques per Site:</span>
+            <strong id="critiqueCount">4-5</strong>
+          </div>
+        </div>
+
+        <button id="analyzeBtn" class="btn-primary">
+          <span class="btn-text">🚀 Analyze Websites</span>
+          <span class="btn-loader hidden">Analyzing...</span>
+        </button>
+
+        <div id="status" class="status hidden"></div>
+
+        <!-- Progress Section -->
+        <div id="progressSection" class="progress-section hidden">
+          <h3>Analysis Progress</h3>
+          <div id="progressContainer"></div>
+        </div>
+      </section>
+
+      <section class="results-section hidden" id="resultsSection">
+        <div class="results-header">
+          <h2>Analysis Results</h2>
+          <button id="exportBtn" class="btn-secondary">Export All Emails</button>
+        </div>
+
+        <div id="results"></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

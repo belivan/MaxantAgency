@@ -1,0 +1,678 @@
+# Maksant Outreach Playbook - Practical Implementation Guide
+
+**Last Updated:** October 2025
+**Purpose:** Step-by-step guide for implementing research findings in daily outreach
+
+---
+
+## Quick Reference Card
+
+**Daily Limits (Per Email Account):**
+- New account (Week 1): **5-10 emails/day**
+- New account (Week 2-3): **15-20 emails/day**
+- Established account: **40-50 emails/day**
+- Our recommended target: **10-20 emails/week** (quality focus)
+
+**Best Sending Times:**
+- Tuesday-Thursday: **9-11 AM** (recipient's timezone)
+- Space emails: **2+ minutes apart**
+
+**Follow-Up Schedule:**
+- Follow-up #1: **3-4 days** after initial
+- Follow-up #2: **5-7 days** after first follow-up
+- Follow-up #3: **7-10 days** after second (final)
+
+**Multi-Channel Timing:**
+- LinkedIn connection: **Day 2** after email
+- Instagram follow: **Day 3** after email
+- LinkedIn DM: **Day 9** (if connected)
+- Phone call: **Day 17** (local only, if appropriate)
+
+---
+
+## Week-by-Week Implementation Plan
+
+### Week 1: Foundation Setup
+
+**Monday: Email Infrastructure**
+- [ ] Set up professional email domain (yourname@yourbusiness.com)
+- [ ] Configure SPF, DKIM, DMARC records (work with hosting provider)
+- [ ] Start DMARC at "none" policy (monitor mode)
+- [ ] Sign up for email warmup service (Warmup Inbox, Mailreach, etc.)
+- [ ] Start warmup process: 5-10 emails/day
+
+**Tuesday: LinkedIn Optimization**
+- [ ] Update LinkedIn profile photo (professional headshot)
+- [ ] Rewrite headline to clearly state what you do
+- [ ] Update "About" section with clear value proposition
+- [ ] Add recent posts or engage with industry content
+- [ ] Get 2-3 recommendations from past clients
+
+**Wednesday: Instagram Setup**
+- [ ] Create/optimize business Instagram account
+- [ ] Post 5-10 examples of your work
+- [ ] Write clear bio explaining your services
+- [ ] Link to website/portfolio
+- [ ] Gain 100+ followers (engage with local businesses)
+
+**Thursday: Tool Setup**
+- [ ] Ensure Maksant tool is fully operational
+- [ ] Test analysis on 3-5 sample websites
+- [ ] Review email outputs for quality
+- [ ] Verify contact extraction is working
+
+**Friday: Research & Targeting**
+- [ ] Identify 20-30 ideal prospect businesses
+- [ ] Verify they have websites worth improving
+- [ ] Check they're the right size/budget for your services
+- [ ] Organize prospects by priority
+
+---
+
+### Week 2: First Campaign (Start Small)
+
+**Monday: Analysis Phase**
+- [ ] Analyze 5 high-priority prospects with the tool
+- [ ] Review AI-generated emails carefully
+- [ ] Customize each email with manual touches
+- [ ] Verify contact email addresses (use verification tool)
+
+**Tuesday: Email Send (First Batch)**
+- [ ] Send **5 emails** on Tuesday morning (9-11 AM)
+- [ ] Space them 2-3 minutes apart
+- [ ] Send from warmed-up email account
+- [ ] Log in spreadsheet: Name, Company, Email, Date Sent
+
+**Wednesday: LinkedIn Outreach**
+- [ ] Send LinkedIn connection requests to the 5 prospects
+- [ ] Use blank requests OR 1-line personalized note
+- [ ] Don't mention the email yet
+
+**Thursday: Instagram Engagement**
+- [ ] Follow the 5 prospects' Instagram accounts (if found)
+- [ ] Like 2-3 recent posts from each
+- [ ] Don't DM yet - just establish presence
+
+**Friday: Monitoring**
+- [ ] Check email open rates (if using tracking)
+- [ ] Note any replies or bounces
+- [ ] Monitor LinkedIn connection acceptances
+- [ ] Update tracking spreadsheet
+
+---
+
+### Week 3: Scale Up & Follow-Up
+
+**Monday: Analysis Phase**
+- [ ] Analyze 10 new prospects (scale up from 5)
+- [ ] Review and customize emails
+- [ ] Verify email addresses
+
+**Tuesday: Email Send (Second Batch)**
+- [ ] Send **10 emails** on Tuesday morning
+- [ ] Space them 2-3 minutes apart
+- [ ] Increase warmup: Now sending 15/day
+
+**Wednesday: LinkedIn Follow-Up**
+- [ ] If connections accepted, send brief LinkedIn DMs
+- [ ] Reference the email you sent last week
+- [ ] Keep it conversational and value-first
+
+**Thursday: Email Follow-Up #1 (Week 2 Prospects)**
+- [ ] Send first follow-up to Week 2 prospects (no replies)
+- [ ] Add new value or insight (don't just say "following up")
+- [ ] Keep it brief (2-3 sentences)
+
+**Friday: Analysis & Adjustment**
+- [ ] Review metrics: Open rate, reply rate, LinkedIn acceptance
+- [ ] Identify what's working and what's not
+- [ ] Adjust email templates if needed
+- [ ] Plan next week's targets
+
+---
+
+### Week 4: Consistent Rhythm
+
+**Monday-Wednesday: New Outreach**
+- [ ] Analyze 10-15 new prospects
+- [ ] Send 10-15 new emails (Tuesday-Thursday AM)
+- [ ] Continue LinkedIn connection requests
+
+**Thursday: Follow-Ups**
+- [ ] Email follow-up #1 for Week 3 prospects
+- [ ] Email follow-up #2 for Week 2 prospects (final email)
+- [ ] LinkedIn follow-ups for those who connected
+
+**Friday: Review & Optimize**
+- [ ] Calculate overall response rate
+- [ ] Update prospect tracking
+- [ ] Plan next week's campaign
+- [ ] Adjust approach based on results
+
+---
+
+## Email Templates & Structure
+
+### Initial Email (Auto-Generated by Tool)
+
+**What the Tool Generates:**
+```
+Subject: [Specific finding about their site]
+
+Hi [Name],
+
+[Opening compliment or observation]
+
+I analyzed [their website] and noticed a few things that might
+be holding you back:
+
+1. [Specific critique with metric]
+2. [Specific critique with business impact]
+3. [Specific critique with actionable suggestion]
+
+[Brief value proposition]
+
+Would you be open to a quick call to discuss?
+
+Best,
+[Your Name]
+Maksant | Web Design & Development
+[Your Phone] | [Your Website]
+```
+
+**What You Should Customize:**
+- Replace [Name] with their actual first name
+- Replace [Your Name] with your actual name
+- Add a personal touch based on your manual review
+- Verify the critiques are accurate and meaningful
+
+---
+
+### Follow-Up Email #1 (Day 3-4)
+
+**Purpose:** Add new value, gentle reminder
+
+**Template:**
+```
+Subject: Re: [Original Subject]
+
+Hi [Name],
+
+Wanted to follow up on my email from last week about [their website].
+
+I did some more digging and found [new insight or additional finding].
+This could be a quick win for [their specific goal].
+
+Still interested in chatting? I have time [Day] or [Day] if that works.
+
+Cheers,
+[Your Name]
+```
+
+**Key Points:**
+- Reference original email
+- Add NEW value (not just "checking in")
+- Specific availability (shows you're real)
+- Keep it brief
+
+---
+
+### Follow-Up Email #2 (Day 8-11, Final)
+
+**Purpose:** Last attempt, graceful exit if no interest
+
+**Template:**
+```
+Subject: Re: [Original Subject]
+
+Hi [Name],
+
+Last email, I promise! I know you're busy.
+
+If you're not interested in discussing [their website] right now,
+totally understand. Feel free to reach out if things change.
+
+In the meantime, here's a [helpful resource/tip] that might help
+with [specific issue you found].
+
+All the best with [their business]!
+
+[Your Name]
+```
+
+**Key Points:**
+- Acknowledge they're busy
+- Give them an easy out
+- Provide value even if they don't hire you
+- End on positive note
+- Don't ask for anything
+
+---
+
+## LinkedIn Message Templates
+
+### Initial Connection Message (Optional - Can Send Blank)
+
+**Option 1: Blank Request**
+- Send with no message
+- Let your profile speak for itself
+- 20% acceptance rate with blanks
+
+**Option 2: Brief Personalized Note**
+```
+Hey [Name], came across your profile and noticed we're both
+in [industry/location]. Would love to connect!
+```
+
+**Key Points:**
+- Keep it under 300 characters
+- Don't mention your services
+- Reference something specific (mutual connection, location, industry)
+
+---
+
+### Post-Connection Message (Day 9)
+
+**Template:**
+```
+Hey [Name], thanks for connecting!
+
+I sent you an email last week about [their website] - not sure
+if it landed in your inbox. Noticed [specific thing about their site]
+that could help with [their goal].
+
+Quick 15-min call to share what I found?
+```
+
+**Key Points:**
+- Thank them for connecting
+- Reference the email (reminder)
+- Specific observation (shows you did work)
+- Low-commitment ask (15 minutes)
+
+---
+
+### LinkedIn Follow-Up (Day 16, Final)
+
+**Template:**
+```
+Hey [Name], I know you're swamped. Last ping on this!
+
+If the timing isn't right for discussing [their website], no worries.
+Happy to stay connected and maybe help down the road.
+
+Good luck with [their business]! 🚀
+```
+
+**Key Points:**
+- Acknowledge they're busy
+- Don't push
+- Leave door open for future
+- End positively
+
+---
+
+## Instagram DM Templates
+
+### Initial Instagram DM (Only After Following)
+
+**Template:**
+```
+Hey [Name]! Love what you're doing with [their business] 👏
+
+I actually checked out your website and found a few quick wins
+that could help you get more [leads/sales/bookings]. Mind if I share?
+```
+
+**Key Points:**
+- Compliment their business/content first
+- Mention you reviewed their site (shows effort)
+- Ask permission to share (not pushy)
+- Keep it casual (Instagram is informal)
+
+---
+
+### Instagram Follow-Up (Day 21)
+
+**Template:**
+```
+Hey [Name], following up on my DM about [their website].
+Still happy to share those quick wins I found if you're interested!
+
+No pressure though - I know DMs get buried 😅
+```
+
+**Key Points:**
+- Brief reminder
+- Acknowledge DMs get lost
+- Keep it light and casual
+- Don't over-explain
+
+---
+
+## Phone Call Strategy (Local Businesses Only)
+
+### When to Call
+
+**✓ DO Call If:**
+- Local business (within 50 miles)
+- Phone number prominently displayed on their site
+- Service-based business (restaurants, contractors, professionals)
+- No response after 2-3 emails
+
+**✗ DON'T Call If:**
+- No phone number on website (shows they don't want calls)
+- E-commerce or SaaS business (prefer email)
+- After 5 PM or before 9 AM
+- Already got a "not interested" response via email
+
+---
+
+### Phone Script
+
+**Opening:**
+```
+"Hi, is this [Name]? This is [Your Name] from Maksant. I sent you
+an email last week about [their website] - do you have 2 minutes?"
+```
+
+**If YES:**
+```
+"Great! I analyzed your website and found [1-2 specific things].
+For example, [specific metric or observation]. This could help
+you get more [leads/customers/bookings]. Would you be open to
+a quick meeting to go over what I found?"
+```
+
+**If NO (They're Busy):**
+```
+"No problem! When would be a better time to call back? Or would
+you prefer I just send you the details via email?"
+```
+
+**If NOT INTERESTED:**
+```
+"Totally understand. If things change down the road, feel free
+to reach out. Best of luck with [their business]!"
+```
+
+**Key Points:**
+- Be respectful of their time
+- Reference your email (establishes credibility)
+- Be specific (not vague "website problems")
+- Offer value, don't push
+- Take no for an answer gracefully
+
+---
+
+## Tracking Spreadsheet Template
+
+Create a Google Sheet or Excel file with these columns:
+
+| Date | Company | Contact Name | Email | Phone | LinkedIn | Instagram | Email Sent | Email Opened | Email Replied | LI Connected | LI Message Sent | IG Followed | IG DM Sent | Call Made | Meeting Booked | Status | Notes |
+|------|---------|--------------|-------|-------|----------|-----------|------------|--------------|---------------|--------------|-----------------|-------------|------------|-----------|----------------|--------|-------|
+| 10/18 | ABC Corp | John Smith | john@abc.com | 555-1234 | /in/johnsmith | @abccorp | 10/18 | ✓ | - | ✓ | 10/20 | ✓ | - | - | - | Warm | Opened email, accepted LinkedIn |
+| 10/19 | XYZ Inc | Jane Doe | jane@xyz.com | - | /in/janedoe | - | 10/19 | ✓ | ✓ | ✓ | - | - | - | - | ✓ | Won! | Meeting booked for 10/25 |
+
+**Status Options:**
+- **New** - Just added to list
+- **Warm** - Some engagement (opened email, connected on LinkedIn)
+- **Cold** - No engagement after all touchpoints
+- **Won** - Meeting booked or project started
+- **Lost** - Explicitly said no or no response after all attempts
+
+---
+
+## Metrics to Track Weekly
+
+### Email Metrics
+- **Sent:** Total emails sent this week
+- **Open Rate:** % of emails opened (aim for 45%+)
+- **Reply Rate:** % of emails that got replies (aim for 5%+)
+- **Bounce Rate:** % of emails that bounced (should be <2%)
+- **Unsubscribe Rate:** % of people who opted out
+
+### LinkedIn Metrics
+- **Connection Requests Sent:** Total requests sent
+- **Acceptance Rate:** % of requests accepted (aim for 30-40%)
+- **Message Response Rate:** % of DMs that got replies
+
+### Instagram Metrics
+- **Accounts Followed:** Total follows this week
+- **DMs Sent:** Total DMs sent
+- **DM Response Rate:** % of DMs that got replies
+
+### Overall Metrics
+- **Total Prospects Contacted:** Across all channels
+- **Total Responses:** Any positive engagement
+- **Response Rate:** % of prospects who engaged somehow
+- **Meetings Booked:** Calls scheduled
+- **Conversion Rate:** % of prospects → meetings
+
+---
+
+## Red Flags & When to Stop
+
+### Stop Outreach If:
+
+1. **They explicitly opt out**
+   - Honor unsubscribe immediately
+   - Remove from all channels
+   - Don't reach out again
+
+2. **No response after full sequence**
+   - 3 emails + LinkedIn + Instagram = done
+   - Don't keep emailing
+   - Move on to next prospects
+
+3. **They respond "not interested"**
+   - Accept it gracefully
+   - Thank them for their time
+   - Don't try to convince them
+
+4. **Your metrics are terrible**
+   - <10% open rate = deliverability issue
+   - <1% reply rate = messaging issue
+   - High bounce rate = list quality issue
+   - Pause, diagnose, fix before continuing
+
+### Email Reputation Red Flags:
+
+**Stop Sending Immediately If:**
+- Bounce rate >5%
+- Spam complaint rate >0.1%
+- Sudden drop in open rates
+- Emails landing in spam folder
+- ISP blocks or warnings
+
+**Actions:**
+- Investigate deliverability issues
+- Clean your list
+- Review email content for spam triggers
+- Check SPF/DKIM/DMARC setup
+- Restart warmup process
+
+---
+
+## Monthly Review Checklist
+
+**First Week of Each Month:**
+
+1. **Calculate Last Month's Metrics:**
+   - [ ] Total prospects contacted
+   - [ ] Overall response rate
+   - [ ] Meetings booked
+   - [ ] Deals closed (if applicable)
+
+2. **Identify What Worked:**
+   - [ ] Which industries responded best?
+   - [ ] Which email templates got most replies?
+   - [ ] Which channels drove most engagement?
+   - [ ] What day/time had best open rates?
+
+3. **Identify What Didn't Work:**
+   - [ ] Which prospects never engaged?
+   - [ ] Which templates got no responses?
+   - [ ] Where are prospects dropping off?
+
+4. **Adjust Strategy:**
+   - [ ] Double down on what works
+   - [ ] Drop or revise what doesn't
+   - [ ] Test new approaches for underperforming segments
+   - [ ] Update email templates based on feedback
+
+5. **Check Email Health:**
+   - [ ] Review DMARC reports
+   - [ ] Check sender reputation score
+   - [ ] Verify SPF/DKIM still configured correctly
+   - [ ] Clean email list (remove bounces, unengaged)
+
+---
+
+## Scaling Plan (Month 3+)
+
+Once you have 2+ months of data and good metrics:
+
+### Month 3: Incremental Scale
+- Increase to **20-30 emails/week** (still manageable)
+- Add second email account (different domain)
+- Warm up second account (start slow)
+
+### Month 4: Team Approach
+- Delegate analysis to tool (trust AI more)
+- Focus your time on customization and follow-ups
+- Continue 20-30 emails/week per person
+
+### Month 5: Process Optimization
+- Create playbooks for different industries
+- Standardize successful email templates
+- Build FAQ for common objections
+- Track ROI more carefully
+
+### Month 6: Systematic Scale
+- If metrics hold: Scale to 50 emails/week
+- Add third email account if needed
+- Consider hiring assistant for list building
+- Implement CRM for better tracking
+
+**Important:** Only scale if maintaining quality. Better to send 20 great emails than 100 mediocre ones.
+
+---
+
+## Common Mistakes to Avoid
+
+### Email Mistakes:
+1. ❌ Sending same template to everyone
+2. ❌ Not personalizing beyond {{FirstName}}
+3. ❌ Leading with a sales pitch
+4. ❌ Using spammy subject lines
+5. ❌ Sending attachments in cold emails
+6. ❌ Multiple CTAs (confuses recipient)
+7. ❌ No clear sender identity
+
+### LinkedIn Mistakes:
+1. ❌ Pitching in connection request
+2. ❌ Sending essay-length messages
+3. ❌ Mass connection requests (gets flagged)
+4. ❌ Not optimizing your profile first
+5. ❌ Following up too quickly
+6. ❌ Being too salesy
+
+### Instagram Mistakes:
+1. ❌ DMing before following
+2. ❌ Copy-paste messages (they can tell)
+3. ❌ Leading with a pitch
+4. ❌ Messaging from empty account
+5. ❌ Being too formal (Instagram is casual)
+
+### General Mistakes:
+1. ❌ Contacting same person on all channels at once (overwhelming)
+2. ❌ Not tracking who you've contacted (double-contacting)
+3. ❌ Giving up after one email (need 3+ touchpoints)
+4. ❌ Not respecting opt-outs
+5. ❌ Quantity over quality
+6. ❌ Not testing and adjusting
+
+---
+
+## Quick Decision Tree
+
+**Should I Contact This Prospect?**
+
+```
+Is their website actually broken/outdated?
+│
+├─ NO → Don't contact (nothing to offer)
+│
+└─ YES ↓
+    Can they likely afford your services?
+    │
+    ├─ NO → Don't contact (wrong fit)
+    │
+    └─ YES ↓
+        Is this an industry you can help?
+        │
+        ├─ NO → Don't contact (can't deliver results)
+        │
+        └─ YES ↓
+            Can you find a decision-maker's contact?
+            │
+            ├─ NO → Skip or research more
+            │
+            └─ YES ↓
+                Have you contacted them before?
+                │
+                ├─ YES → Check if they opted out
+                │   │
+                │   ├─ YES → Don't contact
+                │   └─ NO → Check last contact date
+                │       │
+                │       ├─ <6 months ago → Don't contact
+                │       └─ >6 months ago → OK to re-contact
+                │
+                └─ NO ↓
+                    ✅ PROCEED WITH OUTREACH
+```
+
+---
+
+## Resources & Tools
+
+### Email Tools:
+- **Warmup:** Warmup Inbox, Mailreach, Lemlist
+- **Verification:** NeverBounce, ZeroBounce, Hunter.io
+- **Tracking:** Mailtrack, Yesware, HubSpot
+- **Testing:** Mail-tester.com (check spam score)
+
+### LinkedIn Tools:
+- **Automation:** Dux-Soup, Phantombuster (use carefully)
+- **Research:** LinkedIn Sales Navigator
+- **Profile:** LinkedIn Profile Optimizer
+
+### Instagram Tools:
+- **Analytics:** Iconosquare, Later
+- **Scheduling:** Buffer, Hootsuite
+- **Research:** Instagram Insights
+
+### General:
+- **CRM:** HubSpot (free), Pipedrive, Airtable
+- **Tracking:** Google Sheets, Notion
+- **Calendar:** Calendly (for booking meetings)
+
+---
+
+## Support & Questions
+
+**If you're stuck or results aren't good:**
+
+1. **Review this playbook** - Make sure you're following best practices
+2. **Check your metrics** - Identify specifically what's underperforming
+3. **Test variations** - Try different subject lines, email lengths, CTAs
+4. **Ask for feedback** - If you get replies, ask what resonated
+5. **Give it time** - Need 30-50 sends to see patterns
+
+**Remember:** Cold outreach is a numbers game, but quality beats quantity every time.
+
+---
+
+**Next Document:** [03-prompt-refinement-plan.md](03-prompt-refinement-plan.md) - Applying research to AI prompts
