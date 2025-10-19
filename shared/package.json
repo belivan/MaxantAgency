@@ -1,0 +1,10 @@
+{
+  "name": "maksant-shared",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shared utilities for Maksant services",
+  "main": "logger.js",
+  "exports": {
+    "./logger": "./logger.js"
+  }
+}

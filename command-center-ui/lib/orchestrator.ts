@@ -11,12 +11,23 @@ function getRepoRoot() {
   return path.resolve(process.cwd(), '..');
 }
 
-function importFromRepo(relativePath: string) {
+async function importFromRepo(relativePath: string) {
   const absolute = path.resolve(getRepoRoot(), relativePath);
-  if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_COMMAND_CENTER === 'true') {
-    console.log('[orchestrator] importing', absolute);
+  const fileUrl = pathToFileURL(absolute).href;
+  console.log('[orchestrator] Attempting import:', {
+    relativePath,
+    absolute,
+    fileUrl,
+    cwd: process.cwd(),
+    repoRoot: getRepoRoot()
+  });
+  try {
+    return await import(fileUrl);
+  } catch (error: any) {
+    console.error('[orchestrator] Import failed:', error.message);
+    console.error('[orchestrator] Error stack:', error.stack);
+    throw error;
   }
-  return import(pathToFileURL(absolute).href);
 }
 
 async function getOrchestratorModule() {

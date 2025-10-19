@@ -104,7 +104,8 @@ export async function runProspector(options) {
     saveSupabase,
     supabaseStatus = 'pending_analysis',
     runId = randomUUID(),
-    source = 'client-orchestrator'
+    source = 'client-orchestrator',
+    logger = console
   } = options;
 
   if (!briefPath && !briefData) {
@@ -117,10 +118,18 @@ export async function runProspector(options) {
   // Use Grok with web search for real companies, or GPT for fast generation
   let json;
   if (model === 'grok-4-fast' || model === 'grok-beta') {
-    console.log('🔍 Using Grok with web search to find REAL companies...');
+    if (logger.info) {
+      logger.info('Using Grok with web search to find real companies', { model, count, city: city || 'none' });
+    } else {
+      console.log('🔍 Using Grok with web search to find REAL companies...');
+    }
     json = await findCompaniesWithGrok({ brief, count, city });
   } else {
-    console.log(`📋 Using ${model} to generate prospect list...`);
+    if (logger.info) {
+      logger.info(`Using ${model} to generate prospect list`, { count, city: city || 'none' });
+    } else {
+      console.log(`📋 Using ${model} to generate prospect list...`);
+    }
     const prompt = buildProspectPrompt({ studio: brief.studio, icp: brief.icp, geo: brief.geo, count, cityHint: city });
     json = await completeJSON({ prompt, model });
   }
@@ -144,12 +153,48 @@ export async function runProspector(options) {
   let urls = companies.map((c) => normalizeUrl(c.website)).filter(Boolean);
   urls = uniq([...seedUrls, ...urls]);
 
+  if (logger.debug) {
+    logger.debug('Extracted URLs from companies', { count: urls.length, urls });
+  } else {
+    console.log(`📋 Extracted ${urls.length} URLs from companies:`, urls);
+  }
+
   if (verify) {
+    if (logger.info) {
+      logger.info('Verifying URLs', { count: urls.length });
+    } else {
+      console.log('🔍 Verifying URLs...');
+    }
+
     const results = [];
+    const failed = [];
+
     for (const u of urls) {
       const ok = await verifyUrl(u);
-      if (ok) results.push(u);
+      if (ok) {
+        results.push(u);
+      } else {
+        failed.push(u);
+      }
+
+      if (logger.debug) {
+        logger.debug(`URL verification: ${ok ? 'passed' : 'failed'}`, { url: u, verified: ok });
+      } else {
+        console.log(`  ${ok ? '✅' : '❌'} ${u}`);
+      }
     }
+
+    if (logger.info) {
+      logger.info('URL verification completed', {
+        total: urls.length,
+        verified: results.length,
+        failed: failed.length,
+        failedUrls: failed
+      });
+    } else {
+      console.log(`✅ Verified ${results.length} of ${urls.length} URLs`);
+    }
+
     urls = results;
   }
 

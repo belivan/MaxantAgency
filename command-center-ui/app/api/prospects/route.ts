@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import {
-  getDefaultBrief,
-  markProspectStatusBridge,
-  runProspectorBridge
-} from '@/lib/orchestrator';
+import { getDefaultBrief } from '@/lib/orchestrator';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -23,7 +19,7 @@ export async function POST(request: Request) {
       brief,
       count = 20,
       city,
-      model = 'gpt-4o-mini',
+      model = 'grok-4-fast',
       verify = true
     } = body;
 
@@ -36,20 +32,25 @@ export async function POST(request: Request) {
       );
     }
 
-    const result = await runProspectorBridge({
-      briefData,
-      count,
-      city,
-      model,
-      verify,
-      saveToFile: false,
-      saveSupabase: true,
-      supabaseStatus: 'pending_analysis',
-      source: 'command-center-ui'
+    // Call client-orchestrator API server
+    const orchestratorUrl = process.env.ORCHESTRATOR_URL || 'http://localhost:3010';
+    const response = await fetch(`${orchestratorUrl}/api/prospects`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brief: briefData,
+        count,
+        city,
+        model,
+        verify
+      })
     });
 
-    // Ensure Supabase status marks default state
-    await markProspectStatusBridge(result.urls, 'pending_analysis');
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Prospect generation failed');
+    }
 
     return NextResponse.json({
       success: true,
