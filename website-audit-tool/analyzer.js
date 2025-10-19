@@ -35,6 +35,695 @@ const anthropic = new Anthropic({
 /**
  * Analyze multiple websites one at a time with progress updates
  */
+async function analyzeWebsite(url, browser, sendProgress) {
+  console.log(`Analyzing: ${url}`);
+
+  sendProgress({
+    type: 'step',
+    step: 'loading_page',
+    message: `⏳ Loading homepage...`,
+    url
+  });
+
+  const context = await browser.newContext({
+    viewport: { width: 1920, height: 1080 },
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+  });
+
+  const page = await context.newPage();
+
+  try {
+    // Navigate to the page
+    const startTime = Date.now();
+    await page.goto(url, {
+      waitUntil: 'networkidle',
+      timeout: 30000
+    });
+    const loadTime = Date.now() - startTime;
+
+    sendProgress({
+      type: 'step',
+      step: 'page_loaded',
+      message: `✓ Homepage loaded (${(loadTime / 1000).toFixed(1)}s)`,
+      url
+    });
+
+    sendProgress({
+      type: 'step',
+      step: 'capturing_screenshot',
+      message: `⏳ Capturing screenshots...`,
+      url
+    });
+
+    // Capture screenshot
+    const screenshotDir = './screenshots';
+    await fs.mkdir(screenshotDir, { recursive: true });
+
+    const domain = new URL(url).hostname.replace(/[^a-z0-9]/gi, '_');
+    const timestamp = Date.now();
+    const screenshotPath = path.join(screenshotDir, `${domain}_${timestamp}.png`);
+
+    await page.screenshot({
+      path: screenshotPath,
+      fullPage: false
+    });
+
+    // Gather website data
+    const websiteData = await page.evaluate(() => {
+      const bodyText = document.body.innerText;
+      const data = {
+        title: document.title,
+        metaDescription: document.querySelector('meta[name="description"]')?.content || '',
+        h1Tags: Array.from(document.querySelectorAll('h1')).map(h => h.innerText).slice(0, 5),
+        hasContactForm: !!document.querySelector('form'),
+        hasCTA: !!(
+          document.querySelector('button') ||
+          document.querySelector('a[href*="contact"]') ||
+          document.querySelector('a[href*="get-started"]') ||
+          document.querySelector('a[href*="book"]')
+        ),
+        imageCount: document.querySelectorAll('img').length,
+        linkCount: document.querySelectorAll('a').length,
+        hasChat: !!(
+          document.querySelector('[class*="chat"]') ||
+          document.querySelector('[id*="chat"]')
+        ),
+        hasPhoneNumber: /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(bodyText),
+        hasPortfolio: !!(
+          document.querySelector('[class*="portfolio"]') ||
+          document.querySelector('[class*="work"]') ||
+          document.querySelector('[class*="project"]') ||
+          bodyText.toLowerCase().includes('featured work') ||
+          bodyText.toLowerCase().includes('our work') ||
+          bodyText.toLowerCase().includes('case stud')
+        ),
+        // Check if portfolio items are CLICKABLE (likely link to detailed case studies)
+        portfolioItemCount: (() => {
+          const selectors = [
+            '[class*="portfolio"] a[href]',
+            '[class*="work"] a[href]',
+            '[class*="project"] a[href]',
+            '[class*="case-study"] a[href]',
+            'a[href*="/portfolio/"]',
+            'a[href*="/work/"]',
+            'a[href*="/projects/"]',
+            'a[href*="/case-studies/"]'
+          ];
+          let count = 0;
+          for (const selector of selectors) {
+            const items = document.querySelectorAll(selector);
+            count = Math.max(count, items.length);
+          }
+          return count;
+        })(),
+        hasTestimonials: !!(
+          document.querySelector('[class*="testimonial"]') ||
+          document.querySelector('[class*="review"]') ||
+          bodyText.toLowerCase().includes('what our clients say') ||
+          bodyText.toLowerCase().includes('client testimonial')
+        ),
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight
+        },
+        bodyText: bodyText.slice(0, 5000), // First 5000 chars (captures more content like portfolio, footer)
+      };
+      return data;
+    });
+
+    // FULL MOBILE SCRAPE - Switch to mobile viewport and re-scrape everything
+    await page.setViewportSize({ width: 375, height: 667 }); // iPhone size
+    await page.waitForTimeout(1000); // Give time for mobile layout to render
+
+    const mobileScreenshotPath = path.join(screenshotDir, `${domain}_${timestamp}_mobile.png`);
+    await page.screenshot({
+      path: mobileScreenshotPath,
+      fullPage: false
+    });
+
+    // FULL mobile data scrape (same as desktop, but at mobile viewport)
+    const mobileData = await page.evaluate(() => {
+      const bodyText = document.body.innerText;
+      const data = {
+        title: document.title,
+        metaDescription: document.querySelector('meta[name="description"]')?.content || '',
+        h1Tags: Array.from(document.querySelectorAll('h1')).map(h => h.innerText).slice(0, 5),
+        hasContactForm: !!document.querySelector('form'),
+        hasCTA: !!(
+          document.querySelector('button') ||
+          document.querySelector('a[href*="contact"]') ||
+          document.querySelector('a[href*="get-started"]') ||
+          document.querySelector('a[href*="book"]')
+        ),
+        imageCount: document.querySelectorAll('img').length,
+        linkCount: document.querySelectorAll('a').length,
+        hasChat: !!(
+          document.querySelector('[class*="chat"]') ||
+          document.querySelector('[id*="chat"]')
+        ),
+        hasPhoneNumber: /\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/.test(bodyText),
+        hasClickToCallLinks: document.querySelectorAll('a[href^="tel:"]').length > 0,
+        phoneNumbers: Array.from(new Set(
+          bodyText.match(/\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g) || []
+        )),
+        hasPortfolio: !!(
+          document.querySelector('[class*="portfolio"]') ||
+          document.querySelector('[class*="work"]') ||
+          document.querySelector('[class*="project"]') ||
+          bodyText.toLowerCase().includes('featured work') ||
+          bodyText.toLowerCase().includes('our work') ||
+          bodyText.toLowerCase().includes('case stud')
+        ),
+        portfolioItemCount: (() => {
+          const selectors = [
+            '[class*="portfolio"] a[href]',
+            '[class*="work"] a[href]',
+            '[class*="project"] a[href]',
+            '[class*="case-study"] a[href]',
+            'a[href*="/portfolio/"]',
+            'a[href*="/work/"]',
+            'a[href*="/projects/"]',
+            'a[href*="/case-studies/"]'
+          ];
+          let count = 0;
+          for (const selector of selectors) {
+            const items = document.querySelectorAll(selector);
+            count = Math.max(count, items.length);
+          }
+          return count;
+        })(),
+        hasTestimonials: !!(
+          document.querySelector('[class*="testimonial"]') ||
+          document.querySelector('[class*="review"]') ||
+          bodyText.toLowerCase().includes('what our clients say') ||
+          bodyText.toLowerCase().includes('client testimonial')
+        ),
+        hasMobileMenu: !!(
+          document.querySelector('[class*="mobile-menu"]') ||
+          document.querySelector('[class*="hamburger"]') ||
+          document.querySelector('[id*="mobile-menu"]') ||
+          document.querySelector('[class*="nav-toggle"]') ||
+          document.querySelector('button[aria-label*="menu" i]')
+        ),
+        primaryCTASize: (() => {
+          const ctas = document.querySelectorAll('a[href*="contact"], button, .cta, [class*="btn"]');
+          if (ctas.length === 0) return null;
+          const firstCTA = ctas[0];
+          const rect = firstCTA.getBoundingClientRect();
+          const isVisible = rect.width > 0 && rect.height > 0;
+          return isVisible ? { 
+            width: Math.round(rect.width), 
+            height: Math.round(rect.height),
+            isTappable: rect.height >= 44 && rect.width >= 44
+          } : null;
+        })(),
+        visibleContentAboveFold: (() => {
+          const viewportHeight = window.innerHeight;
+          const elementsAboveFold = Array.from(document.querySelectorAll('h1, h2, p, button, a'))
+            .filter(el => {
+              const rect = el.getBoundingClientRect();
+              return rect.top >= 0 && rect.top <= viewportHeight && rect.height > 0;
+            });
+          return {
+            headlineCount: elementsAboveFold.filter(el => el.tagName === 'H1' || el.tagName === 'H2').length,
+            ctaCount: elementsAboveFold.filter(el => el.tagName === 'BUTTON' || el.tagName === 'A').length,
+            textLength: elementsAboveFold.map(el => el.innerText).join(' ').length
+          };
+        })(),
+        viewport: {
+          width: window.innerWidth,
+          height: window.innerHeight
+        },
+        bodyText: bodyText.slice(0, 5000)
+      };
+      return data;
+    });
+
+    // Store mobile data separately
+    websiteData.mobile = mobileData;
+
+    sendProgress({
+      type: 'step',
+      step: 'screenshots_captured',
+      message: `✓ Full scrape complete (desktop + mobile data)`,
+      url
+    });
+
+    // GROK EXTRACTION: Extract comprehensive data using AI
+    sendProgress({
+      type: 'step',
+      step: 'grok_extraction',
+      message: `🤖 Extracting company data with AI...`,
+      url
+    });
+
+    let grokData = null;
+    let contactInfo = null;
+
+    try {
+      const html = await page.content();
+      grokData = await extractWithGrok(html, url, 'grok-4-fast', page);
+
+      // Convert Grok data to legacy contactInfo format for compatibility
+      contactInfo = {
+        pageUrl: url,
+        emails: grokData.contactInfo?.email ? [{ value: grokData.contactInfo.email, source: 'grok' }] : [],
+        phones: grokData.contactInfo?.phone ? [{ value: grokData.contactInfo.phone, source: 'grok' }] : [],
+        names: grokData.teamInfo?.founder?.name ? [grokData.teamInfo.founder.name] : [],
+        contactPages: [],
+
+        // NEW: Enhanced data from Grok
+        companyName: grokData.companyInfo?.name,
+        industry: grokData.companyInfo?.industry,
+        location: grokData.companyInfo?.location,
+        foundingYear: grokData.companyInfo?.foundingYear,
+        services: grokData.businessIntel?.services,
+        valueProposition: grokData.businessIntel?.valueProposition,
+        socialProfiles: grokData.socialProfiles,
+        recentContent: grokData.contentInfo?.recentPosts,
+        hasActiveBlog: grokData.contentInfo?.hasActiveBlog
+      };
+
+      sendProgress({
+        type: 'info',
+        message: `✅ AI extraction complete (${grokData._meta.tokensUsed.input} tokens)`,
+        url
+      });
+    } catch (e) {
+      console.error('Grok extraction failed:', e.message);
+
+      // Fallback to traditional extraction
+      sendProgress({
+        type: 'warning',
+        message: `⚠️ AI extraction failed, using traditional scraper...`,
+        url
+      });
+
+      try {
+        contactInfo = await extractFromPage(page, url);
+      } catch (fallbackError) {
+        contactInfo = { pageUrl: url, emails: [], phones: [], names: [], contactPages: [] };
+      }
+    }
+
+    await context.close();
+
+    return {
+      url,
+      loadTime,
+      screenshotPath,
+      mobileScreenshotPath,
+      data: websiteData,
+      contact: contactInfo,
+      grokData: grokData,  // NEW: Full Grok extraction data
+      error: null
+    };
+
+  } catch (error) {
+    await context.close();
+    console.error(`Error analyzing ${url}:`, error.message);
+
+    return {
+      url,
+      error: error.message,
+      data: null
+    };
+  }
+}
+
+/**
+ * Generate AI critique using Claude with progress updates
+ */
+async function generateCritique(websiteAnalysis, industry, seoResults, visualResults, competitorResults, sendProgress, options = {}) {
+  if (websiteAnalysis.error) {
+    return {
+      critiques: [`Unable to analyze website: ${websiteAnalysis.error}`],
+      industryCritiques: [],
+      seoCritiques: [],
+      visualCritiques: [],
+      competitorCritiques: [],
+      companyName: new URL(websiteAnalysis.url).hostname,
+      summary: 'Analysis failed',
+      industry: null,
+      seo: null,
+      visual: null,
+      competitor: null
+    };
+  }
+
+  const { url, loadTime, data } = websiteAnalysis;
+  const tracker = options.aiTracker;
+  const textModel = options.textModel || 'claude-sonnet-4-5';
+
+  sendProgress({
+    type: 'step',
+    step: 'ai_analysis',
+    message: `⏳ Running AI analysis with dynamic prompt builder...`,
+    url
+  });
+
+  // Build dynamic, context-aware prompt using the new prompt builder
+  // Pass visualResults so the prompt knows if visual analysis is available
+  const basePrompt = buildAnalysisPrompt(data, industry, seoResults, url, loadTime, visualResults);
+  const contentSection = buildContentSection(data);
+
+  const prompt = `${basePrompt}
+
+${contentSection}`;
+
+
+
+  try {
+    const aiResult = await callAI({
+      model: textModel,
+      prompt: prompt,
+      systemPrompt: 'You are a website critique assistant. Return only valid JSON.'
+    });
+
+    console.log('AI result received:', aiResult ? 'Yes' : 'No', 'Has text:', aiResult?.text ? 'Yes' : 'No');
+
+    // Track the AI call
+    if (tracker && aiResult && aiResult.usage) {
+      tracker.trackCall(textModel, aiResult.usage.inputTokens, aiResult.usage.outputTokens, 'website_critique');
+    }
+
+    // Check if we got a valid response
+    if (!aiResult || !aiResult.text) {
+      console.error('AI returned empty or invalid response. aiResult:', JSON.stringify(aiResult, null, 2));
+      throw new Error('AI returned empty response');
+    }
+
+    let responseText = aiResult.text;
+
+    // Validate JSON response using json-validator
+    const validation = validateJSON(responseText, 'websiteAnalysis');
+
+    // Log validation result if debug mode
+    if (process.env.DEBUG_AI === 'true') {
+      console.log('\n' + formatValidationResult(validation));
+    }
+
+    let result;
+
+    if (validation.isValid) {
+      // Validation passed - use validated data
+      result = validation.data;
+      sendProgress({
+        type: 'info',
+        message: '✅ AI response validated successfully',
+        url
+      });
+
+      // LAYER 2: AI Quality Check (optional, cheap)
+      if (process.env.ENABLE_AI_QUALITY_CHECK === 'true') {
+        sendProgress({
+          type: 'step',
+          step: 'quality_check',
+          message: '🔍 Running AI quality check...',
+          url
+        });
+
+        const qualityCheck = await validateQualityWithAI(result, 'websiteAnalysis', {
+          model: process.env.QUALITY_CHECK_MODEL || 'gpt-4o-mini',
+          forceCheck: false // Only check if suspicious signals detected
+        });
+
+        if (qualityCheck.skipped) {
+          sendProgress({
+            type: 'info',
+            message: '✅ Quality check skipped (no issues detected)',
+            url
+          });
+        } else if (!qualityCheck.isQualityGood && qualityCheck.fixedVersion) {
+          // Use AI-corrected version
+          console.log('🔧 Using AI-corrected version');
+          console.log('Issues found:', qualityCheck.issues.join(', '));
+          result = qualityCheck.fixedVersion;
+          sendProgress({
+            type: 'warning',
+            message: `⚠️ AI fixed ${qualityCheck.issues.length} quality issues ($${qualityCheck.cost.toFixed(4)})`,
+            url
+          });
+        } else if (!qualityCheck.isQualityGood) {
+          // Quality issues but no fix available
+          console.warn('⚠️ Quality issues detected (no auto-fix):', qualityCheck.issues.join(', '));
+          sendProgress({
+            type: 'warning',
+            message: `⚠️ ${qualityCheck.issues.length} quality issues detected ($${qualityCheck.cost.toFixed(4)})`,
+            url
+          });
+        } else {
+          sendProgress({
+            type: 'info',
+            message: `✅ Quality check passed ($${qualityCheck.cost.toFixed(4)})`,
+            url
+          });
+        }
+      }
+    } else {
+      // Validation failed - try fallback parsing
+      console.warn('⚠️ AI response failed validation, attempting fallback parsing...');
+      console.warn('Validation errors:', validation.errors.join(', '));
+
+      // Try legacy parsing
+      responseText = responseText.replace(/```(?:json)?\s*([\s\S]*?)```/gi, '$1').trim();
+      result = parseJSONFromText(responseText);
+
+      // If parsing completely failed, try heuristic extraction
+      if (!result) {
+        const { extractPartialResult } = await import('./modules/ai-utils.js');
+        result = extractPartialResult(responseText);
+      }
+
+      // If we still have nothing, log the response and throw
+      if (!result) {
+        console.error('Failed to parse AI response. Raw text:', responseText.substring(0, 500));
+        throw new Error('Failed to parse AI JSON response after validation and fallback attempts');
+      }
+
+      sendProgress({
+        type: 'warning',
+        message: '⚠️ Used fallback parsing (AI response format was unexpected)',
+        url
+      });
+    }
+
+    // Ensure critiques is always an array (defensive)
+    if (!result.critiques || !Array.isArray(result.critiques)) {
+      if (typeof result.critiques === 'string') {
+        // Split string into array
+        result.critiques = result.critiques.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      } else {
+        result.critiques = [];
+      }
+    }
+
+    // Extract critique categories based on what modules were enabled
+    const finalResult = {
+      companyName: result.companyName || new URL(url).hostname,
+      critiques: result.critiques.slice(0, 3),
+      industryCritiques: industry ? result.critiques.slice(3, 5) : [],
+      seoCritiques: seoResults ? (industry ? result.critiques.slice(5, 7) : result.critiques.slice(3, 5)) : [],
+      visualCritiques: visualResults ? visualResults.critiques : [],
+      competitorCritiques: competitorResults ? competitorResults.critiques : [],
+      summary: result.summary || 'Website analysis complete',
+      industry: industry,
+      seo: seoResults,
+      visual: visualResults,
+      competitor: competitorResults
+    };
+
+    const critiqueCountMsg = `✓ Generated ${finalResult.critiques.length} general${finalResult.industryCritiques.length > 0 ? ` + ${finalResult.industryCritiques.length} industry` : ''}${finalResult.seoCritiques.length > 0 ? ` + ${finalResult.seoCritiques.length} SEO` : ''}${finalResult.visualCritiques.length > 0 ? ` + ${finalResult.visualCritiques.length} visual` : ''}${finalResult.competitorCritiques.length > 0 ? ` + ${finalResult.competitorCritiques.length} competitor` : ''} critiques`;
+
+    sendProgress({
+      type: 'step',
+      step: 'ai_complete',
+      message: critiqueCountMsg,
+      url
+    });
+
+    return finalResult;
+
+  } catch (error) {
+    console.error('AI critique generation error:', error);
+
+    const fallbackCritiques = [
+      `Page load time of ${(loadTime / 1000).toFixed(1)} seconds may be impacting bounce rate`,
+      data.metaDescription ? 'Meta description could be more compelling' : 'Missing meta description hurts SEO and click-through rates',
+      data.hasCTA ? 'Call-to-action buttons could be more prominent' : 'No clear call-to-action to drive conversions'
+    ];
+
+    const fallbackIndustryCritiques = industry ? [
+      `As a ${industry.specific} business, consider adding industry-specific trust signals`,
+      `Review industry best practices for ${industry.specific} to improve conversions`
+    ] : [];
+
+    const fallbackSeoCritiques = seoResults ? [
+      seoResults.sitemap.exists ? 'Consider submitting sitemap to Google Search Console' : 'Missing sitemap.xml - add one to help search engines discover pages',
+      seoResults.imageAltTags.percentage > 50 ? `${seoResults.imageAltTags.percentage}% of images missing alt tags - hurts accessibility and SEO` : 'Review structured data markup for better search visibility'
+    ] : [];
+
+    const fallbackVisualCritiques = visualResults ? visualResults.critiques : [];
+    const fallbackCompetitorCritiques = competitorResults ? competitorResults.critiques : [];
+
+    return {
+      companyName: new URL(url).hostname,
+      critiques: fallbackCritiques,
+      industryCritiques: fallbackIndustryCritiques,
+      seoCritiques: fallbackSeoCritiques,
+      visualCritiques: fallbackVisualCritiques,
+      competitorCritiques: fallbackCompetitorCritiques,
+      summary: 'Website has room for improvement in performance and conversion optimization',
+      industry: industry,
+      seo: seoResults,
+      visual: visualResults,
+      competitor: competitorResults
+    };
+  }
+}
+
+/**
+ * Generate personalized email from critique
+ */
+function generateEmail(url, critique, emailType = 'local') {
+  const { companyName, critiques, industryCritiques, seoCritiques, visualCritiques, competitorCritiques, summary, industry } = critique;
+  const domain = new URL(url).hostname;
+
+  // Simple templating helper - replace {{key}} with vars[key]
+  function renderTemplate(template, vars = {}) {
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+      return vars[key] !== undefined ? String(vars[key]) : '';
+    });
+  }
+
+  // Build industry-specific section if available
+  let industrySection = '';
+  if (industry && industryCritiques && industryCritiques.length > 0) {
+    industrySection = `\n\nINDUSTRY-SPECIFIC ISSUES (${industry.specific}):\n${industryCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
+  }
+
+  // Build SEO section if available
+  let seoSection = '';
+  if (seoCritiques && seoCritiques.length > 0) {
+    seoSection = `\n\nTECHNICAL SEO ISSUES:\n${seoCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
+  }
+
+  // Build visual design section if available
+  let visualSection = '';
+  if (visualCritiques && visualCritiques.length > 0) {
+    visualSection = `\n\nVISUAL DESIGN ISSUES:\n${visualCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
+  }
+
+  // Build competitive analysis section if available
+  let competitorSection = '';
+  if (competitorCritiques && competitorCritiques.length > 0) {
+    competitorSection = `\n\nCOMPETITIVE ANALYSIS:\n${competitorCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
+  }
+
+  const issueCount = critiques.length + (industryCritiques?.length || 0) + (seoCritiques?.length || 0) + (visualCritiques?.length || 0) + (competitorCritiques?.length || 0);
+
+  // Default templates (keep concise and templated)
+  const templates = {
+    local: {
+      subject: `{{issueCount}} quick improvements for {{domain}}`,
+      body: `Hi {{firstName}},
+
+{{opening}}
+
+I took a quick look at {{domain}} and noticed a few issues worth addressing:
+
+GENERAL ISSUES:
+1. {{critique1}}
+2. {{critique2}}
+3. {{critique3}}{{industrySection}}{{seoSection}}{{visualSection}}{{competitorSection}}
+
+{{summary}} These are all fixable, and we've helped similar organizations make these exact improvements.
+
+Would you be open to a short 15-minute call to review a few concrete fixes? No obligation—just useful feedback.
+
+Best,
+{{senderName}}
+Co-Founder, Maksant
+{{senderWebsite}}
+{{senderPhone}}`
+    },
+    national: {
+      subject: `Your website analysis — {{domain}}`,
+      body: `Hi {{firstName}},
+
+{{opening}}
+
+I analyzed {{domain}} and found a few areas for quick improvement:
+
+GENERAL ISSUES:
+1. {{critique1}}
+2. {{critique2}}
+3. {{critique3}}{{industrySection}}{{seoSection}}{{visualSection}}{{competitorSection}}
+
+We've helped organizations like yours improve load times, conversions, and search visibility.
+
+Would you be open to a 15-minute call to discuss low-effort wins we could implement?
+
+Best regards,
+{{senderName}}
+Maksant
+{{senderWebsite}}`
+    }
+  };
+
+  // Variables for rendering
+  const vars = {
+    issueCount,
+    domain,
+    firstName: '{{firstName}}', // Proper placeholder format
+    opening: (critique.humanizedEmail && critique.humanizedEmail.body)
+      ? // Use the AI-provided body as a short opening if it's short; otherwise fall back to a one-line hook
+        (critique.humanizedEmail.body.length < 300 ? critique.humanizedEmail.body.split('\n')[0] : '')
+      : '',
+    critique1: critiques[0] || '',
+    critique2: critiques[1] || '',
+    critique3: critiques[2] || '',
+    industrySection: industrySection ? `\n\nINDUSTRY-SPECIFIC ISSUES (${industry ? industry.specific : ''}):\n${industryCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
+    seoSection: seoSection ? `\n\nTECHNICAL SEO ISSUES:\n${seoCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
+    visualSection: visualSection ? `\n\nVISUAL DESIGN ISSUES:\n${visualCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
+    competitorSection: competitorSection ? `\n\nCOMPETITIVE ANALYSIS:\n${competitorCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
+    summary: summary || '',
+    senderName: '[Your Name]',
+    senderWebsite: 'https://maksant.com'
+  };
+
+  const chosenTemplate = (emailType === 'local') ? templates.local : templates.national;
+
+  // Allow subject override from AI if provided (still keep templated default)
+  const subject = (critique.humanizedEmail && critique.humanizedEmail.subject)
+    ? critique.humanizedEmail.subject
+    : renderTemplate(chosenTemplate.subject, vars);
+
+  // Render body template and fall back to AI-provided body if template yields empty
+  let body = renderTemplate(chosenTemplate.body, vars);
+
+  // If AI provided a full humanized email and the template feels insufficient, we can append or prefer it.
+  if (critique.humanizedEmail && critique.humanizedEmail.body) {
+    // If AI body is longer than template opening, append it after the template's opening line to keep template structure
+    const aiBody = critique.humanizedEmail.body;
+    if (aiBody.length > 120) {
+      // Insert AI body after the opening paragraph if present
+      const openingLine = vars.opening || '';
+      if (openingLine) {
+        body = body.replace(openingLine, openingLine + '\n\n' + aiBody);
+      } else {
+        // Append AI body at the top
+        body = aiBody + '\n\n' + body;
+      }
+    }
+  }
+
+  return { subject, body };
+}
+
+/**
+ * Analyze multiple websites one at a time with progress updates
+ */
 export async function analyzeWebsites(urls, options, sendProgress) {
   const browser = await chromium.launch({
     headless: true
