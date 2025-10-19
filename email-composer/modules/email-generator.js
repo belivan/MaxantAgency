@@ -471,6 +471,8 @@ async function callClaude(model, prompt) {
   const modelMap = {
     'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
     'claude-haiku-4-5': 'claude-haiku-4-5-20251001',
+    'claude-haiku-3-5': 'claude-3-5-haiku-20241022', // CHEAP!
+    'haiku': 'claude-3-5-haiku-20241022', // Alias for convenience
   };
 
   const response = await anthropic.messages.create({
@@ -483,7 +485,29 @@ async function callClaude(model, prompt) {
     }],
   });
 
+  // Log cost for transparency
+  const usage = response.usage;
+  const cost = calculateClaudeCost(model, usage);
+  console.log(`   💰 Cost: $${cost.toFixed(4)} (${usage.input_tokens} in + ${usage.output_tokens} out)`);
+
   return response.content[0].text;
+}
+
+/**
+ * Calculate Claude API cost
+ */
+function calculateClaudeCost(model, usage) {
+  const pricing = {
+    'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
+    'claude-haiku-4-5': { input: 1.00, output: 5.00 },
+    'claude-haiku-3-5': { input: 0.25, output: 1.25 },
+    'haiku': { input: 0.25, output: 1.25 },
+  };
+
+  const rates = pricing[model] || pricing['haiku'];
+  const inputCost = (usage.input_tokens / 1_000_000) * rates.input;
+  const outputCost = (usage.output_tokens / 1_000_000) * rates.output;
+  return inputCost + outputCost;
 }
 
 /**
@@ -500,7 +524,28 @@ async function callOpenAI(model, prompt) {
     max_tokens: 2000,
   });
 
+  // Log cost for transparency
+  const usage = response.usage;
+  const cost = calculateOpenAICost(model, usage);
+  console.log(`   💰 Cost: $${cost.toFixed(4)} (${usage.prompt_tokens} in + ${usage.completion_tokens} out)`);
+
   return response.choices[0].message.content;
+}
+
+/**
+ * Calculate OpenAI API cost
+ */
+function calculateOpenAICost(model, usage) {
+  const pricing = {
+    'gpt-4o': { input: 2.50, output: 10.00 },
+    'gpt-4o-mini': { input: 0.15, output: 0.60 }, // CHEAP!
+    'gpt-4-turbo': { input: 10.00, output: 30.00 },
+  };
+
+  const rates = pricing[model] || pricing['gpt-4o-mini'];
+  const inputCost = (usage.prompt_tokens / 1_000_000) * rates.input;
+  const outputCost = (usage.completion_tokens / 1_000_000) * rates.output;
+  return inputCost + outputCost;
 }
 
 /**

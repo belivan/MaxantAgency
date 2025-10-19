@@ -11,14 +11,15 @@ import { analyzeVisualDesign, formatVisualResultsForAI } from './modules/visual.
 import { discoverAndAnalyzeCompetitors } from './modules/competitor.js';
 import { buildAnalysisPrompt, buildContentSection } from './modules/prompt-builder.js';
 import { parseJSONFromText } from './modules/ai-utils.js';
-import { createDraft } from './modules/drafts-gmail.js';
 import { extractFromPage, findBestContact } from './modules/contact.js';
-import { sanitizeHumanizedEmail, replacePlaceholders } from './modules/email-sanitizer.js';
 import { callAI, MODELS } from './ai-providers.js';
 import { validateJSON, formatValidationResult, validateQualityWithAI } from './modules/json-validator.js';
 import { extractWithGrok, getBestContactEmail, getBestContactPerson, getMostRecentPost } from './modules/grok-extractor.js';
-import { saveLeadToSupabase } from './modules/supabase-client.js';
+import { saveLeadToSupabase, getProspectsForAnalysis, linkProspectToLead } from './modules/supabase-client.js';
 import { calculateTotalCost, formatCost, formatTime } from './modules/cost-tracker.js';
+import { enrichSocialProfiles, analyzeSocialPresence, mergeSocialProfiles } from './modules/social-scraper.js';
+import { extractSocialProfiles } from './modules/social-finder.js';
+import { analyzeContentInsights } from './modules/content-analyzer.js';
 
 dotenv.config();
 
@@ -29,9 +30,55 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-// [REMOVED] generateEmail function - email generation moved to separate app
+/**
+ * AI Call Tracker - tracks usage and estimates costs
+ */
+class AICallTracker {
+  constructor() {
+    this.calls = [];
+    this.totalInputTokens = 0;
+    this.totalOutputTokens = 0;
+  }
 
+  trackCall(model, inputTokens, outputTokens, purpose) {
+    this.calls.push({ model, inputTokens, outputTokens, purpose, timestamp: Date.now() });
+    this.totalInputTokens += inputTokens || 0;
+    this.totalOutputTokens += outputTokens || 0;
+  }
 
+  estimateCost(model, estimatedInputTokens = 1000, estimatedOutputTokens = 500) {
+    const modelConfig = MODELS[model] || MODELS['gpt-5-mini'];
+    const inputCost = (estimatedInputTokens / 1_000_000) * modelConfig.inputCost;
+    const outputCost = (estimatedOutputTokens / 1_000_000) * modelConfig.outputCost;
+    return inputCost + outputCost;
+  }
+
+  getTotalCost() {
+    let total = 0;
+    for (const call of this.calls) {
+      const modelConfig = MODELS[call.model] || MODELS['gpt-5-mini'];
+      const inputCost = (call.inputTokens / 1_000_000) * modelConfig.inputCost;
+      const outputCost = (call.outputTokens / 1_000_000) * modelConfig.outputCost;
+      total += inputCost + outputCost;
+    }
+    return total;
+  }
+
+  getSummary() {
+    return {
+      totalCalls: this.calls.length,
+      totalInputTokens: this.totalInputTokens,
+      totalOutputTokens: this.totalOutputTokens,
+      estimatedCost: this.getTotalCost(),
+      breakdown: this.calls
+    };
+  }
+}
+
+/**
+ * Save analysis results to a structured folder
+ * Creates: analysis-results/{domain}/{timestamp}/
+ */
 async function saveAnalysisResults(result) {
   try {
     // Extract domain from URL (e.g., "maksant.com")
@@ -258,7 +305,10 @@ ${result.emailQA.suggestions.map((suggestion, i) => `   ${i + 1}. ${suggestion}`
         console.log('⚠️ Could not copy screenshot:', err.message);
       }
     }
-    
+
+    // Supabase save removed from here - now handled in main analyzeWebsites function (line 1364)
+    // This avoids duplicate saves and ensures the full result object with all data is saved
+
     console.log(`\n💾 Analysis saved to: ${folderPath}`);
     console.log(`   📁 Folder: lead-${leadGrade}/${domain}/${timestamp}`);
     console.log(`   🎯 Lead Grade: ${leadGrade} | Website Grade: ${websiteGrade}`);
@@ -269,53 +319,114 @@ ${result.emailQA.suggestions.map((suggestion, i) => `   ${i + 1}. ${suggestion}`
     return null;
   }
 }
-function extractContactInfo(websiteData) {
-  const bodyText = websiteData.bodyText || '';
-  const title = websiteData.title || '';
-  
-  // Try to find "About" or "Team" section
-  const aboutMatch = bodyText.match(/(?:About|Team|Meet|Founder|Owner|CEO|President)[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
-  
-  // Try to find email addresses (often near names)
-  const emailMatch = bodyText.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\s*[@\-\s]*([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-  
-  // Try to extract from title (often "FirstName LastName | Company")
-  const titleMatch = title.match(/^([A-Z][a-z]+)(?:\s+[A-Z][a-z]+)?\s*[|\-]/);
-  
-  // Try common patterns like "Contact John Smith" or "Email: john.smith@..."
-  const contactMatch = bodyText.match(/(?:Contact|Email|Call|Reach)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
-  
-  let fullName = null;
-  let firstName = null;
-  
-  // Priority: aboutMatch > emailMatch > titleMatch > contactMatch
-  if (aboutMatch) {
-    fullName = aboutMatch[1].trim();
-  } else if (emailMatch) {
-    fullName = emailMatch[1].trim();
-  } else if (titleMatch) {
-    fullName = titleMatch[1].trim();
-  } else if (contactMatch) {
-    fullName = contactMatch[1].trim();
-  }
-  
-  // Extract first name
-  if (fullName) {
-    firstName = fullName.split(/\s+/)[0];
-  }
-  
-  // Extract email if found
-  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-  const email = bodyText.match(emailPattern)?.[0] || null;
-  
-  return {
-    firstName: firstName || null,
-    fullName: fullName || null,
-    email: email || null
-  };
-}
+
 /**
- * Analyze multiple websites one at a time with progress updates
+ * Format critiques as human-readable text
+ */
+function formatCritiquesAsText(result) {
+  let text = `WEBSITE ANALYSIS RESULTS\n`;
+  text += `${'='.repeat(80)}\n\n`;
+  text += `Company: ${result.companyName}\n`;
+  text += `URL: ${result.url}\n`;
+  text += `Industry: ${result.industry?.specific || 'Unknown'}\n`;
+  text += `Analysis Date: ${new Date().toLocaleString()}\n`;
+  text += `Pages Analyzed: ${result.pagesAnalyzed}\n`;
+  text += `Modules Used: ${result.modulesUsed.join(', ')}\n`;
+  text += `\n${'='.repeat(80)}\n\n`;
+  
+  // General Issues
+  if (result.critiques.basic && result.critiques.basic.length > 0) {
+    text += `GENERAL ISSUES (${result.critiques.basic.length})\n`;
+    text += `${'-'.repeat(80)}\n`;
+    result.critiques.basic.forEach((critique, i) => {
+      text += `${i + 1}. ${critique}\n\n`;
+    });
+  }
+  
+  // Industry-Specific Issues
+  if (result.critiques.industry && result.critiques.industry.length > 0) {
+    text += `INDUSTRY-SPECIFIC ISSUES (${result.critiques.industry.length})\n`;
+    text += `${'-'.repeat(80)}\n`;
+    result.critiques.industry.forEach((critique, i) => {
+      text += `${i + 1}. ${critique}\n\n`;
+    });
+  }
+  
+  // SEO Issues
+  if (result.critiques.seo && result.critiques.seo.length > 0) {
+    text += `SEO ISSUES (${result.critiques.seo.length})\n`;
+    text += `${'-'.repeat(80)}\n`;
+    result.critiques.seo.forEach((critique, i) => {
+      text += `${i + 1}. ${critique}\n\n`;
+    });
+  }
+  
+  // Visual Issues
+  if (result.critiques.visual && result.critiques.visual.length > 0) {
+    text += `VISUAL DESIGN ISSUES (${result.critiques.visual.length})\n`;
+    text += `${'-'.repeat(80)}\n`;
+    result.critiques.visual.forEach((critique, i) => {
+      text += `${i + 1}. ${critique}\n\n`;
+    });
+  }
+  
+  // Competitor Analysis
+  if (result.critiques.competitor && result.critiques.competitor.length > 0) {
+    text += `COMPETITOR ANALYSIS (${result.critiques.competitor.length})\n`;
+    text += `${'-'.repeat(80)}\n`;
+    result.critiques.competitor.forEach((critique, i) => {
+      text += `${i + 1}. ${critique}\n\n`;
+    });
+  }
+  
+  // Email
+  if (result.email) {
+    text += `${'='.repeat(80)}\n\n`;
+    text += `OUTREACH EMAIL\n`;
+    text += `${'-'.repeat(80)}\n`;
+    text += `Subject: ${result.email.subject}\n\n`;
+    text += `${result.email.body}\n`;
+  }
+  
+  return text;
+}
+
+/**
+ * Extract contact information from website content
+ * Returns { firstName, fullName, email } or defaults
+ */
+
+/**
+ * Optionally humanize a templated email with one AI call
+ * Returns { subject, body } or the original email if humanization fails
+ */
+
+/**
+ * Generate critique reasoning for the user to understand WHY each critique was made
+ * This helps the user review and customize the email with full context
+ * Uses a cheap model (GPT-4o-mini or Haiku) to save costs
+ */
+
+/**
+ * QA Review Agent - Determines LEAD QUALITY (separate from website quality)
+ *
+ * TWO TYPES OF GRADES:
+ * - Website Quality (A-F): How much data we extracted (email, phone, services, etc.)
+ * - Lead Quality (A-F): How good the outreach email is ← THIS AGENT DECIDES
+ *
+ * This agent has the FINAL SAY on whether a lead is worth contacting.
+ * Even if website has all data (Website Grade A), if email is generic/fake/bad → Lead Grade F
+ *
+ * Uses a cheap model (GPT-4o-mini or Haiku) to save costs
+ *
+ * @param {Object} email - The generated email {subject, body}
+ * @param {Object} context - Context about the analysis {modulesUsed, hasVisualAnalysis, grokData, companyName}
+ * @param {Object} options - Options {aiTracker}
+ * @returns {Object} - QA result {leadGrade, passed, issues[], warnings[], suggestions[]}
+ */
+
+/**
+ * Analyze a single website with progress updates
  */
 async function analyzeWebsite(url, browser, sendProgress) {
   console.log(`Analyzing: ${url}`);
@@ -338,11 +449,9 @@ async function analyzeWebsite(url, browser, sendProgress) {
     // Navigate to the page
     const startTime = Date.now();
     await page.goto(url, {
-      waitUntil: 'domcontentloaded',
-      timeout: 60000
+      waitUntil: 'networkidle',
+      timeout: 30000
     });
-    // Wait a bit for dynamic content to load
-    await page.waitForTimeout(2000);
     const loadTime = Date.now() - startTime;
 
     sendProgress({
@@ -869,141 +978,6 @@ ${contentSection}`;
 /**
  * Generate personalized email from critique
  */
-function generateEmail(url, critique, emailType = 'local') {
-  const { companyName, critiques, industryCritiques, seoCritiques, visualCritiques, competitorCritiques, summary, industry } = critique;
-  const domain = new URL(url).hostname;
-
-  // Simple templating helper - replace {{key}} with vars[key]
-  function renderTemplate(template, vars = {}) {
-    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
-      return vars[key] !== undefined ? String(vars[key]) : '';
-    });
-  }
-
-  // Build industry-specific section if available
-  let industrySection = '';
-  if (industry && industryCritiques && industryCritiques.length > 0) {
-    industrySection = `\n\nINDUSTRY-SPECIFIC ISSUES (${industry.specific}):\n${industryCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
-  }
-
-  // Build SEO section if available
-  let seoSection = '';
-  if (seoCritiques && seoCritiques.length > 0) {
-    seoSection = `\n\nTECHNICAL SEO ISSUES:\n${seoCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
-  }
-
-  // Build visual design section if available
-  let visualSection = '';
-  if (visualCritiques && visualCritiques.length > 0) {
-    visualSection = `\n\nVISUAL DESIGN ISSUES:\n${visualCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
-  }
-
-  // Build competitive analysis section if available
-  let competitorSection = '';
-  if (competitorCritiques && competitorCritiques.length > 0) {
-    competitorSection = `\n\nCOMPETITIVE ANALYSIS:\n${competitorCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n`;
-  }
-
-  const issueCount = critiques.length + (industryCritiques?.length || 0) + (seoCritiques?.length || 0) + (visualCritiques?.length || 0) + (competitorCritiques?.length || 0);
-
-  // Default templates (keep concise and templated)
-  const templates = {
-    local: {
-      subject: `{{issueCount}} quick improvements for {{domain}}`,
-      body: `Hi {{firstName}},
-
-{{opening}}
-
-I took a quick look at {{domain}} and noticed a few issues worth addressing:
-
-GENERAL ISSUES:
-1. {{critique1}}
-2. {{critique2}}
-3. {{critique3}}{{industrySection}}{{seoSection}}{{visualSection}}{{competitorSection}}
-
-{{summary}} These are all fixable, and we've helped similar organizations make these exact improvements.
-
-Would you be open to a short 15-minute call to review a few concrete fixes? No obligation—just useful feedback.
-
-Best,
-{{senderName}}
-Co-Founder, Maksant
-{{senderWebsite}}
-{{senderPhone}}`
-    },
-    national: {
-      subject: `Your website analysis — {{domain}}`,
-      body: `Hi {{firstName}},
-
-{{opening}}
-
-I analyzed {{domain}} and found a few areas for quick improvement:
-
-GENERAL ISSUES:
-1. {{critique1}}
-2. {{critique2}}
-3. {{critique3}}{{industrySection}}{{seoSection}}{{visualSection}}{{competitorSection}}
-
-We've helped organizations like yours improve load times, conversions, and search visibility.
-
-Would you be open to a 15-minute call to discuss low-effort wins we could implement?
-
-Best regards,
-{{senderName}}
-Maksant
-{{senderWebsite}}`
-    }
-  };
-
-  // Variables for rendering
-  const vars = {
-    issueCount,
-    domain,
-    firstName: '{{firstName}}', // Proper placeholder format
-    opening: (critique.humanizedEmail && critique.humanizedEmail.body)
-      ? // Use the AI-provided body as a short opening if it's short; otherwise fall back to a one-line hook
-        (critique.humanizedEmail.body.length < 300 ? critique.humanizedEmail.body.split('\n')[0] : '')
-      : '',
-    critique1: critiques[0] || '',
-    critique2: critiques[1] || '',
-    critique3: critiques[2] || '',
-    industrySection: industrySection ? `\n\nINDUSTRY-SPECIFIC ISSUES (${industry ? industry.specific : ''}):\n${industryCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
-    seoSection: seoSection ? `\n\nTECHNICAL SEO ISSUES:\n${seoCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
-    visualSection: visualSection ? `\n\nVISUAL DESIGN ISSUES:\n${visualCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
-    competitorSection: competitorSection ? `\n\nCOMPETITIVE ANALYSIS:\n${competitorCritiques.map((c, i) => `${i + 1}. ${c}`).join('\n')}` : '',
-    summary: summary || '',
-    senderName: '[Your Name]',
-    senderWebsite: 'https://maksant.com'
-  };
-
-  const chosenTemplate = (emailType === 'local') ? templates.local : templates.national;
-
-  // Allow subject override from AI if provided (still keep templated default)
-  const subject = (critique.humanizedEmail && critique.humanizedEmail.subject)
-    ? critique.humanizedEmail.subject
-    : renderTemplate(chosenTemplate.subject, vars);
-
-  // Render body template and fall back to AI-provided body if template yields empty
-  let body = renderTemplate(chosenTemplate.body, vars);
-
-  // If AI provided a full humanized email and the template feels insufficient, we can append or prefer it.
-  if (critique.humanizedEmail && critique.humanizedEmail.body) {
-    // If AI body is longer than template opening, append it after the template's opening line to keep template structure
-    const aiBody = critique.humanizedEmail.body;
-    if (aiBody.length > 120) {
-      // Insert AI body after the opening paragraph if present
-      const openingLine = vars.opening || '';
-      if (openingLine) {
-        body = body.replace(openingLine, openingLine + '\n\n' + aiBody);
-      } else {
-        // Append AI body at the top
-        body = aiBody + '\n\n' + body;
-      }
-    }
-  }
-
-  return { subject, body };
-}
 
 /**
  * Analyze multiple websites one at a time with progress updates
@@ -1035,15 +1009,18 @@ export async function analyzeWebsites(urls, options, sendProgress) {
   const senderPhoneEnv = process.env.SENDER_PHONE || '';
   const senderWebsiteEnv = process.env.SENDER_WEBSITE || '';
 
+  // Create AI call tracker for cost estimation
+  const aiTracker = new AICallTracker();
+  
   // Estimate total AI calls
   const estimatedCallsPerSite = 1 + // critique generation
     (options.modules?.industry ? 0.5 : 0) + // industry detection (sometimes cached)
     (options.modules?.visual ? 1 : 0) + // visual analysis
     (options.modules?.competitor ? 2 : 0) + // competitor discovery + analysis
     (!options.skipHumanize ? 1 : 0); // email humanization
-
+  
   const estimatedTotalCalls = Math.ceil(urls.length * estimatedCallsPerSite);
-  const estimatedCostPerCall = 0.01; // Approximate cost per AI call
+  const estimatedCostPerCall = aiTracker.estimateCost(options.textModel || 'gpt-5-mini');
   const estimatedTotalCost = estimatedTotalCalls * estimatedCostPerCall;
   
   // Send cost estimate before starting
@@ -1083,29 +1060,70 @@ export async function analyzeWebsites(urls, options, sendProgress) {
         const page = await context.newPage();
         const homepageAnalysis = await analyzeWebsite(url, browser, sendProgress);
 
-        // If homepage analysis failed, skip this site and continue with others
+        // If homepage analysis failed, check if we can do social outreach instead
         if (homepageAnalysis.error) {
+          console.error(`❌ Website failed ${url}: ${homepageAnalysis.error}`);
           await page.close();
           await context.close();
 
-          sendProgress({
-            type: 'error',
-            url,
-            message: `❌ Failed to analyze ${url}: ${homepageAnalysis.error}`
-          });
+          // NEW: Try to save partial lead with social profiles for social outreach
+          // This recovers value from failed website analyses!
+          let savedPartialLead = false;
 
+          try {
+            // Determine website error type
+            const errorType = homepageAnalysis.error.includes('SSL') ? 'ssl_error' :
+                             homepageAnalysis.error.includes('Timeout') ? 'timeout' :
+                             homepageAnalysis.error.includes('DNS') ? 'dns_error' : 'failed';
+
+            // Build minimal lead data
+            const partialLeadData = {
+              url,
+              website_grade: 'F',
+              website_score: 0,
+              website_status: errorType,
+              website_error: homepageAnalysis.error.substring(0, 500), // Limit error length
+              requires_social_outreach: false, // Will be true if we have social profiles
+              analyzed_at: new Date().toISOString()
+            };
+
+            // Save partial lead (will be updated by saveLeadToSupabase if it has company data)
+            await saveLeadToSupabase(partialLeadData);
+            savedPartialLead = true;
+
+            sendProgress({
+              type: 'partial_lead_saved',
+              url,
+              message: `💾 Saved partial lead (website failed)`,
+              websiteStatus: errorType
+            });
+
+          } catch (saveError) {
+            console.error(`Failed to save partial lead: ${saveError.message}`);
+          }
+
+          // Add error result and continue
           results.push({
             url,
             error: homepageAnalysis.error,
-            status: 'failed'
+            companyName: null,
+            skipped: true,
+            partialLeadSaved: savedPartialLead
           });
 
-          continue; // Skip to next URL
+          sendProgress({
+            type: 'site_error',
+            url,
+            error: homepageAnalysis.error,
+            message: `❌ Skipped ${url} (error: ${homepageAnalysis.error})`
+          });
+
+          continue; // Skip to next site
         }
 
         // Step 2: Discover additional pages based on depth tier
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(2000); // Wait for dynamic content
         const pagesToAnalyze = await discoverPages(url, depthTier, page, sendProgress);
         await page.close();
         await context.close();
@@ -1246,12 +1264,58 @@ export async function analyzeWebsites(urls, options, sendProgress) {
         }
 
         // Step 10: Generate critique (with all module context if available)
-        const critique = await generateCritique(combinedAnalysis, industry, seoResults, visualResults, competitorResults, sendProgress, options);
+        const critique = await generateCritique(combinedAnalysis, industry, seoResults, visualResults, competitorResults, sendProgress, { ...options, aiTracker });
 
-        // Step 10: Generate email
-        // [REMOVED] Email generation - moved to separate email app
-        // Extract contact info from the main website analysis (for results)
-        const contactInfo = extractContactInfo(combinedAnalysis);
+        // Step 10.5: Analyze blog/news content for personalization insights (optional)
+        let contentInsights = null;
+        if (options.analyzeContent !== false && homepageAnalysis.grokData) {
+          try {
+            sendProgress({
+              type: 'step',
+              step: 'analyzing_content',
+              message: `🤖 Analyzing blog/news content for insights...`,
+              url
+            });
+
+            contentInsights = await analyzeContentInsights(
+              homepageAnalysis.grokData,
+              critique.companyName || 'Unknown',
+              industry?.specific || 'Unknown',
+              options.contentModel || 'grok-4-fast' // Cheapest model
+            );
+
+            sendProgress({
+              type: 'step',
+              step: 'content_analyzed',
+              message: `✓ Content insights extracted`,
+              url
+            });
+
+          } catch (e) {
+            console.error('Content analysis failed:', e.message);
+            contentInsights = { analyzed: false, error: e.message };
+          }
+        }
+
+        // Step 11: Generate email (optional - skip if options.skipEmail === true)
+        let email = null;
+        let qaReview = null;
+
+        if (!options.skipEmail) {
+          sendProgress({
+            type: 'step',
+            step: 'generating_email',
+            message: `⏳ Generating email template...`,
+            url
+          });
+
+          // Note: Email generation has been removed and moved to email-composer service
+          // This section is skipped when options.skipEmail === true
+          console.log('⏭️  Email generation skipped (handled by email-composer service)');
+        }
+
+        // Gmail Drafts integration removed (email generation moved to email-composer)
+        let draftResult = null;
 
         // Add result
         const modulesUsed = ['basic'];
@@ -1284,9 +1348,9 @@ export async function analyzeWebsites(urls, options, sendProgress) {
           seoAnalysis: !!seoResults,
           visualAnalysis: visualResults ? visualResults.screenshots?.length || 0 : 0,
           competitorAnalysis: !!competitorResults,
-          // emailWriting removed
-          // critiqueReasoning removed
-          // qaReview removed
+          emailWriting: true,    // Always runs
+          critiqueReasoning: true,  // Always runs
+          qaReview: true,        // Always runs
 
           pagesAnalyzed: allAnalyses.length,
         };
@@ -1297,8 +1361,9 @@ export async function analyzeWebsites(urls, options, sendProgress) {
           url,
           companyName: critique.companyName,
           contact: bestContact || null,
-          extractedContact: contactInfo, // Add extracted contact info
+          extractedContact: homepageAnalysis.contact || null, // Contact info from homepage analysis
           grokData: homepageAnalysis.grokData || null, // NEW: Include full Grok extraction data
+          contentInsights: contentInsights || null, // NEW: Blog/news content analysis for personalization
           critiques: {
             basic: critique.critiques,
             industry: critique.industryCritiques || [],
@@ -1311,7 +1376,9 @@ export async function analyzeWebsites(urls, options, sendProgress) {
           visual: critique.visual,
           competitor: critique.competitor,
           summary: critique.summary,
-          // [REMOVED] email and draft fields - moved to separate email app
+          email: email,
+          emailQA: qaReview || null, // QA review of email quality
+          draft: draftResult,
           loadTime: homepageAnalysis.loadTime,
           screenshot: homepageAnalysis.screenshotPath,
           pagesAnalyzed: allAnalyses.length,
@@ -1323,7 +1390,32 @@ export async function analyzeWebsites(urls, options, sendProgress) {
           error: null
         };
 
-        // [REMOVED] Critique reasoning generation - moved to separate email app
+        // Generate critique reasoning (using cheap model) for user reference
+        // This must happen AFTER result object is created
+        if (!options.skipHumanize && email) {
+          try {
+            const personalizationContext = {
+              grokData: homepageAnalysis.grokData,
+              industry: industry,
+              hasVisualAnalysis: !!visualResults,
+              hasSEOAnalysis: !!seoResults,
+              hasCompetitorAnalysis: !!competitorResults,
+              pagesAnalyzed: allAnalyses.length,
+              depthTier: depthTier,
+              qualityScore: qualityScore,
+              qualityGrade: qualityGrade
+            };
+
+            const reasoning = await generateCritiqueReasoning(email, critique, personalizationContext, {
+              ...options,
+              aiTracker
+            });
+            result.critiqueReasoning = reasoning;
+          } catch (e) {
+            console.error('Critique reasoning generation failed:', e.message);
+            result.critiqueReasoning = 'Reasoning generation failed';
+          }
+        }
 
         results.push(result);
 
@@ -1356,35 +1448,21 @@ export async function analyzeWebsites(urls, options, sendProgress) {
         });
 
       } catch (siteError) {
-        // If a site fails, log it and continue with next site
-        console.error(`Site analysis error for ${url}:`, siteError.message);
-
-        sendProgress({
-          type: 'error',
-          url,
-          message: `❌ Failed to analyze ${url}: ${siteError.message}`
-        });
-
-        results.push({
-          url,
-          error: siteError.message,
-          status: 'failed'
-        });
-
-        // Continue to next site instead of stopping everything
-        continue;
+        // If any site fails, stop everything
+        await browser.close();
+        throw siteError;
       }
     }
 
     // Send final cost summary
-    // Cost summary handled by calculateTotalCost
+    const costSummary = aiTracker.getSummary();
     sendProgress({
       type: 'cost_summary',
-      totalCalls: estimatedTotalCalls,
-      totalCost: estimatedTotalCost,
-      totalInputTokens: 0,
-      totalOutputTokens: 0,
-      message: `✅ Analysis complete: ${estimatedTotalCalls} estimated AI calls, $${estimatedTotalCost.toFixed(4)} estimated cost`
+      totalCalls: costSummary.totalCalls,
+      totalCost: costSummary.estimatedCost,
+      totalInputTokens: costSummary.totalInputTokens,
+      totalOutputTokens: costSummary.totalOutputTokens,
+      message: `✅ Analysis complete: ${costSummary.totalCalls} AI calls, $${costSummary.estimatedCost.toFixed(4)} total cost`
     });
 
     await browser.close();
@@ -1436,4 +1514,243 @@ function combineMultiPageAnalyses(analyses) {
   };
 
   return combined;
+}
+
+/**
+ * Analyze prospects from Supabase with social media enrichment
+ * Fetches prospects → analyzes websites → scrapes social media → saves to leads table
+ *
+ * @param {Object} options - Analysis options
+ * @param {number} options.limit - Max number of prospects to fetch (default: 10)
+ * @param {string} options.industry - Filter by industry (optional)
+ * @param {string} options.city - Filter by city (optional)
+ * @param {string} options.runId - Filter by run_id (optional)
+ * @param {boolean} options.enrichSocial - Whether to scrape social media (default: true)
+ * @param {Function} sendProgress - Progress callback function
+ * @returns {Promise<Object>} Analysis results
+ */
+export async function analyzeProspectsFromSupabase(options = {}, sendProgress = () => {}) {
+  console.log('\n🔍 Starting prospect-driven analysis from Supabase...\n');
+
+  try {
+    // Fetch prospects from Supabase
+    sendProgress({
+      type: 'fetching_prospects',
+      message: '📥 Fetching prospects from Supabase...'
+    });
+
+    const prospects = await getProspectsForAnalysis({
+      limit: options.limit || 10,
+      status: 'pending_analysis',
+      industry: options.industry || null,
+      city: options.city || null,
+      runId: options.runId || null
+    });
+
+    if (prospects.length === 0) {
+      console.log('ℹ️  No prospects found for analysis');
+      return {
+        success: true,
+        prospectsFound: 0,
+        analyzed: 0,
+        results: []
+      };
+    }
+
+    console.log(`✅ Found ${prospects.length} prospects to analyze`);
+
+    sendProgress({
+      type: 'prospects_found',
+      count: prospects.length,
+      message: `✅ Found ${prospects.length} prospects to analyze`
+    });
+
+    // Extract URLs from prospects
+    const urls = prospects.map(p => p.website);
+
+    // Analyze websites using existing analyzeWebsites function
+    const analysisResults = await analyzeWebsites(urls, {
+      ...options,
+      // Disable email generation (moved to separate app)
+      skipEmail: true,
+      skipQA: true,
+      // Add metadata for tracking
+      metadata: {
+        sourceApp: 'website-audit-tool',
+        source: 'prospects-table'
+      }
+    }, sendProgress);
+
+    // Enrich with social media data and link prospects to leads
+    const browser = await chromium.launch({ headless: true });
+
+    for (let i = 0; i < analysisResults.length; i++) {
+      const result = analysisResults[i];
+      const prospect = prospects[i];
+
+      if (result.error) {
+        console.log(`⚠️  Website failed for ${result.url}: ${result.error}`);
+
+        // NEW: Even if website failed, try to save social profiles for social outreach!
+        if (prospect.social_profiles) {
+          try {
+            console.log(`💡 Website broken, but prospect has social profiles → Flagging for social outreach`);
+
+            // Update the partial lead with prospect data and social profiles
+            await saveLeadToSupabase({
+              url: result.url,
+              company_name: prospect.company_name || 'Unknown',
+              industry: prospect.industry,
+              location: prospect.city || null,
+              website_grade: 'F',
+              website_score: 0,
+              website_status: result.error.includes('SSL') ? 'ssl_error' :
+                             result.error.includes('Timeout') ? 'timeout' :
+                             result.error.includes('DNS') ? 'dns_error' : 'failed',
+              website_error: result.error.substring(0, 500),
+              requires_social_outreach: true, // ← FLAG FOR SOCIAL OUTREACH!
+              social_profiles: prospect.social_profiles, // Save social profiles from prospects table
+              analyzed_at: new Date().toISOString(),
+              // Add prospect context
+              metadata: {
+                prospectId: prospect.id,
+                runId: prospect.run_id,
+                whyNow: prospect.why_now,
+                teaser: prospect.teaser,
+                sourceApp: 'website-audit-tool'
+              }
+            });
+
+            // Link prospect to lead
+            await linkProspectToLead(prospect.id, result.url);
+
+            console.log(`✅ Saved for social outreach: ${prospect.company_name} (${Object.keys(prospect.social_profiles).filter(k => prospect.social_profiles[k]).join(', ')})`);
+
+            sendProgress({
+              type: 'social_outreach_flagged',
+              url: result.url,
+              companyName: prospect.company_name,
+              message: `💡 ${prospect.company_name} → Flagged for social outreach (website broken)`,
+              socialPlatforms: Object.keys(prospect.social_profiles).filter(k => prospect.social_profiles[k])
+            });
+
+          } catch (saveError) {
+            console.error(`Failed to save for social outreach: ${saveError.message}`);
+          }
+        }
+
+        continue; // Skip to next prospect
+      }
+
+      try {
+        sendProgress({
+          type: 'enriching_social',
+          url: result.url,
+          message: `🔗 Enriching social media data for ${prospect.company_name || result.url}...`
+        });
+
+        // Create new browser context for social scraping
+        const context = await browser.newContext({
+          viewport: { width: 1920, height: 1080 },
+          userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        });
+        const page = await context.newPage();
+
+        // Navigate to website
+        await page.goto(result.url, {
+          waitUntil: 'domcontentloaded',
+          timeout: 30000
+        });
+
+        // Extract social profiles from website
+        const websiteProfiles = await extractSocialProfiles(page, result.url);
+
+        // Enrich social profiles (scrape Instagram, Facebook, LinkedIn)
+        let scrapedProfiles = null;
+        if (options.enrichSocial !== false) {
+          scrapedProfiles = await enrichSocialProfiles(page, prospect.social_profiles);
+
+          // Optionally analyze social presence with cheap AI
+          if (scrapedProfiles && (options.analyzeSocial !== false)) {
+            const socialAnalysis = await analyzeSocialPresence(
+              scrapedProfiles,
+              prospect.company_name || result.companyName,
+              prospect.industry,
+              options.socialModel || 'grok-4-fast' // Cheapest model
+            );
+            result.socialAnalysis = socialAnalysis;
+          }
+        }
+
+        // Merge all social profile data
+        result.grokData.socialProfiles = mergeSocialProfiles(
+          prospect.social_profiles,
+          websiteProfiles?.profiles,
+          scrapedProfiles
+        );
+
+        // Add prospect context to result
+        result.metadata = {
+          ...result.metadata,
+          prospectId: prospect.id,
+          runId: prospect.run_id,
+          whyNow: prospect.why_now,
+          teaser: prospect.teaser,
+          briefSnapshot: prospect.brief_snapshot
+        };
+
+        // Save to Supabase
+        await saveLeadToSupabase(result);
+
+        // Link prospect to lead
+        await linkProspectToLead(prospect.id, result.url);
+
+        console.log(`✅ Enriched and saved: ${prospect.company_name || result.url}`);
+
+        sendProgress({
+          type: 'social_enriched',
+          url: result.url,
+          message: `✅ Social data enriched for ${prospect.company_name || result.url}`
+        });
+
+        await page.close();
+        await context.close();
+
+      } catch (error) {
+        console.error(`❌ Social enrichment failed for ${result.url}:`, error.message);
+        sendProgress({
+          type: 'social_error',
+          url: result.url,
+          error: error.message,
+          message: `⚠️  Social enrichment failed: ${error.message}`
+        });
+      }
+    }
+
+    await browser.close();
+
+    console.log(`\n✅ Prospect analysis complete: ${analysisResults.length} prospects analyzed\n`);
+
+    sendProgress({
+      type: 'analysis_complete',
+      count: analysisResults.length,
+      message: `✅ Analysis complete: ${analysisResults.length} prospects analyzed`
+    });
+
+    return {
+      success: true,
+      prospectsFound: prospects.length,
+      analyzed: analysisResults.length,
+      results: analysisResults
+    };
+
+  } catch (error) {
+    console.error('❌ Prospect analysis failed:', error);
+    sendProgress({
+      type: 'error',
+      error: error.message,
+      message: `❌ Analysis failed: ${error.message}`
+    });
+    throw error;
+  }
 }

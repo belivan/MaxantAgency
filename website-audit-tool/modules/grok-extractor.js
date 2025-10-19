@@ -91,7 +91,25 @@ OUTPUT FORMAT (strict JSON):
     "services": ["Service 1", "Service 2"],
     "targetAudience": "Who they serve",
     "valueProposition": "What makes them unique",
+    "offeringsDetail": "Detailed description of products/services offered",
     "recentNews": ["Recent achievement or news if found"]
+  },
+  "achievements": {
+    "awards": ["Award Name - Year"],
+    "certifications": ["Certification Name"],
+    "yearsInBusiness": 10,
+    "notableAccomplishments": ["Major project", "Industry recognition"]
+  },
+  "socialProof": {
+    "testimonials": [
+      {
+        "quote": "Customer quote here",
+        "author": "Customer Name",
+        "company": "Company Name (optional)"
+      }
+    ],
+    "communityInvolvement": ["Charity work", "Community events", "Sponsorships"],
+    "brandVoice": "professional | casual | friendly | authoritative | technical | creative"
   },
   "techStack": {
     "platform": "WordPress | Shopify | Webflow | Wix | Squarespace | ProcessWire | Drupal | Custom | Unknown",
@@ -118,8 +136,10 @@ Extract:
 3. **Social Profiles**: LinkedIn (company + personal), Instagram, Twitter, Facebook, YouTube
 4. **Team Info**: Founder name/bio/LinkedIn, key team members with titles and LinkedIn
 5. **Content Info**: Recent blog posts (title, date, URL, summary), whether blog is active
-6. **Business Intel**: Services offered, target audience, value proposition, recent news/achievements
-7. **Tech Stack**: Platform (WordPress, Shopify, Webflow, Wix, ProcessWire, Drupal, Custom, etc.), framework (React, Vue, Next.js), CSS framework (Tailwind, Bootstrap), hosting, tools, confidence (0.0-1.0), and how you detected it
+6. **Business Intel**: Services offered, target audience, value proposition, detailed offerings description, recent news/achievements
+7. **Achievements**: Awards, certifications, years in business (calculate from founding year), notable accomplishments
+8. **Social Proof**: Customer testimonials (quote + author + company), community involvement (charity/events/sponsorships), brand voice (professional/casual/friendly/etc)
+9. **Tech Stack**: Platform (WordPress, Shopify, Webflow, Wix, ProcessWire, Drupal, Custom, etc.), framework (React, Vue, Next.js), CSS framework (Tailwind, Bootstrap), hosting, tools, confidence (0.0-1.0), and how you detected it
 
 **Tech Stack Detection Tips:**
 - Look for meta tags like <meta name="generator" content="WordPress 6.4">

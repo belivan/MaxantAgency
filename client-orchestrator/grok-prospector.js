@@ -33,7 +33,7 @@ export async function findCompaniesWithGrok({ brief, count = 20, city, logger = 
 
   const prompt = `You are a business prospecting assistant with web search capabilities.
 
-**Task:** Find ${count} REAL companies that match this ICP:
+**Task:** Find ${count} REAL, VERIFIED companies that match this ICP:
 
 **Target Industries:** ${niches}
 **Buying Triggers:** ${triggers}
@@ -42,18 +42,35 @@ export async function findCompaniesWithGrok({ brief, count = 20, city, logger = 
 **What I'm offering:**
 ${studio.intro || 'Web design and development services'}
 
-**For each company, provide:**
-1. Company name (real, verified to exist)
-2. Website URL (actual working URL)
+**CRITICAL VERIFICATION REQUIREMENTS:**
+Before including ANY company in your results, you MUST:
+1. Use web search to VERIFY the company currently exists and is operating
+2. VERIFY the website domain is currently active and accessible (not parked, not "coming soon", not expired)
+3. VERIFY the URL loads to an actual business website with real content
+4. DO NOT include companies if you cannot find and verify their website through web search
+5. DO NOT include domains that redirect to GoDaddy, Namecheap, or other parking pages
+6. DO NOT hallucinate or guess company names - only include companies you find via web search
+7. VERIFY each URL is reachable before including it
+
+**For each VERIFIED company, provide:**
+1. Company name (must be real and verified to exist via web search)
+2. Website URL (must be currently active and accessible - test it!)
 3. Industry/niche
 4. Why now (specific trigger - outdated site, slow loading, missing mobile, etc.)
 5. Teaser (one-sentence opener)
+6. Social media profiles (use web search to find their real profiles):
+   - Instagram profile URL
+   - Facebook page URL
+   - LinkedIn company page URL
+   - LinkedIn decision maker profile URL (owner, CEO, marketing director)
 
-**IMPORTANT:**
-- Use web search to find REAL companies with websites
+**ADDITIONAL REQUIREMENTS:**
+- ONLY include companies with working, accessible websites that you verify via web search
 - Prioritize companies that show signs of triggers (outdated sites, poor mobile, etc.)
-- Only include companies you can verify exist via web search
 - Focus on SMBs (small-medium businesses) not enterprises
+- Use web search to find their actual social media profiles
+- If a social profile cannot be found, use null for that field
+- Better to return FEWER verified companies than to include unverified ones
 
 Return ONLY valid JSON in this exact format:
 {
@@ -63,7 +80,13 @@ Return ONLY valid JSON in this exact format:
       "website": "https://example.com",
       "industry": "Restaurant",
       "why_now": "Their website is not mobile-friendly",
-      "teaser": "I noticed your site doesn't work well on mobile"
+      "teaser": "I noticed your site doesn't work well on mobile",
+      "social_profiles": {
+        "instagram": "https://instagram.com/company",
+        "facebook": "https://facebook.com/company",
+        "linkedin_company": "https://linkedin.com/company/company-name",
+        "linkedin_person": "https://linkedin.com/in/person-name"
+      }
     }
   ]
 }`;
@@ -81,7 +104,7 @@ Return ONLY valid JSON in this exact format:
       messages: [
         {
           role: 'system',
-          content: 'You are a business prospecting assistant. Use web search to find real companies. Always respond with valid JSON.'
+          content: 'You are a business prospecting assistant with web search capabilities. Your primary task is to find REAL, VERIFIED companies with WORKING websites. You MUST use web search to verify each company and website exists and is accessible before including it. DO NOT hallucinate or guess company names. Only include companies you can verify through web search. Always respond with valid JSON.'
         },
         {
           role: 'user',
@@ -112,6 +135,20 @@ Return ONLY valid JSON in this exact format:
     } else {
       console.log(`✅ Found ${companiesFound} real companies via Grok`);
     }
+
+    // Log social profiles found
+    result.companies?.forEach(company => {
+      const socials = company.social_profiles || {};
+      const foundProfiles = [];
+      if (socials.instagram) foundProfiles.push(`Instagram: ${socials.instagram}`);
+      if (socials.facebook) foundProfiles.push(`Facebook: ${socials.facebook}`);
+      if (socials.linkedin_company) foundProfiles.push(`LinkedIn Company: ${socials.linkedin_company}`);
+      if (socials.linkedin_person) foundProfiles.push(`LinkedIn Person: ${socials.linkedin_person}`);
+
+      if (foundProfiles.length > 0) {
+        console.log(`📱 ${company.name}: ${foundProfiles.join(', ')}`);
+      }
+    });
 
     return result;
   } catch (e) {

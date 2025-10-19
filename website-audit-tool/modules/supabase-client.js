@@ -34,8 +34,8 @@ export async function saveLeadToSupabase(result) {
     const leadData = {
       // Basic Info
       url: result.url,
-      company_name: result.companyName || companyInfo.name,
-      industry: result.industry?.specific || companyInfo.industry,
+      company_name: result.company_name || result.companyName || companyInfo.name,
+      industry: result.industry?.specific || result.industry || companyInfo.industry,
 
       // Grading (Website Quality - Data Completeness)
       website_score: result.websiteScore,
@@ -53,13 +53,13 @@ export async function saveLeadToSupabase(result) {
 
       // Company Info
       founding_year: companyInfo.foundingYear,
-      location: companyInfo.location,
+      location: result.location || companyInfo.location,
       company_description: companyInfo.description,
       target_audience: businessIntel.targetAudience,
       value_proposition: businessIntel.valueProposition,
 
-      // Social Profiles (JSONB)
-      social_profiles: socialProfiles,
+      // Social Profiles (JSONB) - can come from grokData OR directly from result
+      social_profiles: result.social_profiles || socialProfiles,
 
       // Team Info (JSONB)
       team_info: teamInfo,
@@ -72,8 +72,23 @@ export async function saveLeadToSupabase(result) {
       recent_blog_posts: contentInfo.recentPosts || [],
       last_content_update: contentInfo.lastContentUpdate,
 
-      // Tech Stack (NEW)
+      // Tech Stack
       tech_stack: grokData.techStack || null,
+
+      // Priority 3 & 4: Rich Content for Social Media
+      achievements: grokData.achievements || null, // JSONB: awards, certifications, years in business
+      testimonials: grokData.socialProof?.testimonials || [], // Array of customer testimonials
+      community_involvement: grokData.socialProof?.communityInvolvement || [], // Array of community activities
+      brand_voice: grokData.socialProof?.brandVoice || null, // String: professional/casual/friendly/etc
+      offerings_detail: businessIntel.offeringsDetail || null, // Detailed product/service descriptions
+
+      // Content Insights (NEW - for email/social personalization)
+      content_insights: result.contentInsights || null, // JSONB: blog/news analysis for personalization
+
+      // Social Outreach Fallback (NEW - for failed websites with social profiles)
+      requires_social_outreach: result.requires_social_outreach || false,
+      website_status: result.website_status || 'active',
+      website_error: result.website_error || null,
 
       // Analysis Results (JSONB)
       critiques_basic: result.critiques?.basic || [],
@@ -111,9 +126,10 @@ export async function saveLeadToSupabase(result) {
       campaign_id: result.metadata?.campaignId || null,
       client_name: result.metadata?.clientName || null,
       source_app: result.metadata?.sourceApp || null,
+      // NOTE: metadata column doesn't exist yet - would need migration to add it
 
       // Timestamps
-      analyzed_at: result.timestamp || new Date().toISOString(),
+      analyzed_at: result.analyzed_at || result.timestamp || new Date().toISOString(),
     };
 
     // Insert or update (upsert based on URL)
@@ -213,5 +229,123 @@ export async function updateOutreachStatus(url, status) {
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROSPECT MANAGEMENT FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Get prospects ready for analysis
+ * @param {Object} options - Query options
+ * @param {number} options.limit - Max number of prospects to fetch (default: 10)
+ * @param {string} options.status - Filter by status (default: 'pending_analysis')
+ * @param {string} options.industry - Filter by industry (optional)
+ * @param {string} options.city - Filter by city (optional)
+ * @param {string} options.runId - Filter by run_id (optional)
+ * @returns {Array} - Array of prospects
+ */
+export async function getProspectsForAnalysis(options = {}) {
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
+  const {
+    limit = 10,
+    status = 'pending_analysis',
+    industry = null,
+    city = null,
+    runId = null
+  } = options;
+
+  let query = supabase
+    .from('prospects')
+    .select('*')
+    .eq('status', status)
+    .order('created_at', { ascending: true }) // Process oldest first
+    .limit(limit);
+
+  // Apply optional filters
+  if (industry) {
+    query = query.eq('industry', industry);
+  }
+
+  if (city) {
+    query = query.eq('city', city);
+  }
+
+  if (runId) {
+    query = query.eq('run_id', runId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('❌ Failed to fetch prospects:', error);
+    throw error;
+  }
+
+  console.log(`📥 Fetched ${data.length} prospects for analysis`);
+  return data;
+}
+
+/**
+ * Update prospect status
+ * @param {string} prospectId - Prospect ID
+ * @param {string} status - New status ('pending_analysis', 'queued', 'analyzed')
+ * @returns {Object} - Updated prospect
+ */
+export async function updateProspectStatus(prospectId, status) {
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
+  const { data, error } = await supabase
+    .from('prospects')
+    .update({
+      status,
+      last_status_change: new Date().toISOString()
+    })
+    .eq('id', prospectId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ Failed to update prospect status:', error);
+    throw error;
+  }
+
+  return data;
+}
+
+/**
+ * Link a prospect to its analyzed lead
+ * This helps track the prospect → lead relationship
+ * @param {string} prospectId - Prospect ID
+ * @param {string} leadUrl - Lead URL (from leads table)
+ * @returns {Object} - Updated prospect
+ */
+export async function linkProspectToLead(prospectId, leadUrl) {
+  if (!supabase) {
+    throw new Error('Supabase not configured');
+  }
+
+  const { data, error } = await supabase
+    .from('prospects')
+    .update({
+      status: 'analyzed',
+      last_status_change: new Date().toISOString()
+    })
+    .eq('id', prospectId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ Failed to link prospect to lead:', error);
+    throw error;
+  }
+
+  console.log(`🔗 Linked prospect ${prospectId} to lead ${leadUrl}`);
   return data;
 }

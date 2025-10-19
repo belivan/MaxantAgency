@@ -95,6 +95,7 @@ export async function getLeadsReadyForOutreach(limit = 10) {
   const { data, error } = await supabase
     .from('leads')
     .select('*')
+    .eq('requires_social_outreach', false) // ⚠️ CRITICAL: Only get regular leads, NOT social outreach leads
     .in('lead_grade', ['A', 'B'])
     .not('contact_email', 'is', null)
     .order('created_at', { ascending: false })

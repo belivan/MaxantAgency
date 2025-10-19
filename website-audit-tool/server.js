@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { analyzeWebsites } from './analyzer.js';
+import { analyzeWebsites, analyzeProspectsFromSupabase } from './analyzer.js';
 import { generateAuthUrl, getTokenFromCode } from './modules/drafts-gmail.js';
 
 dotenv.config();
@@ -140,6 +140,119 @@ app.get('/api/drafts/status', (req, res) => {
   const credsExists = fs.existsSync('./.credentials.json');
   const hasRefresh = !!process.env.GMAIL_REFRESH_TOKEN;
   res.json({ connected: credsExists || hasRefresh, credsExists, hasRefresh });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PROSPECT-DRIVEN ANALYSIS ENDPOINT
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Analyze prospects from Supabase with social media enrichment
+ * POST /api/analyze-prospects
+ *
+ * Body parameters:
+ * - limit (number): Max prospects to fetch (default: 10)
+ * - industry (string): Filter by industry (optional)
+ * - city (string): Filter by city (optional)
+ * - runId (string): Filter by run_id (optional)
+ * - enrichSocial (boolean): Scrape social media (default: true)
+ * - analyzeSocial (boolean): AI analysis of social presence (default: true)
+ * - textModel (string): AI model for analysis (default: 'grok-4-fast')
+ * - depthTier (string): Analysis depth tier1/tier2/tier3 (default: 'tier1')
+ */
+app.post('/api/analyze-prospects', async (req, res) => {
+  try {
+    const {
+      limit = 10,
+      industry = null,
+      city = null,
+      runId = null,
+      enrichSocial = true,
+      analyzeSocial = true,
+      textModel = 'grok-4-fast',
+      depthTier = 'tier1'
+    } = req.body;
+
+    // Validate limit
+    if (limit > 50) {
+      return res.status(400).json({
+        error: 'Maximum 50 prospects per batch'
+      });
+    }
+
+    // Set up Server-Sent Events
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    console.log(`📥 Analyzing up to ${limit} prospects from Supabase...`);
+
+    // Progress callback
+    const sendProgress = (progressData) => {
+      res.write(`data: ${JSON.stringify(progressData)}\n\n`);
+    };
+
+    try {
+      // Send initial progress
+      sendProgress({
+        type: 'start',
+        limit,
+        filters: { industry, city, runId },
+        timestamp: Date.now()
+      });
+
+      // Run prospect analysis
+      const result = await analyzeProspectsFromSupabase({
+        limit,
+        industry,
+        city,
+        runId,
+        enrichSocial,
+        analyzeSocial,
+        textModel,
+        depthTier,
+        modules: {
+          basic: true,
+          industry: true,
+          seo: false, // Skip SEO for speed
+          visual: false, // Skip visual for speed
+          competitor: false // Skip competitor for speed
+        }
+      }, sendProgress);
+
+      // Send final results
+      sendProgress({
+        type: 'complete',
+        success: true,
+        prospectsFound: result.prospectsFound,
+        analyzed: result.analyzed,
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      console.error('Prospect analysis error:', error);
+
+      // Send error via SSE
+      sendProgress({
+        type: 'error',
+        error: error.message,
+        timestamp: Date.now()
+      });
+    }
+
+    res.end();
+
+  } catch (error) {
+    console.error('Server error:', error);
+
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Failed to start prospect analysis',
+        message: error.message
+      });
+    }
+  }
 });
 
 app.listen(PORT, () => {

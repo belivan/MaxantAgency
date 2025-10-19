@@ -48,6 +48,12 @@ export async function saveComposedEmail(emailData) {
     ai_model,
     quality_score,
     validation_issues,
+
+    // Project Tracking
+    project_id,
+    campaign_id,
+    client_name,
+    source_app,
   } = emailData;
 
   const { data, error } = await supabase
@@ -80,6 +86,11 @@ export async function saveComposedEmail(emailData) {
       validation_issues,
       status: 'pending',
       composed_at: new Date().toISOString(),
+      // Project tracking
+      project_id,
+      campaign_id,
+      client_name,
+      source_app: source_app || 'email-composer',
     })
     .select()
     .single();
@@ -102,10 +113,22 @@ export async function getComposedEmails(filters = {}) {
   let query = supabase
     .from('composed_emails')
     .select('*')
-    .order('composed_at', { ascending: false });
+    .order('composed_at', { ascending: false});
 
   if (filters.status) {
     query = query.eq('status', filters.status);
+  }
+
+  if (filters.project_id) {
+    query = query.eq('project_id', filters.project_id);
+  }
+
+  if (filters.campaign_id) {
+    query = query.eq('campaign_id', filters.campaign_id);
+  }
+
+  if (filters.client_name) {
+    query = query.eq('client_name', filters.client_name);
   }
 
   if (filters.limit) {
@@ -306,4 +329,85 @@ export async function getComposedEmailStats() {
   }
 
   return stats;
+}
+
+/**
+ * Save social media outreach message to Supabase (unified table)
+ * @param {Object} outreachData - Social media outreach data
+ * @returns {Promise<Object>} Saved outreach record
+ */
+export async function saveSocialOutreach(outreachData) {
+  const {
+    // Lead info
+    lead_id,
+    url,
+    company_name,
+    contact_name,
+    industry,
+
+    // Social media specific
+    outreach_type, // 'linkedin', 'facebook', 'instagram'
+    platform, // same as outreach_type
+    message_body, // The DM text
+    character_count, // Length of message
+    social_profile_url, // LinkedIn/Facebook/Instagram URL
+
+    // Strategy
+    strategy,
+
+    // Quality
+    ai_model,
+    quality_score,
+
+    // Project Tracking
+    project_id,
+    campaign_id,
+    client_name,
+    source_app,
+  } = outreachData;
+
+  const { data, error } = await supabase
+    .from('composed_emails')
+    .insert({
+      // Lead info
+      lead_id,
+      url,
+      company_name,
+      contact_name,
+      industry,
+
+      // Social media fields
+      outreach_type: outreach_type || platform, // linkedin, facebook, instagram
+      platform,
+      message_body,
+      character_count,
+      social_profile_url,
+
+      // Email fields (NULL for social)
+      contact_email: null,
+      email_subject: null,
+      email_body: null,
+
+      // Common fields
+      email_strategy: strategy, // Reuse existing column
+      ai_model,
+      quality_score: quality_score || 0,
+      status: 'pending',
+
+      // Project tracking
+      project_id,
+      campaign_id,
+      client_name,
+      source_app: source_app || 'email-composer',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('❌ Error saving social outreach:', error);
+    throw error;
+  }
+
+  console.log(`✅ Social outreach saved to database (${platform})`);
+  return data;
 }

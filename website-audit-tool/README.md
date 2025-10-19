@@ -1,8 +1,6 @@
-# Maksant Website Audit Tool - Data Collection Edition
+# Website Audit Tool
 
-**An AI-powered data collection tool with 6 specialized agents that analyzes websites, extracts comprehensive contact data, detects tech stacks, and saves everything to a database - all with transparent cost & time tracking.**
-
-> **Note:** Email generation has been moved to a separate app. This tool focuses exclusively on data collection and analysis.
+**AI-powered website analysis and prospect enrichment tool that collects comprehensive business data, analyzes websites, and prepares leads for outreach.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
@@ -11,215 +9,117 @@
 
 ## 🎯 What Does This Tool Do?
 
-This tool helps you build a comprehensive lead database by:
+The Website Audit Tool analyzes websites and enriches prospect data by:
 
-1. **Extracts contact data intelligently** - Email, phone, name with source tracking & confidence scoring
-2. **Analyzes website quality** - 6 specialized AI agents identify specific issues and opportunities
-3. **Detects platforms & tech stacks** - WordPress, Shopify, React, Tailwind, ProcessWire, etc.
-4. **Grades data completeness** - A-F scoring shows which leads have the most complete information
-5. **Tracks cost & time** - Know exactly how much each analysis costs (typically $0.016-0.070 per website)
-6. **Saves everything to database** - All data in Supabase PostgreSQL for easy querying and integration
+1. **Extracts comprehensive business data** - Company info, contact details, services, social profiles
+2. **Analyzes website quality** - Identifies specific issues, opportunities, and improvements
+3. **Scrapes social media** - Instagram, Facebook, LinkedIn profiles and metadata
+4. **Analyzes content** - Blog posts and news for personalization hooks
+5. **Handles failures gracefully** - When websites fail, saves social profiles for social media outreach
+6. **Saves to database** - All data stored in Supabase PostgreSQL for easy querying
 
-Instead of spending hours manually collecting contact info, you get comprehensive lead data in ~60-90 seconds per website, organized by data quality, with full transparency.
-
-**Email generation** is handled by a separate app - this tool focuses exclusively on data collection.
+**Cost:** ~$0.04 per lead (using cheap Grok AI model)
+**Speed:** ~20-30 seconds per website
 
 ---
 
 ## ✨ Key Features
 
-### 🤖 6 Specialized AI Agents (Sequential Pipeline)
+### 📊 Comprehensive Data Extraction
 
-Each agent has ONE job and does it well:
+- **Company Information:** Name, industry, location, founding year, description
+- **Contact Data:** Email, phone, contact person with confidence scoring
+- **Services:** Automatically extracted service offerings
+- **Social Profiles:** Instagram, Facebook, LinkedIn, Twitter URLs
+- **Value Proposition:** Target audience and positioning
+- **Tech Stack:** Platform detection (WordPress, Shopify, etc.)
 
-**1. Grok AI Extractor** ($0.015/site) - Deep data mining *(Always Runs)*
-- Company name, industry, location, founding year
-- Contact info (email, phone, name, title) with source tracking & confidence scoring
-- Services, target audience, value proposition
-- Social profiles (LinkedIn, Instagram, Twitter, Facebook)
-- Blog posts, content info
-- **Platform/tech stack** (WordPress, Shopify, React, Tailwind, ProcessWire, etc.)
+### 🔍 Website Analysis
 
-**2. Basic Analysis Agent** ($0.001-0.003/page) - Structure & missing elements *(Always Runs)*
-- HTML structure, SEO metadata, performance
-- Missing CTAs, contact forms, trust signals
-- **Strict rule:** NO visual critiques unless visual module enabled
+- **Quality Grading:** A-F scoring based on data completeness
+- **Critiques:** Specific, actionable recommendations
+- **SEO Analysis:** Meta tags, structure, performance issues
+- **Content Analysis:** Blog posts and news for engagement hooks
 
-**3. Industry-Specific Agent** ($0.002/site) - Tailored recommendations *(Optional)*
-- Auto-detects industry (Web Design, HVAC, E-commerce, Consulting, etc.)
-- Provides industry-specific best practices
-- Compares against vertical standards
+### 📱 Social Media Enrichment
 
-**4. SEO Analysis Agent** ($0.001/site) - Technical SEO *(Optional)*
-- Title tags, meta descriptions, heading structure
-- Performance metrics, mobile-friendliness
-- Schema markup, Open Graph tags
+**Three-source data merging:**
+1. Social profiles from prospects table (input data)
+2. Social profile URLs scraped from website
+3. Profile metadata scraped from social platforms
 
-**5. Visual Design Agent** ($0.004-0.020/screenshot) - Screenshot analysis *(Optional)*
-- Desktop + mobile screenshots
-- Visual hierarchy, button visibility, contrast
-- **Only runs if explicitly enabled**
+**Platforms supported:**
+- Instagram (name, bio, username)
+- Facebook (page name, description)
+- LinkedIn (company + personal profiles)
 
-**6. Competitor Discovery Agent** ($0.030/site) - Find & analyze competitors *(Optional)*
-- Uses Grok AI with web search to find 3 competitors
-- Comparative analysis of features and positioning
+### 🚨 Social Outreach Fallback (NEW!)
 
-> **Note:** Email Writing, Critique Reasoning, and QA Review agents have been moved to a separate email composer app.
+When a website fails to load (SSL error, timeout, DNS error):
+- Saves partial lead with social profiles
+- Flags as `requires_social_outreach = true`
+- Records error type and message
+- **Perfect for:** "Hey, noticed your website is down - we can fix it!" outreach
 
-### 📊 Website Quality Grading (Data Completeness)
+### 📝 Content Insights Analysis (NEW!)
 
-**Website Grade (A-F):** How comprehensive and complete the extracted data is
+Analyzes blog posts and news articles to extract:
+- **Content themes** - Topics the company writes about
+- **Expertise signals** - Areas of demonstrated knowledge
+- **Engagement hooks** - Recent posts to reference in outreach
+- **Content gaps** - Missing topics for value proposition
+- **Writing style** - Professional, casual, technical, etc.
 
-**Scoring Breakdown:**
-- **40 points:** Data extraction completeness
-  - Email found: 15 points
-  - Phone found: 10 points
-  - Company name/industry/location: 15 points
+### 💾 Database Integration
 
-- **60 points:** Analysis depth (modules enabled)
-  - Basic analysis: 15 points *(always runs)*
-  - Industry analysis: 15 points *(if enabled)*
-  - SEO analysis: 10 points *(if enabled)*
-  - Visual analysis: 10 points *(if enabled)*
-  - Competitor analysis: 10 points *(if enabled)*
-
-**Grade Definitions:**
-- **Grade A (70-100):** Comprehensive data - ready to contact!
-- **Grade B (50-69):** Good data, some gaps - review before contact
-- **Grade C (30-49):** Minimal data - missing important pieces
-- **Grade D (10-29):** Very little data extracted
-- **Grade F (0-9):** Almost no usable data
-
-### 📁 Grade-Based Folder Organization
-
-Results organized by **Website Quality Grade**:
-
-```
-analysis-results/
-  ├── grade-A/  (Comprehensive data - contact immediately!)
-  │   └── maksant.com/2025-10-18_20-15-30/
-  │       ├── analysis-data.json (Complete analysis with all data)
-  │       ├── client-info.json (Formatted contact info)
-  │       ├── basic-issues.txt (Human-readable critiques)
-  │       └── screenshot-homepage.png (if visual module enabled)
-  ├── grade-B/  (Good data - review before contact)
-  ├── grade-C/  (Minimal data - missing pieces)
-  ├── grade-D/  (Very little data)
-  └── grade-F/  (Almost no data)
-```
-
-**Why?** Go straight to `grade-A/` folder - these leads have the most complete contact information!
-
-### 💰 Cost & Time Tracking
-
-Every analysis tracks:
-- **Total cost** in dollars (e.g., $0.0408)
-- **Analysis time** in seconds (e.g., 110s / 1m 50s)
-- **Cost breakdown** per AI operation
-
-**Example cost breakdown (Basic + Industry):**
-```
-Grok AI Extraction:      $0.0400  (largest cost)
-Basic Analysis:          $0.0003
-Industry Analysis:       $0.0002
-Email Writing:           $0.0001
-Critique Reasoning:      $0.0001
-QA Review:               $0.0001
-───────────────────────────────
-TOTAL:                   $0.0408 per website
-```
-
-Displayed in:
-- UI result cards *(green for time, blue for cost)*
-- Export files
-- Supabase database
-
-### 🗄️ Supabase Database Integration
-
-Auto-saves all leads to PostgreSQL:
-- Company name, industry, location
-- Contact info (email, phone, name, title) with source & confidence
+Auto-saves all data to Supabase PostgreSQL:
+- Full prospect and company information
 - Social profiles (JSONB)
-- Services, blog posts, content
-- **Platform/tech stack** (WordPress, Shopify, ProcessWire, etc.)
-- All critiques from all 9 agents (JSONB)
-- Email subject & body, QA review
-- **Cost and time data** (NEW!)
-- Outreach status tracking (not_contacted → email_sent → replied → converted)
-
-**Query examples:**
-```sql
--- Find all Grade A leads not yet contacted
-SELECT company_name, contact_email, location
-FROM leads
-WHERE lead_grade = 'A' AND outreach_status = 'not_contacted';
-
--- Calculate total spend
-SELECT SUM(analysis_cost) as total, AVG(analysis_time) as avg_time
-FROM leads;
-
--- Find all WordPress sites
-SELECT company_name, tech_stack->>'platform' as platform
-FROM leads
-WHERE tech_stack->>'platform' = 'WordPress';
-```
+- Website critiques and analysis
+- Content insights
+- Social outreach flags
+- Cost and time tracking
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Install Node.js
-
-Download & install Node.js 18+ from [nodejs.org](https://nodejs.org)
-
-### 2. Install Dependencies
+### 1. Install Dependencies
 
 ```bash
 cd website-audit-tool
 npm install
-npx playwright install
+npx playwright install chromium
 ```
 
-### 3. Get API Keys
+### 2. Configure Environment
 
-**Required:**
-- **Grok AI (xAI):** Get key at [x.ai](https://x.ai/) - $5 per 1M tokens
-- **OpenAI:** Get key at [platform.openai.com](https://platform.openai.com/) - $0.15-7.50 per 1M tokens
-
-**Optional:**
-- **Anthropic Claude:** Get key at [console.anthropic.com](https://console.anthropic.com/) - $0.10-6.50 per 1M tokens
-- **Supabase:** Free at [supabase.com](https://supabase.com/) - PostgreSQL database
-
-### 4. Configure .env File
+Copy `.env.example` to `.env` and add your API keys:
 
 ```bash
-cp .env.example .env
-```
+# Required API Keys
+XAI_API_KEY=xai-xxxxxx           # Grok AI (cheap! $5 per 1M tokens)
+OPENAI_API_KEY=sk-xxxxxx          # OpenAI (for critiques)
 
-Edit `.env` and add your keys:
-
-```bash
-# Required
-XAI_API_KEY=xai-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# Optional (for database)
-SUPABASE_URL=https://xxxxx.supabase.co
+# Database (Required)
+SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_KEY=eyJhbGc...
 
-# Models
-TEXT_MODEL=gpt-5-mini
-VISION_MODEL=gpt-4o
+# Models (Recommended cheap options)
+TEXT_MODEL=grok-4-fast
+VISION_MODEL=grok-4-fast
 ```
 
-### 5. Set Up Supabase (Optional but Recommended)
+### 3. Set Up Database
 
-1. Create project at [supabase.com](https://supabase.com)
-2. Run SQL from [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md)
-3. Run migration: [`docs/supabase-migration-cost-time.sql`](docs/supabase-migration-cost-time.sql)
-4. Add URL and key to `.env`
+Run the migrations in Supabase SQL Editor:
 
-### 6. Start the Server
+```bash
+migrations/add-content-insights.sql
+migrations/add-social-outreach-flag.sql
+```
+
+### 4. Start the Server
 
 ```bash
 npm start
@@ -229,418 +129,399 @@ Open browser at: **http://localhost:3000**
 
 ---
 
-## 🎮 How to Use
+## 📡 API Endpoints
 
-### Web UI
-
-1. **Enter URLs** (one per line):
-   ```
-   https://maksant.com
-   https://goettl.com
-   https://sweetgreen.com
-   ```
-
-2. **Configure options:**
-   - **Email Type:** Local (Philadelphia area) or National
-   - **Text Model:** GPT-5 Mini ($0.15/1M tokens) or GPT-5 ($5.50/1M)
-   - **Vision Model:** GPT-4o ($7.50/1M) or GPT-5 ($5.50/1M)
-   - **Depth Tier:** 1 page (fast), 3 pages (standard), or 5-10 pages (comprehensive)
-   - **Modules:** Basic (always runs), Industry, Visual, SEO, Competitor
-   - **Supabase:** Check to save to database
-
-3. **Click "Analyze Websites"**
-
-4. **View real-time progress:**
-   - Each step shown as it runs
-   - Cost estimate before starting
-   - Final cost & time after completion
-
-5. **Review results:**
-   - Company name, load time, **analysis time, cost**
-   - Summary, critiques, email preview
-   - Copy email or export all
-
-### API (for integrations)
+### Analyze Websites
 
 ```javascript
 POST /api/analyze
 
 {
-  "urls": ["https://maksant.com"],
-  "textModel": "gpt-5-mini",
-  "visionModel": "gpt-4o",
-  "depthTier": "tier1",
-  "modules": {
-    "basic": true,
-    "industry": true,
-    "visual": false,
-    "seo": false,
-    "competitor": false
-  },
-  "emailType": "local",
+  "urls": ["https://example.com"],
+  "enrichSocial": true,          // Scrape social media profiles
+  "analyzeSocial": true,          // Analyze social presence
+  "analyzeContent": true,         // Extract blog/news insights
+  "textModel": "grok-4-fast",     // AI model for analysis
   "saveToSupabase": true
 }
 ```
 
 **Response:** Server-Sent Events (real-time progress)
 
----
+### Analyze Prospects from Database
 
-## 📂 Output Files
+```javascript
+POST /api/analyze-prospects
 
-Each analysis creates:
-
-```
-analysis-results/lead-A/maksant.com/2025-10-18_20-15-30/
-├── analysis-data.json       # Full analysis (all data)
-├── client-info.json          # Quick reference (email, phone, grades, cost, time)
-├── email.txt                 # Final outreach email
-├── qa-review.txt             # QA review with lead grade
-├── critiques.txt             # All critiques from all agents
-├── critique-reasoning.txt    # WHY critiques were made
-├── screenshots/              # Desktop + mobile (if visual enabled)
-│   ├── desktop-full.png
-│   └── mobile-full.png
-└── logs/
-    └── analysis.log
-```
-
----
-
-## 💰 Cost Information
-
-### Typical Costs
-
-**Basic + Industry (Recommended):** ~$0.04/website
-```
-Grok AI:           $0.0400  (8,000 tokens × $5/1M)
-Basic Analysis:    $0.0003  (2,000 tokens × $0.15/1M)
-Industry Analysis: $0.0002  (1,500 tokens × $0.15/1M)
-Email Writing:     $0.0001  (800 tokens × $0.15/1M)
-Critique Reasoning:$0.0001  (600 tokens × $0.15/1M)
-QA Review:         $0.0001  (500 tokens × $0.15/1M)
-```
-
-**All Modules (Comprehensive):** ~$0.12/website
-- Adds: SEO ($0.0002), Visual ($0.03), Competitor ($0.05)
-
-### Monthly Budgets
-
-| Websites/Month | Basic Only | All Modules |
-|----------------|------------|-------------|
-| 50 websites    | ~$2.00     | ~$6.00      |
-| 100 websites   | ~$4.00     | ~$12.00     |
-| 500 websites   | ~$20.00    | ~$60.00     |
-
-**Pro tip:** Use Basic + Industry for prospecting. Add Visual/Competitor only for high-value leads.
-
----
-
-## 🎯 Advanced Features
-
-### Platform & Tech Stack Detection
-
-Grok AI automatically detects what each website is built with:
-
-**Detects:**
-- Platform: WordPress, Shopify, Webflow, Wix, Squarespace, **ProcessWire**, Drupal, Custom
-- Framework: React, Vue, Next.js, Angular
-- CSS Framework: Tailwind, Bootstrap, Foundation
-- Hosting: Vercel, Netlify, AWS, Cloudflare
-- Tools: Google Tag Manager, Hotjar, analytics
-
-**Example output:**
-```json
 {
-  "platform": "ProcessWire",
-  "platformVersion": "3.0.210",
-  "framework": "None",
-  "cssFramework": "Tailwind",
-  "hosting": "Unknown",
-  "confidence": 0.8,
-  "detectionMethod": "class-conventions, script-urls"
+  "limit": 10,                    // Number of prospects to analyze
+  "industry": "Restaurant",       // Optional: filter by industry
+  "city": "Philadelphia, PA",     // Optional: filter by location
+  "enrichSocial": true,
+  "analyzeSocial": true,
+  "analyzeContent": true
 }
 ```
 
-**Saved to:** `analysis-data.json` → `grokData.techStack` and Supabase `tech_stack` column
+**What it does:**
+1. Fetches prospects from `prospects` table where `status = 'pending_analysis'`
+2. Analyzes each website
+3. Scrapes social media profiles
+4. Analyzes content for insights
+5. Saves enriched data to `leads` table
+6. Updates prospect `status` to 'analyzed'
+7. Links prospect to lead
 
-### Honest Personalization
-
-**Email Writing Agent** has strict rules:
-
-✅ **ALLOWED** (we have this data):
-- "I see you're on Instagram" (have URL)
-- "Noticed you offer Web Design" (have services list)
-- "Read your blog post about [title]" (extracted title)
-
-❌ **BANNED** (fake personalization):
-- "Love your Instagram content" (didn't see content!)
-- "Your Facebook posts are great" (didn't read posts!)
-- "Amazing work on X" (fake engagement)
-
-**Result:** Emails sound genuine, not spammy.
-
-### Agent Separation
-
-Each agent stays in its lane:
-
-| Agent | CAN Do | CANNOT Do |
-|-------|--------|-----------|
-| Grok AI | Extract data | Analyze or critique |
-| Basic Analysis | Comment on HTML/text | Visual elements (when visual OFF) |
-| Visual Analysis | Comment on design | Run when module disabled |
-| Email Writing | Use extracted data | Fake personalization |
-| QA Review | Grade email quality | Create new critiques |
-
-**Enforced by:** Detailed prompts in [`docs/AGENT-PROMPTS.md`](docs/AGENT-PROMPTS.md)
+**Response:** Server-Sent Events with progress
 
 ---
 
-## 📚 File Structure
+## 💾 Database Schema
+
+### Prospects Table
+
+**Input data** (from client-orchestrator or other sources):
+
+```javascript
+{
+  id: "uuid",
+  company_name: "Apex Plumbing Services",
+  industry: "Home Services - Plumbing",
+  website: "https://apexplumbingservices.com",
+  city: "Philadelphia, PA",
+  social_profiles: {
+    instagram: "https://instagram.com/apex...",
+    facebook: "https://facebook.com/Apex...",
+    linkedin_person: "https://linkedin.com/in/john-doe..."
+  },
+  status: "pending_analysis",
+  why_now: "Just opened, needs web presence",
+  teaser: "Get more customers with better website"
+}
+```
+
+### Leads Table
+
+**Output data** (enriched and analyzed):
+
+```javascript
+{
+  // Basic Info
+  url: "https://example.com",
+  company_name: "Apex Plumbing Services",
+  industry: "Home Services - Plumbing",
+  location: "Philadelphia, PA",
+
+  // Grading
+  website_grade: "F",
+  website_score: 30,
+
+  // Contact
+  contact_email: "john@apex.com",
+  contact_phone: "(555) 123-4567",
+  contact_name: "John Doe",
+
+  // Company Details
+  company_description: "Full-service plumbing...",
+  value_proposition: "24/7 emergency service",
+  target_audience: "Homeowners in Philadelphia",
+  services: ["Drain cleaning", "Water heaters", ...],
+
+  // Social Profiles (JSONB - merged from 3 sources)
+  social_profiles: {
+    instagram: {
+      url: "https://instagram.com/apex...",
+      username: "apexplumbing",
+      name: "Apex Plumbing Services",
+      bio: "24/7 Emergency Plumbing...",
+      scraped: true
+    },
+    facebook: { ... },
+    linkedin_person: { ... }
+  },
+
+  // Analysis
+  critiques_basic: ["No contact info...", ...],
+  critiques_industry: ["Missing service area map...", ...],
+  analysis_summary: "Solid business but website needs...",
+
+  // Content Insights (JSONB - NEW!)
+  content_insights: {
+    analyzed: true,
+    hasActiveBlog: true,
+    contentThemes: ["water heater maintenance", "emergency plumbing"],
+    expertiseSignals: ["Licensed master plumber", "20 years experience"],
+    engagementHook: "I saw your recent post about tankless water heaters",
+    contentGaps: ["Pricing transparency", "Customer reviews"],
+    writingStyle: "professional",
+    contentFrequency: "active"
+  },
+
+  // Social Outreach (NEW!)
+  requires_social_outreach: false,  // true if website failed
+  website_status: "active",         // or "timeout", "ssl_error", etc.
+  website_error: null,
+
+  // Metadata
+  analyzed_at: "2025-10-19T12:00:00Z",
+  analysis_cost: 0.04,
+  analysis_time: 22
+}
+```
+
+---
+
+## 🎮 Usage Examples
+
+### Example 1: Analyze Single Website
+
+```bash
+curl -X POST http://localhost:3000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "urls": ["https://zahavrestaurant.com"],
+    "enrichSocial": true,
+    "analyzeContent": true,
+    "textModel": "grok-4-fast"
+  }'
+```
+
+### Example 2: Analyze Prospects from Database
+
+```bash
+curl -X POST http://localhost:3000/api/analyze-prospects \
+  -H "Content-Type: application/json" \
+  -d '{
+    "limit": 10,
+    "industry": "Restaurant",
+    "city": "Philadelphia, PA"
+  }'
+```
+
+### Example 3: Query Leads
+
+```sql
+-- Get all leads ready for email outreach
+SELECT company_name, contact_email, website_grade
+FROM leads
+WHERE requires_social_outreach = false
+AND contact_email IS NOT NULL
+ORDER BY website_grade DESC;
+
+-- Get leads that need social media outreach
+SELECT company_name, social_profiles, website_status
+FROM leads
+WHERE requires_social_outreach = true
+ORDER BY analyzed_at DESC;
+
+-- Get leads with active blogs for content-based outreach
+SELECT company_name, content_insights->>'engagementHook' as hook
+FROM leads
+WHERE content_insights->>'hasActiveBlog' = 'true';
+```
+
+---
+
+## 📊 Cost Breakdown
+
+Using **grok-4-fast** (cheapest model):
+
+| Operation | Cost per Lead | Notes |
+|-----------|---------------|-------|
+| Grok data extraction | $0.03-0.04 | Main extraction |
+| Website critique | $0.0003 | Basic analysis |
+| Content analysis | $0.0002 | Blog/news (if found) |
+| Social analysis | $0.0001 | Social presence (optional) |
+| **Total** | **~$0.04** | Per successful lead |
+
+**Budget examples:**
+- 100 leads/month: ~$4
+- 500 leads/month: ~$20
+- 1000 leads/month: ~$40
+
+---
+
+## 🔧 Advanced Features
+
+### Social Outreach Fallback
+
+When a website fails (timeout, SSL error, DNS error):
+
+1. System saves partial lead with:
+   - Company name from prospect
+   - Social profiles from prospect
+   - Error type and message
+   - Flag: `requires_social_outreach = true`
+
+2. Email composer can query these leads for social media outreach:
+   - Instagram DMs
+   - Facebook Messenger
+   - LinkedIn Messages
+   - Message: "Hey, noticed your website is down - we can help!"
+
+### Content Insights for Personalization
+
+Analyzes blog posts and news to generate:
+
+```javascript
+{
+  contentThemes: ["plumbing tips", "water conservation"],
+  expertiseSignals: ["Licensed", "20 years experience"],
+  engagementHook: "I saw your recent article on tankless water heaters",
+  contentGaps: ["pricing", "service area"],
+  writingStyle: "professional"
+}
+```
+
+Use in outreach emails:
+- Reference recent blog posts
+- Mention their expertise areas
+- Suggest content they're missing
+- Match their communication style
+
+---
+
+## 📁 File Structure
 
 ```
 website-audit-tool/
-├── analyzer.js               # Main orchestrator (9 agents run here)
-├── server.js                 # Express API server
-├── ai-providers.js           # AI model initialization
-├── package.json              # Dependencies
-├── .env                      # Configuration (SECRET!)
+├── analyzer.js                   # Main analysis orchestrator
+├── server.js                     # Express API server
+├── ai-providers.js               # AI model configurations
 │
-├── modules/                  # Specialized modules
-│   ├── grok-extractor.js     # Agent 1: Data extraction
-│   ├── prompt-builder.js     # Agent 2: Basic analysis
-│   ├── industry.js           # Agent 3: Industry-specific
-│   ├── seo.js                # Agent 4: SEO deep-dive
-│   ├── visual.js             # Agent 5: Visual design
-│   ├── competitor.js         # Agent 6: Competitor discovery
-│   ├── email-sanitizer.js    # Agent 7: Email humanization
-│   ├── cost-tracker.js       # Cost & time tracking (NEW!)
-│   ├── supabase-client.js    # Database integration
-│   └── ...
+├── modules/
+│   ├── grok-extractor.js         # Company data extraction
+│   ├── social-scraper.js         # Social media scraping (NEW!)
+│   ├── content-analyzer.js       # Blog/news analysis (NEW!)
+│   ├── supabase-client.js        # Database operations
+│   ├── prompt-builder.js         # AI critique generation
+│   └── cost-tracker.js           # Cost/time tracking
 │
-├── public/                   # Web UI
-│   ├── index.html            # Main interface
-│   ├── app.js                # Client-side JavaScript
-│   └── styles.css            # Styling
+├── migrations/
+│   ├── add-content-insights.sql          # Content analysis schema
+│   └── add-social-outreach-flag.sql      # Social outreach schema
 │
-├── scripts/                  # Test scripts
-│   ├── test-all-features.js           # Comprehensive test
-│   ├── test-cost-time-tracking.js     # Cost/time verification
-│   ├── test-15-websites-supabase.js   # Supabase integration test
-│   └── query-supabase.js              # Database queries
+├── scripts/
+│   ├── test-prospect-analysis.js         # Test prospect pipeline
+│   ├── test-real-business.js             # Test with real site
+│   ├── check-social-outreach-leads.js    # Verify social outreach
+│   └── reset-prospect-status.js          # Reset for re-testing
 │
-├── docs/                     # Documentation
-│   ├── SUPABASE-SETUP.md             # Database setup guide
-│   ├── AGENT-PROMPTS.md              # 9 agent separation blueprint
-│   ├── SESSION-COMPLETE.md           # Feature summary
-│   ├── supabase-migration-cost-time.sql  # Cost/time migration
-│   └── ...
-│
-└── analysis-results/         # Output (organized by lead grade)
-    ├── lead-A/              # Contact immediately!
-    ├── lead-B/              # Review then contact
-    ├── lead-C/              # Needs editing
-    ├── lead-D/              # Major rewrite
-    └── lead-F/              # Do not contact
+└── public/                       # Web UI
+    ├── index.html
+    ├── app.js
+    └── styles.css
 ```
-
----
-
-## 🔧 Troubleshooting
-
-### Supabase saves failing
-
-**Error:** `TypeError: fetch failed`
-
-**Fix:**
-1. Verify `SUPABASE_URL` in `.env` is correct
-2. Use `service_role` key (not `anon` key)
-3. Run migration: [`docs/supabase-migration-cost-time.sql`](docs/supabase-migration-cost-time.sql)
-4. Check project status at [app.supabase.com](https://app.supabase.com)
-
-### Cost showing $0.0000
-
-**Fix:** Already fixed in latest version. Verify [modules/cost-tracker.js:6](modules/cost-tracker.js#L6) shows `'grok-beta': 5.00` (not `0.00500`)
-
-### Playwright browser errors
-
-**Fix:**
-```bash
-npx playwright install chromium
-```
-
-### "Port 3000 already in use"
-
-**Fix:**
-- Change `PORT=3001` in `.env`
-- Or kill process: `taskkill /F /PID <port_number>` (Windows) or `lsof -ti:3000 | xargs kill` (Mac/Linux)
 
 ---
 
 ## 🧪 Testing
 
-### Run Tests
+### Test with Real Philadelphia Business
 
 ```bash
-# Comprehensive feature test
-node scripts/test-all-features.js
-
-# Cost & time tracking verification
-node scripts/test-cost-time-tracking.js
-
-# Supabase integration (15 websites)
-node scripts/test-15-websites-supabase.js
-
-# Query Supabase database
-node scripts/query-supabase.js
+node test-real-business.js
 ```
 
-### Development Mode
+Tests full pipeline with real working website.
+
+### Test Prospect Analysis
 
 ```bash
-npm run dev  # Auto-restart on file changes
+node scripts/test-prospect-analysis.js
 ```
+
+Fetches prospects from database and analyzes them.
+
+### Check Social Outreach Leads
+
+```bash
+node scripts/check-social-outreach-leads.js
+```
+
+Shows all leads flagged for social media outreach.
 
 ---
 
-## 📊 Multi-Tenant Support (Coming Soon)
+## 🔗 Integration with Other Services
 
-Your orchestrator app can specify which database to use:
+### Client Orchestrator → Website Audit Tool
+
+Client orchestrator creates prospects:
 
 ```javascript
-POST /api/analyze
-{
-  "urls": ["https://site.com"],
+// client-orchestrator creates prospects
+await supabase.from('prospects').insert({
+  company_name: "Apex Plumbing",
+  website: "https://apexplumbing.com",
+  industry: "Plumbing",
+  city: "Philadelphia, PA",
+  status: "pending_analysis",
+  social_profiles: { instagram: "..." }
+});
 
-  // Option 1: Same table with project IDs
-  "database": {
-    "projectId": "philly-restaurants-2025",
-    "campaignId": "week-1-batch",
-    "clientName": "Maksant"
-  },
-
-  // Option 2: Different database per client
-  "database": {
-    "url": "https://client-abc.supabase.co",
-    "key": "eyJhbGc...",
-    "table": "leads_client_xyz"
-  }
-}
+// Website audit tool analyzes
+POST /api/analyze-prospects { limit: 10 }
 ```
 
-See implementation details in the roadmap.
+### Website Audit Tool → Email Composer
+
+Email composer reads enriched leads:
+
+```javascript
+// Get leads ready for email
+const { data } = await supabase
+  .from('leads')
+  .select('*')
+  .eq('requires_social_outreach', false)
+  .not('contact_email', 'is', null);
+
+// Get leads for social outreach
+const { data: socialLeads } = await supabase
+  .from('leads')
+  .select('*')
+  .eq('requires_social_outreach', true);
+```
+
+See `email-composer/SOCIAL-OUTREACH-INTEGRATION.md` for details.
 
 ---
 
-## 🎯 Tips for Success
+## 🛠 Troubleshooting
 
-### Getting Better Results
+### Playwright Errors
 
-1. **Analyze Quality Websites**
-   - Target businesses that can afford your services
-   - Focus on sites with issues but not completely broken
-   - Target industries you understand
-
-2. **Always Personalize**
-   - AI writes specific emails, but add personal touches
-   - Add recipient's actual name
-   - Add your name and contact info
-   - Reference something unique about their business
-
-3. **Research Before Sending**
-   - Visit website yourself
-   - Verify AI's findings
-   - Check if they're actually hiring
-   - Find the right person (not generic info@)
-
-4. **Quality Over Quantity**
-   - Send 10-20 quality emails/week (not 100 generic ones)
-   - Only email businesses you've researched
-   - Follow up once if no response, then stop
-   - Track responses and adjust
-
-### Avoiding Spam Issues
-
-**DO:**
-- Send emails one at a time
-- Personalize every email
-- Use your real email address
-- Make it easy to opt out
-- Space out emails (not 50 in one day)
-
-**DON'T:**
-- Use exact same template for everyone
-- Send without reading analysis
-- Email same person multiple times
-- Buy email lists
-- Send at weird hours (3am, etc.)
-
----
-
-## 🛠 Development
-
-### Project Architecture
-
-**Core Workflow ([analyzer.js](analyzer.js)):**
-```
-1. Load homepage with Playwright
-2. Capture screenshots (desktop + mobile)
-3. Extract data with Grok AI (Agent 1)
-4. Detect industry (Agent 3)
-5. Crawl additional pages (if Tier 2/3)
-6. Run analysis modules (Agents 2-6)
-7. Generate email (Agent 7)
-8. Explain critiques (Agent 8)
-9. QA review (Agent 9) → determines Lead Grade
-10. Calculate cost & time
-11. Save files (organized by Lead Grade)
-12. Save to Supabase (if enabled)
+```bash
+npx playwright install chromium
 ```
 
-**Data Flow:**
+### Supabase Connection Issues
+
+1. Verify `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` in `.env`
+2. Use service_role key (not anon key)
+3. Run migrations in Supabase SQL Editor
+
+### Port Already in Use
+
+Change port in `.env`:
 ```
-HTML → Grok AI → Company Data
-    ↓
-Screenshots → Vision AI → Visual Critiques
-    ↓
-All Data → Email AI → Personalized Email
-    ↓
-Email → QA AI → Lead Grade → Folder (lead-A/, lead-B/, etc.)
-    ↓
-Everything → Supabase → Database
-    ↓
-Cost Tracker → Cost & Time Data → UI + Database
+PORT=3001
 ```
 
 ---
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Credits
-
-Built with:
-- [Playwright](https://playwright.dev/) - Browser automation
-- [Grok AI (xAI)](https://x.ai/) - Data extraction
-- [OpenAI](https://openai.com/) - GPT models
-- [Anthropic](https://anthropic.com/) - Claude models
-- [Supabase](https://supabase.com/) - PostgreSQL database
-- [Express.js](https://expressjs.com/) - Web server
+MIT License
 
 ---
 
 ## 📞 Support
 
-- **Documentation:** See [`docs/`](docs/) folder
-- **Issues:** Report bugs or suggest features
+- **Documentation:** See API.md for endpoint details
 - **Email:** maksantagency@gmail.com
 - **Website:** [maksant.com](https://maksant.com)
 
 ---
 
-**Built by [Maksant](https://maksant.com)** - Helping businesses grow through better web presence.
-
-Need website help? Let's connect!
+**Built by Maksant** - Helping agencies scale their outreach.

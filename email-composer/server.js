@@ -30,6 +30,13 @@ import {
 } from './modules/email-generator.js';
 
 import {
+  generateOutreachMessage,
+  generateOutreachVariants,
+  validateOutreachMessage,
+  OUTREACH_STRATEGIES,
+} from './modules/social-media-generator.js';
+
+import {
   verifyWebsite,
   quickAccessibilityCheck,
 } from './modules/website-verifier.js';
@@ -40,6 +47,7 @@ import {
 
 import {
   saveComposedEmail,
+  saveSocialOutreach,
   getComposedEmails,
   getApprovedEmails,
   updateComposedEmailStatus,
@@ -59,6 +67,10 @@ import {
   isAuthorized,
   getUserEmail,
   testEmailConfig,
+  sendEmail,
+  sendTestEmail,
+  validateSMTPConfig,
+  batchSendEmails,
 } from './modules/email-sender.js';
 
 // Setup
@@ -216,7 +228,7 @@ app.get('/api/lead/:url', async (req, res) => {
 /**
  * POST /api/compose
  * Compose a personalized email for a lead
- * Body: { url, strategy, generateVariants, verify }
+ * Body: { url, strategy, generateVariants, verify, model }
  */
 app.post('/api/compose', async (req, res) => {
   try {
@@ -225,6 +237,7 @@ app.post('/api/compose', async (req, res) => {
       strategy = STRATEGIES.COMPLIMENT_SANDWICH,
       generateVariants = true,
       verify = process.env.ENABLE_REVERIFICATION === 'true',
+      model = process.env.DEFAULT_EMAIL_MODEL || 'haiku', // Default to cheap model!
     } = req.body;
 
     if (!url) {
@@ -251,6 +264,23 @@ app.post('/api/compose', async (req, res) => {
 
     console.log(`    Lead found: ${lead.company_name || lead.url}`);
 
+    // Check if this lead requires social outreach instead of email
+    if (lead.requires_social_outreach) {
+      console.warn(`   ⚠️  This lead requires social media outreach (broken website)`);
+      return res.status(400).json({
+        success: false,
+        error: 'This lead has a broken website and requires social media outreach (Instagram/Facebook/LinkedIn DMs), not email. Use /api/compose-social instead.',
+        lead: {
+          url: lead.url,
+          company_name: lead.company_name,
+          website_status: lead.website_status,
+          requires_social_outreach: true,
+          social_profiles: lead.social_profiles,
+        },
+        recommendation: 'Use POST /api/compose-social with platform: instagram|facebook|linkedin',
+      });
+    }
+
     // 2. Optionally verify website is still live and get fresh data
     let verificationResult = null;
     if (verify) {
@@ -271,6 +301,7 @@ app.post('/api/compose', async (req, res) => {
     const emailResult = await generateEmail(lead, {
       strategy,
       generateVariants,
+      model,
     });
 
     console.log('    Email generated');
@@ -353,6 +384,12 @@ app.post('/api/compose', async (req, res) => {
       ai_model: process.env.DEFAULT_EMAIL_MODEL || 'claude-sonnet-4-5',
       quality_score: qualityScore,
       validation_issues: validationResults.issues || null,
+
+      // Project tracking (from lead)
+      project_id: lead.project_id || null,
+      campaign_id: lead.campaign_id || null,
+      client_name: lead.client_name || null,
+      source_app: 'email-composer',
     });
 
     console.log(`   Saved to Supabase: ${composedEmail.id}`);
@@ -410,6 +447,182 @@ app.post('/api/compose', async (req, res) => {
 });
 
 /**
+ * POST /api/compose-social
+ * Generate social media outreach DMs and save to database
+ * Body: { url, platform, strategy, model, variants }
+ */
+app.post('/api/compose-social', async (req, res) => {
+  try {
+    const {
+      url,
+      platform = 'linkedin', // linkedin, facebook, instagram
+      strategy = OUTREACH_STRATEGIES.VALUE_FIRST, // value-first, common-ground, compliment-question, quick-win
+      model = 'haiku', // 'haiku' or 'gpt-4o-mini'
+      variants = null, // Number of variants for A/B testing
+    } = req.body;
+
+    if (!url) {
+      return res.status(400).json({
+        success: false,
+        error: 'URL is required',
+      });
+    }
+
+    console.log(`\n\n📱 ============================================`);
+    console.log(`📱 GENERATING ${platform.toUpperCase()} OUTREACH DM`);
+    console.log(`📱 ============================================\n`);
+
+    // 1. Fetch lead from database
+    console.log(`1️⃣ Fetching lead from database...`);
+    const lead = await getLeadByUrl(url);
+
+    if (!lead) {
+      return res.status(404).json({
+        success: false,
+        error: `Lead not found for URL: ${url}`,
+      });
+    }
+
+    console.log(`   Lead found: ${lead.company_name}`);
+
+    // 2. Get social profile URL from lead's social_profiles object
+    const socialProfiles = lead.social_profiles || {};
+
+    // Extract URLs from nested structure
+    const socialProfileUrls = {
+      linkedin: socialProfiles.linkedIn?.company || socialProfiles.linkedIn?.personal?.[0] || null,
+      facebook: socialProfiles.facebook || null,
+      instagram: socialProfiles.instagram?.url || null,
+    };
+
+    const social_profile_url = socialProfileUrls[platform];
+    if (!social_profile_url) {
+      console.log(`   ⚠️  Warning: No ${platform} URL in lead data (social_profiles.${platform})`);
+    } else {
+      console.log(`   ✅ ${platform} URL found: ${social_profile_url}`);
+    }
+
+    // 3. Generate outreach DM
+    let result;
+    let savedRecords = [];
+
+    if (variants && variants > 1) {
+      // Generate multiple variants for A/B testing
+      console.log(`2️⃣ Generating ${variants} DM variants...`);
+
+      result = await generateOutreachVariants({
+        lead,
+        platform,
+        variants,
+        model,
+      });
+
+      // Save each variant to database
+      console.log(`\n3️⃣ Saving variants to database...`);
+      for (const variant of result.variants) {
+        const validation = validateOutreachMessage(variant);
+
+        const savedRecord = await saveSocialOutreach({
+          lead_id: lead.id,
+          url: lead.url, // NOTE: it's 'url' not 'website_url'
+          company_name: lead.company_name,
+          contact_name: lead.contact_name,
+          industry: lead.industry,
+
+          outreach_type: platform,
+          platform,
+          message_body: variant.message,
+          character_count: variant.character_count,
+          social_profile_url,
+
+          strategy: variant.strategy,
+          ai_model: variant.model_used,
+          quality_score: validation.score,
+
+          project_id: lead.project_id,
+          campaign_id: lead.campaign_id,
+          client_name: lead.client_name,
+        });
+
+        savedRecords.push(savedRecord);
+      }
+    } else {
+      // Generate single DM
+      console.log(`2️⃣ Generating ${platform} DM...`);
+
+      result = await generateOutreachMessage({
+        lead,
+        platform,
+        strategy,
+        model,
+      });
+
+      // Validate DM
+      const validation = validateOutreachMessage(result);
+      result.validation = validation;
+
+      // Save to database
+      console.log(`\n3️⃣ Saving DM to database...`);
+      const savedRecord = await saveSocialOutreach({
+        lead_id: lead.id,
+        url: lead.url, // NOTE: it's 'url' not 'website_url'
+        company_name: lead.company_name,
+        contact_name: lead.contact_name,
+        industry: lead.industry,
+
+        outreach_type: platform,
+        platform,
+        message_body: result.message,
+        character_count: result.character_count,
+        social_profile_url,
+
+        strategy,
+        ai_model: result.model_used,
+        quality_score: validation.score,
+
+        project_id: lead.project_id,
+        campaign_id: lead.campaign_id,
+        client_name: lead.client_name,
+      });
+
+      savedRecords.push(savedRecord);
+    }
+
+    console.log(`\n✅ ${platform.toUpperCase()} outreach DM generated and saved!`);
+    console.log(`   Database ID(s): ${savedRecords.map(r => r.id).join(', ')}`);
+    console.log(`   Cost: $${(result.cost || result.total_cost || 0).toFixed(4)}`);
+
+    // 4. Sync to Notion (optional - same as email workflow)
+    if (process.env.NOTION_ENABLED === 'true') {
+      console.log(`\n4️⃣ Syncing to Notion...`);
+      for (const record of savedRecords) {
+        await syncToNotion(record);
+      }
+    }
+
+    res.json({
+      success: true,
+      lead: {
+        url: lead.url, // NOTE: it's 'url' not 'website_url'
+        company: lead.company_name,
+        industry: lead.industry,
+      },
+      ...result,
+      saved_records: savedRecords,
+      generatedAt: new Date().toISOString(),
+    });
+
+  } catch (error) {
+    console.error('❌ Error generating social outreach:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
+  }
+});
+
+/**
  * POST /api/verify
  * Verify a website is still accessible
  * Body: { url, fullVerification }
@@ -458,6 +671,61 @@ app.get('/api/strategies', (req, res) => {
       [STRATEGIES.COMPLIMENT_SANDWICH]: 'Compliment � problem + fixes � encouragement (recommended)',
     },
   });
+});
+
+/**
+ * GET /api/emails
+ * Get composed emails with optional filters
+ * Query params: status, project_id, campaign_id, client_name, limit
+ */
+app.get('/api/emails', async (req, res) => {
+  try {
+    const { status, project_id, campaign_id, client_name, limit } = req.query;
+
+    const filters = {};
+    if (status) filters.status = status;
+    if (project_id) filters.project_id = project_id;
+    if (campaign_id) filters.campaign_id = campaign_id;
+    if (client_name) filters.client_name = client_name;
+    if (limit) filters.limit = parseInt(limit);
+
+    const emails = await getComposedEmails(filters);
+
+    res.json({
+      success: true,
+      count: emails.length,
+      emails,
+    });
+  } catch (error) {
+    console.error('L Error fetching composed emails:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/emails/project/:project_id
+ * Get all composed emails for a specific project
+ */
+app.get('/api/emails/project/:project_id', async (req, res) => {
+  try {
+    const { project_id } = req.params;
+    const limit = parseInt(req.query.limit) || 100;
+
+    const emails = await getComposedEmails({
+      project_id,
+      limit,
+    });
+
+    res.json({
+      success: true,
+      project_id,
+      count: emails.length,
+      emails,
+    });
+  } catch (error) {
+    console.error('L Error fetching project emails:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 /**
@@ -611,6 +879,229 @@ app.get('/api/oauth/status', async (req, res) => {
 });
 
 // ============================================================================
+// SMTP EMAIL SENDING
+// ============================================================================
+
+/**
+ * POST /api/send-test-email
+ * Send a test email to verify SMTP configuration
+ */
+app.post('/api/send-test-email', async (req, res) => {
+  try {
+    const { provider = 'gmail', actualSend = false } = req.body;
+
+    console.log('\n🧪 API: Sending test email...');
+
+    const result = await sendTestEmail({ provider, actualSend });
+
+    res.json({
+      success: true,
+      message: actualSend ? 'Test email sent via SMTP!' : 'Test .eml file created',
+      result,
+    });
+  } catch (error) {
+    console.error('❌ Error sending test email:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      hint: error.message.includes('GMAIL_APP_PASSWORD')
+        ? 'Get your Gmail App Password from https://myaccount.google.com/apppasswords'
+        : null,
+    });
+  }
+});
+
+/**
+ * POST /api/validate-smtp
+ * Validate SMTP configuration
+ */
+app.post('/api/validate-smtp', async (req, res) => {
+  try {
+    const { provider = 'gmail' } = req.body;
+
+    console.log('\n🔍 API: Validating SMTP configuration...');
+
+    const valid = await validateSMTPConfig(provider);
+
+    res.json({
+      success: true,
+      valid,
+      message: 'SMTP configuration is valid!',
+    });
+  } catch (error) {
+    console.error('❌ SMTP validation failed:', error);
+    res.status(500).json({
+      success: false,
+      valid: false,
+      error: error.message,
+      hint: error.message.includes('GMAIL_APP_PASSWORD')
+        ? 'Get your Gmail App Password from https://myaccount.google.com/apppasswords'
+        : null,
+    });
+  }
+});
+
+/**
+ * POST /api/send-email
+ * Send a composed email via SMTP
+ *
+ * Body:
+ * - email_id: ID of composed email to send (fetches from database)
+ * - OR provide full email data: { company_name, contact_email, email_subject, email_body }
+ * - provider: 'gmail' or custom SMTP config object (optional, default: 'gmail')
+ * - actualSend: true/false (optional, default: false for safety)
+ */
+app.post('/api/send-email', async (req, res) => {
+  try {
+    const {
+      email_id,
+      email_data,
+      provider = 'gmail',
+      actualSend = false,
+    } = req.body;
+
+    console.log('\n📧 API: Sending email...');
+
+    let emailToSend;
+
+    // Fetch from database if email_id provided
+    if (email_id) {
+      const { data, error } = await supabase
+        .from('composed_emails')
+        .select('*')
+        .eq('id', email_id)
+        .single();
+
+      if (error || !data) {
+        throw new Error(`Email not found: ${email_id}`);
+      }
+
+      emailToSend = {
+        company_name: data.company_name,
+        contact_email: data.recipient_email,
+        email_subject: data.email_subject,
+        email_body: data.email_body,
+      };
+    } else if (email_data) {
+      emailToSend = email_data;
+    } else {
+      throw new Error('Must provide either email_id or email_data');
+    }
+
+    const result = await sendEmail(emailToSend, { provider, actualSend });
+
+    // Update database if email_id provided and actualSend was true
+    if (email_id && actualSend && result.smtpSent) {
+      await supabase
+        .from('composed_emails')
+        .update({
+          status: 'sent',
+          sent_at: result.sentAt,
+        })
+        .eq('id', email_id);
+
+      console.log(`   ✅ Updated database: email ${email_id} marked as sent`);
+    }
+
+    res.json({
+      success: true,
+      message: actualSend ? 'Email sent via SMTP!' : '.eml file created',
+      result,
+    });
+  } catch (error) {
+    console.error('❌ Error sending email:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * POST /api/send-batch
+ * Batch send approved emails via SMTP
+ *
+ * Body:
+ * - email_ids: Array of composed email IDs
+ * - provider: 'gmail' or custom SMTP config (optional)
+ * - actualSend: true/false (optional, default: false)
+ * - delayMs: Delay between emails in ms (optional, default: 1000)
+ */
+app.post('/api/send-batch', async (req, res) => {
+  try {
+    const {
+      email_ids,
+      provider = 'gmail',
+      actualSend = false,
+      delayMs = 1000,
+    } = req.body;
+
+    if (!email_ids || !Array.isArray(email_ids) || email_ids.length === 0) {
+      throw new Error('Must provide array of email_ids');
+    }
+
+    console.log(`\n📬 API: Batch sending ${email_ids.length} emails...`);
+
+    // Fetch emails from database
+    const { data: emails, error } = await supabase
+      .from('composed_emails')
+      .select('*')
+      .in('id', email_ids);
+
+    if (error || !emails || emails.length === 0) {
+      throw new Error('No emails found for provided IDs');
+    }
+
+    // Convert to email format
+    const emailsData = emails.map(e => ({
+      id: e.id,
+      company_name: e.company_name,
+      contact_email: e.recipient_email,
+      email_subject: e.email_subject,
+      email_body: e.email_body,
+    }));
+
+    const results = await batchSendEmails(emailsData, {
+      provider,
+      actualSend,
+      delayMs,
+    });
+
+    // Update database for successfully sent emails
+    if (actualSend && results.sent.length > 0) {
+      const sentIds = results.sent.map(r => {
+        const email = emailsData.find(e => e.company_name === r.company_name);
+        return email?.id;
+      }).filter(Boolean);
+
+      if (sentIds.length > 0) {
+        await supabase
+          .from('composed_emails')
+          .update({
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+          })
+          .in('id', sentIds);
+
+        console.log(`   ✅ Updated database: ${sentIds.length} emails marked as sent`);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Batch complete: ${results.sent.length} sent, ${results.failed.length} failed`,
+      results,
+    });
+  } catch (error) {
+    console.error('❌ Error in batch sending:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// ============================================================================
 // HEALTH CHECK
 // ============================================================================
 
@@ -642,6 +1133,11 @@ app.listen(PORT, () => {
   console.log(`   - POST /api/verify - Verify website accessibility`);
   console.log(`   - GET  /api/strategies - Get email strategies`);
   console.log(`   - POST /api/sync-from-notion - Sync status changes from Notion`);
+  console.log(`   - POST /api/compose-social - Generate social media content`);
+  console.log(`   - POST /api/send-test-email - Test SMTP configuration`);
+  console.log(`   - POST /api/validate-smtp - Validate SMTP settings`);
+  console.log(`   - POST /api/send-email - Send email via SMTP`);
+  console.log(`   - POST /api/send-batch - Batch send emails via SMTP`);
   console.log(`   - GET  /api/oauth/google - Authorize Gmail (one-time setup)`);
   console.log(`   - GET  /api/oauth/status - Check Gmail authorization status`);
   console.log(`\n=� Environment:`);

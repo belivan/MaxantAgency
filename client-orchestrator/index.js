@@ -72,24 +72,77 @@ export async function verifyUrl(url) {
   try {
     const u = new URL(url);
 
-    // Try HEAD first (faster, doesn't download content)
-    try {
-      const headRes = await fetch(u.toString(), {
-        method: 'HEAD',
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
-      if (headRes.ok) return true;
-    } catch (headError) {
-      // HEAD failed, try GET as fallback
-    }
-
-    // Fallback to GET request (some sites block HEAD)
+    // Fetch the page and check if it's a real business website
     const getRes = await fetch(u.toString(), {
       method: 'GET',
       signal: AbortSignal.timeout(10000), // 10 second timeout
       redirect: 'follow'
     });
-    return getRes.ok;
+
+    if (!getRes.ok) {
+      return false;
+    }
+
+    // Check if redirected to a parking page domain
+    const finalUrl = getRes.url.toLowerCase();
+    const parkingDomains = [
+      'godaddy.com',
+      'secureserver.net',
+      'parklogic.com',
+      'parkingcrew.net',
+      'sedoparking.com',
+      'bodis.com',
+      'parkweb.co',
+      'afternic.com',
+      'dan.com',
+      'namecheap.com/parking',
+      'hugedomains.com',
+      'buy.com',
+      'domainmarket.com'
+    ];
+
+    // Check if final URL contains any parking domain
+    if (parkingDomains.some(domain => finalUrl.includes(domain))) {
+      console.log(`  ⚠️  ${url} → Parked domain detected (${finalUrl})`);
+      return false;
+    }
+
+    // Get page content to check for parking page indicators
+    const html = await getRes.text();
+    const htmlLower = html.toLowerCase();
+
+    // Common parking page text indicators
+    const parkingIndicators = [
+      'this domain may be for sale',
+      'this domain is for sale',
+      'buy this domain',
+      'domain is parked',
+      'parked free',
+      'this page is parked',
+      'coming soon',
+      'under construction',
+      'domain forwarding',
+      'domain parking',
+      'this domain has been registered',
+      'renew this domain',
+      'expired domain',
+      'hugedomains.com',
+      'sedo domain parking',
+      'godaddy.com/domainsearch'
+    ];
+
+    // Check for multiple indicators (more than 2 = likely a parking page)
+    const indicatorCount = parkingIndicators.filter(indicator =>
+      htmlLower.includes(indicator)
+    ).length;
+
+    if (indicatorCount >= 2) {
+      console.log(`  ⚠️  ${url} → Parking page detected (${indicatorCount} indicators)`);
+      return false;
+    }
+
+    // Passed all checks
+    return true;
 
   } catch (error) {
     return false;
@@ -123,6 +176,7 @@ export async function runProspector(options) {
     supabaseStatus = 'pending_analysis',
     runId = randomUUID(),
     source = 'client-orchestrator',
+    projectId = null,
     logger = console
   } = options;
 
@@ -254,6 +308,7 @@ export async function runProspector(options) {
         source,
         status: supabaseStatus,
         city: city || brief?.geo?.city || null,
+        projectId,
         brief: {
           studio: brief.studio || null,
           icp: brief.icp || null,

@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Generated prospect files
+prospects.json
+prospects-*.json
+
+# Screenshots from analyzer
+screenshots/
+
+# Environment variables (should use ../website-audit-tool/.env)
+.env
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db

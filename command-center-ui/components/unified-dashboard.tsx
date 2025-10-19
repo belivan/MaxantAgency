@@ -16,6 +16,11 @@ type ProspectResponse = {
   companies: ProspectRow[];
   urls: string[];
   runId: string;
+  project?: {
+    id: string;
+    name: string;
+    description: string;
+  };
 };
 
 type AnalyzeResponse = {
@@ -46,6 +51,13 @@ export default function UnifiedDashboard() {
   const [alert, setAlert] = useState<string | null>(null);
   const [analysisSummary, setAnalysisSummary] = useState<string>('');
   const [analysisLogs, setAnalysisLogs] = useState<any[]>([]);
+
+  // Project tracking state
+  const [currentProject, setCurrentProject] = useState<{
+    id: string;
+    name: string;
+    description: string;
+  } | null>(null);
 
   // Progress tracking
   const [analysisProgress, setAnalysisProgress] = useState<{
@@ -145,13 +157,19 @@ export default function UnifiedDashboard() {
       const payload: ProspectResponse = {
         companies: json.companies || [],
         urls: json.urls || [],
-        runId: json.runId
+        runId: json.runId,
+        project: json.project
       };
       setProspectData(payload);
       setSelectedProspectUrls(payload.urls || []);
 
+      // Store current project for tracking through pipeline
+      if (json.project) {
+        setCurrentProject(json.project);
+      }
+
       if (values.autoAnalyze && payload.urls.length > 0) {
-        setAlert(`Generated ${payload.urls.length} verified URLs. Auto-analyzing with Tier 3...`);
+        setAlert(`Generated ${payload.urls.length} verified URLs${json.project ? ` for project "${json.project.name}"` : ''}. Auto-analyzing with Tier 3...`);
         // Trigger auto-analyze after a short delay to ensure state is updated
         setTimeout(() => {
           handleAnalyze({
@@ -160,12 +178,14 @@ export default function UnifiedDashboard() {
             modules: ['seo', 'visual', 'industry', 'competitor'],
             textModel: 'gpt-5-mini',
             visionModel: 'gpt-4o',
-            metadata: {},
+            metadata: {
+              projectId: json.project?.id || null
+            },
             autoEmail: values.autoEmail
           });
         }, 500);
       } else {
-        setAlert(`Generated ${payload.urls.length} verified URLs (Run ID: ${payload.runId}).`);
+        setAlert(`Generated ${payload.urls.length} verified URLs${json.project ? ` for project "${json.project.name}"` : ''} (Run ID: ${payload.runId}).`);
       }
     } catch (error: any) {
       console.error(error);
@@ -186,13 +206,22 @@ export default function UnifiedDashboard() {
     setAlert(null);
     setAnalysisLogs([]);
 
+    // Include project ID in metadata if we have one
+    const analyzerOptions = {
+      ...options,
+      metadata: {
+        ...options.metadata,
+        projectId: currentProject?.id || options.metadata?.projectId || null
+      }
+    };
+
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           urls: selectedProspectUrls,
-          options
+          options: analyzerOptions
         })
       });
 
@@ -292,6 +321,45 @@ export default function UnifiedDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Header with About link */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-100">Maksant Agency Command Center</h1>
+        <a
+          href="/about"
+          className="text-sm text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+        >
+          <span>ℹ️</span>
+          <span>About</span>
+        </a>
+      </div>
+
+      {/* Current Project Display */}
+      {currentProject && (
+        <div className="rounded-lg border border-blue-600/30 bg-blue-950/20 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-blue-400">📊</span>
+              <div>
+                <div className="text-sm font-medium text-blue-300">
+                  Current Project: {currentProject.name}
+                </div>
+                {currentProject.description && (
+                  <div className="text-xs text-slate-400 mt-1">
+                    {currentProject.description}
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={() => setCurrentProject(null)}
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex gap-2 rounded-lg border border-slate-800 bg-slate-900/40 p-2">
         {tabs.map((tab) => (

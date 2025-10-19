@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import { randomUUID } from 'crypto';
 import { runProspector } from './index.js';
 import { createLogger, requestLogger } from '../shared/logger.js';
+import { createProject } from './supabase.js';
 
 dotenv.config();
 
@@ -35,7 +36,8 @@ app.post('/api/prospects', async (req, res) => {
       count = 20,
       city,
       model = 'grok-4-fast',
-      verify = true
+      verify = true,
+      projectName
     } = req.body;
 
     logger.info('Prospect generation started', {
@@ -53,6 +55,32 @@ app.post('/api/prospects', async (req, res) => {
       });
     }
 
+    // Create a project to track this generation run
+    let project = null;
+    try {
+      const industryName = brief?.icp?.industry || 'prospects';
+      const locationName = city || brief?.geo?.city || '';
+      const timestamp = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+      const autoProjectName = projectName ||
+        `${locationName ? locationName + ' ' : ''}${industryName} - ${timestamp}`;
+
+      project = await createProject({
+        name: autoProjectName,
+        description: `Generated ${count} prospects for ${industryName}${locationName ? ' in ' + locationName : ''}`,
+        icp_data: brief
+      });
+
+      logger.info('Project created', {
+        projectId: project?.id,
+        projectName: autoProjectName
+      });
+    } catch (projectError) {
+      logger.warn('Failed to create project, continuing without project tracking', {
+        error: projectError.message
+      });
+    }
+
     const result = await runProspector({
       briefData: brief,
       count,
@@ -63,6 +91,7 @@ app.post('/api/prospects', async (req, res) => {
       saveSupabase: true,
       supabaseStatus: 'pending_analysis',
       source: 'command-center-ui',
+      projectId: project?.id || null,
       logger
     });
 
@@ -71,6 +100,7 @@ app.post('/api/prospects', async (req, res) => {
       companiesFound: result.companies.length,
       urlsVerified: result.urls.length,
       runId: result.runId,
+      projectId: project?.id,
       duration: `${duration}ms`
     });
 
@@ -78,7 +108,12 @@ app.post('/api/prospects', async (req, res) => {
       success: true,
       companies: result.companies,
       urls: result.urls,
-      runId: result.runId
+      runId: result.runId,
+      project: project ? {
+        id: project.id,
+        name: project.name,
+        description: project.description
+      } : null
     });
   } catch (error) {
     const duration = Date.now() - startTime;
