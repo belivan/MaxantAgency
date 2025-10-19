@@ -217,7 +217,8 @@ function buildNotionPageContent(emailData) {
     paragraph: {
       rich_text: [{
         type: 'text',
-        text: { content: 'Subject: ', annotations: { bold: true } },
+        text: { content: 'Subject: ' },
+        annotations: { bold: true },
       }, {
         type: 'text',
         text: { content: emailData.email_subject },
