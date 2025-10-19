@@ -14,7 +14,11 @@ if (fs.existsSync(analyzerEnv)) dotenv.config({ path: analyzerEnv, override: fal
  * Use Grok AI with web search to find REAL companies
  * This is better than GPT because it searches the live web
  */
-export async function findCompaniesWithGrok({ brief, count = 20, city }) {
+export async function findCompaniesWithGrok({ brief, count = 20, city, logger = console }) {
+  if (logger.info) {
+    logger.info('Starting Grok web search for real companies', { count, city: city || 'none' });
+  }
+
   const apiKey = process.env.XAI_API_KEY;
   if (!apiKey) {
     throw new Error('XAI_API_KEY not set. Add it to website-audit-tool/.env');
@@ -99,10 +103,23 @@ Return ONLY valid JSON in this exact format:
 
   try {
     const result = JSON.parse(content);
-    console.log(`✅ Found ${result.companies?.length || 0} real companies via Grok`);
+    const companiesFound = result.companies?.length || 0;
+
+    if (logger.info) {
+      logger.info(`Grok found ${companiesFound} companies`, {
+        companies: result.companies?.map(c => c.name) || []
+      });
+    } else {
+      console.log(`✅ Found ${companiesFound} real companies via Grok`);
+    }
+
     return result;
   } catch (e) {
-    console.error('Failed to parse Grok response:', content);
+    if (logger.error) {
+      logger.error('Failed to parse Grok response', { error: e.message, content });
+    } else {
+      console.error('Failed to parse Grok response:', content);
+    }
     throw new Error('Grok did not return valid JSON');
   }
 }

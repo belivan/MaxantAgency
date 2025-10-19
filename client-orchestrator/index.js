@@ -71,9 +71,27 @@ export function uniq(arr) {
 export async function verifyUrl(url) {
   try {
     const u = new URL(url);
-    const res = await fetch(u.toString(), { method: 'HEAD' });
-    return res.ok;
-  } catch {
+
+    // Try HEAD first (faster, doesn't download content)
+    try {
+      const headRes = await fetch(u.toString(), {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      if (headRes.ok) return true;
+    } catch (headError) {
+      // HEAD failed, try GET as fallback
+    }
+
+    // Fallback to GET request (some sites block HEAD)
+    const getRes = await fetch(u.toString(), {
+      method: 'GET',
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+      redirect: 'follow'
+    });
+    return getRes.ok;
+
+  } catch (error) {
     return false;
   }
 }
@@ -123,7 +141,7 @@ export async function runProspector(options) {
     } else {
       console.log('🔍 Using Grok with web search to find REAL companies...');
     }
-    json = await findCompaniesWithGrok({ brief, count, city });
+    json = await findCompaniesWithGrok({ brief, count, city, logger });
   } else {
     if (logger.info) {
       logger.info(`Using ${model} to generate prospect list`, { count, city: city || 'none' });

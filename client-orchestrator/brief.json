@@ -33,9 +33,7 @@
     "city": "Philadelphia, PA",
     "radiusMiles": 40
   },
-  "seeds": [
-    "https://example-seed-site.com"
-  ],
+  "seeds": [],
   "notes": "Use local orientation; prioritize reachable SMBs with visible phone number."
 }
 
