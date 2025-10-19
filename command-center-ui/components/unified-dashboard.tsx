@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import StatsOverview from './stats-overview';
 import ProspectForm, { ProspectFormValues } from './prospect-form';
@@ -8,6 +8,7 @@ import AnalyzerPanel, { AnalyzerOptions } from './analyzer-panel';
 import ProspectTable, { ProspectRow } from './prospect-table';
 import LeadsTable, { Lead } from './leads-table';
 import EmailComposer from './email-composer';
+import ProgressBar from './progress-bar';
 
 type Tab = 'overview' | 'prospects' | 'leads' | 'emails';
 
@@ -45,6 +46,14 @@ export default function UnifiedDashboard() {
   const [alert, setAlert] = useState<string | null>(null);
   const [analysisSummary, setAnalysisSummary] = useState<string>('');
   const [analysisLogs, setAnalysisLogs] = useState<any[]>([]);
+
+  // Progress tracking
+  const [analysisProgress, setAnalysisProgress] = useState<{
+    current: number;
+    total: number;
+    currentStep: string;
+    startTime?: number;
+  } | null>(null);
 
   // Leads tab state
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
