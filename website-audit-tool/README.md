@@ -66,38 +66,49 @@ Each agent has ONE job and does it well:
 
 > **Note:** Email Writing, Critique Reasoning, and QA Review agents have been moved to a separate email composer app.
 
-### 📊 Dual Grading System
+### 📊 Website Quality Grading (Data Completeness)
 
-**Website Grade (A-F):** How comprehensive the analysis was
-- 40 points: Data extraction (email, phone, company, location)
-- 60 points: Analysis modules run (basic, industry, SEO, visual, competitor)
+**Website Grade (A-F):** How comprehensive and complete the extracted data is
 
-**Lead Grade (A-F):** How good the outreach email is *(from QA Agent)*
-- **Grade A:** Contact immediately! (no issues, max 1 warning)
-- **Grade B:** Review then contact (2-3 warnings)
-- **Grade C:** Needs editing (4+ warnings)
-- **Grade D:** Major rewrite needed (almost all warnings)
-- **Grade F:** Do not contact (missing email or critical issues)
+**Scoring Breakdown:**
+- **40 points:** Data extraction completeness
+  - Email found: 15 points
+  - Phone found: 10 points
+  - Company name/industry/location: 15 points
 
-### 📁 Lead-Based Folder Organization
+- **60 points:** Analysis depth (modules enabled)
+  - Basic analysis: 15 points *(always runs)*
+  - Industry analysis: 15 points *(if enabled)*
+  - SEO analysis: 10 points *(if enabled)*
+  - Visual analysis: 10 points *(if enabled)*
+  - Competitor analysis: 10 points *(if enabled)*
 
-Results organized by **Lead Grade** (not website quality):
+**Grade Definitions:**
+- **Grade A (70-100):** Comprehensive data - ready to contact!
+- **Grade B (50-69):** Good data, some gaps - review before contact
+- **Grade C (30-49):** Minimal data - missing important pieces
+- **Grade D (10-29):** Very little data extracted
+- **Grade F (0-9):** Almost no usable data
+
+### 📁 Grade-Based Folder Organization
+
+Results organized by **Website Quality Grade**:
 
 ```
 analysis-results/
-  ├── lead-A/  (Contact immediately - perfect emails!)
+  ├── grade-A/  (Comprehensive data - contact immediately!)
   │   └── maksant.com/2025-10-18_20-15-30/
-  │       ├── email.txt
-  │       ├── qa-review.txt (Grade A explanation)
-  │       ├── analysis-data.json
-  │       └── ...
-  ├── lead-B/  (Review then contact)
-  ├── lead-C/  (Needs editing before sending)
-  ├── lead-D/  (Major rewrite needed)
-  └── lead-F/  (Do not contact - no email or bad quality)
+  │       ├── analysis-data.json (Complete analysis with all data)
+  │       ├── client-info.json (Formatted contact info)
+  │       ├── basic-issues.txt (Human-readable critiques)
+  │       └── screenshot-homepage.png (if visual module enabled)
+  ├── grade-B/  (Good data - review before contact)
+  ├── grade-C/  (Minimal data - missing pieces)
+  ├── grade-D/  (Very little data)
+  └── grade-F/  (Almost no data)
 ```
 
-**Why?** Go straight to `lead-A/` folder and send those emails. Simple!
+**Why?** Go straight to `grade-A/` folder - these leads have the most complete contact information!
 
 ### 💰 Cost & Time Tracking
 
