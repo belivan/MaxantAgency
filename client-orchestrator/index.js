@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { randomUUID } from 'crypto';
 
 // Load local .env (optional) then website-audit-tool/.env (primary)
 dotenv.config();
@@ -14,6 +15,7 @@ if (fs.existsSync(analyzerEnv)) dotenv.config({ path: analyzerEnv, override: fal
 import { buildProspectPrompt, buildDomainInferencePrompt } from './prompts.js';
 import { completeJSON } from './llm.js';
 import { analyzeWebsites } from '../website-audit-tool/analyzer.js';
+import { upsertProspects, hasSupabase, markProspectStatus } from './supabase.js';
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -27,7 +29,9 @@ function parseArgs() {
     tier: 'tier1',
     emailType: 'local',
     batch: 10,
-    model: 'gpt-4o-mini'
+    model: 'gpt-4o-mini',
+    saveSupabase: undefined,
+    supabaseStatus: 'pending_analysis'
   };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -42,6 +46,9 @@ function parseArgs() {
     else if (a === '--email-type') out.emailType = args[++i];
     else if (a === '--batch') out.batch = Math.min(10, parseInt(args[++i], 10) || 10);
     else if (a === '--model') out.model = args[++i];
+    else if (a === '--save-supabase') out.saveSupabase = true;
+    else if (a === '--no-supabase') out.saveSupabase = false;
+    else if (a === '--prospect-status') out.supabaseStatus = args[++i];
   }
   if (!out.briefPath) {
     console.error('Missing --brief <path>');
@@ -56,11 +63,11 @@ function readJSON(p) {
   return JSON.parse(raw);
 }
 
-function uniq(arr) {
+export function uniq(arr) {
   return Array.from(new Set(arr));
 }
 
-async function verifyUrl(url) {
+export async function verifyUrl(url) {
   try {
     const u = new URL(url);
     const res = await fetch(u.toString(), { method: 'HEAD' });
@@ -70,7 +77,7 @@ async function verifyUrl(url) {
   }
 }
 
-function normalizeUrl(s) {
+export function normalizeUrl(s) {
   if (!s) return '';
   let v = s.trim();
   if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
@@ -82,37 +89,53 @@ function normalizeUrl(s) {
   }
 }
 
-async function main() {
-  const args = parseArgs();
-  const brief = readJSON(args.briefPath);
+export async function runProspector(options) {
+  const {
+    briefPath,
+    briefData,
+    outPath = null,
+    count = 20,
+    city,
+    model = 'gpt-4o-mini',
+    verify = true,
+    seeds = [],
+    saveToFile = true,
+    saveSupabase,
+    supabaseStatus = 'pending_analysis',
+    runId = randomUUID(),
+    source = 'client-orchestrator'
+  } = options;
 
-  // Seeds
-  const seedUrls = (brief.seeds || []).map(normalizeUrl).filter(Boolean);
+  if (!briefPath && !briefData) {
+    throw new Error('Brief data or --brief path required');
+  }
 
-  // Build prospect prompt from brief
-  const prompt = buildProspectPrompt({ studio: brief.studio, icp: brief.icp, geo: brief.geo, count: args.count, cityHint: args.city });
-  const json = await completeJSON({ prompt, model: args.model });
+  const brief = briefData || readJSON(briefPath);
+  const seedUrls = [...seeds, ...(brief.seeds || [])].map(normalizeUrl).filter(Boolean);
+
+  const prompt = buildProspectPrompt({ studio: brief.studio, icp: brief.icp, geo: brief.geo, count, cityHint: city });
+  const json = await completeJSON({ prompt, model });
 
   let companies = Array.isArray(json?.companies) ? json.companies : [];
-  // If many lack websites, attempt domain inference
-  const missing = companies.filter(c => !c.website);
+  const missing = companies.filter((c) => !c.website);
   if (missing.length > 0) {
     try {
       const inferPrompt = buildDomainInferencePrompt(companies);
-      const inferred = await completeJSON({ prompt: inferPrompt, model: args.model });
-      const byName = new Map((inferred || []).map(x => [x.name?.toLowerCase(), x.website]));
-      companies = companies.map(c => ({
+      const inferred = await completeJSON({ prompt: inferPrompt, model });
+      const byName = new Map((Array.isArray(inferred) ? inferred : []).map((x) => [x.name?.toLowerCase(), x.website]));
+      companies = companies.map((c) => ({
         ...c,
         website: c.website || byName.get((c.name || '').toLowerCase()) || ''
       }));
-    } catch {}
+    } catch (error) {
+      console.warn('�?O Domain inference failed, continuing with provided websites.');
+    }
   }
 
-  // Normalize & verify URLs
-  let urls = companies.map(c => normalizeUrl(c.website)).filter(Boolean);
+  let urls = companies.map((c) => normalizeUrl(c.website)).filter(Boolean);
   urls = uniq([...seedUrls, ...urls]);
 
-  if (args.verify) {
+  if (verify) {
     const results = [];
     for (const u of urls) {
       const ok = await verifyUrl(u);
@@ -121,22 +144,81 @@ async function main() {
     urls = results;
   }
 
-  // Save prospects file
   const prospectOut = {
     generatedAt: new Date().toISOString(),
-    countRequested: args.count,
+    countRequested: count,
     countFound: urls.length,
-    city: args.city || brief?.geo?.city || null,
+    city: city || brief?.geo?.city || null,
     industries: json?.industries || [],
     companies,
-    urls
+    urls,
+    runId
   };
-  fs.writeFileSync(path.resolve(process.cwd(), args.outPath), JSON.stringify(prospectOut, null, 2), 'utf8');
-  console.log(`Saved prospects to ${args.outPath} (${urls.length} URLs)`);
 
-  if (!args.run) return;
+  if (saveToFile && outPath) {
+    fs.writeFileSync(path.resolve(process.cwd(), outPath), JSON.stringify(prospectOut, null, 2), 'utf8');
+    console.log(`Saved prospects to ${outPath} (${urls.length} URLs)`);
+  }
 
-  // Run analyzer in batches
+  const shouldSaveSupabase = saveSupabase !== undefined ? saveSupabase : hasSupabase();
+  let supabaseRecords = [];
+  if (shouldSaveSupabase) {
+    try {
+      const companyMap = new Map();
+      for (const comp of companies) {
+        const normalized = normalizeUrl(comp.website);
+        if (normalized) {
+          companyMap.set(normalized, { ...comp, website: normalized });
+        }
+      }
+
+      const payload = urls.map((urlValue) => ({
+        ...(companyMap.get(urlValue) || { name: null, industry: null, why_now: null, teaser: null }),
+        website: urlValue
+      }));
+
+      supabaseRecords = await upsertProspects(payload, {
+        runId,
+        source,
+        status: supabaseStatus,
+        city: city || brief?.geo?.city || null,
+        brief: {
+          studio: brief.studio || null,
+          icp: brief.icp || null,
+          geo: brief.geo || null,
+          notes: brief.notes || null
+        }
+      });
+      if (supabaseRecords.length) {
+        console.log(`�o. Synced ${supabaseRecords.length} prospects to Supabase`);
+      }
+    } catch (error) {
+      console.error('�?O Failed to sync prospects to Supabase:', error.message);
+    }
+  }
+
+  return { prospectOut, urls, companies, brief, runId, supabaseRecords };
+}
+
+async function runCli() {
+  const args = parseArgs();
+  const { prospectOut, urls, runId } = await runProspector({
+    briefPath: args.briefPath,
+    outPath: args.outPath,
+    count: args.count,
+    city: args.city,
+    model: args.model,
+    verify: args.verify,
+    saveToFile: true,
+    saveSupabase: args.saveSupabase,
+    supabaseStatus: args.supabaseStatus,
+    source: 'client-orchestrator-cli'
+  });
+
+  if (!args.run || urls.length === 0) {
+    return;
+  }
+
   const batchSize = Math.min(10, Math.max(1, args.batch || 10));
   for (let i = 0; i < urls.length; i += batchSize) {
     const chunk = urls.slice(i, i + batchSize);
@@ -148,7 +230,11 @@ async function main() {
       modules: { basic: true, seo: true },
       emailType: args.emailType,
       saveToDrafts: process.env.SAVE_TO_DRAFTS === 'true',
-      dryRun: process.env.DRY_RUN === 'true'
+      dryRun: process.env.DRY_RUN === 'true',
+      metadata: {
+        runId,
+        sourceApp: 'client-orchestrator-cli'
+      }
     };
 
     const progress = (p) => {
@@ -163,6 +249,7 @@ async function main() {
 
     try {
       await analyzeWebsites(chunk, options, progress);
+      await markProspectStatus(chunk, 'analyzed');
     } catch (e) {
       console.error('Analyzer error:', e.message);
     }
@@ -171,8 +258,11 @@ async function main() {
   console.log('All done. Results saved under website-audit-tool/analysis-results');
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+const isCliEntry = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 
+if (isCliEntry) {
+  runCli().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}

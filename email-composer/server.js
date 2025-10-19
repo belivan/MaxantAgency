@@ -20,6 +20,7 @@ import {
   getLeadsByIndustry,
   getLeadStats,
   updateLead,
+  supabase,
 } from './modules/supabase-client.js';
 
 import {
@@ -47,6 +48,18 @@ import {
 import {
   syncToNotion,
 } from './modules/notion-sync.js';
+
+import {
+  syncFromNotion,
+} from './modules/notion-to-supabase-sync.js';
+
+import {
+  getAuthUrl,
+  getTokensFromCode,
+  isAuthorized,
+  getUserEmail,
+  testEmailConfig,
+} from './modules/email-sender.js';
 
 // Setup
 dotenv.config();
@@ -351,6 +364,16 @@ app.post('/api/compose', async (req, res) => {
       notionPageId = await syncToNotion(composedEmail);
       if (notionPageId) {
         console.log(`   Synced to Notion: ${notionPageId}`);
+
+        // Update Supabase with notion_page_id
+        await supabase
+          .from('composed_emails')
+          .update({
+            notion_page_id: notionPageId,
+            synced_to_notion: true,
+            notion_sync_at: new Date().toISOString(),
+          })
+          .eq('id', composedEmail.id);
       }
     } catch (error) {
       console.warn(`   Notion sync failed: ${error.message}`);
@@ -437,6 +460,156 @@ app.get('/api/strategies', (req, res) => {
   });
 });
 
+/**
+ * POST /api/sync-from-notion
+ * Sync status changes from Notion back to Supabase
+ */
+app.post('/api/sync-from-notion', async (req, res) => {
+  try {
+    const result = await syncFromNotion();
+    res.json(result);
+  } catch (error) {
+    console.error('Error syncing from Notion:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
+
+// ============================================================================
+// GMAIL OAUTH ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/oauth/google
+ * Start Gmail OAuth flow
+ */
+app.get('/api/oauth/google', (req, res) => {
+  try {
+    const authUrl = getAuthUrl();
+    res.redirect(authUrl);
+  } catch (error) {
+    console.error('Error generating auth URL:', error);
+    res.status(500).send('Error starting OAuth flow');
+  }
+});
+
+/**
+ * GET /api/oauth/google/callback
+ * OAuth callback endpoint
+ */
+app.get('/api/oauth/google/callback', async (req, res) => {
+  const { code } = req.query;
+
+  if (!code) {
+    return res.status(400).send('Missing authorization code');
+  }
+
+  try {
+    await getTokensFromCode(code);
+    const email = await getUserEmail();
+
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Gmail OAuth Success</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+          }
+          .success {
+            color: #22c55e;
+            font-size: 48px;
+            margin-bottom: 20px;
+          }
+          h1 { color: #333; }
+          p { color: #666; line-height: 1.6; }
+          .email { color: #0066cc; font-weight: bold; }
+          .close-btn {
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+          }
+          .close-btn:hover { background: #0052a3; }
+        </style>
+      </head>
+      <body>
+        <div class="success">✅</div>
+        <h1>Gmail OAuth Successful!</h1>
+        <p>Successfully authorized Gmail for <span class="email">${email}</span></p>
+        <p>You can now close this window and return to the application.</p>
+        <button class="close-btn" onclick="window.close()">Close Window</button>
+      </body>
+      </html>
+    `);
+  } catch (error) {
+    console.error('Error in OAuth callback:', error);
+    res.status(500).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Gmail OAuth Error</title>
+        <style>
+          body {
+            font-family: sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+          }
+          .error { color: #ef4444; font-size: 48px; margin-bottom: 20px; }
+          h1 { color: #333; }
+          p { color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="error">❌</div>
+        <h1>OAuth Error</h1>
+        <p>${error.message}</p>
+      </body>
+      </html>
+    `);
+  }
+});
+
+/**
+ * GET /api/oauth/status
+ * Check Gmail OAuth status
+ */
+app.get('/api/oauth/status', async (req, res) => {
+  try {
+    const authorized = isAuthorized();
+
+    if (authorized) {
+      const email = await getUserEmail();
+      res.json({
+        authorized: true,
+        email,
+      });
+    } else {
+      res.json({
+        authorized: false,
+        authUrl: '/api/oauth/google',
+      });
+    }
+  } catch (error) {
+    res.status(500).json({
+      error: error.message,
+    });
+  }
+});
+
 // ============================================================================
 // HEALTH CHECK
 // ============================================================================
@@ -468,6 +641,9 @@ app.listen(PORT, () => {
   console.log(`   - POST /api/compose - Compose email for a lead`);
   console.log(`   - POST /api/verify - Verify website accessibility`);
   console.log(`   - GET  /api/strategies - Get email strategies`);
+  console.log(`   - POST /api/sync-from-notion - Sync status changes from Notion`);
+  console.log(`   - GET  /api/oauth/google - Authorize Gmail (one-time setup)`);
+  console.log(`   - GET  /api/oauth/status - Check Gmail authorization status`);
   console.log(`\n=� Environment:`);
   console.log(`   - Default model: ${process.env.DEFAULT_EMAIL_MODEL || 'claude-sonnet-4-5'}`);
   console.log(`   - Generate variants: ${process.env.GENERATE_VARIANTS || 'true'}`);

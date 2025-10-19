@@ -143,6 +143,39 @@ export async function syncToNotion(emailData) {
           ],
         },
 
+        // Technical Reasoning (text) - formatted summary (max 2000 chars)
+        'Technical Reasoning': {
+          rich_text: [
+            {
+              text: {
+                content: truncateText(formatTechnicalReasoning(emailData.technical_reasoning), 2000),
+              },
+            },
+          ],
+        },
+
+        // Business Summary (text) (max 2000 chars)
+        'Business Summary': {
+          rich_text: [
+            {
+              text: {
+                content: truncateText(emailData.business_reasoning || '', 2000),
+              },
+            },
+          ],
+        },
+
+        // Verification Checklist (text) (max 2000 chars)
+        'Checklist': {
+          rich_text: [
+            {
+              text: {
+                content: truncateText(formatChecklist(emailData.verification_checklist), 2000),
+              },
+            },
+          ],
+        },
+
         // Composed At (date)
         'Composed': {
           date: {
@@ -189,13 +222,56 @@ export async function syncToNotion(emailData) {
 function mapStatusToNotion(status) {
   const statusMap = {
     'pending': 'Pending',
-    'approved': 'Draft', // Anton uses "Draft" for approved emails
+    'approved': 'Approved',
     'rejected': 'Rejected',
     'sent': 'Sent',
     'failed': 'Failed',
   };
 
   return statusMap[status?.toLowerCase()] || 'Pending';
+}
+
+/**
+ * Truncate text to max length with ellipsis
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length
+ * @returns {string} Truncated text
+ */
+function truncateText(text, maxLength) {
+  if (!text || text.length <= maxLength) {
+    return text || '';
+  }
+  return text.substring(0, maxLength - 3) + '...';
+}
+
+/**
+ * Format technical reasoning array into readable text
+ * @param {Array} reasoning - Technical reasoning array
+ * @returns {string} Formatted text
+ */
+function formatTechnicalReasoning(reasoning) {
+  if (!reasoning || !Array.isArray(reasoning)) {
+    return '';
+  }
+
+  return reasoning.map((issue, index) => {
+    return `${index + 1}. ${issue.technical || 'N/A'}\n   Why: ${issue.why_it_matters || 'N/A'}\n   Wrote: "${issue.what_i_wrote || 'N/A'}"`;
+  }).join('\n\n');
+}
+
+/**
+ * Format verification checklist into readable text
+ * @param {Object} checklist - Verification checklist
+ * @returns {string} Formatted text
+ */
+function formatChecklist(checklist) {
+  if (!checklist || !checklist.steps || !Array.isArray(checklist.steps)) {
+    return '';
+  }
+
+  return checklist.steps.map((step, index) => {
+    return `${index + 1}. ${step.step}\n   Look for: ${step.what_to_look_for}`;
+  }).join('\n\n');
 }
 
 /**

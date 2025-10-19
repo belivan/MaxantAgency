@@ -1,66 +1,69 @@
 # Client Orchestrator
 
-A companion app that: 1) uses an LLM to generate and vet a list of real companies and websites from your brief (ICP + studio intro), and 2) calls `website-audit-tool` to analyze them in batches.
+Generates prospect lists from your studio brief, verifies real websites, optionally syncs them to Supabase, and (when requested) runs the full website analyzer on those URLs.
 
-## What it does
-- Takes a brief (who you help, offer, strengths, geo) as input
-- Uses prompts based on your ChatGPT playbook to propose niches, companies, and one‑line why now
-- Normalizes to website URLs and optionally verifies they load
-- Batches up to 10 URLs and calls `analyzeWebsites` from `website-audit-tool`
-- Saves prospect list and analysis results metadata
+## Capabilities
+- Builds targeted prompts from your ICP + offer brief
+- Asks the LLM for industries, real companies, and a one-line “why now” hook
+- Infers missing domains, normalizes URLs, and optionally verifies they load
+- Saves verified prospects to disk and/or Supabase (`prospects` table)
+- Can immediately call `website-audit-tool/analyzer` in batches (≤10)
 
-## Quick start
-1) Ensure `website-audit-tool` runs (env keys, npm install, playwright)
-2) Put your API keys in `website-audit-tool/.env` (reused here)
-3) Install deps for orchestrator:
-   - From repo root:
-     - `cd client-orchestrator`
-     - `npm install`
-4) Create your brief (copy and edit):
-   - `cp brief.example.json brief.json`
-5) Run prospect generation only:
-   - `node index.js --brief brief.json --out prospects.json --no-run`
-6) Run full pipeline (generate + analyze via analyzer):
-   - `node index.js --brief brief.json --out prospects.json --run --tier tier1 --email-type local`
+## Quick Start
+1. Ensure `website-audit-tool` is configured (API keys, `npm install`, `npx playwright install`)
+2. Copy `brief.example.json` → `brief.json` and edit to fit your studio
+3. Install dependencies:
+   ```bash
+   cd client-orchestrator
+   npm install
+   ```
+4. Generate prospects only:
+   ```bash
+   node index.js --brief brief.json --out prospects.json --no-run
+   ```
+5. Generate + analyze immediately:
+   ```bash
+   node index.js --brief brief.json --out prospects.json --run --tier tier1 --email-type local
+   ```
 
-## CLI options
+## CLI Options
 - `--brief <path>` Path to brief JSON (required)
-- `--out <path>` Output file for prospects (default: `prospects.json`)
-- `--count <n>` Target companies (default: 20)
-- `--city <name>` City/region hint to bias local results
-- `--verify` Verify URLs with HTTP HEAD (default: true)
-- `--no-verify` Disable URL verification
-- `--run` After generating prospects, run the website analyzer
-- `--tier <tier1|tier2|tier3>` Depth tier passed to analyzer (default: tier1)
-- `--email-type <local|national>` Template type for analyzer (default: local)
-- `--batch <n>` Batch size per analyzer call (max 10; default 10)
-- `--model <name>` LLM for prospecting (default: `gpt-4o-mini`)
+- `--out <path>` Write prospects JSON (default `prospects.json`)
+- `--count <n>` Number of companies to request (default 20)
+- `--city <name>` Bias LLM results toward a city/region
+- `--verify` / `--no-verify` Toggle HTTP HEAD verification (default on)
+- `--model <name>` LLM for prospecting (default `gpt-4o-mini`)
+- `--run` Trigger analyzer after generation
+- `--tier <tier1|tier2|tier3>` Analyzer depth tier (default `tier1`)
+- `--email-type <local|national>` Forwarded to analyzer templates (default `local`)
+- `--batch <1-10>` Websites per analyzer batch (default 10)
+- `--save-supabase` Force Supabase sync
+- `--no-supabase` Skip Supabase sync even if credentials exist
+- `--prospect-status <status>` Status stored in Supabase (default `pending_analysis`)
 
-## Brief format
-See `brief.example.json`. Fields:
-- `studio`: who you are, offer, pricing, strengths, samples/links
-- `icp`: industries, sizes, locations, triggers, exclusions
-- `geo`: optional locality targeting (city, radius)
-- `notes`: any extra guidance
+## Supabase Integration
+- If `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are present (shared from `website-audit-tool/.env`), verified URLs are upserted into the `prospects` table with metadata: run ID, city, brief snapshot, source
+- Status values: `pending_analysis`, `queued`, `analyzed`, `error`
+- Helper functions live in `supabase.js` (also used by the Command Center)
 
-## How it integrates
-- Imports `analyzeWebsites(urls, options, onProgress)` from `../website-audit-tool/analyzer.js`
-- Loads env from both `client-orchestrator/.env` (optional) and `website-audit-tool/.env` (primary)
-- Respects analyzer limits (<= 10 URLs per batch)
+## File Layout
+- `index.js` – exported `runProspector` helper + CLI entrypoint
+- `llm.js` – OpenAI JSON-completion wrapper
+- `prompts.js` – prompt builders aligned to the outreach playbook
+- `supabase.js` – shared Supabase helpers for prospects
+- `brief.example.json` – template brief
 
-## Files
-- `index.js` orchestrates: parse brief, LLM prospecting, URL verify, batching, analyzer calls
-- `llm.js` wraps OpenAI client
-- `prompts.js` structured prompts aligned to your playbook
-- `brief.example.json` template input
+## Brief Schema
+- `studio`: name, intro, offer, price points, strengths, reference links
+- `icp`: niches, company size, buyer roles, triggers, exclusions
+- `geo`: optional city + radius
+- `seeds`: optional seed URLs (always included)
+- `notes`: extra guidance
 
-## Notes & guardrails
-- LLM‑sourced companies can be imperfect; optional URL verify prunes dead links
-- When a website is missing, we ask the LLM to infer the likely domain; still verified if `--verify`
-- You can also feed your own seed list by adding `seeds` to the brief (array of URLs); seeds are always included
-
-## Troubleshooting
-- If analyzer can’t find API keys, ensure they are in `website-audit-tool/.env`
-- If Playwright errors occur, run `npx playwright install` inside `website-audit-tool`
-- If batches exceed 10, reduce `--batch` or let the default 10 apply
+## Tips & Guardrails
+- LLM output can be imperfect—keep verification on unless you have trusted lists
+- Domain inference runs automatically if the LLM omits websites
+- Seeds from the brief are merged with LLM results before verification
+- Missing Supabase credentials just log a warning; the CLI still writes locally
+- Analyzer imports (`website-audit-tool/analyzer.js`) expect the audit tool’s dependencies to be installed
 

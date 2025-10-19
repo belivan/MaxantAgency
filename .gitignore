@@ -22,6 +22,8 @@ coverage/
 .cache/
 tmp/
 *.tmp
+.next/
+**/.next/
 
 # Tool artifacts
 website-audit-tool/analysis-results/
