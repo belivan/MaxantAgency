@@ -32,6 +32,12 @@ export async function syncToNotion(emailData) {
   }
 
   console.log(`=� Syncing to Notion: ${emailData.company_name}`);
+  console.log('DEBUG - Email Data:', {
+    email_subject: emailData.email_subject,
+    email_body: emailData.email_body?.substring(0, 100),
+    has_subject: !!emailData.email_subject,
+    has_body: !!emailData.email_body
+  });
 
   try {
     // Create page in Notion database
@@ -115,6 +121,28 @@ export async function syncToNotion(emailData) {
           ],
         },
 
+        // Email Subject (text)
+        'Subject': {
+          rich_text: [
+            {
+              text: {
+                content: emailData.email_subject || '',
+              },
+            },
+          ],
+        },
+
+        // Email Body (text)
+        'Body': {
+          rich_text: [
+            {
+              text: {
+                content: emailData.email_body || '',
+              },
+            },
+          ],
+        },
+
         // Composed At (date)
         'Composed': {
           date: {
@@ -136,11 +164,9 @@ export async function syncToNotion(emailData) {
           },
         } : undefined,
 
-        // Follow-up Needed (select)
+        // Follow-up Needed (checkbox)
         'Follow-up Needed': {
-          select: {
-            name: emailData.status === 'sent' && !emailData.replied ? 'Yes' : 'No',
-          },
+          checkbox: emailData.status === 'sent' && !emailData.replied,
         },
       },
       children: buildNotionPageContent(emailData),
