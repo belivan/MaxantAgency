@@ -8,6 +8,8 @@ export type ProspectFormValues = {
   city: string;
   verify: boolean;
   model: string;
+  autoAnalyze: boolean;
+  autoEmail: boolean;
 };
 
 type Props = {

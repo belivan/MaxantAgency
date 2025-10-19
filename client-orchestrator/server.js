@@ -2,6 +2,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
 import { runProspector } from './index.js';
 import { createLogger, requestLogger } from '../shared/logger.js';
 
@@ -94,10 +95,112 @@ app.post('/api/prospects', async (req, res) => {
   }
 });
 
+// Analyze websites
+app.post('/api/analyze', async (req, res) => {
+  const startTime = Date.now();
+
+  try {
+    const { urls, options = {} } = req.body;
+
+    if (!Array.isArray(urls) || urls.length === 0) {
+      logger.warn('No URLs provided for analysis');
+      return res.status(400).json({
+        success: false,
+        error: 'No URLs provided'
+      });
+    }
+
+    logger.info('Website analysis started', {
+      urlCount: urls.length,
+      tier: options.tier || 'tier1',
+      modules: options.modules || ['seo']
+    });
+
+    // Import analyzer dynamically (it's already in the same codebase)
+    const { analyzeWebsites } = await import('../website-audit-tool/analyzer.js');
+    const { markProspectStatus } = await import('./supabase.js');
+
+    const moduleSet = new Set(options.modules || ['seo']);
+    const analyzerOptions = {
+      textModel: options.textModel || process.env.DEFAULT_TEXT_MODEL || 'gpt-5-mini',
+      visionModel: options.visionModel || process.env.DEFAULT_VISION_MODEL || 'gpt-4o',
+      depthTier: options.tier || 'tier1',
+      modules: {
+        basic: true,
+        seo: moduleSet.has('seo'),
+        visual: moduleSet.has('visual'),
+        industry: moduleSet.has('industry'),
+        competitor: moduleSet.has('competitor')
+      },
+      emailType: options.emailType || 'local',
+      metadata: {
+        runId: options.runId || randomUUID(),
+        sourceApp: 'command-center-ui',
+        campaignId: options.metadata?.campaignId || null,
+        projectId: options.metadata?.projectId || null,
+        clientName: options.metadata?.clientName || null
+      }
+    };
+
+    const logs = [];
+    const onProgress = (payload) => {
+      logs.push({
+        type: payload?.type,
+        message: payload?.message,
+        url: payload?.url
+      });
+
+      // Log progress
+      if (payload?.type === 'complete') {
+        logger.info('Analysis completed for URL', { url: payload.url });
+      }
+    };
+
+    // Mark as queued
+    if (typeof markProspectStatus === 'function') {
+      await markProspectStatus(urls, 'queued');
+    }
+
+    // Run analyzer
+    const results = await analyzeWebsites(urls, analyzerOptions, onProgress);
+
+    // Mark as analyzed
+    if (typeof markProspectStatus === 'function') {
+      await markProspectStatus(urls, 'analyzed');
+    }
+
+    const duration = Date.now() - startTime;
+    logger.info('Website analysis completed', {
+      urlCount: urls.length,
+      resultsCount: results.length,
+      duration: `${duration}ms`
+    });
+
+    res.json({
+      success: true,
+      results,
+      logs
+    });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    logger.error('Website analysis failed', {
+      error: error.message,
+      stack: error.stack,
+      duration: `${duration}ms`
+    });
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Analysis failed'
+    });
+  }
+});
+
 app.listen(PORT, () => {
   logger.info('Client Orchestrator API started', {
     port: PORT,
     healthCheck: `http://localhost:${PORT}/health`,
-    prospectsAPI: `http://localhost:${PORT}/api/prospects`
+    prospectsAPI: `http://localhost:${PORT}/api/prospects`,
+    analyzeAPI: `http://localhost:${PORT}/api/analyze`
   });
 });
