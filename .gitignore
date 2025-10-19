@@ -33,3 +33,11 @@ website-audit-tool/screenshots/
 # System files
 Thumbs.db
 *.DS_Store
+
+# Email artifacts (sent emails storage)
+email-composer/emails/sent/
+*.eml
+
+# Credentials and OAuth tokens
+.credentials.json
+**/. credentials.json
