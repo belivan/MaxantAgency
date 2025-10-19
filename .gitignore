@@ -28,7 +28,14 @@ tmp/
 # Tool artifacts
 website-audit-tool/analysis-results/
 website-audit-tool/screenshots/
+client-orchestrator/screenshots/
 .claude/
+
+# Backup files
+*.bak
+*.bak2
+*.bak3
+*.bak4
 
 # System files
 Thumbs.db
