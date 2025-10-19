@@ -62,18 +62,15 @@ export async function analyzeWebsites(urls, options, sendProgress) {
   const senderPhoneEnv = process.env.SENDER_PHONE || '';
   const senderWebsiteEnv = process.env.SENDER_WEBSITE || '';
 
-  // Create AI call tracker for cost estimation
-  const aiTracker = new AICallTracker();
-  
   // Estimate total AI calls
   const estimatedCallsPerSite = 1 + // critique generation
     (options.modules?.industry ? 0.5 : 0) + // industry detection (sometimes cached)
     (options.modules?.visual ? 1 : 0) + // visual analysis
     (options.modules?.competitor ? 2 : 0) + // competitor discovery + analysis
     (!options.skipHumanize ? 1 : 0); // email humanization
-  
+
   const estimatedTotalCalls = Math.ceil(urls.length * estimatedCallsPerSite);
-  const estimatedCostPerCall = aiTracker.estimateCost(options.textModel || 'gpt-5-mini');
+  const estimatedCostPerCall = 0.01; // Approximate cost per AI call
   const estimatedTotalCost = estimatedTotalCalls * estimatedCostPerCall;
   
   // Send cost estimate before starting
@@ -263,7 +260,7 @@ export async function analyzeWebsites(urls, options, sendProgress) {
         }
 
         // Step 10: Generate critique (with all module context if available)
-        const critique = await generateCritique(combinedAnalysis, industry, seoResults, visualResults, competitorResults, sendProgress, { ...options, aiTracker });
+        const critique = await generateCritique(combinedAnalysis, industry, seoResults, visualResults, competitorResults, sendProgress, options);
 
         // Step 10: Generate email
         // [REMOVED] Email generation - moved to separate email app
@@ -380,14 +377,14 @@ export async function analyzeWebsites(urls, options, sendProgress) {
     }
 
     // Send final cost summary
-    const costSummary = aiTracker.getSummary();
+    // Cost summary handled by calculateTotalCost
     sendProgress({
       type: 'cost_summary',
-      totalCalls: costSummary.totalCalls,
-      totalCost: costSummary.estimatedCost,
-      totalInputTokens: costSummary.totalInputTokens,
-      totalOutputTokens: costSummary.totalOutputTokens,
-      message: `✅ Analysis complete: ${costSummary.totalCalls} AI calls, $${costSummary.estimatedCost.toFixed(4)} total cost`
+      totalCalls: estimatedTotalCalls,
+      totalCost: estimatedTotalCost,
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      message: `✅ Analysis complete: ${estimatedTotalCalls} estimated AI calls, $${estimatedTotalCost.toFixed(4)} estimated cost`
     });
 
     await browser.close();

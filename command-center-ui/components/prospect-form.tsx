@@ -65,6 +65,14 @@ export default function ProspectForm({
     onValuesChange({ ...values, verify: !values.verify });
   }, [onValuesChange, values]);
 
+  const handleAutoAnalyzeToggle = useCallback(() => {
+    onValuesChange({ ...values, autoAnalyze: !values.autoAnalyze });
+  }, [onValuesChange, values]);
+
+  const handleAutoEmailToggle = useCallback(() => {
+    onValuesChange({ ...values, autoEmail: !values.autoEmail });
+  }, [onValuesChange, values]);
+
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
@@ -149,6 +157,35 @@ export default function ProspectForm({
           <input type="checkbox" className="h-4 w-4" checked={values.verify} onChange={handleVerifyToggle} disabled={loading} />
           Verify URLs before saving (HEAD request)
         </label>
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-brand-600/30 bg-brand-950/20 p-4">
+        <h3 className="text-sm font-semibold text-brand-400">Automation Pipeline</h3>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={values.autoAnalyze}
+              onChange={handleAutoAnalyzeToggle}
+              disabled={loading}
+            />
+            Auto-analyze after generation (Tier 3, all modules)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              type="checkbox"
+              className="h-4 w-4"
+              checked={values.autoEmail}
+              onChange={handleAutoEmailToggle}
+              disabled={loading || !values.autoAnalyze}
+            />
+            Auto-compose emails after analysis (Grade A/B leads only)
+          </label>
+        </div>
+        <p className="text-xs text-slate-500">
+          Enable full pipeline: Generate prospects → Analyze websites → Compose personalized emails
+        </p>
       </div>
     </form>
   );

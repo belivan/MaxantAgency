@@ -33,7 +33,9 @@ export default function UnifiedDashboard() {
     count: 20,
     city: '',
     verify: true,
-    model: 'grok-4-fast'
+    model: 'grok-4-fast',
+    autoAnalyze: false,
+    autoEmail: false
   });
   const [loadingBrief, setLoadingBrief] = useState(true);
   const [loadingProspects, setLoadingProspects] = useState(false);
@@ -74,7 +76,7 @@ export default function UnifiedDashboard() {
         if (json.success && json.prospects?.length > 0) {
           // Convert prospects to the format expected by ProspectTable
           const companies = json.prospects.map((p: any) => ({
-            name: p.name || 'Unknown',
+            name: p.company_name || p.name || 'Unknown',
             industry: p.industry,
             why_now: p.why_now,
             teaser: p.teaser,
@@ -138,7 +140,24 @@ export default function UnifiedDashboard() {
       };
       setProspectData(payload);
       setSelectedProspectUrls(payload.urls || []);
-      setAlert(`Generated ${payload.urls.length} verified URLs (Run ID: ${payload.runId}).`);
+
+      if (values.autoAnalyze && payload.urls.length > 0) {
+        setAlert(`Generated ${payload.urls.length} verified URLs. Auto-analyzing with Tier 3...`);
+        // Trigger auto-analyze after a short delay to ensure state is updated
+        setTimeout(() => {
+          handleAnalyze({
+            tier: 'tier3',
+            emailType: 'local',
+            modules: ['seo', 'visual', 'industry', 'competitor'],
+            textModel: 'gpt-5-mini',
+            visionModel: 'gpt-4o',
+            metadata: {},
+            autoEmail: values.autoEmail
+          });
+        }, 500);
+      } else {
+        setAlert(`Generated ${payload.urls.length} verified URLs (Run ID: ${payload.runId}).`);
+      }
     } catch (error: any) {
       console.error(error);
       setAlert(error.message || 'Prospect generation failed');
@@ -178,6 +197,46 @@ export default function UnifiedDashboard() {
         `Analyzer completed. ${count} site${count === 1 ? '' : 's'} processed successfully.`
       );
       setAnalysisLogs(json.logs || []);
+
+      // Auto-email: Fetch analyzed leads and filter for Grade A/B with emails
+      if (options.autoEmail) {
+        try {
+          const leadsRes = await fetch('/api/leads', { cache: 'no-store' });
+          const leadsData = await leadsRes.json();
+
+          if (leadsData.success && leadsData.leads) {
+            const eligibleLeads = leadsData.leads.filter((lead: Lead) =>
+              (lead.grade === 'A' || lead.grade === 'B') &&
+              lead.contact_email &&
+              lead.contact_email.trim() !== ''
+            );
+
+            if (eligibleLeads.length > 0) {
+              const eligibleIds = eligibleLeads.map((lead: Lead) => lead.id);
+              setSelectedLeadIds(eligibleIds);
+              setLeadsForComposer(eligibleLeads);
+
+              setAnalysisSummary(
+                `Analyzer completed. ${count} site${count === 1 ? '' : 's'} processed. Auto-composing emails for ${eligibleLeads.length} Grade A/B lead${eligibleLeads.length === 1 ? '' : 's'}...`
+              );
+
+              // Switch to emails tab after a brief delay
+              setTimeout(() => {
+                setActiveTab('emails');
+              }, 1000);
+            } else {
+              setAnalysisSummary(
+                `Analyzer completed. ${count} site${count === 1 ? '' : 's'} processed. No Grade A/B leads with emails found for auto-compose.`
+              );
+            }
+          }
+        } catch (emailError: any) {
+          console.error('Auto-email fetch failed:', emailError);
+          setAnalysisSummary(
+            `Analyzer completed. ${count} site${count === 1 ? '' : 's'} processed. Failed to fetch leads for auto-email.`
+          );
+        }
+      }
     } catch (error: any) {
       console.error(error);
       setAlert(error.message || 'Analyzer run failed');

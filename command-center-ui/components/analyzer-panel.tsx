@@ -14,6 +14,7 @@ export type AnalyzerOptions = {
     projectId?: string;
     clientName?: string;
   };
+  autoEmail?: boolean;
 };
 
 type Props = {
