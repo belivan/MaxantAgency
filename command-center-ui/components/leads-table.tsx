@@ -40,7 +40,12 @@ export default function LeadsTable({ selectedLeads, onSelectionChange }: Props) 
       if (emailFilter) params.append('hasEmail', 'true');
       params.append('limit', '100');
 
-      const response = await fetch(`/api/leads?${params.toString()}`);
+      const response = await fetch(`/api/leads?${params.toString()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      });
       const data = await response.json();
 
       if (!response.ok || !data.success) {
@@ -145,6 +150,14 @@ export default function LeadsTable({ selectedLeads, onSelectionChange }: Props) 
           />
           Has Email Only
         </label>
+
+        <button
+          onClick={fetchLeads}
+          disabled={loading}
+          className="rounded bg-slate-700 px-3 py-1 text-sm text-slate-200 hover:bg-slate-600 disabled:opacity-50"
+        >
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
 
         <div className="ml-auto text-sm text-slate-500">
           {leads.length} lead{leads.length !== 1 ? 's' : ''} • {selectedLeads.length} selected
