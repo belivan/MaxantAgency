@@ -8,6 +8,7 @@ export type AnalyzerOptions = {
   emailType: 'local' | 'national';
   modules: string[];
   textModel?: string;
+  visionModel?: string;
   metadata?: {
     campaignId?: string;
     projectId?: string;
@@ -29,10 +30,25 @@ const moduleOptions = [
   { value: 'competitor', label: 'Competitor' }
 ];
 
+const textModels = [
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Fast & Cheap)' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'grok-4-fast', label: 'Grok 4 Fast' },
+  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' }
+];
+
+const visionModels = [
+  { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
+  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 (Vision)' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Cheaper)' }
+];
+
 export default function AnalyzerPanel({ disabled, loading, selectionSummary, onRun }: Props) {
   const [tier, setTier] = useState<'tier1' | 'tier2' | 'tier3'>('tier1');
   const [emailType, setEmailType] = useState<'local' | 'national'>('local');
   const [modules, setModules] = useState<string[]>(['seo']);
+  const [textModel, setTextModel] = useState('gpt-5-mini');
+  const [visionModel, setVisionModel] = useState('gpt-4o');
   const [campaignId, setCampaignId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [clientName, setClientName] = useState('');
@@ -52,6 +68,8 @@ export default function AnalyzerPanel({ disabled, loading, selectionSummary, onR
       tier,
       emailType,
       modules,
+      textModel,
+      visionModel,
       metadata: {
         campaignId: campaignId || undefined,
         projectId: projectId || undefined,
@@ -85,6 +103,28 @@ export default function AnalyzerPanel({ disabled, loading, selectionSummary, onR
           <select value={emailType} onChange={(event) => setEmailType(event.target.value as any)} disabled={loading || disabled}>
             <option value="local">Local</option>
             <option value="national">National</option>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-2">
+          Text Model (for analysis & emails)
+          <select value={textModel} onChange={(event) => setTextModel(event.target.value)} disabled={loading || disabled}>
+            {textModels.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-2">
+          Vision Model (for screenshots)
+          <select value={visionModel} onChange={(event) => setVisionModel(event.target.value)} disabled={loading || disabled}>
+            {visionModels.map((model) => (
+              <option key={model.value} value={model.value}>
+                {model.label}
+              </option>
+            ))}
           </select>
         </label>
 

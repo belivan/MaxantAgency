@@ -9,6 +9,8 @@ type AnalyzePayload = {
     tier?: 'tier1' | 'tier2' | 'tier3';
     emailType?: 'local' | 'national';
     modules?: string[];
+    textModel?: string;
+    visionModel?: string;
     metadata?: {
       campaignId?: string;
       projectId?: string;
@@ -40,6 +42,8 @@ export async function POST(request: Request) {
           tier: options?.tier || 'tier1',
           emailType: options?.emailType || 'local',
           modules: options?.modules || ['seo'],
+          textModel: options?.textModel || 'gpt-5-mini',
+          visionModel: options?.visionModel || 'gpt-4o',
           metadata: options?.metadata || {}
         }
       })

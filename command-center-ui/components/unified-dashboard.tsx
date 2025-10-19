@@ -48,7 +48,7 @@ export default function UnifiedDashboard() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [leadsForComposer, setLeadsForComposer] = useState<Lead[]>([]);
 
-  // Load brief on mount
+  // Load brief and prospects on mount
   useState(() => {
     const loadBrief = async () => {
       try {
@@ -65,7 +65,37 @@ export default function UnifiedDashboard() {
       }
     };
 
+    const loadProspects = async () => {
+      try {
+        const res = await fetch('/api/prospects?status=pending_analysis&limit=50', {
+          cache: 'no-store'
+        });
+        const json = await res.json();
+        if (json.success && json.prospects?.length > 0) {
+          // Convert prospects to the format expected by ProspectTable
+          const companies = json.prospects.map((p: any) => ({
+            name: p.name || 'Unknown',
+            industry: p.industry,
+            why_now: p.why_now,
+            teaser: p.teaser,
+            website: p.website
+          }));
+          const urls = json.prospects.map((p: any) => p.website);
+
+          setProspectData({
+            companies,
+            urls,
+            runId: 'loaded-from-db'
+          });
+          setSelectedProspectUrls(urls);
+        }
+      } catch (error: any) {
+        console.error('Failed to load prospects', error);
+      }
+    };
+
     loadBrief();
+    loadProspects();
   });
 
   const handleGenerateProspects = async (values: ProspectFormValues) => {

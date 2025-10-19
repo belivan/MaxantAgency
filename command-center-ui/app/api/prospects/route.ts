@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDefaultBrief } from '@/lib/orchestrator';
+import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -12,6 +13,48 @@ type ProspectPayload = {
   verify?: boolean;
 };
 
+// GET - Fetch prospects from Supabase
+export async function GET(request: NextRequest) {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        { success: false, error: 'Supabase credentials not configured' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const searchParams = request.nextUrl.searchParams;
+    const status = searchParams.get('status') || 'pending_analysis';
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+    const { data, error } = await supabase
+      .from('prospects')
+      .select('*')
+      .eq('status', status)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    return NextResponse.json({
+      success: true,
+      prospects: data || [],
+      count: data?.length || 0
+    });
+  } catch (error: any) {
+    console.error('Fetch prospects error:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to fetch prospects' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Generate new prospects
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as ProspectPayload;
