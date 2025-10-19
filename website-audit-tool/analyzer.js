@@ -56,9 +56,11 @@ async function analyzeWebsite(url, browser, sendProgress) {
     // Navigate to the page
     const startTime = Date.now();
     await page.goto(url, {
-      waitUntil: 'networkidle',
-      timeout: 30000
+      waitUntil: 'domcontentloaded',
+      timeout: 60000
     });
+    // Wait a bit for dynamic content to load
+    await page.waitForTimeout(2000);
     const loadTime = Date.now() - startTime;
 
     sendProgress({
@@ -799,16 +801,29 @@ export async function analyzeWebsites(urls, options, sendProgress) {
         const page = await context.newPage();
         const homepageAnalysis = await analyzeWebsite(url, browser, sendProgress);
 
-        // If homepage analysis failed, stop everything
+        // If homepage analysis failed, skip this site and continue with others
         if (homepageAnalysis.error) {
           await page.close();
           await context.close();
-          await browser.close();
-          throw new Error(`Failed to analyze ${url}: ${homepageAnalysis.error}`);
+
+          sendProgress({
+            type: 'error',
+            url,
+            message: `❌ Failed to analyze ${url}: ${homepageAnalysis.error}`
+          });
+
+          results.push({
+            url,
+            error: homepageAnalysis.error,
+            status: 'failed'
+          });
+
+          continue; // Skip to next URL
         }
 
         // Step 2: Discover additional pages based on depth tier
-        await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.waitForTimeout(2000);
         const pagesToAnalyze = await discoverPages(url, depthTier, page, sendProgress);
         await page.close();
         await context.close();
@@ -1059,9 +1074,23 @@ export async function analyzeWebsites(urls, options, sendProgress) {
         });
 
       } catch (siteError) {
-        // If any site fails, stop everything
-        await browser.close();
-        throw siteError;
+        // If a site fails, log it and continue with next site
+        console.error(`Site analysis error for ${url}:`, siteError.message);
+
+        sendProgress({
+          type: 'error',
+          url,
+          message: `❌ Failed to analyze ${url}: ${siteError.message}`
+        });
+
+        results.push({
+          url,
+          error: siteError.message,
+          status: 'failed'
+        });
+
+        // Continue to next site instead of stopping everything
+        continue;
       }
     }
 
