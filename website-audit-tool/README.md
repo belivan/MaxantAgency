@@ -1,6 +1,8 @@
-# Maksant Website Audit Tool
+# Maksant Website Audit Tool - Data Collection Edition
 
-**An AI-powered tool with 9 specialized agents that analyzes websites, generates personalized outreach emails, and tracks everything in a database - all with transparent cost & time tracking.**
+**An AI-powered data collection tool with 6 specialized agents that analyzes websites, extracts comprehensive contact data, detects tech stacks, and saves everything to a database - all with transparent cost & time tracking.**
+
+> **Note:** Email generation has been moved to a separate app. This tool focuses exclusively on data collection and analysis.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-green.svg)](https://nodejs.org/)
@@ -9,69 +11,60 @@
 
 ## 🎯 What Does This Tool Do?
 
-This tool helps you grow your business by:
+This tool helps you build a comprehensive lead database by:
 
-1. **Analyzes websites intelligently** - 9 specialized AI agents work together to find real, specific issues
-2. **Creates honest, personalized emails** - No fake "Love your Instagram!" - only references content we actually have
-3. **Organizes leads by quality** - Automatic grading system tells you which leads to contact immediately
-4. **Tracks cost & time** - Know exactly how much each analysis costs (typically $0.04-0.08 per website)
-5. **Saves everything to database** - All data in Supabase for easy querying and CRM integration
-6. **Detects platforms & tech** - Automatically identifies WordPress, Shopify, React, Tailwind, etc.
+1. **Extracts contact data intelligently** - Email, phone, name with source tracking & confidence scoring
+2. **Analyzes website quality** - 6 specialized AI agents identify specific issues and opportunities
+3. **Detects platforms & tech stacks** - WordPress, Shopify, React, Tailwind, ProcessWire, etc.
+4. **Grades data completeness** - A-F scoring shows which leads have the most complete information
+5. **Tracks cost & time** - Know exactly how much each analysis costs (typically $0.016-0.070 per website)
+6. **Saves everything to database** - All data in Supabase PostgreSQL for easy querying and integration
 
-Instead of spending hours reviewing websites and writing generic emails, you get professional outreach emails in ~90 seconds per website, organized by lead quality, with full transparency.
+Instead of spending hours manually collecting contact info, you get comprehensive lead data in ~60-90 seconds per website, organized by data quality, with full transparency.
+
+**Email generation** is handled by a separate app - this tool focuses exclusively on data collection.
 
 ---
 
 ## ✨ Key Features
 
-### 🤖 9 Specialized AI Agents (Sequential Pipeline)
+### 🤖 6 Specialized AI Agents (Sequential Pipeline)
 
 Each agent has ONE job and does it well:
 
-1. **Grok AI Extractor** ($0.04/site) - Deep data mining
-   - Company name, industry, location, founding year
-   - Contact info (email, phone) with confidence scoring
-   - Services, target audience, value proposition
-   - Social profiles (LinkedIn, Instagram, Twitter, Facebook)
-   - Blog posts, content updates
-   - **Platform/tech stack** (WordPress, Shopify, React, Tailwind, ProcessWire, etc.)
+**1. Grok AI Extractor** ($0.015/site) - Deep data mining *(Always Runs)*
+- Company name, industry, location, founding year
+- Contact info (email, phone, name, title) with source tracking & confidence scoring
+- Services, target audience, value proposition
+- Social profiles (LinkedIn, Instagram, Twitter, Facebook)
+- Blog posts, content info
+- **Platform/tech stack** (WordPress, Shopify, React, Tailwind, ProcessWire, etc.)
 
-2. **Basic Analysis Agent** ($0.0003/page) - Structure & missing elements
-   - HTML structure, SEO metadata, performance
-   - Missing CTAs, contact forms, trust signals
-   - **Strict rule:** NO visual critiques unless visual module enabled
+**2. Basic Analysis Agent** ($0.001-0.003/page) - Structure & missing elements *(Always Runs)*
+- HTML structure, SEO metadata, performance
+- Missing CTAs, contact forms, trust signals
+- **Strict rule:** NO visual critiques unless visual module enabled
 
-3. **Industry-Specific Agent** ($0.0002/site) - Tailored recommendations
-   - Auto-detects industry (Web Design, HVAC, E-commerce, etc.)
-   - Provides industry-specific best practices
+**3. Industry-Specific Agent** ($0.002/site) - Tailored recommendations *(Optional)*
+- Auto-detects industry (Web Design, HVAC, E-commerce, Consulting, etc.)
+- Provides industry-specific best practices
+- Compares against vertical standards
 
-4. **SEO Analysis Agent** ($0.0002/site) - Technical SEO
-   - Title tags, meta descriptions, heading structure
-   - Performance metrics, mobile-friendliness
+**4. SEO Analysis Agent** ($0.001/site) - Technical SEO *(Optional)*
+- Title tags, meta descriptions, heading structure
+- Performance metrics, mobile-friendliness
+- Schema markup, Open Graph tags
 
-5. **Visual Design Agent** ($0.03/screenshot) - Screenshot analysis (Optional)
-   - Desktop + mobile screenshots
-   - Visual hierarchy, button visibility, contrast
-   - **Only runs if enabled**
+**5. Visual Design Agent** ($0.004-0.020/screenshot) - Screenshot analysis *(Optional)*
+- Desktop + mobile screenshots
+- Visual hierarchy, button visibility, contrast
+- **Only runs if explicitly enabled**
 
-6. **Competitor Discovery Agent** ($0.05/site) - Find & analyze competitors (Optional)
-   - Uses Grok AI with web search to find 3 competitors
-   - Comparative analysis
+**6. Competitor Discovery Agent** ($0.030/site) - Find & analyze competitors *(Optional)*
+- Uses Grok AI with web search to find 3 competitors
+- Comparative analysis of features and positioning
 
-7. **Email Writing Agent** ($0.0001/email) - Personalized outreach
-   - **Honest personalization ONLY**
-   - ✅ "I see you're on Instagram" (have URL)
-   - ❌ "Love your Instagram posts" (didn't see content!)
-
-8. **Critique Reasoning Agent** ($0.0001/critique) - Explains WHY
-   - Business impact of each critique
-   - Alternatives considered
-   - Saves to `critique-reasoning.txt`
-
-9. **QA Review Agent** ($0.0001/email) - Email quality validation
-   - Checks for fake personalization
-   - Verifies no visual critiques when module OFF
-   - Grades email quality (A-F) **→ determines folder!**
+> **Note:** Email Writing, Critique Reasoning, and QA Review agents have been moved to a separate email composer app.
 
 ### 📊 Dual Grading System
 

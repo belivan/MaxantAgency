@@ -39,7 +39,7 @@ export async function syncToNotion(emailData) {
       parent: { database_id: NOTION_DATABASE_ID },
       icon: {
         type: 'emoji',
-        emoji: '📧',
+        emoji: '💌',
       },
       properties: {
         // Title (required)
@@ -233,7 +233,7 @@ function buildNotionPageContent(emailData) {
         type: 'text',
         text: { content: emailData.email_body },
       }],
-      icon: { type: 'emoji', emoji: '📧' },
+      
       color: 'gray_background',
     },
   });
