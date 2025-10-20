@@ -8,6 +8,10 @@ node_modules/
 **/.env
 **/.env.*
 
+# BUT allow .env.example files (for documentation)
+!.env.example
+!**/.env.example
+
 # Logs & debug
 logs/
 *.log
