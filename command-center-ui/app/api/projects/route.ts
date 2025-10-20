@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body = await request.json();
-    const { name, description, budget_limit, budget_alert_threshold } = body;
+    const { name, description, budget_limit, budget_alert_threshold, icp_brief, analysis_config, outreach_config } = body;
 
     // Validate required fields
     if (!name || name.trim().length < 3) {
@@ -96,6 +96,19 @@ export async function POST(request: Request) {
     // Map budget_limit to budget column in database
     if (budget_limit !== undefined && budget_limit > 0) {
       projectData.budget = budget_limit;
+    }
+
+    // Include JSONB config fields if provided
+    if (icp_brief) {
+      projectData.icp_brief = icp_brief;
+    }
+
+    if (analysis_config) {
+      projectData.analysis_config = analysis_config;
+    }
+
+    if (outreach_config) {
+      projectData.outreach_config = outreach_config;
     }
 
     // Insert project into database

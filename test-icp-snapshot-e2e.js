@@ -18,7 +18,7 @@ async function test1_CreateProject() {
   const projectData = {
     name: `ICP Snapshot Test ${Date.now()}`,
     description: 'Testing ICP brief snapshot locking',
-    budget_limit: 500,
+    budget: 500,
     icp_brief: {
       industry: 'Landscaping',
       location: 'Denver, CO',
