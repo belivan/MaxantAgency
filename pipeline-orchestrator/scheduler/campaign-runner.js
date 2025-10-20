@@ -95,8 +95,20 @@ export async function runCampaign(campaign, triggerType = 'scheduled') {
       });
 
       try {
+        // Inject campaign's project_id into step params (if exists)
+        const stepConfig = {
+          ...step,
+          params: {
+            ...step.params,
+            options: {
+              ...step.params?.options,
+              projectId: campaign.project_id  // Pass campaign's project_id to engines
+            }
+          }
+        };
+
         // Execute the step
-        const stepResult = await executeStep(step);
+        const stepResult = await executeStep(stepConfig);
 
         // Extract and accumulate cost
         const stepCost = extractCostFromStepResult(stepResult);
