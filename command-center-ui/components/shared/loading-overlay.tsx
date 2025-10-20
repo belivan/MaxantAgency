@@ -24,12 +24,12 @@ export function LoadingOverlay({ isLoading, message = 'Loading...' }: LoadingOve
   if (!mounted || !isLoading) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop with blur */}
+    <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+      {/* Backdrop with blur - but allows clicking through */}
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
 
       {/* Spinner and message */}
-      <div className="relative flex flex-col items-center space-y-4">
+      <div className="relative flex flex-col items-center space-y-4 pointer-events-auto">
         <Loader2 className="w-12 h-12 animate-spin text-primary" />
         <p className="text-lg font-medium text-foreground">{message}</p>
       </div>

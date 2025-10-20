@@ -207,6 +207,7 @@ export async function reanalyzeLead(
  * Delete a lead
  */
 export async function deleteLead(id: string): Promise<void> {
+  // Call Analysis Engine directly for delete operations
   const response = await fetch(`${API_BASE}/api/leads/${id}`, {
     method: 'DELETE'
   });
@@ -221,6 +222,7 @@ export async function deleteLead(id: string): Promise<void> {
  * Delete multiple leads in batch
  */
 export async function deleteLeads(ids: string[]): Promise<{ deleted: number; failed: number }> {
+  // Call Analysis Engine directly for delete operations
   const response = await fetch(`${API_BASE}/api/leads/batch-delete`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

@@ -23,7 +23,7 @@ import { extractWebsiteData } from './extractors/grok-extractor.js';
 import { extractFromDOM } from './extractors/dom-scraper.js';
 import { findSocialProfiles } from './enrichers/social-finder.js';
 import { scrapeSocialMetadata, closeBrowser as closeSocialBrowser } from './enrichers/social-scraper.js';
-import { saveOrLinkProspect, prospectExistsInProject } from './database/supabase-client.js';
+import { saveOrLinkProspect, prospectExistsInProject, getProjectIcpBrief } from './database/supabase-client.js';
 import { logInfo, logError, logWarn, logStepStart, logStepComplete } from './shared/logger.js';
 import { costTracker } from './shared/cost-tracker.js';
 
@@ -53,6 +53,34 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
     timeMs: 0,
     prospects: []
   };
+
+  // Fetch project's ICP brief if projectId is provided (for snapshot locking)
+  let projectIcpBrief = null;
+  if (options.projectId) {
+    try {
+      projectIcpBrief = await getProjectIcpBrief(options.projectId);
+      if (projectIcpBrief) {
+        logInfo('Fetched project ICP brief for snapshot', {
+          projectId: options.projectId,
+          industry: projectIcpBrief.industry
+        });
+      } else {
+        logWarn('Project ICP brief not found, using provided brief for snapshot', {
+          projectId: options.projectId
+        });
+        projectIcpBrief = brief; // Fallback to provided brief
+      }
+    } catch (error) {
+      logWarn('Failed to fetch project ICP brief, using provided brief', {
+        projectId: options.projectId,
+        error: error.message
+      });
+      projectIcpBrief = brief; // Fallback to provided brief
+    }
+  } else {
+    // No project specified, use the brief parameter as snapshot
+    projectIcpBrief = brief;
+  }
 
   try {
     logInfo('Starting prospecting pipeline', {
@@ -402,6 +430,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           ...prospectData,
           icp_match_score: icpScore,
           is_relevant: isRelevant,
+          icp_brief_snapshot: projectIcpBrief, // Save ICP brief snapshot for historical tracking
           status: 'ready_for_analysis',
           run_id: runId,
           source: 'prospecting-engine',

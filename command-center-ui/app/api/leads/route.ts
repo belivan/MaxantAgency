@@ -1,32 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Try both naming conventions for environment variables
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || process.env.SUPABASE_SERVICE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase credentials:', {
-        hasUrl: !!supabaseUrl,
-        hasKey: !!supabaseKey
-      });
-      return NextResponse.json(
-        { success: false, error: 'Supabase credentials not configured' },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;
     const grade = searchParams.get('grade');
     const industry = searchParams.get('industry');
     const hasEmail = searchParams.get('hasEmail');
+    const projectId = searchParams.get('project_id');
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
@@ -48,6 +33,10 @@ export async function GET(request: NextRequest) {
 
     if (hasEmail === 'true') {
       query = query.not('contact_email', 'is', null);
+    }
+
+    if (projectId) {
+      query = query.eq('project_id', projectId);
     }
 
     const { data, error, count } = await query;

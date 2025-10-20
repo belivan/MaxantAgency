@@ -6,12 +6,11 @@
  */
 
 import { Users, ScanSearch, Mail, DollarSign } from 'lucide-react';
-import { StatsCards } from '@/components/dashboard/stats-cards';
+import { StatsCards, StatCardData } from '@/components/dashboard/stats-cards';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
-import { PipelineHealth } from '@/components/dashboard/pipeline-health';
+import { PipelineHealth, EngineHealth as EngineHealthType } from '@/components/dashboard/pipeline-health';
 import { useDashboardStats, useEngineHealth, useActivityFeed } from '@/lib/hooks';
 import { LoadingOverlay } from '@/components/shared/loading-overlay';
-import type { StatCardData, EngineHealth as EngineHealthType } from '@/lib/types';
 
 export default function DashboardPage() {
   const { stats, loading, error } = useDashboardStats(30000); // Refresh every 30s

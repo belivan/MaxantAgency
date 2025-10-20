@@ -18,6 +18,9 @@ export interface Project {
   end_date?: string;
   created_at: string;
   updated_at?: string;
+  icp_brief?: any;
+  analysis_config?: any;
+  outreach_config?: any;
 }
 
 /**
@@ -80,6 +83,43 @@ export async function createProject(projectData: {
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || 'Failed to create project');
+  }
+
+  const data: APIResponse<Project> = await response.json();
+  if (!data.data) {
+    throw new Error('No project data returned');
+  }
+
+  return data.data;
+}
+
+/**
+ * Update a project
+ */
+export async function updateProject(
+  id: string,
+  updates: {
+    name?: string;
+    description?: string;
+    status?: 'active' | 'paused' | 'completed' | 'archived';
+    budget?: number;
+    client_name?: string;
+    icp_brief?: Record<string, any>;
+    analysis_config?: Record<string, any>;
+    outreach_config?: Record<string, any>;
+  }
+): Promise<Project> {
+  const response = await fetch(`/api/projects/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to update project');
   }
 
   const data: APIResponse<Project> = await response.json();

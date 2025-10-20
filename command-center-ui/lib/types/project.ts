@@ -13,6 +13,12 @@ export interface Project {
   // ICP Brief
   icp_brief?: Record<string, any>;
 
+  // Analysis Config
+  analysis_config?: Record<string, any>;
+
+  // Outreach Config
+  outreach_config?: Record<string, any>;
+
   // Status
   status: ProjectStatus;
 
@@ -64,6 +70,8 @@ export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   icp_brief?: Record<string, any>;
+  analysis_config?: Record<string, any>;
+  outreach_config?: Record<string, any>;
   status?: ProjectStatus;
   budget_limit?: number;
   budget_alert_threshold?: number;

@@ -500,4 +500,34 @@ export async function getProspectStats(filters = {}) {
   }
 }
 
+/**
+ * Get a project's ICP brief by project ID
+ *
+ * @param {string} projectId - Project ID
+ * @returns {Promise<object|null>} ICP brief object or null
+ */
+export async function getProjectIcpBrief(projectId) {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('icp_brief')
+      .eq('id', projectId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') { // No rows returned
+        logInfo('Project not found', { projectId });
+        return null;
+      }
+      logError('Failed to fetch project ICP brief', error, { projectId });
+      throw error;
+    }
+
+    return data?.icp_brief || null;
+  } catch (error) {
+    logError('Error fetching project ICP brief', error, { projectId });
+    return null;
+  }
+}
+
 export default supabase;

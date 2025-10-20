@@ -28,19 +28,22 @@ interface ProspectSelectorProps {
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
   preSelectedIds?: string[];
+  projectId?: string | null;
 }
 
 export function ProspectSelector({
   selectedIds,
   onSelectionChange,
-  preSelectedIds
+  preSelectedIds,
+  projectId
 }: ProspectSelectorProps) {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<ProspectFilters>({
     status: 'ready_for_analysis',
     verified: true,
     limit: 10,
-    offset: 0
+    offset: 0,
+    project_id: projectId || undefined
   });
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
@@ -63,6 +66,16 @@ export function ProspectSelector({
 
     fetchProjects();
   }, []);
+
+  // Update filters when projectId prop changes
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      project_id: projectId || undefined,
+      offset: 0
+    }));
+    setPage(1);
+  }, [projectId]);
 
   // Auto-select pre-selected prospects on load
   useState(() => {

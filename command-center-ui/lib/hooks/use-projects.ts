@@ -5,12 +5,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  getAllProjects,
-  getProjectById,
+  getProjects,
+  getProject,
   createProject as createProjectAPI,
   updateProject as updateProjectAPI,
-  deleteProject as deleteProjectAPI
-} from '@/lib/api/supabase';
+  
+} from '@/lib/api/projects';
 import type { Project, CreateProjectRequest, UpdateProjectRequest } from '@/lib/types';
 
 export interface UseProjectsReturn {
@@ -33,7 +33,7 @@ export function useProjects(): UseProjectsReturn {
     setError(null);
 
     try {
-      const data = await getAllProjects();
+      const data = await getProjects();
       setProjects(data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch projects');
@@ -142,7 +142,7 @@ export function useSingleProject(id: string | null): UseSingleProjectReturn {
     setError(null);
 
     try {
-      const data = await getProjectById(id);
+      const data = await getProject(id);
       setProject(data);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch project');

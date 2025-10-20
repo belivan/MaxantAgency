@@ -74,7 +74,7 @@ export function Navbar() {
   };
 
   return (
-    <nav className="border-b border-border bg-card">
+    <nav className="sticky top-0 z-[100] border-b border-border bg-card pointer-events-auto">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

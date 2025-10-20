@@ -5,21 +5,42 @@
  * View and manage analyzed leads with detailed analysis
  */
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { LeadsTable, LeadDetailModal } from '@/components/leads';
+import { ProjectSelector } from '@/components/shared/project-selector';
 import { useLeads } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
 import { LoadingOverlay } from '@/components/shared';
-import type { Lead } from '@/lib/types';
+import type { Lead, LeadFilters } from '@/lib/types';
 
 export default function LeadsPage() {
   const router = useRouter();
-  const { leads, loading, error, refresh } = useLeads();
+  const searchParams = useSearchParams();
+
+  // Get project_id from URL
+  const urlProjectId = searchParams.get('project_id');
+
+  // Project selection state
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
+
+  // Build filters based on selected project
+  const [filters, setFilters] = useState<LeadFilters>({
+    project_id: urlProjectId || undefined
+  });
+
+  const { leads, loading, error, refresh } = useLeads(filters);
 
   // Detail modal state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  // Update filters when project selection changes
+  useEffect(() => {
+    setFilters({
+      project_id: selectedProjectId || undefined
+    });
+  }, [selectedProjectId]);
 
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
@@ -49,6 +70,15 @@ export default function LeadsPage() {
           <p className="text-muted-foreground">
             Analyzed leads with detailed insights and recommendations
           </p>
+        </div>
+
+        {/* Project Selector */}
+        <div className="max-w-xs">
+          <ProjectSelector
+            value={selectedProjectId}
+            onChange={setSelectedProjectId}
+            label="Filter by Project"
+          />
         </div>
 
       {/* Error State */}

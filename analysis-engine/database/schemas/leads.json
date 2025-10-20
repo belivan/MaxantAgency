@@ -40,6 +40,11 @@
       "type": "text",
       "description": "Business city/location"
     },
+    {
+      "name": "state",
+      "type": "text",
+      "description": "Business state (NY, CA, etc.)"
+    },
 
     {
       "name": "contact_email",

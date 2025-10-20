@@ -637,7 +637,7 @@ function extractLeadData(result) {
     company_name: result.company_name,
     industry: result.industry,
     city: result.city || null,
-    state: result.state || null,
+    // state: result.state || null,  // TEMPORARILY DISABLED - Supabase schema cache issue
 
     // Contact info
     contact_email: result.contact_email || null,

@@ -21,18 +21,24 @@ import { EmailsTable } from '@/components/outreach/emails-table';
 import { EmailDetailModal } from '@/components/outreach/email-detail-modal';
 import { SocialMessagesTable } from '@/components/outreach/social-messages-table';
 import { SocialMessageDetailModal } from '@/components/outreach/social-message-detail-modal';
+import { ProjectSelector } from '@/components/shared/project-selector';
 import type { SocialPlatform } from '@/components/outreach/social-platform-selector';
 import { LoadingSection } from '@/components/shared/loading-spinner';
 import { LoadingOverlay } from '@/components/shared';
 import { useEngineHealth } from '@/lib/hooks';
 import { getLeadsByIds } from '@/lib/api/supabase';
 import { getEmails, getSocialMessages } from '@/lib/api/outreach';
+import { updateProject } from '@/lib/api';
 import type { Lead, Email, SocialMessage } from '@/lib/types';
 
 export default function OutreachPage() {
   const searchParams = useSearchParams();
   const leadIdsParam = searchParams.get('lead_ids');
+  const urlProjectId = searchParams.get('project_id');
   const engineStatus = useEngineHealth();
+
+  // Project selection state
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
 
   // Leads for composition
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -70,7 +76,13 @@ export default function OutreachPage() {
 
       try {
         const leadIds = leadIdsParam.split(',');
-        const fetchedLeads = await getLeadsByIds(leadIds);
+        let fetchedLeads = await getLeadsByIds(leadIds);
+
+        // Filter by project if one is selected
+        if (selectedProjectId) {
+          fetchedLeads = fetchedLeads.filter(lead => lead.project_id === selectedProjectId);
+        }
+
         setLeads(fetchedLeads);
       } catch (err: any) {
         console.error('Failed to load leads:', err);
@@ -81,7 +93,28 @@ export default function OutreachPage() {
     };
 
     loadLeads();
-  }, [leadIdsParam]);
+  }, [leadIdsParam, selectedProjectId]);
+
+  // Save outreach config when strategy changes
+  useEffect(() => {
+    if (!selectedProjectId || !selectedStrategy) return;
+
+    const saveConfig = async () => {
+      try {
+        await updateProject(selectedProjectId, {
+          outreach_config: {
+            strategy: selectedStrategy,
+            platform: selectedPlatform
+          }
+        });
+        console.log('✅ Saved outreach config to project:', selectedProjectId);
+      } catch (error: any) {
+        console.error('Failed to save outreach config:', error);
+      }
+    };
+
+    saveConfig();
+  }, [selectedStrategy, selectedPlatform, selectedProjectId]);
 
   // Load emails when on "My Emails" tab
   useEffect(() => {
@@ -90,7 +123,11 @@ export default function OutreachPage() {
     const loadEmails = async () => {
       setEmailsLoading(true);
       try {
-        const fetchedEmails = await getEmails({ limit: 100, sort_by: 'created_at', sort_order: 'desc' });
+        const filters: any = { limit: 100, sort_by: 'created_at', sort_order: 'desc' };
+        if (selectedProjectId) {
+          filters.project_id = selectedProjectId;
+        }
+        const fetchedEmails = await getEmails(filters);
         setEmails(fetchedEmails);
       } catch (err: any) {
         console.error('Failed to load emails:', err);
@@ -100,7 +137,7 @@ export default function OutreachPage() {
     };
 
     loadEmails();
-  }, [activeTab]);
+  }, [activeTab, selectedProjectId]);
 
   // Load social messages when on "Social Messages" tab
   useEffect(() => {
@@ -109,7 +146,11 @@ export default function OutreachPage() {
     const loadSocialMessages = async () => {
       setSocialMessagesLoading(true);
       try {
-        const fetchedMessages = await getSocialMessages({ limit: 100, sort_by: 'created_at', sort_order: 'desc' });
+        const filters: any = { limit: 100, sort_by: 'created_at', sort_order: 'desc' };
+        if (selectedProjectId) {
+          filters.project_id = selectedProjectId;
+        }
+        const fetchedMessages = await getSocialMessages(filters);
         setSocialMessages(fetchedMessages);
       } catch (err: any) {
         console.error('Failed to load social messages:', err);
@@ -119,7 +160,7 @@ export default function OutreachPage() {
     };
 
     loadSocialMessages();
-  }, [activeTab]);
+  }, [activeTab, selectedProjectId]);
 
   // Refresh data after composition
   const refreshEmails = async () => {
@@ -156,6 +197,15 @@ export default function OutreachPage() {
           <p className="text-muted-foreground">
             Compose personalized emails and social messages for your leads
           </p>
+        </div>
+
+        {/* Project Selector */}
+        <div className="max-w-xs">
+          <ProjectSelector
+            value={selectedProjectId}
+            onChange={setSelectedProjectId}
+            label="Filter by Project"
+          />
         </div>
 
         {/* Engine Offline Warning */}

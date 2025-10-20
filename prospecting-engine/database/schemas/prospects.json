@@ -1,7 +1,6 @@
 {
   "table": "prospects",
   "description": "Companies discovered during prospecting, ready for analysis",
-
   "columns": [
     {
       "name": "id",
@@ -34,7 +33,13 @@
     {
       "name": "website_status",
       "type": "text",
-      "enum": ["active", "timeout", "ssl_error", "not_found", "no_website"],
+      "enum": [
+        "active",
+        "timeout",
+        "ssl_error",
+        "not_found",
+        "no_website"
+      ],
       "default": "active",
       "description": "Website accessibility status"
     },
@@ -117,9 +122,20 @@
       "description": "Whether prospect matches ICP criteria"
     },
     {
+      "name": "icp_brief_snapshot",
+      "type": "jsonb",
+      "description": "Snapshot of the project's ICP brief when this prospect was discovered (locked for historical tracking)"
+    },
+    {
       "name": "status",
       "type": "text",
-      "enum": ["ready_for_analysis", "queued", "analyzing", "analyzed", "error"],
+      "enum": [
+        "ready_for_analysis",
+        "queued",
+        "analyzing",
+        "analyzed",
+        "error"
+      ],
       "default": "ready_for_analysis",
       "index": true,
       "description": "Processing status in pipeline"
@@ -159,22 +175,28 @@
       "description": "Timestamp when record was last updated"
     }
   ],
-
   "indexes": [
     {
       "name": "idx_prospects_status_city",
-      "columns": ["status", "city"]
+      "columns": [
+        "status",
+        "city"
+      ]
     },
     {
       "name": "idx_prospects_industry_rating",
-      "columns": ["industry", "google_rating"]
+      "columns": [
+        "industry",
+        "google_rating"
+      ]
     },
     {
       "name": "idx_prospects_run_id",
-      "columns": ["run_id"]
+      "columns": [
+        "run_id"
+      ]
     }
   ],
-
   "constraints": [
     {
       "type": "check",
@@ -202,6 +224,5 @@
       "expression": "discovery_time_ms IS NULL OR discovery_time_ms >= 0"
     }
   ],
-
   "foreignKeys": []
 }

@@ -5,7 +5,8 @@
  * Generate and manage prospects using ICP brief
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -13,8 +14,10 @@ import {
   ProspectConfigForm,
   ProgressStream
 } from '@/components/prospecting';
+import { ProjectSelector } from '@/components/shared';
 import { parseJSON } from '@/lib/utils/validation';
 import { useEngineHealth } from '@/lib/hooks';
+import { updateProject } from '@/lib/api';
 import type { ProspectGenerationOptions } from '@/lib/types';
 
 interface ProgressLog {
@@ -25,10 +28,23 @@ interface ProgressLog {
 
 export default function ProspectingPage() {
   const engineStatus = useEngineHealth();
+  const searchParams = useSearchParams();
+
+  // Project selection state
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [icpBriefSaved, setIcpBriefSaved] = useState(false);
 
   // ICP Brief state
   const [icpBrief, setIcpBrief] = useState('');
   const [icpValid, setIcpValid] = useState(false);
+
+  // Read project_id from URL params on mount
+  useEffect(() => {
+    const projectIdParam = searchParams.get('project_id');
+    if (projectIdParam) {
+      setSelectedProjectId(projectIdParam);
+    }
+  }, [searchParams]);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -63,21 +79,34 @@ export default function ProspectingPage() {
     setGeneratedCount(0);
     setLogs([]);
     setProgress(undefined);
+    setIcpBriefSaved(false);
 
     addLog('Starting prospect generation...', 'info');
 
     try {
       // Call API - it streams SSE immediately
       const API_BASE = process.env.NEXT_PUBLIC_PROSPECTING_API || 'http://localhost:3010';
+
+      // Prepare brief with count and city
+      const brief = {
+        ...briefResult.data,
+        count: config.count,
+        city: config.city || briefResult.data.city
+      };
+
+      // Prepare options
+      const options = {
+        model: config.model,
+        verify: config.verify,
+        projectId: selectedProjectId || undefined
+      };
+
       const response = await fetch(`${API_BASE}/api/prospect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          brief: briefResult.data,
-          count: config.count,
-          city: config.city || undefined,
-          model: config.model,
-          verify: config.verify
+          brief,
+          options
         })
       });
 
@@ -132,6 +161,21 @@ export default function ProspectingPage() {
                   const count = event.results?.prospects?.length || event.results?.count || 0;
                   setGeneratedCount(count);
                   setIsGenerating(false);
+
+                  // Save ICP brief to project if a project is selected
+                  if (selectedProjectId) {
+                    try {
+                      await updateProject(selectedProjectId, {
+                        icp_brief: briefResult.data
+                      });
+                      setIcpBriefSaved(true);
+                      addLog('ICP brief saved to project!', 'success');
+                    } catch (err: any) {
+                      console.error('Failed to save ICP brief to project:', err);
+                      addLog(`Warning: Failed to save ICP brief to project: ${err.message}`, 'warning');
+                    }
+                  }
+
                   return;
                 }
 
@@ -168,6 +212,20 @@ export default function ProspectingPage() {
         <p className="text-muted-foreground">
           Generate prospects using your Ideal Customer Profile brief
         </p>
+      </div>
+
+      {/* Project Selector */}
+      <div className="max-w-md">
+        <ProjectSelector
+          value={selectedProjectId}
+          onChange={setSelectedProjectId}
+          label="Project (optional)"
+        />
+        {selectedProjectId && (
+          <p className="text-sm text-muted-foreground mt-2">
+            Prospects will be associated with this project, and your ICP brief will be saved.
+          </p>
+        )}
       </div>
 
       {/* Engine Offline Warning */}
@@ -220,9 +278,16 @@ export default function ProspectingPage() {
           </AlertTitle>
           <AlertDescription className="text-green-800 dark:text-green-200">
             Successfully generated <strong>{generatedCount} prospects</strong>.{' '}
+            {icpBriefSaved && selectedProjectId && (
+              <>
+                <span className="block mt-1">
+                  ICP brief saved to project.
+                </span>
+              </>
+            )}
             <a
               href="/analysis"
-              className="underline font-medium hover:text-green-950 dark:hover:text-green-50"
+              className="underline font-medium hover:text-green-950 dark:hover:text-green-50 inline-block mt-1"
             >
               Go to the Analysis tab
             </a>{' '}

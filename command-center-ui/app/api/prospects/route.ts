@@ -28,21 +28,35 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get('status') || 'pending_analysis';
+    const status = searchParams.get('status');
+    const projectId = searchParams.get('project_id');
     const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    const { data, error } = await supabase
+    // Build query
+    let query = supabase
       .from('prospects')
-      .select('*')
-      .eq('status', status)
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
+
+    // Apply filters
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (projectId) {
+      query = query.eq('project_id', projectId);
+    }
+
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
     return NextResponse.json({
       success: true,
       prospects: data || [],
+      total: count || 0,
       count: data?.length || 0
     });
   } catch (error: any) {

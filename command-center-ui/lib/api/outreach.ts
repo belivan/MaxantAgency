@@ -412,11 +412,15 @@ export async function getStrategies(): Promise<any[]> {
 /**
  * Compose email for a website URL with strategy
  */
-export async function composeEmail(url: string, strategyId: string): Promise<any> {
+export async function composeEmail(url: string, strategyId: string, generateVariants: boolean = true): Promise<any> {
   const response = await fetch(`${API_BASE}/api/compose`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, strategy_id: strategyId })
+    body: JSON.stringify({
+      url,
+      strategy_id: strategyId,
+      generateVariants
+    })
   });
 
   if (!response.ok) {
@@ -424,7 +428,47 @@ export async function composeEmail(url: string, strategyId: string): Promise<any
     throw new Error(error.message || 'Failed to compose email');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Transform backend response to UI-expected format
+  const email = data.email || {};
+  const lead = data.lead || {};
+
+  // Build variants array from backend data
+  const variants = [];
+
+  if (email.has_variants && email.subject_variants && email.body_variants) {
+    // Create all possible combinations
+    for (let s = 0; s < email.subject_variants.length; s++) {
+      for (let b = 0; b < email.body_variants.length; b++) {
+        const isRecommended =
+          email.recommended_variant?.subject === s &&
+          email.recommended_variant?.body === b;
+
+        variants.push({
+          variant_name: isRecommended ? 'Recommended' : `Variant ${variants.length + 1}`,
+          subject: email.subject_variants[s],
+          body: email.body_variants[b],
+          tone: isRecommended ? 'recommended' : 'alternative'
+        });
+      }
+    }
+  } else {
+    // Single variant (no A/B testing)
+    variants.push({
+      variant_name: 'Primary',
+      subject: email.subject || '',
+      body: email.body || '',
+      tone: 'default'
+    });
+  }
+
+  return {
+    company_name: email.company_name || lead.company_name || 'Unknown Company',
+    website: email.url || lead.url || url,
+    strategy_used: email.strategy || strategyId,
+    variants
+  };
 }
 
 /**

@@ -64,6 +64,21 @@
       "type": "timestamptz",
       "default": "now()",
       "description": "When this project was last updated"
+    },
+    {
+      "name": "icp_brief",
+      "type": "jsonb",
+      "description": "Ideal Customer Profile brief defining target audience and criteria"
+    },
+    {
+      "name": "analysis_config",
+      "type": "jsonb",
+      "description": "Configuration for website analysis (analyzers to run, weights, etc.)"
+    },
+    {
+      "name": "outreach_config",
+      "type": "jsonb",
+      "description": "Configuration for outreach generation (email strategy, tone, etc.)"
     }
   ],
   "indexes": [

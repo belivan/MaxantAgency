@@ -10,9 +10,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ProspectSelector, AnalysisConfig, AnalysisProgress } from '@/components/analysis';
+import { ProjectSelector } from '@/components/shared/project-selector';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
-import { analyzeProspects } from '@/lib/api';
+import { analyzeProspects, updateProject } from '@/lib/api';
 import type { AnalysisOptionsFormData, SSEMessage, LeadGrade } from '@/lib/types';
 
 interface CurrentAnalysis {
@@ -38,8 +39,12 @@ export default function AnalysisPage() {
   const engineStatus = useEngineHealth();
   const { startTask, updateTask, addLog, completeTask, errorTask } = useTaskProgress();
 
-  // Get pre-selected prospect IDs from URL
+  // Get pre-selected prospect IDs and project from URL
   const preSelectedIds = searchParams.get('prospect_ids')?.split(',') || [];
+  const urlProjectId = searchParams.get('project_id');
+
+  // Project selection state
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -118,6 +123,23 @@ export default function AnalysisPage() {
     setProgress(undefined);
     setCurrentAnalysis(undefined);
 
+    // Save analysis config to project if one is selected
+    if (selectedProjectId) {
+      try {
+        await updateProject(selectedProjectId, {
+          analysis_config: {
+            tier: config.tier,
+            modules: config.modules,
+            capture_screenshots: config.capture_screenshots ?? true
+          }
+        });
+        console.log('✅ Saved analysis config to project:', selectedProjectId);
+      } catch (error: any) {
+        console.error('Failed to save analysis config:', error);
+        // Don't block analysis if config save fails
+      }
+    }
+
     // Start global progress task with descriptive title
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const taskTitle = `Analysis: ${selectedIds.length} prospects (${timestamp})`;
@@ -132,7 +154,8 @@ export default function AnalysisPage() {
         prospect_ids: selectedIds,
         count: selectedIds.length,
         tier: config.tier,
-        modules: config.modules
+        modules: config.modules,
+        project_id: selectedProjectId
       });
 
       const response = await fetch(`${API_BASE}/api/analyze`, {
@@ -142,7 +165,8 @@ export default function AnalysisPage() {
           prospect_ids: selectedIds,
           tier: config.tier,
           modules: config.modules,
-          capture_screenshots: config.capture_screenshots ?? true
+          capture_screenshots: config.capture_screenshots ?? true,
+          project_id: selectedProjectId
         })
       });
 
@@ -236,6 +260,15 @@ export default function AnalysisPage() {
           </p>
         </div>
 
+        {/* Project Selector */}
+        <div className="max-w-xs">
+          <ProjectSelector
+            value={selectedProjectId}
+            onChange={setSelectedProjectId}
+            label="Filter by Project"
+          />
+        </div>
+
         {/* Engine Offline Warning */}
         {isAnalysisEngineOffline && (
           <Alert variant="destructive">
@@ -255,6 +288,7 @@ export default function AnalysisPage() {
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
             preSelectedIds={preSelectedIds}
+            projectId={selectedProjectId}
           />
         </div>
 
