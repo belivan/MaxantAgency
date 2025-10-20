@@ -23,7 +23,7 @@ import { extractWebsiteData } from './extractors/grok-extractor.js';
 import { extractFromDOM } from './extractors/dom-scraper.js';
 import { findSocialProfiles } from './enrichers/social-finder.js';
 import { scrapeSocialMetadata, closeBrowser as closeSocialBrowser } from './enrichers/social-scraper.js';
-import { saveProspect, prospectExists } from './database/supabase-client.js';
+import { saveOrLinkProspect, prospectExistsInProject } from './database/supabase-client.js';
 import { logInfo, logError, logWarn, logStepStart, logStepComplete } from './shared/logger.js';
 import { costTracker } from './shared/cost-tracker.js';
 
@@ -145,11 +145,17 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           progress: `${i + 1}/${companies.length}`
         });
 
-        // Check if prospect already exists
+        // Check if prospect already exists in THIS project
         if (company.googlePlaceId) {
-          const exists = await prospectExists(company.googlePlaceId);
-          if (exists) {
-            logInfo('Prospect already exists, skipping', { company: company.name });
+          const existsInProject = await prospectExistsInProject(
+            company.googlePlaceId,
+            options.projectId // Will check globally if no projectId provided
+          );
+          if (existsInProject) {
+            logInfo('Prospect already exists in this project, skipping', {
+              company: company.name,
+              projectId: options.projectId || 'global'
+            });
             results.skipped++;
             continue;
           }
@@ -393,14 +399,19 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           discovery_time_ms: Date.now() - startTime
         };
 
-        // Save to database
-        const savedProspect = await saveProspect(prospect);
+        // Save to database (or link to project if exists globally)
+        const savedProspect = await saveOrLinkProspect(
+          prospect,
+          options.projectId, // Link to project if specified
+          { run_id: runId }
+        );
         results.saved++;
         results.prospects.push(savedProspect);
 
-        logInfo('Prospect saved', {
+        logInfo('Prospect saved/linked', {
           id: savedProspect.id,
-          company: savedProspect.company_name
+          company: savedProspect.company_name,
+          projectId: options.projectId || 'none'
         });
 
       } catch (error) {

@@ -22,11 +22,11 @@ export function initSupabase() {
   }
 
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error(
-      'Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env file'
+      'Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_KEY in .env file'
     );
   }
 

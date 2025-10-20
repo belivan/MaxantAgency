@@ -22,7 +22,7 @@ export async function runSeed(options = {}) {
 
   if (!connectionOk) {
     logger.error('Failed to connect to Supabase');
-    logger.info('Please check your .env file and ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set');
+    logger.info('Please check your .env file and ensure SUPABASE_URL and SUPABASE_SERVICE_KEY are set');
     return;
   }
 

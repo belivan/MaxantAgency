@@ -25,9 +25,19 @@ const DATABASE_ID = process.env.NOTION_DATABASE_ID;
  */
 export async function syncEmailToNotion(email, lead) {
   try {
-    const properties = {
-      // Title (required)
-      'Company': {
+    // First, check what properties actually exist in the database
+    const database = await notion.databases.retrieve({ database_id: DATABASE_ID });
+    const existingProps = database.properties || {};
+
+    // Helper to check if property exists and get its type
+    const hasProperty = (name) => name in existingProps;
+    const getPropertyType = (name) => existingProps[name]?.type;
+
+    const properties = {};
+
+    // Add Name as title (Notion's default title field)
+    if (hasProperty('Name') && getPropertyType('Name') === 'title') {
+      properties['Name'] = {
         title: [
           {
             text: {
@@ -35,10 +45,37 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      },
+      };
+    }
 
-      // Rich text fields
-      'Subject': email.subject ? {
+    // Company as rich_text (user's database structure)
+    if (hasProperty('Company')) {
+      if (getPropertyType('Company') === 'rich_text') {
+        properties['Company'] = {
+          rich_text: [
+            {
+              text: {
+                content: lead.company_name || lead.url || 'Unknown'
+              }
+            }
+          ]
+        };
+      } else if (getPropertyType('Company') === 'title') {
+        properties['Company'] = {
+          title: [
+            {
+              text: {
+                content: lead.company_name || lead.url || 'Unknown'
+              }
+            }
+          ]
+        };
+      }
+    }
+
+    // Rich text fields
+    if (hasProperty('Subject') && email.subject) {
+      properties['Subject'] = {
         rich_text: [
           {
             text: {
@@ -46,9 +83,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'Body': {
+    if (hasProperty('Body')) {
+      properties['Body'] = {
         rich_text: [
           {
             text: {
@@ -56,69 +95,104 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      },
+      };
+    }
 
-      // URL
-      'Website': lead.url ? {
+    // URL
+    if (hasProperty('Website') && lead.url) {
+      properties['Website'] = {
         url: lead.url
-      } : undefined,
+      };
+    }
 
-      // Select fields
-      'Status': {
+    // Select fields
+    if (hasProperty('Status')) {
+      properties['Status'] = {
         select: {
           name: capitalizeStatus(email.status)
         }
-      },
+      };
+    }
 
-      'Platform': {
+    if (hasProperty('Platform')) {
+      properties['Platform'] = {
         select: {
-          name: capitalizePlatform(email.platform)
+          name: capitalizePlatform(email.platform || 'email')
         }
-      },
+      };
+    }
 
-      'Strategy': {
+    if (hasProperty('Strategy')) {
+      properties['Strategy'] = {
         select: {
-          name: formatStrategy(email.strategy)
+          name: formatStrategy(email.strategy || 'compliment-sandwich')
         }
-      },
+      };
+    }
 
-      'Grade': lead.lead_grade ? {
+    if (hasProperty('Grade') && lead.lead_grade) {
+      properties['Grade'] = {
         select: {
           name: lead.lead_grade
         }
-      } : undefined,
+      };
+    }
 
-      // Number fields
-      'Score': email.validation_score ? {
+    // Number fields
+    if (hasProperty('Score') && email.validation_score) {
+      properties['Score'] = {
         number: email.validation_score
-      } : undefined,
+      };
+    }
 
-      'Cost': email.cost ? {
+    if (hasProperty('Cost') && email.cost) {
+      properties['Cost'] = {
         number: Math.round(email.cost * 1000000) / 1000000 // Round to 6 decimals
-      } : undefined,
+      };
+    }
 
-      // Multi-select
-      'Industry': lead.industry ? {
-        multi_select: [
-          {
-            name: lead.industry
-          }
-        ]
-      } : undefined,
+    // Multi-select or rich_text for Industry
+    if (hasProperty('Industry') && lead.industry) {
+      const industryType = getPropertyType('Industry');
+      if (industryType === 'multi_select') {
+        properties['Industry'] = {
+          multi_select: [
+            {
+              name: lead.industry
+            }
+          ]
+        };
+      } else if (industryType === 'rich_text') {
+        properties['Industry'] = {
+          rich_text: [
+            {
+              text: {
+                content: lead.industry
+              }
+            }
+          ]
+        };
+      }
+    }
 
-      // NEW: Type (Email vs Social DM)
-      'Type': {
+    // Type (Email vs Social DM)
+    if (hasProperty('Type')) {
+      properties['Type'] = {
         select: {
           name: email.platform === 'email' ? 'Email' : 'Social DM'
         }
-      },
+      };
+    }
 
-      // NEW: Contact info
-      'Contact Email': lead.contact_email ? {
+    // Contact info
+    if (hasProperty('Contact Email') && lead.contact_email) {
+      properties['Contact Email'] = {
         email: lead.contact_email
-      } : undefined,
+      };
+    }
 
-      'Contact Name': lead.contact_name ? {
+    if (hasProperty('Contact Name') && lead.contact_name) {
+      properties['Contact Name'] = {
         rich_text: [
           {
             text: {
@@ -126,16 +200,20 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      // NEW: Lead quality fields
-      'Website Grade': lead.website_grade ? {
+    // Lead quality fields
+    if (hasProperty('Website Grade') && lead.website_grade) {
+      properties['Website Grade'] = {
         select: {
           name: lead.website_grade
         }
-      } : undefined,
+      };
+    }
 
-      'Top Issue': lead.top_issue ? {
+    if (hasProperty('Top Issue') && lead.top_issue) {
+      properties['Top Issue'] = {
         rich_text: [
           {
             text: {
@@ -143,9 +221,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'City': lead.city ? {
+    if (hasProperty('City') && lead.city) {
+      properties['City'] = {
         rich_text: [
           {
             text: {
@@ -153,20 +233,26 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      // NEW: Technical metadata
-      'AI Model': email.model_used ? {
+    // Technical metadata
+    if (hasProperty('AI Model') && email.model_used) {
+      properties['AI Model'] = {
         select: {
           name: email.model_used
         }
-      } : undefined,
+      };
+    }
 
-      'Generation Time (ms)': email.generation_time_ms ? {
+    if (hasProperty('Generation Time (ms)') && email.generation_time_ms) {
+      properties['Generation Time (ms)'] = {
         number: email.generation_time_ms
-      } : undefined,
+      };
+    }
 
-      'Email ID': email.id ? {
+    if (hasProperty('Email ID') && email.id) {
+      properties['Email ID'] = {
         rich_text: [
           {
             text: {
@@ -174,29 +260,39 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      // NEW: Social DM specific
-      'Character Count': email.character_count ? {
+    // Social DM specific
+    if (hasProperty('Character Count') && email.character_count) {
+      properties['Character Count'] = {
         number: email.character_count
-      } : undefined,
+      };
+    }
 
-      'Platform Limit': email.platform_limit ? {
+    if (hasProperty('Platform Limit') && email.platform_limit) {
+      properties['Platform Limit'] = {
         number: email.platform_limit
-      } : undefined,
+      };
+    }
 
-      'Social Profile': lead.social_profile_url ? {
+    if (hasProperty('Social Profile') && lead.social_profile_url) {
+      properties['Social Profile'] = {
         url: lead.social_profile_url
-      } : undefined,
+      };
+    }
 
-      'Sent Via': {
+    if (hasProperty('Sent Via')) {
+      properties['Sent Via'] = {
         select: {
           name: 'Pending'
         }
-      },
+      };
+    }
 
-      // NEW: Timestamp
-      'Created At': email.created_at ? {
+    // Timestamp
+    if (hasProperty('Created At')) {
+      properties['Created At'] = email.created_at ? {
         date: {
           start: email.created_at
         }
@@ -204,14 +300,18 @@ export async function syncEmailToNotion(email, lead) {
         date: {
           start: new Date().toISOString()
         }
-      },
+      };
+    }
 
-      // VARIANT OPTIONS - Show all 3 subjects + 2-3 bodies
-      'Has Variants': {
+    // VARIANT OPTIONS - Show all 3 subjects + 2-3 bodies
+    if (hasProperty('Has Variants')) {
+      properties['Has Variants'] = {
         checkbox: email.has_variants || false
-      },
+      };
+    }
 
-      'Subject Variant 1': (email.subject_variants && email.subject_variants[0]) ? {
+    if (hasProperty('Subject Variant 1') && email.subject_variants && email.subject_variants[0]) {
+      properties['Subject Variant 1'] = {
         rich_text: [
           {
             text: {
@@ -219,9 +319,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'Subject Variant 2': (email.subject_variants && email.subject_variants[1]) ? {
+    if (hasProperty('Subject Variant 2') && email.subject_variants && email.subject_variants[1]) {
+      properties['Subject Variant 2'] = {
         rich_text: [
           {
             text: {
@@ -229,9 +331,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'Subject Variant 3': (email.subject_variants && email.subject_variants[2]) ? {
+    if (hasProperty('Subject Variant 3') && email.subject_variants && email.subject_variants[2]) {
+      properties['Subject Variant 3'] = {
         rich_text: [
           {
             text: {
@@ -239,9 +343,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'Body Variant 1': (email.body_variants && email.body_variants[0]) ? {
+    if (hasProperty('Body Variant 1') && email.body_variants && email.body_variants[0]) {
+      properties['Body Variant 1'] = {
         rich_text: [
           {
             text: {
@@ -249,9 +355,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'Body Variant 2': (email.body_variants && email.body_variants[1]) ? {
+    if (hasProperty('Body Variant 2') && email.body_variants && email.body_variants[1]) {
+      properties['Body Variant 2'] = {
         rich_text: [
           {
             text: {
@@ -259,9 +367,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'Body Variant 3': (email.body_variants && email.body_variants[2]) ? {
+    if (hasProperty('Body Variant 3') && email.body_variants && email.body_variants[2]) {
+      properties['Body Variant 3'] = {
         rich_text: [
           {
             text: {
@@ -269,9 +379,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'AI Recommendation': email.recommended_variant ? {
+    if (hasProperty('AI Recommendation') && email.recommended_variant) {
+      properties['AI Recommendation'] = {
         rich_text: [
           {
             text: {
@@ -279,9 +391,11 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined,
+      };
+    }
 
-      'Variant Reasoning': email.variant_reasoning ? {
+    if (hasProperty('Variant Reasoning') && email.variant_reasoning) {
+      properties['Variant Reasoning'] = {
         rich_text: [
           {
             text: {
@@ -289,15 +403,15 @@ export async function syncEmailToNotion(email, lead) {
             }
           }
         ]
-      } : undefined
-    };
+      };
+    }
 
-    // Remove undefined properties
-    Object.keys(properties).forEach(key => {
-      if (properties[key] === undefined) {
-        delete properties[key];
-      }
-    });
+    // Check if we have at least one property to sync
+    if (Object.keys(properties).length === 0) {
+      console.log(`   ⚠️  Notion sync skipped: No matching properties exist in database`);
+      console.log(`   💡 Set up properties in Notion - see NOTION-SETUP-GUIDE.md`);
+      return { skipped: true, reason: 'No matching properties exist in Notion database' };
+    }
 
     const response = await notion.pages.create({
       parent: {

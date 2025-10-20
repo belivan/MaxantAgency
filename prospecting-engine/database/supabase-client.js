@@ -170,16 +170,16 @@ export async function getProspectById(id) {
 }
 
 /**
- * Check if a prospect already exists by Google Place ID
+ * Check if a prospect already exists by Google Place ID (globally)
  *
  * @param {string} googlePlaceId - Google Place ID
- * @returns {Promise<boolean>} True if exists
+ * @returns {Promise<object|null>} Prospect object if exists, null otherwise
  */
 export async function prospectExists(googlePlaceId) {
   try {
     const { data, error } = await supabase
       .from('prospects')
-      .select('id')
+      .select('*')
       .eq('google_place_id', googlePlaceId)
       .single();
 
@@ -187,9 +187,215 @@ export async function prospectExists(googlePlaceId) {
       throw error;
     }
 
-    return !!data;
+    return data || null;
   } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Check if a prospect exists in a specific project
+ *
+ * @param {string} googlePlaceId - Google Place ID
+ * @param {string} projectId - Project ID (optional)
+ * @returns {Promise<boolean>} True if prospect exists in project
+ */
+export async function prospectExistsInProject(googlePlaceId, projectId) {
+  try {
+    // If no project specified, check global existence
+    if (!projectId) {
+      const prospect = await prospectExists(googlePlaceId);
+      return !!prospect;
+    }
+
+    // Check if prospect exists globally
+    const { data: prospect, error: prospectError } = await supabase
+      .from('prospects')
+      .select('id')
+      .eq('google_place_id', googlePlaceId)
+      .single();
+
+    if (prospectError && prospectError.code !== 'PGRST116') {
+      throw prospectError;
+    }
+
+    if (!prospect) {
+      return false; // Prospect doesn't exist at all
+    }
+
+    // Check if it's linked to this project
+    const { data: link, error: linkError } = await supabase
+      .from('project_prospects')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('prospect_id', prospect.id)
+      .single();
+
+    if (linkError && linkError.code !== 'PGRST116') {
+      throw linkError;
+    }
+
+    return !!link;
+  } catch (error) {
+    logError('Error checking prospect in project', error, { googlePlaceId, projectId });
     return false;
+  }
+}
+
+/**
+ * Link a prospect to a project
+ *
+ * @param {string} prospectId - Prospect ID
+ * @param {string} projectId - Project ID
+ * @param {object} metadata - Optional metadata (run_id, notes, etc.)
+ * @returns {Promise<object>} Created link
+ */
+export async function linkProspectToProject(prospectId, projectId, metadata = {}) {
+  try {
+    const { data, error } = await supabase
+      .from('project_prospects')
+      .insert({
+        prospect_id: prospectId,
+        project_id: projectId,
+        run_id: metadata.run_id || null,
+        notes: metadata.notes || null,
+        custom_score: metadata.custom_score || null,
+        status: metadata.status || 'active'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      // Ignore duplicate errors (prospect already in project)
+      if (error.code === '23505') { // PostgreSQL unique violation
+        logInfo('Prospect already linked to project', { prospectId, projectId });
+        return null;
+      }
+      logError('Failed to link prospect to project', error, { prospectId, projectId });
+      throw error;
+    }
+
+    logInfo('Prospect linked to project', { prospectId, projectId });
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Save or link a prospect (project-aware)
+ * If prospect exists globally, link it to the project
+ * If not, create it and link it
+ *
+ * @param {object} prospectData - Prospect data
+ * @param {string} projectId - Project ID (optional)
+ * @param {object} metadata - Link metadata (run_id, etc.)
+ * @returns {Promise<object>} Prospect object
+ */
+export async function saveOrLinkProspect(prospectData, projectId = null, metadata = {}) {
+  try {
+    // Check if prospect exists globally
+    let prospect = null;
+    if (prospectData.google_place_id) {
+      prospect = await prospectExists(prospectData.google_place_id);
+    }
+
+    // If prospect doesn't exist, create it
+    if (!prospect) {
+      prospect = await saveProspect({
+        ...prospectData,
+        project_id: projectId // Still set for backward compatibility
+      });
+      logInfo('New prospect created', {
+        id: prospect.id,
+        company: prospect.company_name
+      });
+    } else {
+      logInfo('Prospect already exists globally', {
+        id: prospect.id,
+        company: prospect.company_name
+      });
+    }
+
+    // Link to project if specified
+    if (projectId) {
+      await linkProspectToProject(prospect.id, projectId, {
+        ...metadata,
+        run_id: prospectData.run_id || metadata.run_id
+      });
+    }
+
+    return prospect;
+  } catch (error) {
+    logError('Failed to save or link prospect', error, {
+      company: prospectData.company_name,
+      projectId
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get prospects for a specific project
+ *
+ * @param {string} projectId - Project ID
+ * @param {object} filters - Additional filters
+ * @returns {Promise<Array>} Array of prospects with project-specific data
+ */
+export async function getProspectsByProject(projectId, filters = {}) {
+  try {
+    let query = supabase
+      .from('project_prospects')
+      .select(`
+        id,
+        added_at,
+        notes,
+        custom_score,
+        status,
+        run_id,
+        prospects (*)
+      `)
+      .eq('project_id', projectId);
+
+    // Apply filters
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    if (filters.runId) {
+      query = query.eq('run_id', filters.runId);
+    }
+
+    // Limit and order
+    const limit = filters.limit || 50;
+    query = query.limit(limit).order('added_at', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) {
+      logError('Failed to fetch prospects by project', error, { projectId, filters });
+      throw error;
+    }
+
+    // Flatten the structure
+    const prospects = data.map(item => ({
+      ...item.prospects,
+      project_link_id: item.id,
+      project_status: item.status,
+      project_notes: item.notes,
+      project_custom_score: item.custom_score,
+      added_to_project_at: item.added_at,
+      project_run_id: item.run_id
+    }));
+
+    logInfo('Prospects fetched by project', {
+      projectId,
+      count: prospects.length
+    });
+
+    return prospects;
+  } catch (error) {
+    throw error;
   }
 }
 

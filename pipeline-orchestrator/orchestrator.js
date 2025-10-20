@@ -23,11 +23,22 @@ class Orchestrator {
     try {
       log.info('Initializing Pipeline Orchestrator...');
 
+      // Check if database credentials are configured
+      const hasDatabase = process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY;
+
+      if (!hasDatabase) {
+        log.warn('Supabase credentials not configured - running in API-only mode');
+        log.warn('To enable database features, set SUPABASE_URL and SUPABASE_SERVICE_KEY in .env');
+        this.isRunning = true;
+        return;
+      }
+
       // Check if cron is enabled
       const cronEnabled = process.env.ENABLE_CRON_ON_STARTUP !== 'false';
 
       if (!cronEnabled) {
         log.warn('Cron scheduling disabled in environment config');
+        this.isRunning = true;
         return;
       }
 

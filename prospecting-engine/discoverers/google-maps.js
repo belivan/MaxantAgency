@@ -2,6 +2,7 @@ import { Client } from '@googlemaps/google-maps-services-js';
 import dotenv from 'dotenv';
 import { logInfo, logError, logApiRequest, logApiResponse } from '../shared/logger.js';
 import { costTracker } from '../shared/cost-tracker.js';
+import { prospectExists } from '../database/supabase-client.js';
 
 dotenv.config();
 
@@ -117,14 +118,45 @@ export async function discoverCompanies(query, options = {}) {
 
 /**
  * Extract company data from Google Places result
+ * Uses cached data from database if available to avoid duplicate API calls
  *
  * @param {object} place - Google Places result object
  * @returns {Promise<object>} Company object
  */
 async function extractCompanyData(place) {
   try {
-    // Get place details for more info (website, phone, etc.)
-    const details = await getPlaceDetails(place.place_id);
+    // Check if we already have this prospect in our database (smart caching)
+    const cachedProspect = await prospectExists(place.place_id);
+
+    let details = {};
+
+    if (cachedProspect) {
+      // Reuse cached data - no API call needed! 💰
+      logInfo('Using cached prospect data (0 API calls)', {
+        company: cachedProspect.company_name,
+        placeId: place.place_id
+      });
+
+      // Convert cached prospect back to company format
+      return {
+        name: cachedProspect.company_name,
+        website: cachedProspect.website,
+        phone: cachedProspect.contact_phone,
+        address: cachedProspect.address,
+        city: cachedProspect.city,
+        state: cachedProspect.state,
+        rating: place.rating || cachedProspect.google_rating,
+        reviewCount: place.user_ratings_total || cachedProspect.google_review_count,
+        googlePlaceId: place.place_id,
+        types: place.types || [],
+        industry: cachedProspect.industry,
+        location: place.geometry?.location || null,
+        source: 'database-cache' // Mark as cached
+      };
+    } else {
+      // Not in cache - fetch from Google API
+      details = await getPlaceDetails(place.place_id);
+    }
 
     // Parse address components
     const addressComponents = parseAddressComponents(

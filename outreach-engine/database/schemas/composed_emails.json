@@ -68,6 +68,24 @@
       "description": "Strategy used (compliment-sandwich, problem-first, etc.)"
     },
     {
+      "name": "platform",
+      "type": "text",
+      "enum": ["email", "instagram", "facebook", "linkedin", "twitter"],
+      "default": "email",
+      "index": true,
+      "description": "Outreach platform (email or social media)"
+    },
+    {
+      "name": "character_count",
+      "type": "integer",
+      "description": "Character count (for social DMs)"
+    },
+    {
+      "name": "social_profile_url",
+      "type": "text",
+      "description": "URL to prospect's social media profile"
+    },
+    {
       "name": "has_variants",
       "type": "boolean",
       "default": false,

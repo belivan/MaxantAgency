@@ -1,0 +1,32 @@
+# Dockerfile for Analysis Engine (needs Playwright/Chromium)
+FROM mcr.microsoft.com/playwright:v1.40.0-focal
+
+# Set working directory
+WORKDIR /app
+
+# Install Node.js (Playwright image has it, but ensure correct version)
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
+# Copy package files
+COPY analysis-engine/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Install Playwright browsers (Chromium)
+RUN npx playwright install chromium --with-deps
+
+# Copy service files
+COPY analysis-engine/ ./
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:3001/health || exit 1
+
+# Start server
+CMD ["node", "server.js"]

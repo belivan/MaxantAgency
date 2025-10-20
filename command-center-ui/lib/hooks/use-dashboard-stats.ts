@@ -143,15 +143,15 @@ export function useEngineHealth() {
 
   const checkHealth = useCallback(async () => {
     const checks = await Promise.allSettled([
-      fetch(process.env.NEXT_PUBLIC_PROSPECTING_API + '/api/health', {
+      fetch(process.env.NEXT_PUBLIC_PROSPECTING_API + '/health', {
         method: 'GET',
         signal: AbortSignal.timeout(5000)
       }),
-      fetch(process.env.NEXT_PUBLIC_ANALYSIS_API + '/api/health', {
+      fetch(process.env.NEXT_PUBLIC_ANALYSIS_API + '/health', {
         method: 'GET',
         signal: AbortSignal.timeout(5000)
       }),
-      fetch(process.env.NEXT_PUBLIC_OUTREACH_API + '/api/health', {
+      fetch(process.env.NEXT_PUBLIC_OUTREACH_API + '/health', {
         method: 'GET',
         signal: AbortSignal.timeout(5000)
       })

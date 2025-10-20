@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  # Prospecting Engine
+  prospecting-engine:
+    build:
+      context: ./prospecting-engine
+      dockerfile: ../Dockerfile.engine
+      args:
+        SERVICE_NAME: prospecting-engine
+    container_name: maksant-prospecting
+    restart: unless-stopped
+    ports:
+      - "3010:3010"
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Analysis Engine (with Playwright)
+  analysis-engine:
+    build:
+      context: ./analysis-engine
+      dockerfile: ../Dockerfile.analysis
+    container_name: maksant-analysis
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    shm_size: '2gb'  # Playwright needs shared memory
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Outreach Engine
+  outreach-engine:
+    build:
+      context: ./outreach-engine
+      dockerfile: ../Dockerfile.engine
+      args:
+        SERVICE_NAME: outreach-engine
+    container_name: maksant-outreach
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Pipeline Orchestrator
+  pipeline-orchestrator:
+    build:
+      context: ./pipeline-orchestrator
+      dockerfile: ../Dockerfile.engine
+      args:
+        SERVICE_NAME: pipeline-orchestrator
+    container_name: maksant-pipeline
+    restart: unless-stopped
+    ports:
+      - "3020:3020"
+    environment:
+      - NODE_ENV=production
+      - PORT=3020
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3020/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Command Center UI
+  command-center-ui:
+    build:
+      context: ./command-center-ui
+      dockerfile: ../Dockerfile.ui
+    container_name: maksant-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_PROSPECTING_API=http://prospecting-engine:3010
+      - NEXT_PUBLIC_ANALYSIS_API=http://analysis-engine:3001
+      - NEXT_PUBLIC_OUTREACH_API=http://outreach-engine:3002
+      - NEXT_PUBLIC_PIPELINE_API=http://pipeline-orchestrator:3020
+    env_file:
+      - .env
+    depends_on:
+      - prospecting-engine
+      - analysis-engine
+      - outreach-engine
+      - pipeline-orchestrator
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  maksant-network:
+    driver: bridge
+
+# Optional: If you want to run Supabase locally instead of cloud
+# volumes:
+#   supabase_db_data:

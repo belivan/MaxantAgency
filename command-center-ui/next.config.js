@@ -46,6 +46,9 @@ const nextConfig = {
     NEXT_PUBLIC_OUTREACH_API: process.env.NEXT_PUBLIC_OUTREACH_API,
   },
 
+  // Production build configuration
+  output: 'standalone', // For Docker deployment
+
   // Experimental features
   experimental: {
     externalDir: true,

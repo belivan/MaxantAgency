@@ -96,12 +96,12 @@ async function testEndToEnd() {
     // Cost Analysis
     const costSummary = costTracker.getSummary();
     console.log('💰 COST ANALYSIS:\n');
-    console.log(`   Google Maps API:      $${costSummary.googleMaps.toFixed(4)}`);
-    console.log(`   Grok AI:              $${costSummary.grokAi.toFixed(4)}`);
-    console.log(`   OpenAI:               $${costSummary.openAi.toFixed(4)}`);
+    console.log(`   Google Maps API:      $${costSummary.costs.googleMaps}`);
+    console.log(`   Grok AI:              $${costSummary.costs.grokAi}`);
+    console.log(`   OpenAI:               $${costSummary.costs.openAi}`);
     console.log(`   ─────────────────────────────────`);
-    console.log(`   TOTAL:                $${costSummary.total.toFixed(4)}`);
-    console.log(`   Per Prospect:         $${(costSummary.total / results.saved).toFixed(4)}`);
+    console.log(`   TOTAL:                $${costSummary.costs.total}`);
+    console.log(`   Per Prospect:         $${results.saved > 0 ? (parseFloat(costSummary.costs.total) / results.saved).toFixed(4) : '0.0000'}`);
     console.log('');
 
     // Fetch and display saved prospects
@@ -213,8 +213,8 @@ async function testEndToEnd() {
     // Check 7: Cost tracking
     checks.push({
       name: 'Cost tracking',
-      passed: costSummary.total > 0,
-      detail: `$${costSummary.total.toFixed(4)} total cost tracked`
+      passed: parseFloat(costSummary.costs.total) > 0,
+      detail: `$${costSummary.costs.total} total cost tracked`
     });
 
     // Check 8: Performance

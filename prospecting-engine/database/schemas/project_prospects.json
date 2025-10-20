@@ -1,0 +1,91 @@
+{
+  "table": "project_prospects",
+  "description": "Junction table linking prospects to projects (many-to-many relationship)",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier for the link"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "required": true,
+      "index": true,
+      "description": "Reference to the project"
+    },
+    {
+      "name": "prospect_id",
+      "type": "uuid",
+      "required": true,
+      "index": true,
+      "description": "Reference to the prospect"
+    },
+    {
+      "name": "run_id",
+      "type": "text",
+      "index": true,
+      "description": "Prospecting run that added this prospect to this project"
+    },
+    {
+      "name": "added_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When this prospect was added to this project"
+    },
+    {
+      "name": "notes",
+      "type": "text",
+      "description": "Project-specific notes about this prospect"
+    },
+    {
+      "name": "custom_score",
+      "type": "integer",
+      "description": "Project-specific custom score (0-100)"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["active", "contacted", "qualified", "disqualified", "archived"],
+      "default": "active",
+      "index": true,
+      "description": "Project-specific status for this prospect"
+    }
+  ],
+
+  "foreignKeys": [
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "column": "prospect_id",
+      "references": "prospects.id",
+      "onDelete": "CASCADE"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_project_prospects_project",
+      "columns": ["project_id", "status"]
+    },
+    {
+      "name": "idx_project_prospects_prospect",
+      "columns": ["prospect_id"]
+    }
+  ],
+
+  "constraints": [
+    {
+      "type": "unique",
+      "name": "uq_project_prospect",
+      "columns": ["project_id", "prospect_id"],
+      "description": "Prevent same prospect being added twice to same project"
+    }
+  ]
+}

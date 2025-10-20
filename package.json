@@ -4,11 +4,24 @@
   "description": "Complete lead generation pipeline - unified interface",
   "private": true,
   "scripts": {
-    "start": "concurrently --names \"EMAIL,UI\" --prefix-colors \"cyan,magenta\" \"npm run start:email\" \"npm run start:ui\"",
-    "start:email": "cd email-composer && npm start",
-    "start:ui": "cd command-center-ui && npm run dev",
-    "dev": "npm start",
-    "install:all": "npm install && cd email-composer && npm install && cd ../command-center-ui && npm install && cd ../client-orchestrator && npm install && cd ../website-audit-tool && npm install"
+    "dev": "npm run dev:all",
+    "dev:all": "concurrently --names \"PROSPECT,ANALYSIS,OUTREACH,PIPELINE,UI\" --prefix-colors \"green,blue,yellow,cyan,magenta\" \"npm run dev:prospecting\" \"npm run dev:analysis\" \"npm run dev:outreach\" \"npm run dev:pipeline\" \"npm run dev:ui\"",
+    "dev:prospecting": "cd prospecting-engine && node server.js",
+    "dev:analysis": "cd analysis-engine && node server.js",
+    "dev:outreach": "cd outreach-engine && node server.js",
+    "dev:pipeline": "cd pipeline-orchestrator && node server.js",
+    "dev:ui": "cd command-center-ui && npm run dev",
+    "install:all": "cd prospecting-engine && npm install && cd ../analysis-engine && npm install && cd ../outreach-engine && npm install && cd ../pipeline-orchestrator && npm install && cd ../command-center-ui && npm install && cd ..",
+    "build": "cd command-center-ui && npm run build && cd ..",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop all",
+    "pm2:restart": "pm2 restart all",
+    "pm2:logs": "pm2 logs"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

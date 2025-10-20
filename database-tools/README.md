@@ -30,7 +30,7 @@ cp .env.template .env
 2. Edit `.env` and add your Supabase credentials:
 ```env
 SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+SUPABASE_SERVICE_KEY=your-service-role-key-here
 ```
 
 Find these values in your Supabase project:
@@ -289,7 +289,7 @@ Supported agents:
 
 1. Check your `.env` file exists
 2. Verify `SUPABASE_URL` is correct
-3. Verify `SUPABASE_SERVICE_ROLE_KEY` is correct (not the anon key!)
+3. Verify `SUPABASE_SERVICE_KEY` is correct (not the anon key!)
 
 ### "Circular dependency detected"
 

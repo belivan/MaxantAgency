@@ -3,7 +3,7 @@
  * Tests Agent 1's resilience to failures, timeouts, and invalid data
  */
 
-import { logger } from '../shared/logger.js';
+import logger from '../shared/logger.js';
 
 // Test counter
 let testsPassed = 0;
@@ -444,7 +444,7 @@ async function runAllTests() {
 // Check if server is running
 async function checkServer() {
   try {
-    const response = await fetch('http://localhost:3010/api/health');
+    const response = await fetch('http://localhost:3010/health');
     if (!response.ok) {
       throw new Error('Server not healthy');
     }

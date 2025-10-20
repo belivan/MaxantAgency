@@ -8,7 +8,7 @@
  * Endpoints:
  * - POST /api/prospect - Generate prospects from ICP brief (SSE)
  * - GET /api/prospects - List prospects with filters
- * - GET /api/health - Health check
+ * - GET /health - Health check
  */
 
 import express from 'express';
@@ -207,10 +207,10 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// GET /api/health - Health check
+// GET /health - Health check
 // ═══════════════════════════════════════════════════════════════════
 
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
     service: 'prospecting-engine',
@@ -233,7 +233,7 @@ app.get('/', (req, res) => {
       listProspects: 'GET /api/prospects',
       getProspect: 'GET /api/prospects/:id',
       stats: 'GET /api/stats',
-      health: 'GET /api/health'
+      health: 'GET /health'
     },
     documentation: 'See README.md for full API documentation'
   });
@@ -263,7 +263,7 @@ app.listen(PORT, () => {
   console.log('═══════════════════════════════════════════════════════');
   console.log(`   Port:        ${PORT}`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   Health:      http://localhost:${PORT}/api/health`);
+  console.log(`   Health:      http://localhost:${PORT}/health`);
   console.log('═══════════════════════════════════════════════════════\n');
 
   logInfo('Prospecting Engine started', { port: PORT });

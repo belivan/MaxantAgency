@@ -69,7 +69,15 @@
         "[PLACEHOLDER]",
         "[INSERT",
         "PLACEHOLDER",
-        "TODO"
+        "TODO",
+        "[object Object]",
+        "[object object]",
+        "undefined",
+        " null",
+        "NaN",
+        "[object Array]",
+        "Could you provide",
+        "Would you like to share"
       ]
     },
 

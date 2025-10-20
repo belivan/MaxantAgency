@@ -214,9 +214,13 @@ export async function saveComposedEmail(email) {
 
   const {
     lead_id,
+    lead = null,
     url,
     company_name,
+    industry,
     contact_email,
+    contact_name,
+    contact_title,
     subject,
     body,
     strategy,
@@ -227,7 +231,13 @@ export async function saveComposedEmail(email) {
     validation_score,
     validation_issues,
     variants = null,
-    status = 'ready'
+    status = 'pending',  // Use 'pending' as default (database constraint doesn't allow 'ready')
+    has_variants = false,
+    subject_variants,
+    body_variants,
+    recommended_variant,
+    variant_reasoning,
+    usage
   } = email;
 
   // Validate required fields
@@ -241,29 +251,53 @@ export async function saveComposedEmail(email) {
     throw new Error('body is required');
   }
 
+  // Ensure url and company_name are populated (required by schema)
+  const finalUrl = url || lead?.url || null;
+  const finalCompanyName = company_name || lead?.company_name || 'Unknown Company';
+
+  if (!finalUrl) {
+    throw new Error('url is required (provide email.url or email.lead.url)');
+  }
+
   try {
-    // Map to existing schema (email-composer format)
+    // Debug: log the status being used
+    console.log(`   [DEBUG] Saving with status: "${status}"`);
+
+    // Build complete record with all schema fields
     const record = {
       lead_id,
-      url,
-      company_name,
-      contact_email,
-      email_subject: platform === 'email' ? subject : null,
+      url: finalUrl,
+      company_name: finalCompanyName,
+      industry: industry || lead?.industry || null,
+      contact_email: contact_email || lead?.contact_email || null,
+      contact_name: contact_name || lead?.contact_name || null,
+      contact_title: contact_title || lead?.contact_title || null,
+      platform: platform || 'email',  // 'email', 'instagram', 'facebook', 'linkedin'
+      email_subject: platform === 'email' ? subject : null,  // Only emails have subjects
       email_body: body,
-      email_strategy: strategy,
-      status
-      // Note: The following fields will be added in Phase 5 schema migration:
-      // - model_used, generation_time_ms, generation_cost
-      // - validation_score, validation_issues
-      // - platform (to distinguish email vs social)
-      // - variants (subject_variants, body_variants, recommended_variant)
+      email_strategy: strategy || 'compliment-sandwich',
+      character_count: email.character_count || null,  // For social DMs
+      social_profile_url: lead?.social_profile_url || email.social_profile_url || null,
+      has_variants: has_variants || (subject_variants && subject_variants.length > 0) || false,
+      subject_variants: subject_variants || null,
+      body_variants: body_variants || null,
+      recommended_variant: recommended_variant || null,
+      variant_reasoning: variant_reasoning || null,
+      quality_score: validation_score || null,
+      validation_issues: validation_issues || null,
+      status,
+      ai_model: model_used || null,
+      generation_cost: cost || null,
+      generation_time_ms: generation_time_ms || null,
+      usage_input_tokens: usage?.input_tokens || null,
+      usage_output_tokens: usage?.output_tokens || null
     };
 
     const { data, error } = await supabase
       .from('composed_emails')
       .insert([record])
-    .select()
-    .single();
+      .select()
+      .single();
 
     if (error) {
       throw new Error(`Failed to save composed email: ${error.message}`);
