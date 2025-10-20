@@ -17,50 +17,74 @@ export type SocialMessageStatus = 'pending' | 'sent' | 'responded' | 'ignored' |
 export interface SocialMessage {
   id: string;
   lead_id: string;
+  url: string;
 
   // Platform details
-  platform: SocialPlatform;
-  profile_url: string;
-  profile_handle?: string;
+  platform: string; // 'instagram' | 'facebook' | 'linkedin' | 'twitter'
+  social_profile_url?: string | null;
 
   // Recipient info
   company_name: string;
-  contact_name?: string;
+  contact_name?: string | null;
+  contact_title?: string | null;
+  contact_email?: string | null;
+  industry?: string | null;
 
   // Message content
-  message: string;
-  character_count: number;
+  message_body: string;
+  opening_line?: string | null;
+  character_count?: number | null;
 
   // Variants (for A/B testing)
   has_variants: boolean;
-  message_variants?: string[];
-  recommended_variant?: number;
+  message_variants?: string[] | null;
+  recommended_variant?: number | null;
+  variant_reasoning?: string | null;
 
   // Strategy and quality
-  strategy: SocialStrategy;
-  quality_score: number;
-  personalization_score?: number;
+  strategy?: string | null;
+  quality_score?: number | null;
+  validation_issues?: string[] | null;
 
   // AI reasoning
-  reasoning?: string;
-  tone_notes?: string;
+  technical_reasoning?: string | null;
+  business_summary?: string | null;
 
   // Status tracking
-  status: SocialMessageStatus;
-  sent_at?: string;
-  responded_at?: string;
-  response_text?: string;
+  status: string; // 'pending' | 'reviewed' | 'sent' | 'scheduled' | 'failed'
+  sent_at?: string | null;
+  reviewed_at?: string | null;
 
   // Project tracking
-  project_id?: string;
-  campaign_id?: string;
+  project_id?: string | null;
+  campaign_id?: string | null;
+  client_name?: string | null;
+  source_app?: string | null;
+
+  // Notion integration
+  synced_to_notion: boolean;
+  notion_page_id?: string | null;
+  notion_sync_at?: string | null;
 
   // Cost tracking
-  composition_cost: number;
-  composition_model?: string;
+  ai_model?: string | null;
+  generation_cost?: number | null;
+  generation_time_ms?: number | null;
+  usage_input_tokens?: number | null;
+  usage_output_tokens?: number | null;
 
   created_at: string;
-  updated_at?: string;
+  updated_at?: string | null;
+
+  // Joined lead data (if requested)
+  leads?: {
+    id: string;
+    url: string;
+    industry: string;
+    company_name: string;
+    contact_email?: string | null;
+    social_profiles?: Record<string, any>;
+  };
 }
 
 export interface SocialMessageFilters {

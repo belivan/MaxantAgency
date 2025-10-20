@@ -259,12 +259,32 @@
     {
       "type": "check",
       "name": "chk_quality_score_range",
-      "expression": "quality_score >= 0 AND quality_score <= 100"
+      "expression": "quality_score IS NULL OR (quality_score >= 0 AND quality_score <= 100)"
     },
     {
       "type": "check",
       "name": "chk_generation_cost_positive",
-      "expression": "generation_cost >= 0"
+      "expression": "generation_cost IS NULL OR generation_cost >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_character_count_positive",
+      "expression": "character_count IS NULL OR character_count >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_generation_time_positive",
+      "expression": "generation_time_ms IS NULL OR generation_time_ms >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_tokens_positive",
+      "expression": "usage_input_tokens IS NULL OR usage_input_tokens >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_output_tokens_positive",
+      "expression": "usage_output_tokens IS NULL OR usage_output_tokens >= 0"
     }
   ],
 

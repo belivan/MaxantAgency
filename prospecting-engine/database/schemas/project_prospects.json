@@ -86,6 +86,11 @@
       "name": "uq_project_prospect",
       "columns": ["project_id", "prospect_id"],
       "description": "Prevent same prospect being added twice to same project"
+    },
+    {
+      "type": "check",
+      "name": "chk_custom_score_range",
+      "expression": "custom_score IS NULL OR (custom_score >= 0 AND custom_score <= 100)"
     }
   ]
 }

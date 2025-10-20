@@ -1,7 +1,7 @@
 {
-  "agent": "Agent 3 - Outreach Engine",
+  "agent": "Outreach Engine",
   "agentDir": "outreach-engine",
-  "port": 3001,
+  "port": 3002,
   "checks": [
     {
       "category": "File Structure",
@@ -88,6 +88,17 @@
           "name": "Error handling present",
           "test": "checkErrorHandling",
           "minCoverage": 80
+        }
+      ]
+    },
+    {
+      "category": "Server Health",
+      "items": [
+        {
+          "name": "Server responds to health check",
+          "test": "healthCheck",
+          "port": 3002,
+          "endpoint": "/health"
         }
       ]
     },

@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { createProjectSchema, type CreateProjectFormData } from '@/lib/utils/validation';
+import { createProject } from '@/lib/api/projects';
 
 interface CreateProjectDialogProps {
   onProjectCreated?: (project: any) => void;
@@ -45,25 +46,20 @@ export function CreateProjectDialog({ onProjectCreated }: CreateProjectDialogPro
     setIsSubmitting(true);
 
     try {
-      // TODO: Call API to create project
-      // const project = await createProject(data);
-
-      // For now, just simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      console.log('Creating project:', data);
+      // Create project via API
+      const project = await createProject(data);
 
       // Close dialog and reset form
       setOpen(false);
       reset();
 
-      // Notify parent
+      // Notify parent with the created project
       if (onProjectCreated) {
-        onProjectCreated(data);
+        onProjectCreated(project);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create project:', error);
-      // TODO: Show error toast
+      alert(`Failed to create project: ${error.message}`);
     } finally {
       setIsSubmitting(false);
     }

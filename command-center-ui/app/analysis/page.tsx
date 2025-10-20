@@ -10,8 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ProspectSelector, AnalysisConfig, AnalysisProgress } from '@/components/analysis';
-import { LoadingOverlay } from '@/components/shared';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
+import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { analyzeProspects } from '@/lib/api';
 import type { AnalysisOptionsFormData, SSEMessage, LeadGrade } from '@/lib/types';
 
@@ -36,6 +36,7 @@ export default function AnalysisPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const engineStatus = useEngineHealth();
+  const { startTask, updateTask, addLog, completeTask, errorTask } = useTaskProgress();
 
   // Get pre-selected prospect IDs from URL
   const preSelectedIds = searchParams.get('prospect_ids')?.split(',') || [];
@@ -92,11 +93,6 @@ export default function AnalysisPage() {
         setIsAnalyzing(false);
         setSseUrl(null);
         setCurrentAnalysis(undefined);
-
-        // Auto-navigate to leads page after 2 seconds
-        setTimeout(() => {
-          router.push('/leads');
-        }, 2000);
       } else if (message.type === 'error') {
         setIsAnalyzing(false);
         setSseUrl(null);
@@ -122,21 +118,107 @@ export default function AnalysisPage() {
     setProgress(undefined);
     setCurrentAnalysis(undefined);
 
+    // Start global progress task with descriptive title
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const taskTitle = `Analysis: ${selectedIds.length} prospects (${timestamp})`;
+    const taskId = startTask('analysis', taskTitle, selectedIds.length);
+
     try {
-      // Call API to start analysis
-      const { sseUrl: newSseUrl } = await analyzeProspects(selectedIds, {
+      // Make POST request and handle SSE stream directly
+      const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
+
+      // DEBUG: Log what we're sending
+      console.log('🔍 Analysis Request:', {
+        prospect_ids: selectedIds,
+        count: selectedIds.length,
         tier: config.tier,
-        modules: config.modules as ("design" | "seo" | "content" | "performance" | "accessibility" | "social")[],
-        capture_screenshots: config.capture_screenshots,
-        autoEmail: config.autoEmail,
-        autoAnalyze: config.autoAnalyze
+        modules: config.modules
       });
 
-      // Set SSE URL to start streaming
-      setSseUrl(newSseUrl);
+      const response = await fetch(`${API_BASE}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_ids: selectedIds,
+          tier: config.tier,
+          modules: config.modules,
+          capture_screenshots: config.capture_screenshots ?? true
+        })
+      });
+
+      if (!response.ok || !response.body) {
+        throw new Error('Failed to start analysis');
+      }
+
+      // Read SSE stream
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          // Stream ended - mark task as complete if not already
+          addLog(taskId, 'Analysis completed successfully!', 'success');
+          setIsAnalyzing(false);
+          completeTask(taskId);
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+
+              // Handle progress
+              if (data.type === 'progress' || data.step) {
+                const current = data.completed || 0;
+                setProgress({
+                  current,
+                  total: data.total || selectedIds.length
+                });
+                // Update global progress
+                const message = data.message || data.step || `Processing ${current}/${data.total || selectedIds.length}`;
+                updateTask(taskId, current, message);
+                addLog(taskId, message, 'info');
+              }
+
+              // Handle status messages
+              if (data.type === 'status') {
+                addLog(taskId, data.message || 'Status update', 'info');
+              }
+
+              // Handle log messages
+              if (data.type === 'log') {
+                const logType = data.error ? 'error' : data.level || 'info';
+                addLog(taskId, data.message || 'Log entry', logType as any);
+              }
+
+              // Handle completion - ONLY when explicitly complete, not partial progress
+              if (data.type === 'complete') {
+                addLog(taskId, 'Analysis completed successfully!', 'success');
+                setIsAnalyzing(false);
+                completeTask(taskId);
+              }
+
+              // Handle error
+              if (data.type === 'error' || data.error) {
+                throw new Error(data.error || data.message || 'Analysis failed');
+              }
+            } catch (parseError) {
+              console.error('Failed to parse SSE:', parseError);
+            }
+          }
+        }
+      }
     } catch (error: any) {
       console.error('Failed to start analysis:', error);
       alert(`Failed to start analysis: ${error.message}`);
+      errorTask(taskId, error.message);
       setIsAnalyzing(false);
     }
   };
@@ -145,10 +227,6 @@ export default function AnalysisPage() {
 
   return (
     <>
-      <LoadingOverlay
-        isLoading={isAnalyzing}
-        message="Analyzing prospects..."
-      />
       <div className="container mx-auto p-6 space-y-6">
         {/* Header */}
         <div className="space-y-2">

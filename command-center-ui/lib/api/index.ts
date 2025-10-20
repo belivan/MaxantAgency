@@ -8,3 +8,4 @@ export * from './analysis';
 export * from './outreach';
 export * from './supabase';
 export * from './orchestrator';
+export * from './projects';

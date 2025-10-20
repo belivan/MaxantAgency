@@ -125,12 +125,6 @@
       "description": "Processing status in pipeline"
     },
     {
-      "name": "project_id",
-      "type": "uuid",
-      "foreignKey": "projects.id",
-      "description": "Reference to parent project"
-    },
-    {
       "name": "run_id",
       "type": "text",
       "index": true,
@@ -176,10 +170,6 @@
       "columns": ["industry", "google_rating"]
     },
     {
-      "name": "idx_prospects_project_status",
-      "columns": ["project_id", "status"]
-    },
-    {
       "name": "idx_prospects_run_id",
       "columns": ["run_id"]
     }
@@ -189,12 +179,29 @@
     {
       "type": "check",
       "name": "chk_google_rating_range",
-      "expression": "google_rating >= 1.0 AND google_rating <= 5.0"
+      "expression": "google_rating IS NULL OR (google_rating >= 1.0 AND google_rating <= 5.0)"
     },
     {
       "type": "check",
       "name": "chk_icp_match_score_range",
-      "expression": "icp_match_score >= 0 AND icp_match_score <= 100"
+      "expression": "icp_match_score IS NULL OR (icp_match_score >= 0 AND icp_match_score <= 100)"
+    },
+    {
+      "type": "check",
+      "name": "chk_google_review_count_positive",
+      "expression": "google_review_count IS NULL OR google_review_count >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_discovery_cost_positive",
+      "expression": "discovery_cost IS NULL OR discovery_cost >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_discovery_time_positive",
+      "expression": "discovery_time_ms IS NULL OR discovery_time_ms >= 0"
     }
-  ]
+  ],
+
+  "foreignKeys": []
 }

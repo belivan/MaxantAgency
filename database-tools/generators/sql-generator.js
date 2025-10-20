@@ -5,7 +5,7 @@
 
 import { generateCreateTable, generateDropTable } from './table-generator.js';
 import { generateIndexes } from './index-generator.js';
-import { generateForeignKeys } from './constraint-generator.js';
+import { generateForeignKeys, generateCheckConstraints, generateUniqueConstraints } from './constraint-generator.js';
 
 /**
  * Generate all SQL for a single schema
@@ -17,7 +17,9 @@ export function generateSQL(schema, options = {}) {
   const sql = {
     table: generateCreateTable(schema),
     indexes: generateIndexes(schema),
-    constraints: generateForeignKeys(schema)
+    constraints: generateForeignKeys(schema),
+    checkConstraints: generateCheckConstraints(schema),
+    uniqueConstraints: generateUniqueConstraints(schema)
   };
 
   // If force mode, include DROP statements
@@ -84,14 +86,37 @@ export function generateMigrationFile(schemas, options = {}) {
     }
   }
 
-  // Create foreign key constraints
+  // Create constraints
   if (!options.skipConstraints) {
+    // Foreign key constraints
     lines.push('-- CREATE FOREIGN KEY CONSTRAINTS');
     for (const schema of schemas) {
       const constraints = generateForeignKeys(schema);
       if (constraints.length > 0) {
         lines.push(`-- Foreign keys for ${schema.table}`);
         lines.push(...constraints);
+        lines.push('');
+      }
+    }
+
+    // CHECK constraints
+    lines.push('-- CREATE CHECK CONSTRAINTS');
+    for (const schema of schemas) {
+      const checkConstraints = generateCheckConstraints(schema);
+      if (checkConstraints.length > 0) {
+        lines.push(`-- Check constraints for ${schema.table}`);
+        lines.push(...checkConstraints);
+        lines.push('');
+      }
+    }
+
+    // UNIQUE constraints
+    lines.push('-- CREATE UNIQUE CONSTRAINTS');
+    for (const schema of schemas) {
+      const uniqueConstraints = generateUniqueConstraints(schema);
+      if (uniqueConstraints.length > 0) {
+        lines.push(`-- Unique constraints for ${schema.table}`);
+        lines.push(...uniqueConstraints);
         lines.push('');
       }
     }
@@ -108,13 +133,24 @@ export function generateMigrationFile(schemas, options = {}) {
 export function countStatements(allSQL) {
   let tables = 0;
   let indexes = 0;
-  let constraints = 0;
+  let foreignKeys = 0;
+  let checkConstraints = 0;
+  let uniqueConstraints = 0;
 
   for (const item of allSQL) {
     if (item.sql.table) tables++;
     indexes += item.sql.indexes.length;
-    constraints += item.sql.constraints.length;
+    foreignKeys += item.sql.constraints.length;
+    checkConstraints += (item.sql.checkConstraints || []).length;
+    uniqueConstraints += (item.sql.uniqueConstraints || []).length;
   }
 
-  return { tables, indexes, constraints };
+  return {
+    tables,
+    indexes,
+    foreignKeys,
+    checkConstraints,
+    uniqueConstraints,
+    constraints: foreignKeys + checkConstraints + uniqueConstraints
+  };
 }

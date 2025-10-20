@@ -26,12 +26,13 @@ export function useProspects(filters?: ProspectFilters): UseProspectsReturn {
     setError(null);
 
     try {
-      const data = await getProspects(filters);
-      setProspects(data);
-      setTotal(data.length);
+      const result = await getProspects(filters);
+      setProspects(result.prospects);
+      setTotal(result.total);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch prospects');
       setProspects([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }

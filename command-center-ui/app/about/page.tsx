@@ -236,7 +236,9 @@ export default function AboutPage() {
                 Generates personalized emails using lead data and multiple strategies.
               </p>
               <div className="text-sm text-gray-500">
-                <strong>Features:</strong> A/B testing, quality scoring, Notion sync
+                <strong>Model:</strong> Claude Sonnet 4.5<br/>
+                <strong>Strategies:</strong> Compliment-sandwich, Problem-first, Achievement-focused, Question-based<br/>
+                <strong>Features:</strong> A/B testing, quality scoring, variant generation, Notion sync
               </div>
             </div>
           </div>
@@ -326,9 +328,10 @@ export default function AboutPage() {
                 <h3 className="text-lg font-semibold mb-4 text-blue-300">Services</h3>
                 <ul className="space-y-2 text-gray-400">
                   <li><strong className="text-white">Command Center UI</strong> - Next.js dashboard (Port 3000)</li>
-                  <li><strong className="text-white">Client Orchestrator</strong> - Prospect generator (Port 3010)</li>
-                  <li><strong className="text-white">Website Audit Tool</strong> - Analyzer service (Port 3000)</li>
-                  <li><strong className="text-white">Email Composer</strong> - Email generation (Port 3001)</li>
+                  <li><strong className="text-white">Prospecting Engine</strong> - Prospect generator (Port 3010)</li>
+                  <li><strong className="text-white">Analysis Engine</strong> - Website analyzer (Port 3001)</li>
+                  <li><strong className="text-white">Outreach Engine</strong> - Email & social outreach (Port 3002)</li>
+                  <li><strong className="text-white">Pipeline Orchestrator</strong> - Campaign automation (Port 3020)</li>
                 </ul>
               </div>
 
@@ -338,6 +341,11 @@ export default function AboutPage() {
                   <li><strong className="text-white">prospects</strong> - Generated leads (pending → analyzed)</li>
                   <li><strong className="text-white">leads</strong> - Analyzed websites with grades A-F</li>
                   <li><strong className="text-white">composed_emails</strong> - Generated personalized emails</li>
+                  <li><strong className="text-white">social_outreach</strong> - Social media DM tracking</li>
+                  <li><strong className="text-white">campaigns</strong> - Scheduled automation workflows</li>
+                  <li><strong className="text-white">campaign_runs</strong> - Execution history & results</li>
+                  <li><strong className="text-white">projects</strong> - Project organization & isolation</li>
+                  <li><strong className="text-white">project_prospects</strong> - Many-to-many project linking</li>
                 </ul>
               </div>
             </div>
@@ -345,18 +353,26 @@ export default function AboutPage() {
             <div className="mt-8 pt-8 border-t border-gray-700">
               <h3 className="text-lg font-semibold mb-4 text-purple-300">Key Features</h3>
               <div className="grid md:grid-cols-2 gap-4 text-gray-400">
-                <div>
-                  <li className="mb-2">✓ Modular, independently deployable services</li>
-                  <li className="mb-2">✓ Unified Supabase database</li>
-                  <li className="mb-2">✓ API-first design pattern</li>
-                  <li>✓ Real-time progress tracking</li>
-                </div>
-                <div>
-                  <li className="mb-2">✓ Multi-AI model support</li>
-                  <li className="mb-2">✓ Cost tracking and optimization</li>
-                  <li className="mb-2">✓ Batch processing capabilities</li>
+                <ul className="space-y-2">
+                  <li>✓ Modular, independently deployable services</li>
+                  <li>✓ Unified Supabase database</li>
+                  <li>✓ API-first design pattern</li>
+                  <li>✓ Real-time SSE progress tracking</li>
+                  <li>✓ Multi-AI model support (OpenAI, Anthropic, xAI)</li>
+                  <li>✓ Cost tracking and optimization</li>
+                  <li>✓ Batch processing capabilities</li>
                   <li>✓ Notion integration</li>
-                </div>
+                </ul>
+                <ul className="space-y-2">
+                  <li>✓ Bulk delete operations with confirmation</li>
+                  <li>✓ Smart deduplication (global + project-scoped)</li>
+                  <li>✓ Project-based lead organization</li>
+                  <li>✓ Campaign scheduling & automation</li>
+                  <li>✓ Multi-select with range selection (Shift+Click)</li>
+                  <li>✓ Advanced filtering & sorting</li>
+                  <li>✓ A/B email variant testing</li>
+                  <li>✓ Multiple email strategies (4+ templates)</li>
+                </ul>
               </div>
             </div>
           </div>

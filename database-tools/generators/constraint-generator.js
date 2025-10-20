@@ -5,18 +5,47 @@
 
 /**
  * Generate all foreign key constraints for a schema
+ * Supports both foreignKeys array (preferred) and inline foreignKey (legacy)
  * @param {object} schema - Table schema
  * @returns {string[]} Array of ALTER TABLE statements
  */
 export function generateForeignKeys(schema) {
   const constraints = [];
 
-  if (!schema.foreignKeys || !Array.isArray(schema.foreignKeys)) {
-    return constraints;
+  // Support foreignKeys array (preferred format)
+  if (schema.foreignKeys && Array.isArray(schema.foreignKeys)) {
+    for (const fk of schema.foreignKeys) {
+      constraints.push(generateForeignKey(schema.table, fk));
+    }
   }
 
-  for (const fk of schema.foreignKeys) {
-    constraints.push(generateForeignKey(schema.table, fk));
+  // Support inline foreignKey format (legacy - for backward compatibility)
+  if (schema.columns && Array.isArray(schema.columns)) {
+    for (const col of schema.columns) {
+      if (col.foreignKey) {
+        // Convert inline format to standard format
+        let fk;
+        if (typeof col.foreignKey === 'string') {
+          // Format: "table.column"
+          fk = {
+            column: col.name,
+            references: col.foreignKey
+          };
+        } else if (typeof col.foreignKey === 'object') {
+          // Format: { table: "...", column: "...", onDelete: "..." }
+          fk = {
+            column: col.name,
+            references: `${col.foreignKey.table}.${col.foreignKey.column}`,
+            onDelete: col.foreignKey.onDelete,
+            onUpdate: col.foreignKey.onUpdate
+          };
+        }
+
+        if (fk) {
+          constraints.push(generateForeignKey(schema.table, fk));
+        }
+      }
+    }
   }
 
   return constraints;
@@ -36,10 +65,14 @@ function generateForeignKey(tableName, fk) {
   const onDelete = fk.onDelete ? ` ON DELETE ${fk.onDelete}` : '';
   const onUpdate = fk.onUpdate ? ` ON UPDATE ${fk.onUpdate}` : '';
 
+  // Parse references: "table.column" -> "table(column)"
+  const [refTable, refColumn] = fk.references.split('.');
+  const referencesSQL = `${refTable}(${refColumn})`;
+
   return `ALTER TABLE ${tableName}
   ADD CONSTRAINT ${constraintName}
   FOREIGN KEY (${fk.column})
-  REFERENCES ${fk.references}${onDelete}${onUpdate};`;
+  REFERENCES ${referencesSQL}${onDelete}${onUpdate};`;
 }
 
 /**
@@ -53,7 +86,28 @@ export function dropForeignKey(tableName, constraintName) {
 }
 
 /**
- * Generate CHECK constraints
+ * Generate all CHECK constraints for a schema
+ * @param {object} schema - Table schema
+ * @returns {string[]} Array of ALTER TABLE statements
+ */
+export function generateCheckConstraints(schema) {
+  const constraints = [];
+
+  if (!schema.constraints || !Array.isArray(schema.constraints)) {
+    return constraints;
+  }
+
+  for (const constraint of schema.constraints) {
+    if (constraint.type === 'check') {
+      constraints.push(generateCheckConstraint(schema.table, constraint));
+    }
+  }
+
+  return constraints;
+}
+
+/**
+ * Generate a single CHECK constraint
  * @param {string} tableName - Table name
  * @param {object} constraint - Constraint definition
  * @returns {string} ALTER TABLE statement
@@ -67,7 +121,28 @@ export function generateCheckConstraint(tableName, constraint) {
 }
 
 /**
- * Generate UNIQUE constraints (for multi-column unique constraints)
+ * Generate all UNIQUE constraints for a schema
+ * @param {object} schema - Table schema
+ * @returns {string[]} Array of ALTER TABLE statements
+ */
+export function generateUniqueConstraints(schema) {
+  const constraints = [];
+
+  if (!schema.constraints || !Array.isArray(schema.constraints)) {
+    return constraints;
+  }
+
+  for (const constraint of schema.constraints) {
+    if (constraint.type === 'unique') {
+      constraints.push(generateUniqueConstraint(schema.table, constraint));
+    }
+  }
+
+  return constraints;
+}
+
+/**
+ * Generate a single UNIQUE constraint (for multi-column unique constraints)
  * @param {string} tableName - Table name
  * @param {object} constraint - Constraint definition
  * @returns {string} ALTER TABLE statement

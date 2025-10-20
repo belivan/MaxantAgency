@@ -5,8 +5,8 @@
  * Displays prospects with selection checkboxes
  */
 
-import { useState } from 'react';
-import { CheckSquare, Square, Star, ExternalLink } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { CheckSquare, Square, Star, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,14 +18,26 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { TableSkeleton } from '@/components/shared/loading-spinner';
 import { formatPhone } from '@/lib/utils/format';
+import { deleteProspects } from '@/lib/api/prospecting';
 import type { Prospect } from '@/lib/types';
 
 interface ProspectTableProps {
   prospects: Prospect[];
   selectedIds: string[];
   onSelectionChange: (ids: string[]) => void;
+  onDeleteComplete?: () => void;
   loading?: boolean;
 }
 
@@ -33,8 +45,13 @@ export function ProspectTable({
   prospects,
   selectedIds,
   onSelectionChange,
+  onDeleteComplete,
   loading
 }: ProspectTableProps) {
+  const lastClickedIndexRef = useRef<number | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const isAllSelected = prospects.length > 0 && selectedIds.length === prospects.length;
   const isSomeSelected = selectedIds.length > 0 && !isAllSelected;
 
@@ -46,11 +63,49 @@ export function ProspectTable({
     }
   };
 
-  const handleSelectOne = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onSelectionChange(selectedIds.filter(sid => sid !== id));
+  const handleSelectOne = (id: string, index: number, shiftKey: boolean = false) => {
+    // Shift+Click: Select range
+    if (shiftKey && lastClickedIndexRef.current !== null) {
+      const start = Math.min(lastClickedIndexRef.current, index);
+      const end = Math.max(lastClickedIndexRef.current, index);
+
+      // Get all IDs in the range
+      const rangeIds = prospects.slice(start, end + 1).map(p => p.id);
+
+      // Add range to selection (union with existing selection)
+      const newSelection = Array.from(new Set([...selectedIds, ...rangeIds]));
+      onSelectionChange(newSelection);
     } else {
-      onSelectionChange([...selectedIds, id]);
+      // Normal click: Toggle individual selection
+      if (selectedIds.includes(id)) {
+        onSelectionChange(selectedIds.filter(sid => sid !== id));
+      } else {
+        onSelectionChange([...selectedIds, id]);
+      }
+    }
+
+    // Update last clicked index
+    lastClickedIndexRef.current = index;
+  };
+
+  const handleDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteProspects(selectedIds);
+
+      // Clear selection
+      onSelectionChange([]);
+      setShowDeleteDialog(false);
+
+      // Notify parent to refresh
+      onDeleteComplete?.();
+    } catch (error) {
+      console.error('Failed to delete prospects:', error);
+      alert(`Failed to delete prospects: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -73,25 +128,40 @@ export function ProspectTable({
     <div className="space-y-4">
       {/* Selection Info */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {selectedIds.length > 0 ? (
-            <>
-              <span className="font-medium text-foreground">{selectedIds.length}</span> of{' '}
-              <span className="font-medium text-foreground">{prospects.length}</span> selected
-            </>
-          ) : (
-            <>Showing {prospects.length} prospects</>
-          )}
-        </p>
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            {selectedIds.length > 0 ? (
+              <>
+                <span className="font-medium text-foreground">{selectedIds.length}</span> of{' '}
+                <span className="font-medium text-foreground">{prospects.length}</span> selected
+              </>
+            ) : (
+              <>Showing {prospects.length} prospects</>
+            )}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            💡 Tip: Hold <kbd className="px-1 py-0.5 text-xs font-semibold border rounded bg-muted">Shift</kbd> and click to select a range
+          </p>
+        </div>
 
         {selectedIds.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onSelectionChange([])}
-          >
-            Clear Selection
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSelectionChange([])}
+            >
+              Clear Selection
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete ({selectedIds.length})
+            </Button>
+          </div>
         )}
       </div>
 
@@ -117,7 +187,7 @@ export function ProspectTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {prospects.map((prospect) => {
+            {prospects.map((prospect, index) => {
               const isSelected = selectedIds.includes(prospect.id);
 
               return (
@@ -126,11 +196,24 @@ export function ProspectTable({
                   className={isSelected ? 'bg-muted/50' : ''}
                 >
                   <TableCell>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleSelectOne(prospect.id)}
-                      aria-label={`Select ${prospect.company_name}`}
-                    />
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelectOne(prospect.id, index, e.shiftKey);
+                      }}
+                      className="flex items-center"
+                      style={{ cursor: 'pointer', userSelect: 'none' }}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        aria-label={`Select ${prospect.company_name}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleSelectOne(prospect.id, index, e.shiftKey);
+                        }}
+                      />
+                    </div>
                   </TableCell>
 
                   <TableCell className="font-medium">
@@ -213,6 +296,28 @@ export function ProspectTable({
           </TableBody>
         </Table>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.length} Prospect{selectedIds.length !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected prospect{selectedIds.length !== 1 ? 's' : ''} from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

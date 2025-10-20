@@ -66,8 +66,6 @@ export function EmailStrategySelector({
     loadStrategies();
   }, []);
 
-  const currentStrategy = strategies.find(s => s.id === selectedStrategy);
-
   return (
     <Card>
       <CardHeader>
@@ -114,15 +112,14 @@ export function EmailStrategySelector({
         ) : (
           <>
             {/* Strategy Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select Strategy</label>
+            <div>
               <Select
                 value={selectedStrategy}
                 onValueChange={onStrategyChange}
                 disabled={disabled}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a strategy..." />
+                  <SelectValue placeholder="Select a strategy..." />
                 </SelectTrigger>
                 <SelectContent>
                   {strategies.map(strategy => (
@@ -133,71 +130,6 @@ export function EmailStrategySelector({
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Strategy Details */}
-            {currentStrategy && (
-              <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
-                <div>
-                  <h4 className="font-medium mb-1">{currentStrategy.name}</h4>
-                  {currentStrategy.description && (
-                    <p className="text-sm text-muted-foreground">
-                      {currentStrategy.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Strategy Metadata */}
-                <div className="flex flex-wrap gap-2">
-                  {currentStrategy.tone && (
-                    <Badge variant="outline">
-                      Tone: {currentStrategy.tone}
-                    </Badge>
-                  )}
-                  {currentStrategy.focus && (
-                    <Badge variant="outline">
-                      Focus: {currentStrategy.focus}
-                    </Badge>
-                  )}
-                  {currentStrategy.variant_count !== undefined && (
-                    <Badge variant="outline">
-                      {currentStrategy.variant_count} variant{currentStrategy.variant_count !== 1 ? 's' : ''}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Key Points */}
-                {currentStrategy.key_points && currentStrategy.key_points.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Key Points:</p>
-                    <ul className="space-y-1">
-                      {currentStrategy.key_points.map((point, idx) => (
-                        <li key={idx} className="text-sm text-muted-foreground flex items-start gap-2">
-                          <span className="text-primary">•</span>
-                          <span>{point}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Example Subject Lines */}
-                {currentStrategy.example_subjects && currentStrategy.example_subjects.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Example Subject Lines:</p>
-                    <div className="space-y-1">
-                      {currentStrategy.example_subjects.slice(0, 3).map((subject, idx) => (
-                        <div
-                          key={idx}
-                          className="text-sm p-2 border rounded bg-background"
-                        >
-                          "{subject}"
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </>
         )}
       </CardContent>

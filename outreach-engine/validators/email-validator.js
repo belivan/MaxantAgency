@@ -30,81 +30,85 @@ const SPAM_RULES = JSON.parse(readFileSync(spamPath, 'utf-8'));
  * @returns {object} Validation result with score
  */
 export function validateEmail(email) {
-  // Validate input
-  if (!email) {
-    throw new Error('Email object is required');
-  }
-  if (typeof email !== 'object') {
-    throw new Error('Email must be an object');
-  }
+  try {
+    // Validate input
+    if (!email) {
+      throw new Error('Email object is required');
+    }
+    if (typeof email !== 'object') {
+      throw new Error('Email must be an object');
+    }
 
-  const { subject, body } = email;
+    const { subject, body } = email;
 
-  // Validate required fields
-  if (!subject) {
-    throw new Error('Email subject is required');
+    // Validate required fields
+    if (!subject) {
+      throw new Error('Email subject is required');
+    }
+    if (!body) {
+      throw new Error('Email body is required');
+    }
+    if (typeof subject !== 'string') {
+      throw new Error('Subject must be a string');
+    }
+    if (typeof body !== 'string') {
+      throw new Error('Body must be a string');
+    }
+
+    const subjectValidation = validateSubject(subject);
+    const bodyValidation = validateBody(body);
+    const placeholderCheck = checkPlaceholders(subject + ' ' + body);
+    const spamCheck = checkSpam(subject, body);
+
+    // Calculate overall score
+    let score = 100;
+    const issues = [];
+
+    // Apply subject penalties
+    if (!subjectValidation.isValid) {
+      score += subjectValidation.penalty;
+      issues.push(...subjectValidation.issues);
+    }
+
+    // Apply body penalties
+    if (!bodyValidation.isValid) {
+      score += bodyValidation.penalty;
+      issues.push(...bodyValidation.issues);
+    }
+
+    // Apply placeholder penalty (CRITICAL - hard fail)
+    if (placeholderCheck.found) {
+      score += RULES.penalties.unfilled_placeholder;
+      issues.push(...placeholderCheck.issues);
+      // Force fail - placeholders are unacceptable
+      score = Math.min(score, RULES.thresholds.acceptable - 1);
+    }
+
+    // Apply spam penalties
+    if (spamCheck.found) {
+      score += spamCheck.penalty;
+      issues.push(...spamCheck.issues);
+    }
+
+    // Ensure score doesn't go below 0
+    score = Math.max(0, score);
+
+    return {
+      isValid: score >= RULES.thresholds.acceptable,
+      score: Math.round(score),
+      issues,
+      breakdown: {
+        subject: subjectValidation,
+        body: bodyValidation,
+        placeholders: placeholderCheck,
+        spam: spamCheck
+      },
+      threshold: RULES.thresholds.acceptable,
+      rating: getScoreRating(score)
+    };
+  } catch (error) {
+    throw new Error(`Email validation failed: ${error.message}`);
   }
-  if (!body) {
-    throw new Error('Email body is required');
-  }
-  if (typeof subject !== 'string') {
-    throw new Error('Subject must be a string');
-  }
-  if (typeof body !== 'string') {
-    throw new Error('Body must be a string');
-  }
-
-  const subjectValidation = validateSubject(subject);
-  const bodyValidation = validateBody(body);
-  const placeholderCheck = checkPlaceholders(subject + ' ' + body);
-  const spamCheck = checkSpam(subject, body);
-
-  // Calculate overall score
-  let score = 100;
-  const issues = [];
-
-  // Apply subject penalties
-  if (!subjectValidation.isValid) {
-    score += subjectValidation.penalty;
-    issues.push(...subjectValidation.issues);
-  }
-
-  // Apply body penalties
-  if (!bodyValidation.isValid) {
-    score += bodyValidation.penalty;
-    issues.push(...bodyValidation.issues);
-  }
-
-  // Apply placeholder penalty (CRITICAL - hard fail)
-  if (placeholderCheck.found) {
-    score += RULES.penalties.unfilled_placeholder;
-    issues.push(...placeholderCheck.issues);
-    // Force fail - placeholders are unacceptable
-    score = Math.min(score, RULES.thresholds.acceptable - 1);
-  }
-
-  // Apply spam penalties
-  if (spamCheck.found) {
-    score += spamCheck.penalty;
-    issues.push(...spamCheck.issues);
-  }
-
-  // Ensure score doesn't go below 0
-  score = Math.max(0, score);
-
-  return {
-    isValid: score >= RULES.thresholds.acceptable,
-    score: Math.round(score),
-    issues,
-    breakdown: {
-      subject: subjectValidation,
-      body: bodyValidation,
-      placeholders: placeholderCheck,
-      spam: spamCheck
-    },
-    threshold: RULES.thresholds.acceptable,
-    rating: getScoreRating(score)
-  };
 }
 
 /**
@@ -113,87 +117,91 @@ export function validateEmail(email) {
  * @returns {object} Validation result
  */
 export function validateSubject(subject) {
-  if (!subject || typeof subject !== 'string') {
-    throw new Error('Subject must be a non-empty string');
-  }
-
-  const issues = [];
-  let penalty = 0;
-
-  const length = subject.length;
-
-  // Check length
-  if (length < RULES.rules.subject.minLength) {
-    issues.push({
-      severity: 'warning',
-      issue: `Subject too short (${length} chars, min: ${RULES.rules.subject.minLength})`,
-      value: length
-    });
-    penalty += RULES.penalties.too_short;
-  } else if (length > RULES.rules.subject.maxLength) {
-    issues.push({
-      severity: 'warning',
-      issue: `Subject too long (${length} chars, max: ${RULES.rules.subject.maxLength})`,
-      value: length
-    });
-    penalty += RULES.penalties.too_long;
-  }
-
-  // Check optimal length (61-70 chars)
-  const [optMin, optMax] = RULES.rules.subject.optimalLength;
-  const isOptimal = length >= optMin && length <= optMax;
-
-  // Check for banned phrases
-  const bannedFound = [];
-  for (const phrase of RULES.rules.subject.bannedPhrases) {
-    if (subject.toLowerCase().includes(phrase.toLowerCase())) {
-      bannedFound.push(phrase);
-      penalty += RULES.penalties.banned_phrase_subject;
+  try {
+    if (!subject || typeof subject !== 'string') {
+      throw new Error('Subject must be a non-empty string');
     }
-  }
 
-  if (bannedFound.length > 0) {
-    issues.push({
-      severity: 'error',
-      issue: `Contains banned phrases: ${bannedFound.join(', ')}`,
-      value: bannedFound
-    });
-  }
+    const issues = [];
+    let penalty = 0;
 
-  // Check lowercase requirement
-  if (RULES.rules.subject.requiredLowercase) {
-    if (subject !== subject.toLowerCase() && subject !== subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase()) {
-      // Allow first letter capitalized
-      const capsWords = subject.split(' ').filter(word => word === word.toUpperCase() && word.length > 1);
-      if (capsWords.length > 0) {
-        issues.push({
-          severity: 'warning',
-          issue: 'Subject should be lowercase for conversational tone',
-          value: capsWords
-        });
-        penalty += 5;
+    const length = subject.length;
+
+    // Check length
+    if (length < RULES.rules.subject.minLength) {
+      issues.push({
+        severity: 'warning',
+        issue: `Subject too short (${length} chars, min: ${RULES.rules.subject.minLength})`,
+        value: length
+      });
+      penalty += RULES.penalties.too_short;
+    } else if (length > RULES.rules.subject.maxLength) {
+      issues.push({
+        severity: 'warning',
+        issue: `Subject too long (${length} chars, max: ${RULES.rules.subject.maxLength})`,
+        value: length
+      });
+      penalty += RULES.penalties.too_long;
+    }
+
+    // Check optimal length (61-70 chars)
+    const [optMin, optMax] = RULES.rules.subject.optimalLength;
+    const isOptimal = length >= optMin && length <= optMax;
+
+    // Check for banned phrases
+    const bannedFound = [];
+    for (const phrase of RULES.rules.subject.bannedPhrases) {
+      if (subject.toLowerCase().includes(phrase.toLowerCase())) {
+        bannedFound.push(phrase);
+        penalty += RULES.penalties.banned_phrase_subject;
       }
     }
-  }
 
-  // Check exclamation marks
-  const exclamations = (subject.match(/!/g) || []).length;
-  if (exclamations > RULES.rules.subject.maxExclamations) {
-    issues.push({
-      severity: 'warning',
-      issue: `Too many exclamation marks (${exclamations})`,
-      value: exclamations
-    });
-    penalty += RULES.penalties.excessive_exclamations;
-  }
+    if (bannedFound.length > 0) {
+      issues.push({
+        severity: 'error',
+        issue: `Contains banned phrases: ${bannedFound.join(', ')}`,
+        value: bannedFound
+      });
+    }
 
-  return {
-    isValid: issues.filter(i => i.severity === 'error').length === 0,
-    length,
-    isOptimal,
-    issues,
-    penalty
-  };
+    // Check lowercase requirement
+    if (RULES.rules.subject.requiredLowercase) {
+      if (subject !== subject.toLowerCase() && subject !== subject.charAt(0).toUpperCase() + subject.slice(1).toLowerCase()) {
+        // Allow first letter capitalized
+        const capsWords = subject.split(' ').filter(word => word === word.toUpperCase() && word.length > 1);
+        if (capsWords.length > 0) {
+          issues.push({
+            severity: 'warning',
+            issue: 'Subject should be lowercase for conversational tone',
+            value: capsWords
+          });
+          penalty += 5;
+        }
+      }
+    }
+
+    // Check exclamation marks
+    const exclamations = (subject.match(/!/g) || []).length;
+    if (exclamations > RULES.rules.subject.maxExclamations) {
+      issues.push({
+        severity: 'warning',
+        issue: `Too many exclamation marks (${exclamations})`,
+        value: exclamations
+      });
+      penalty += RULES.penalties.excessive_exclamations;
+    }
+
+    return {
+      isValid: issues.filter(i => i.severity === 'error').length === 0,
+      length,
+      isOptimal,
+      issues,
+      penalty
+    };
+  } catch (error) {
+    throw new Error(`Subject validation failed: ${error.message}`);
+  }
 }
 
 /**
@@ -202,81 +210,85 @@ export function validateSubject(subject) {
  * @returns {object} Validation result
  */
 export function validateBody(body) {
-  if (!body || typeof body !== 'string') {
-    throw new Error('Body must be a non-empty string');
-  }
-
-  const issues = [];
-  let penalty = 0;
-
-  // Count words and sentences
-  const wordCount = body.split(/\s+/).filter(w => w.length > 0).length;
-  const sentenceCount = body.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
-
-  // Check word count
-  if (wordCount > RULES.rules.body.maxWords) {
-    issues.push({
-      severity: 'warning',
-      issue: `Body too long (${wordCount} words, max: ${RULES.rules.body.maxWords})`,
-      value: wordCount
-    });
-    penalty += RULES.penalties.too_long;
-  }
-
-  // Check sentence count
-  if (sentenceCount > RULES.rules.body.maxSentences) {
-    issues.push({
-      severity: 'warning',
-      issue: `Too many sentences (${sentenceCount}, max: ${RULES.rules.body.maxSentences})`,
-      value: sentenceCount
-    });
-    penalty += 10;
-  }
-
-  if (sentenceCount < RULES.rules.body.minSentences) {
-    issues.push({
-      severity: 'warning',
-      issue: `Too few sentences (${sentenceCount}, min: ${RULES.rules.body.minSentences})`,
-      value: sentenceCount
-    });
-    penalty += 5;
-  }
-
-  // Check for banned phrases
-  const bannedFound = [];
-  for (const phrase of RULES.rules.body.bannedPhrases) {
-    if (body.toLowerCase().includes(phrase.toLowerCase())) {
-      bannedFound.push(phrase);
-      penalty += RULES.penalties.banned_phrase_body;
+  try {
+    if (!body || typeof body !== 'string') {
+      throw new Error('Body must be a non-empty string');
     }
-  }
 
-  if (bannedFound.length > 0) {
-    issues.push({
-      severity: 'error',
-      issue: `Contains buzzwords: ${bannedFound.join(', ')}`,
-      value: bannedFound
-    });
-  }
+    const issues = [];
+    let penalty = 0;
 
-  // Check exclamations
-  const exclamations = (body.match(/!/g) || []).length;
-  if (exclamations > RULES.rules.body.maxExclamations) {
-    issues.push({
-      severity: 'warning',
-      issue: `Too many exclamation marks (${exclamations})`,
-      value: exclamations
-    });
-    penalty += RULES.penalties.excessive_exclamations;
-  }
+    // Count words and sentences
+    const wordCount = body.split(/\s+/).filter(w => w.length > 0).length;
+    const sentenceCount = body.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
 
-  return {
-    isValid: issues.filter(i => i.severity === 'error').length === 0,
-    wordCount,
-    sentenceCount,
-    issues,
-    penalty
-  };
+    // Check word count
+    if (wordCount > RULES.rules.body.maxWords) {
+      issues.push({
+        severity: 'warning',
+        issue: `Body too long (${wordCount} words, max: ${RULES.rules.body.maxWords})`,
+        value: wordCount
+      });
+      penalty += RULES.penalties.too_long;
+    }
+
+    // Check sentence count
+    if (sentenceCount > RULES.rules.body.maxSentences) {
+      issues.push({
+        severity: 'warning',
+        issue: `Too many sentences (${sentenceCount}, max: ${RULES.rules.body.maxSentences})`,
+        value: sentenceCount
+      });
+      penalty += 10;
+    }
+
+    if (sentenceCount < RULES.rules.body.minSentences) {
+      issues.push({
+        severity: 'warning',
+        issue: `Too few sentences (${sentenceCount}, min: ${RULES.rules.body.minSentences})`,
+        value: sentenceCount
+      });
+      penalty += 5;
+    }
+
+    // Check for banned phrases
+    const bannedFound = [];
+    for (const phrase of RULES.rules.body.bannedPhrases) {
+      if (body.toLowerCase().includes(phrase.toLowerCase())) {
+        bannedFound.push(phrase);
+        penalty += RULES.penalties.banned_phrase_body;
+      }
+    }
+
+    if (bannedFound.length > 0) {
+      issues.push({
+        severity: 'error',
+        issue: `Contains buzzwords: ${bannedFound.join(', ')}`,
+        value: bannedFound
+      });
+    }
+
+    // Check exclamations
+    const exclamations = (body.match(/!/g) || []).length;
+    if (exclamations > RULES.rules.body.maxExclamations) {
+      issues.push({
+        severity: 'warning',
+        issue: `Too many exclamation marks (${exclamations})`,
+        value: exclamations
+      });
+      penalty += RULES.penalties.excessive_exclamations;
+    }
+
+    return {
+      isValid: issues.filter(i => i.severity === 'error').length === 0,
+      wordCount,
+      sentenceCount,
+      issues,
+      penalty
+    };
+  } catch (error) {
+    throw new Error(`Body validation failed: ${error.message}`);
+  }
 }
 
 /**

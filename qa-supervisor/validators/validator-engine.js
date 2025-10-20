@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import http from 'http';
 import {
   fileExists,
   directoryExists,
@@ -219,6 +220,24 @@ async function runCheck(item, agentDir, projectRoot) {
     };
   }
 
+  // Health check
+  if (item.test === 'healthCheck') {
+    try {
+      const port = item.port;
+      const endpoint = item.endpoint || '/health';
+
+      const isHealthy = await checkHealth(port, endpoint);
+
+      if (isHealthy) {
+        return { status: 'pass', message: `Server responding on port ${port}` };
+      } else {
+        return { status: 'warn', message: `Server not responding on port ${port} (may not be running)` };
+      }
+    } catch (error) {
+      return { status: 'warn', message: `Health check failed: ${error.message}` };
+    }
+  }
+
   // Manual checks
   if (item.test === 'manual') {
     return {
@@ -229,6 +248,36 @@ async function runCheck(item, agentDir, projectRoot) {
 
   // Unknown check type
   return { status: 'warn', message: 'Unknown check type' };
+}
+
+/**
+ * Check if server is healthy
+ */
+async function checkHealth(port, endpoint) {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'localhost',
+      port: port,
+      path: endpoint,
+      method: 'GET',
+      timeout: 2000
+    };
+
+    const req = http.request(options, (res) => {
+      resolve(res.statusCode >= 200 && res.statusCode < 300);
+    });
+
+    req.on('error', () => {
+      resolve(false);
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+
+    req.end();
+  });
 }
 
 /**

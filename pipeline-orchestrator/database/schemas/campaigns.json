@@ -92,5 +92,21 @@
     }
   ],
 
-  "sql": "CREATE TABLE IF NOT EXISTS campaigns (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name TEXT NOT NULL,\n  description TEXT,\n  config JSONB NOT NULL,\n  schedule_cron TEXT,\n  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'completed', 'error')),\n  last_run_at TIMESTAMPTZ,\n  next_run_at TIMESTAMPTZ,\n  total_runs INTEGER DEFAULT 0,\n  total_cost DECIMAL(10,2) DEFAULT 0,\n  project_id UUID,\n  created_at TIMESTAMPTZ DEFAULT NOW(),\n  updated_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);\nCREATE INDEX IF NOT EXISTS idx_campaigns_next_run ON campaigns(next_run_at);\nCREATE INDEX IF NOT EXISTS idx_campaigns_project_id ON campaigns(project_id);"
+  "constraints": [
+    {
+      "type": "check",
+      "name": "chk_total_runs_positive",
+      "expression": "total_runs >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_total_cost_positive",
+      "expression": "total_cost >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_run_times_order",
+      "expression": "next_run_at IS NULL OR last_run_at IS NULL OR next_run_at >= last_run_at"
+    }
+  ]
 }

@@ -49,7 +49,9 @@ const SIZE_CONFIG = {
 };
 
 export function GradeBadge({ grade, size = 'md', showLabel = false }: GradeBadgeProps) {
-  const config = GRADE_CONFIG[grade];
+  // Safety check: if grade is invalid or missing, default to 'F'
+  const normalizedGrade = (grade?.toString().toUpperCase() || 'F') as LeadGrade;
+  const config = GRADE_CONFIG[normalizedGrade] || GRADE_CONFIG['F'];
 
   return (
     <span
@@ -60,7 +62,7 @@ export function GradeBadge({ grade, size = 'md', showLabel = false }: GradeBadge
         SIZE_CONFIG[size]
       )}
     >
-      <span>Grade {grade}</span>
+      <span>Grade {normalizedGrade}</span>
       {showLabel && <span className="font-normal">· {config.label}</span>}
     </span>
   );

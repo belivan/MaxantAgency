@@ -1,0 +1,201 @@
+{
+  "agent": "QA Supervisor",
+  "agentDir": "qa-supervisor",
+  "checks": [
+    {
+      "category": "File Structure",
+      "items": [
+        {
+          "name": "validators/ directory exists",
+          "path": "qa-supervisor/validators",
+          "type": "directory"
+        },
+        {
+          "name": "checklists/ directory exists",
+          "path": "qa-supervisor/checklists",
+          "type": "directory"
+        },
+        {
+          "name": "integration-tests/ directory exists",
+          "path": "qa-supervisor/integration-tests",
+          "type": "directory"
+        },
+        {
+          "name": "performance-tests/ directory exists",
+          "path": "qa-supervisor/performance-tests",
+          "type": "directory"
+        },
+        {
+          "name": "code-quality/ directory exists",
+          "path": "qa-supervisor/code-quality",
+          "type": "directory"
+        },
+        {
+          "name": "reports/ directory exists",
+          "path": "qa-supervisor/reports",
+          "type": "directory"
+        },
+        {
+          "name": "shared/ directory exists",
+          "path": "qa-supervisor/shared",
+          "type": "directory"
+        },
+        {
+          "name": "scripts/ directory exists",
+          "path": "qa-supervisor/scripts",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Core Files",
+      "items": [
+        {
+          "name": "cli.js exists",
+          "path": "qa-supervisor/cli.js",
+          "type": "file"
+        },
+        {
+          "name": "package.json exists",
+          "path": "qa-supervisor/package.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "README.md exists",
+          "path": "qa-supervisor/README.md",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "category": "Validators",
+      "items": [
+        {
+          "name": "validator-engine.js exists",
+          "path": "qa-supervisor/validators/validator-engine.js",
+          "type": "file"
+        },
+        {
+          "name": "agent1-validator.js exists",
+          "path": "qa-supervisor/validators/agent1-validator.js",
+          "type": "file"
+        },
+        {
+          "name": "agent2-validator.js exists",
+          "path": "qa-supervisor/validators/agent2-validator.js",
+          "type": "file"
+        },
+        {
+          "name": "agent3-validator.js exists",
+          "path": "qa-supervisor/validators/agent3-validator.js",
+          "type": "file"
+        },
+        {
+          "name": "agent4-validator.js exists",
+          "path": "qa-supervisor/validators/agent4-validator.js",
+          "type": "file"
+        },
+        {
+          "name": "agent5-validator.js exists",
+          "path": "qa-supervisor/validators/agent5-validator.js",
+          "type": "file"
+        },
+        {
+          "name": "agent6-validator.js exists",
+          "path": "qa-supervisor/validators/agent6-validator.js",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "category": "Checklists",
+      "items": [
+        {
+          "name": "agent1-checklist.json exists",
+          "path": "qa-supervisor/checklists/agent1-checklist.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "agent2-checklist.json exists",
+          "path": "qa-supervisor/checklists/agent2-checklist.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "agent3-checklist.json exists",
+          "path": "qa-supervisor/checklists/agent3-checklist.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "agent4-checklist.json exists",
+          "path": "qa-supervisor/checklists/agent4-checklist.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "agent5-checklist.json exists",
+          "path": "qa-supervisor/checklists/agent5-checklist.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "agent6-checklist.json exists",
+          "path": "qa-supervisor/checklists/agent6-checklist.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "agent7-checklist.json exists (self)",
+          "path": "qa-supervisor/checklists/agent7-checklist.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        }
+      ]
+    },
+    {
+      "category": "Shared Utilities",
+      "items": [
+        {
+          "name": "logger.js exists",
+          "path": "qa-supervisor/shared/logger.js",
+          "type": "file"
+        },
+        {
+          "name": "test-utils.js exists",
+          "path": "qa-supervisor/shared/test-utils.js",
+          "type": "file"
+        },
+        {
+          "name": "quick-validator.js exists",
+          "path": "qa-supervisor/shared/quick-validator.js",
+          "type": "file",
+          "required": false
+        },
+        {
+          "name": "watcher.js exists",
+          "path": "qa-supervisor/shared/watcher.js",
+          "type": "file",
+          "required": false
+        }
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "items": [
+        {
+          "name": "No hardcoded API keys",
+          "test": "checkSecurity",
+          "patterns": ["sk-", "xai-", "AKIA", "eyJhbGc"]
+        },
+        {
+          "name": "Error handling present",
+          "test": "checkErrorHandling",
+          "minCoverage": 70
+        }
+      ]
+    }
+  ]
+}

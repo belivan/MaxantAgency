@@ -1,0 +1,193 @@
+{
+  "table": "projects",
+  "description": "Client projects/campaigns grouping prospects, leads, and outreach activities",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique project identifier"
+    },
+    {
+      "name": "project_name",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Name of the project/campaign"
+    },
+    {
+      "name": "client_name",
+      "type": "text",
+      "description": "Client or company name this project is for"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "description": "Project description or notes"
+    },
+
+    {
+      "name": "icp_brief",
+      "type": "jsonb",
+      "description": "Ideal Customer Profile brief used for prospecting"
+    },
+    {
+      "name": "target_industry",
+      "type": "text",
+      "index": true,
+      "description": "Primary industry being targeted"
+    },
+    {
+      "name": "target_location",
+      "type": "text",
+      "description": "Geographic location/city being targeted"
+    },
+
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["active", "paused", "completed", "archived"],
+      "default": "active",
+      "index": true,
+      "description": "Current project status"
+    },
+
+    {
+      "name": "budget",
+      "type": "decimal",
+      "description": "Total budget allocated for this project (USD)"
+    },
+    {
+      "name": "budget_spent",
+      "type": "decimal",
+      "default": 0,
+      "description": "Total amount spent so far (USD)"
+    },
+
+    {
+      "name": "total_prospects",
+      "type": "integer",
+      "default": 0,
+      "description": "Total prospects generated"
+    },
+    {
+      "name": "total_leads",
+      "type": "integer",
+      "default": 0,
+      "description": "Total leads analyzed"
+    },
+    {
+      "name": "emails_sent",
+      "type": "integer",
+      "default": 0,
+      "description": "Total outreach emails sent"
+    },
+    {
+      "name": "social_dms_sent",
+      "type": "integer",
+      "default": 0,
+      "description": "Total social DMs sent"
+    },
+    {
+      "name": "replies_received",
+      "type": "integer",
+      "default": 0,
+      "description": "Total replies received"
+    },
+    {
+      "name": "conversions",
+      "type": "integer",
+      "default": 0,
+      "description": "Total conversions/clients acquired"
+    },
+
+    {
+      "name": "total_cost",
+      "type": "decimal",
+      "default": 0,
+      "description": "Total API costs (prospecting + analysis + outreach)"
+    },
+    {
+      "name": "prospecting_cost",
+      "type": "decimal",
+      "default": 0,
+      "description": "Cost of prospecting for this project"
+    },
+    {
+      "name": "analysis_cost",
+      "type": "decimal",
+      "default": 0,
+      "description": "Cost of analysis for this project"
+    },
+    {
+      "name": "outreach_cost",
+      "type": "decimal",
+      "default": 0,
+      "description": "Cost of outreach generation for this project"
+    },
+
+    {
+      "name": "started_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When the project was started"
+    },
+    {
+      "name": "completed_at",
+      "type": "timestamptz",
+      "description": "When the project was completed"
+    },
+    {
+      "name": "last_activity_at",
+      "type": "timestamptz",
+      "description": "Last activity timestamp"
+    },
+
+    {
+      "name": "owner",
+      "type": "text",
+      "description": "Person or team responsible for this project"
+    },
+    {
+      "name": "tags",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of tags for categorization"
+    },
+    {
+      "name": "metadata",
+      "type": "jsonb",
+      "description": "Additional custom metadata"
+    },
+
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Record creation timestamp"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Record last update timestamp"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_projects_status_created",
+      "columns": ["status", "created_at"]
+    },
+    {
+      "name": "idx_projects_industry",
+      "columns": ["target_industry"]
+    },
+    {
+      "name": "idx_projects_owner",
+      "columns": ["owner"]
+    }
+  ]
+}

@@ -165,7 +165,7 @@ export function AnalysisConfig({
                               : field.value?.filter(m => m !== module.value);
                             field.onChange(newModules);
                           }}
-                          disabled={disabled || isLoading || isBaselineModule}
+                          disabled={disabled || isBaselineModule}
                         />
                         <div className="flex-1">
                           <Label htmlFor={module.value} className="cursor-pointer">
@@ -232,9 +232,8 @@ export function AnalysisConfig({
             type="submit"
             className="w-full"
             size="lg"
-            disabled={disabled || isLoading || prospectCount === 0}
+            disabled={disabled || prospectCount === 0}
           >
-            {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             <Sparkles className="w-4 h-4 mr-2" />
             Run Analysis on {prospectCount} Prospect{prospectCount === 1 ? '' : 's'}
           </Button>

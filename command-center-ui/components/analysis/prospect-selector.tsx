@@ -5,8 +5,8 @@
  * Filters and selects prospects ready for analysis
  */
 
-import { useState } from 'react';
-import { Filter, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Filter, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,8 @@ import {
 import { ProspectTable } from '@/components/prospecting';
 import { useProspects } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
-import type { Prospect, ProspectFilters } from '@/lib/types';
+import { getProjects, type Project } from '@/lib/api';
+import type { ProspectFilters } from '@/lib/types';
 
 interface ProspectSelectorProps {
   selectedIds: string[];
@@ -34,13 +35,34 @@ export function ProspectSelector({
   onSelectionChange,
   preSelectedIds
 }: ProspectSelectorProps) {
+  const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<ProspectFilters>({
     status: 'ready_for_analysis',
     verified: true,
-    limit: 100
+    limit: 10,
+    offset: 0
   });
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
-  const { prospects, loading, error, refresh } = useProspects(filters);
+  const { prospects, loading, error, refresh, total } = useProspects(filters);
+
+  // Load projects on mount
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoadingProjects(true);
+        const data = await getProjects({ status: 'active' });
+        setProjects(data);
+      } catch (err) {
+        console.error('Failed to load projects:', err);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
 
   // Auto-select pre-selected prospects on load
   useState(() => {
@@ -52,9 +74,27 @@ export function ProspectSelector({
   const handleFilterChange = (key: keyof ProspectFilters, value: any) => {
     setFilters(prev => ({
       ...prev,
-      [key]: value === '' ? undefined : value
+      [key]: value === '' ? undefined : value,
+      offset: 0 // Reset to first page when filters change
+    }));
+    setPage(1);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    const limit = filters.limit || 10;
+    setPage(newPage);
+    setFilters(prev => ({
+      ...prev,
+      offset: (newPage - 1) * limit
     }));
   };
+
+  const pageSize = filters.limit || 10;
+  const totalPages = Math.ceil(total / pageSize);
+  const hasNextPage = page < totalPages;
+  const hasPrevPage = page > 1;
+  const startIndex = (page - 1) * pageSize + 1;
+  const endIndex = Math.min(page * pageSize, total);
 
   return (
     <div className="space-y-4">
@@ -67,7 +107,29 @@ export function ProspectSelector({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-5">
+            {/* Project Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="project">Project</Label>
+              <Select
+                value={filters.project_id || 'all'}
+                onValueChange={(value) => handleFilterChange('project_id', value === 'all' ? undefined : value)}
+                disabled={loadingProjects}
+              >
+                <SelectTrigger id="project">
+                  <SelectValue placeholder={loadingProjects ? 'Loading...' : 'All projects'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All projects</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Status Filter */}
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
@@ -163,6 +225,45 @@ export function ProspectSelector({
             onSelectionChange={onSelectionChange}
             loading={loading}
           />
+
+          {/* Pagination Controls */}
+          {total > 0 && (
+            <div className="flex items-center justify-between border-t pt-4">
+              <div className="text-sm text-muted-foreground">
+                {total > 0 ? (
+                  <>
+                    Showing <span className="font-medium text-foreground">{startIndex}-{endIndex}</span> of{' '}
+                    <span className="font-medium text-foreground">{total}</span> prospects
+                    {totalPages > 1 && <> • Page {page} of {totalPages}</>}
+                  </>
+                ) : (
+                  <>No prospects found</>
+                )}
+              </div>
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={!hasPrevPage || loading}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={!hasNextPage || loading}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Selection Summary */}
           {selectedIds.length > 0 && (

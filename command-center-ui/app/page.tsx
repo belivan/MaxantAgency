@@ -9,13 +9,20 @@ import { Users, ScanSearch, Mail, DollarSign } from 'lucide-react';
 import { StatsCards } from '@/components/dashboard/stats-cards';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { PipelineHealth } from '@/components/dashboard/pipeline-health';
-import { useDashboardStats, useEngineHealth } from '@/lib/hooks';
+import { useDashboardStats, useEngineHealth, useActivityFeed } from '@/lib/hooks';
 import { LoadingOverlay } from '@/components/shared/loading-overlay';
-import type { StatCardData, EngineHealth as EngineHealthType, ActivityFeedItem } from '@/lib/types';
+import type { StatCardData, EngineHealth as EngineHealthType } from '@/lib/types';
 
 export default function DashboardPage() {
   const { stats, loading, error } = useDashboardStats(30000); // Refresh every 30s
   const engineStatus = useEngineHealth();
+  const {
+    activities,
+    loading: activitiesLoading,
+    pagination,
+    nextPage,
+    previousPage
+  } = useActivityFeed(5, 30000); // Show 5 per page, refresh every 30s
 
   if (error) {
     return (
@@ -79,42 +86,6 @@ export default function DashboardPage() {
     }
   ];
 
-  // Mock activity feed (replace with real data later)
-  const activities: ActivityFeedItem[] = [
-    {
-      id: '1',
-      type: 'prospect_generated',
-      message: '20 prospects generated',
-      details: {
-        count: 20,
-        project_name: 'Philly Restaurants'
-      },
-      timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-      color: 'blue'
-    },
-    {
-      id: '2',
-      type: 'analysis_completed',
-      message: 'Website analyzed',
-      details: {
-        company_name: 'Zahav Restaurant',
-        grade: 'A'
-      },
-      timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      color: 'green'
-    },
-    {
-      id: '3',
-      type: 'email_sent',
-      message: 'Email sent',
-      details: {
-        company_name: 'Vetri Cucina'
-      },
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-      color: 'purple'
-    }
-  ];
-
   return (
     <>
       <LoadingOverlay isLoading={loading && !stats} message="Loading Dashboard..." />
@@ -132,7 +103,13 @@ export default function DashboardPage() {
 
         {/* Activity Feed & Pipeline Health */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <ActivityFeed activities={activities} loading={loading} />
+          <ActivityFeed
+            activities={activities}
+            loading={activitiesLoading}
+            pagination={pagination}
+            onNextPage={nextPage}
+            onPreviousPage={previousPage}
+          />
           <PipelineHealth engines={engines} loading={loading} />
         </div>
 

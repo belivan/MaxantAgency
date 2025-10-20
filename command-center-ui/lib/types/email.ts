@@ -25,62 +25,77 @@ export interface EmailVariants {
 export interface Email {
   id: string;
   lead_id: string;
+  url: string;
 
   // Recipient info
-  to_email: string;
-  to_name?: string;
+  contact_email: string;
+  contact_name?: string | null;
+  contact_title?: string | null;
   company_name: string;
+  industry?: string | null;
 
   // Email content
-  subject: string;
-  body: string;
+  email_subject: string;
+  email_body: string;
+  email_strategy: string;
 
   // Variants (for A/B testing)
   has_variants: boolean;
-  subject_variants?: string[];
-  body_variants?: string[];
-  recommended_variant?: {
-    subject: number;
-    body: number;
-  };
+  subject_variants?: string[] | null;
+  body_variants?: string[] | null;
+  recommended_variant?: number | null;
+  variant_reasoning?: string | null;
 
-  // Strategy and quality
-  strategy: EmailStrategy;
-  quality_score: number;
-  personalization_score?: number;
+  // Quality and metadata
+  quality_score?: number | null;
+  validation_issues?: string[] | null;
 
   // AI reasoning
-  technical_reasoning?: string;
-  business_summary?: string;
-  verification_checklist?: string[];
+  technical_reasoning?: string | null;
+  business_summary?: string | null;
+  verification_checklist?: string[] | null;
 
   // Status tracking
-  status: EmailStatus;
-  sent_at?: string;
-  opened_at?: string;
-  replied_at?: string;
-  bounce_reason?: string;
+  status: string; // 'pending' | 'reviewed' | 'sent' | 'scheduled' | 'failed'
+  sent_at?: string | null;
+  reviewed_at?: string | null;
+  email_message_id?: string | null;
 
-  // Email metadata
-  message_id?: string;
-  thread_id?: string;
-  from_email?: string;
-  from_name?: string;
+  // Platform and metadata
+  platform: string;
+  character_count?: number | null;
+  social_profile_url?: string | null;
 
   // Project tracking
-  project_id?: string;
-  campaign_id?: string;
+  project_id?: string | null;
+  campaign_id?: string | null;
+  client_name?: string | null;
+  source_app?: string | null;
 
   // Notion integration
   synced_to_notion: boolean;
-  notion_page_id?: string;
+  notion_page_id?: string | null;
+  notion_sync_at?: string | null;
 
   // Cost tracking
-  composition_cost: number;
-  composition_model?: string;
+  ai_model?: string | null;
+  generation_cost?: number | null;
+  generation_time_ms?: number | null;
+  usage_input_tokens?: number | null;
+  usage_output_tokens?: number | null;
 
   created_at: string;
-  updated_at?: string;
+  updated_at?: string | null;
+
+  // Joined lead data (if requested)
+  leads?: {
+    id: string;
+    url: string;
+    industry: string;
+    company_name: string;
+    contact_email?: string | null;
+    social_profiles?: Record<string, any>;
+  };
 }
 
 export interface EmailFilters {

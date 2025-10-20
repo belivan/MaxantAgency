@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { SocialMessagePreview } from './social-message-preview';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { composeSocialMessage } from '@/lib/api/outreach';
+import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import type { Lead, SocialMessage } from '@/lib/types';
 import type { SocialPlatform } from './social-platform-selector';
 
@@ -35,18 +36,25 @@ export function SocialDMComposer({
   const [message, setMessage] = useState<SocialMessage | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { startTask, updateTask, completeTask, errorTask } = useTaskProgress();
 
   const handleGenerate = async () => {
     setGenerating(true);
     setError(null);
 
+    const taskId = startTask('outreach', `Composing ${platform} DM for ${lead.company_name}`, 1);
+
     try {
-      const generatedMessage = await composeSocialMessage(lead.website, platform);
+      updateTask(taskId, 0, `Generating ${platform} message...`);
+      const generatedMessage = await composeSocialMessage(lead.url, platform);
       setMessage(generatedMessage);
+      updateTask(taskId, 1, 'Social message generated!');
       onMessageGenerated?.(generatedMessage);
+      completeTask(taskId);
     } catch (err: any) {
       console.error('Failed to generate social message:', err);
       setError(err.message || 'Failed to generate message');
+      errorTask(taskId, err.message || 'Failed to generate message');
     } finally {
       setGenerating(false);
     }

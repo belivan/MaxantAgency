@@ -47,7 +47,7 @@ export async function generateProspects(
 /**
  * Get prospects with filters
  */
-export async function getProspects(filters?: ProspectFilters): Promise<Prospect[]> {
+export async function getProspects(filters?: ProspectFilters): Promise<{ prospects: Prospect[]; total: number }> {
   const params = new URLSearchParams();
 
   if (filters?.status) {
@@ -90,8 +90,11 @@ export async function getProspects(filters?: ProspectFilters): Promise<Prospect[
 
   const data = await response.json();
 
-  // Handle both formats: {success, prospects} and {success, data}
-  return data.prospects || data.data || [];
+  // Return prospects and total count
+  return {
+    prospects: data.prospects || data.data || [],
+    total: data.total || 0
+  };
 }
 
 /**
@@ -151,6 +154,28 @@ export async function deleteProspect(id: string): Promise<void> {
     const error = await response.json();
     throw new Error(error.message || 'Failed to delete prospect');
   }
+}
+
+/**
+ * Delete multiple prospects in batch
+ */
+export async function deleteProspects(ids: string[]): Promise<{ deleted: number; failed: number }> {
+  const response = await fetch(`${API_BASE}/api/prospects/batch-delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete prospects');
+  }
+
+  const data = await response.json();
+  return {
+    deleted: data.deleted || 0,
+    failed: data.failed || 0
+  };
 }
 
 /**

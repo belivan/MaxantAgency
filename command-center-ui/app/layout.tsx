@@ -1,6 +1,8 @@
 import '@/app/globals.css';
 import type { Metadata } from 'next';
 import { Navbar } from '@/components/shared';
+import { TaskProgressProvider } from '@/lib/contexts/task-progress-context';
+import { FloatingTaskIndicator } from '@/components/shared/floating-task-indicator';
 
 export const metadata: Metadata = {
   title: 'Maxant Command Center',
@@ -15,10 +17,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body>
-        <div className="min-h-screen bg-background">
-          <Navbar />
-          <main>{children}</main>
-        </div>
+        <TaskProgressProvider>
+          <div className="min-h-screen bg-background">
+            <Navbar />
+            <main>{children}</main>
+            <FloatingTaskIndicator />
+          </div>
+        </TaskProgressProvider>
       </body>
     </html>
   );

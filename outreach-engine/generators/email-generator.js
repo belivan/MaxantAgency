@@ -40,7 +40,7 @@ export async function generateEmail(lead, options = {}) {
 
   try {
     // Load prompt configuration
-    const prompt = loadPrompt('email-strategies', strategy);
+    const prompt = loadPrompt('strategies', strategy);
     if (!prompt) {
       throw new Error(`Strategy '${strategy}' not found`);
     }
@@ -168,28 +168,32 @@ async function callClaude(model, systemPrompt, userPrompt, temperature = 0.7) {
  * @returns {number} Cost in dollars
  */
 function calculateCost(model, usage) {
-  if (!model) throw new Error('Model is required for cost calculation');
-  if (!usage) throw new Error('Usage object is required for cost calculation');
-  if (typeof usage.input_tokens !== 'number' || typeof usage.output_tokens !== 'number') {
-    throw new Error('Usage must have input_tokens and output_tokens as numbers');
+  try {
+    if (!model) throw new Error('Model is required for cost calculation');
+    if (!usage) throw new Error('Usage object is required for cost calculation');
+    if (typeof usage.input_tokens !== 'number' || typeof usage.output_tokens !== 'number') {
+      throw new Error('Usage must have input_tokens and output_tokens as numbers');
+    }
+
+    // Pricing per million tokens (input / output)
+    const pricing = {
+      'claude-haiku-3-5': { input: 0.25, output: 1.25 },
+      'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
+      'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
+      'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 },
+      'claude-sonnet-3-5': { input: 3.00, output: 15.00 },
+      'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 }
+    };
+
+    const rates = pricing[model] || { input: 0.25, output: 1.25 };
+
+    const inputCost = (usage.input_tokens / 1_000_000) * rates.input;
+    const outputCost = (usage.output_tokens / 1_000_000) * rates.output;
+
+    return inputCost + outputCost;
+  } catch (error) {
+    throw new Error(`Cost calculation failed: ${error.message}`);
   }
-
-  // Pricing per million tokens (input / output)
-  const pricing = {
-    'claude-haiku-3-5': { input: 0.25, output: 1.25 },
-    'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
-    'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
-    'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 },
-    'claude-sonnet-3-5': { input: 3.00, output: 15.00 },
-    'claude-3-5-sonnet-20241022': { input: 3.00, output: 15.00 }
-  };
-
-  const rates = pricing[model] || { input: 0.25, output: 1.25 };
-
-  const inputCost = (usage.input_tokens / 1_000_000) * rates.input;
-  const outputCost = (usage.output_tokens / 1_000_000) * rates.output;
-
-  return inputCost + outputCost;
 }
 
 /**
@@ -241,7 +245,7 @@ async function generateSubjectLine(lead, options = {}) {
   console.log(`   Generating subject line...`);
 
   try {
-    const prompt = loadPrompt('email-strategies', 'subject-line-generator');
+    const prompt = loadPrompt('strategies', 'subject-line-generator');
     const context = buildPersonalizationContext(lead);
     context.variant_count = 1; // Single subject for now
 
@@ -294,5 +298,12 @@ async function generateSubjectLine(lead, options = {}) {
  * @returns {Promise<object>} Generated email
  */
 export async function generateSingleEmail(lead, context = null, strategy = 'compliment-sandwich', model = null) {
-  return await generateCompleteEmail(lead, { strategy, model });
+  try {
+    if (!lead) {
+      throw new Error('Lead data is required');
+    }
+    return await generateCompleteEmail(lead, { strategy, model });
+  } catch (error) {
+    throw new Error(`Single email generation failed: ${error.message}`);
+  }
 }

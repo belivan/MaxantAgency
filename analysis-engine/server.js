@@ -130,7 +130,15 @@ app.post('/api/analyze-url', async (req, res) => {
  */
 app.post('/api/analyze', async (req, res) => {
   try {
-    const { filters = {} } = req.body;
+    const { prospect_ids, filters = {} } = req.body;
+
+    // DEBUG: Log what we received
+    console.log('📥 Analysis Request Received:', {
+      prospect_ids,
+      prospect_count: prospect_ids?.length,
+      filters,
+      body: req.body
+    });
 
     // Set up Server-Sent Events
     res.setHeader('Content-Type', 'text/event-stream');
@@ -148,11 +156,33 @@ app.post('/api/analyze', async (req, res) => {
     let query;
     let prospects;
 
+    // If specific prospect_ids are provided, fetch those prospects directly
+    if (prospect_ids && prospect_ids.length > 0) {
+      console.log('🔍 Querying prospects with IDs:', prospect_ids);
+
+      query = supabase
+        .from('prospects')
+        .select('id, company_name, website, industry, city, state')
+        .in('id', prospect_ids)
+        .not('website', 'is', null);
+
+      const { data: prospectData, error: fetchError } = await query;
+
+      if (fetchError) {
+        console.error('❌ Query failed:', fetchError);
+        sendEvent('error', { error: 'Failed to fetch prospects', details: fetchError.message });
+        res.end();
+        return;
+      }
+
+      prospects = prospectData || [];
+      console.log('✅ Found prospects:', prospects.map(p => ({ id: p.id, name: p.company_name, website: p.website })));
+    }
     // If projectId is provided, JOIN with project_prospects to filter by project
-    if (filters.projectId) {
+    else if (filters.projectId) {
       query = supabase
         .from('project_prospects')
-        .select('prospect_id, prospects(id, company_name, website, industry, city)')
+        .select('prospect_id, prospects(id, company_name, website, industry, city, state)')
         .eq('project_id', filters.projectId)
         .not('prospects.website', 'is', null);
 
@@ -180,17 +210,18 @@ app.post('/api/analyze', async (req, res) => {
       // Extract nested prospect data
       prospects = projectProspects?.map(pp => ({
         id: pp.prospects.id,
-        business_name: pp.prospects.company_name,
+        company_name: pp.prospects.company_name,
         website: pp.prospects.website,
         industry: pp.prospects.industry,
-        city: pp.prospects.city
+        city: pp.prospects.city,
+        state: pp.prospects.state
       })) || [];
 
     } else {
       // Query prospects globally if no projectId
       query = supabase
         .from('prospects')
-        .select('id, company_name as business_name, website, industry, city')
+        .select('id, company_name, website, industry, city, state')
         .not('website', 'is', null);
 
       // Apply filters
@@ -231,12 +262,14 @@ app.post('/api/analyze', async (req, res) => {
       url: p.website,
       context: {
         prospect_id: p.id,
-        company_name: p.business_name,
+        company_name: p.company_name,
         industry: p.industry,
         city: p.city,
         project_id: filters.projectId || null  // Pass projectId through context
       }
     }));
+
+    console.log('🎯 Targets prepared for analysis:', targets.map(t => ({ url: t.url, company: t.context.company_name })));
 
     // Analyze with progress updates
     const results = await analyzeMultiple(targets, {
@@ -251,20 +284,30 @@ app.post('/api/analyze', async (req, res) => {
         });
       },
       onComplete: async (result, completed, total) => {
+        console.log('💾 onComplete called:', { url: result.url, success: result.success });
+
         if (result.success) {
           // Save to leads table
           const leadData = extractLeadData(result);
+          console.log('📝 Lead data prepared:', {
+            url: leadData.url,
+            company: leadData.company_name,
+            grade: leadData.website_grade,
+            score: leadData.website_score
+          });
 
-          const { error: insertError } = await supabase
+          const { data: savedData, error: insertError } = await supabase
             .from('leads')
             .upsert(leadData, { onConflict: 'url' });
 
           if (insertError) {
+            console.error('❌ Database save failed:', insertError);
             sendEvent('warning', {
               message: `Failed to save lead ${result.url}`,
               error: insertError.message
             });
           } else {
+            console.log('✅ Lead saved successfully:', leadData.url);
             sendEvent('complete', {
               url: result.url,
               grade: result.grade,
@@ -463,6 +506,101 @@ app.get('/api/stats', async (req, res) => {
 });
 
 /**
+ * DELETE /api/leads/:id
+ * Delete a single lead by ID
+ */
+app.delete('/api/leads/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        error: 'Lead ID is required'
+      });
+    }
+
+    const { error } = await supabase
+      .from('leads')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[Delete Lead] Error:', error);
+      return res.status(500).json({
+        error: 'Failed to delete lead',
+        details: error.message
+      });
+    }
+
+    console.log(`[Delete Lead] Successfully deleted lead ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Lead deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('[Delete Lead] Error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/leads/batch-delete
+ * Delete multiple leads in batch
+ *
+ * Body:
+ * {
+ *   "ids": ["id1", "id2", "id3"]
+ * }
+ */
+app.post('/api/leads/batch-delete', async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        error: 'An array of lead IDs is required'
+      });
+    }
+
+    console.log(`[Batch Delete] Deleting ${ids.length} leads`);
+
+    const { error, count } = await supabase
+      .from('leads')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      console.error('[Batch Delete] Error:', error);
+      return res.status(500).json({
+        error: 'Failed to delete leads',
+        details: error.message
+      });
+    }
+
+    console.log(`[Batch Delete] Successfully deleted ${ids.length} leads`);
+
+    res.json({
+      success: true,
+      deleted: ids.length,
+      failed: 0,
+      message: `${ids.length} lead(s) deleted successfully`
+    });
+
+  } catch (error) {
+    console.error('[Batch Delete] Error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Extract lead data from analysis result for database insertion
  * Adapted to match existing leads table schema from website-audit-tool
  */
@@ -498,107 +636,69 @@ function extractLeadData(result) {
     url: result.url,
     company_name: result.company_name,
     industry: result.industry,
+    city: result.city || null,
+    state: result.state || null,
 
     // Contact info
     contact_email: result.contact_email || null,
     contact_phone: result.contact_phone || null,
 
-    // Scores - BOTH formats for compatibility (round to integers)
-    website_score: Math.round(result.overall_score),    // Their format
-    website_grade: result.grade,                         // Their format
-    design_score: Math.round(result.design_score),       // Our format (NEW)
-    seo_score: Math.round(result.seo_score),             // Our format (NEW)
-    content_score: Math.round(result.content_score),     // Our format (NEW)
-    social_score: Math.round(result.social_score),       // Our format (NEW)
+    // Scores (round to integers for database)
+    overall_score: Math.round(result.overall_score),
+    website_grade: result.grade,
+    design_score: Math.round(result.design_score),
+    seo_score: Math.round(result.seo_score),
+    content_score: Math.round(result.content_score),
+    social_score: Math.round(result.social_score),
 
     // Analysis summary
     analysis_summary: result.analysis_summary,
 
-    // Critiques - their format (text arrays)
-    critiques_basic: critiques_basic,
-    critiques_seo: critiques_seo,
-    critiques_visual: critiques_visual,
-    critiques_industry: [],
-    critiques_competitor: [],
-
-    // Detailed data in their JSON fields
-    seo_data: {
-      score: result.seo_score,
-      issues: result.seo_issues,
-      page_title: result.page_title,
-      meta_description: result.meta_description,
-      has_https: result.has_https
-    },
-
-    visual_data: {
-      score: result.design_score,
-      issues: result.design_issues,
-      is_mobile_friendly: result.is_mobile_friendly,
-      page_load_time: result.page_load_time
-    },
-
-    content_insights: result.content_insights ? {
-      score: result.content_score,
-      issues: result.content_issues,
-      hasActiveBlog: result.has_blog,  // Match their field name format
-      ...result.content_insights
-    } : {
-      score: result.content_score,
-      hasActiveBlog: result.has_blog,
-      analyzed: true
-    },
-
-    // Structured issues - our format (NEW)
+    // Detailed issues (jsonb arrays)
     design_issues: result.design_issues || [],
     seo_issues: result.seo_issues || [],
     content_issues: result.content_issues || [],
     social_issues: result.social_issues || [],
 
-    // Quick wins and outreach - our format (NEW)
+    // Quick wins and outreach
     quick_wins: result.quick_wins || [],
     top_issue: result.top_issue || null,
     one_liner: result.one_liner || null,
     call_to_action: result.call_to_action || null,
 
-    // Critique sections - our format (NEW)
-    critique_sections: result.critique_sections || null,
-
     // Tech and performance
-    tech_stack: result.tech_stack ? {
-      platform: result.tech_stack,
-      confidence: 0.8
-    } : null,
-
-    load_time: result.page_load_time,
+    tech_stack: result.tech_stack || null,
+    page_load_time: result.page_load_time || null,
+    is_mobile_friendly: result.is_mobile_friendly || false,
+    has_https: result.has_https || false,
 
     // Social profiles and metadata
     social_profiles: result.social_profiles || {},
-    social_metadata: result.social_metadata || null,                    // Our format (NEW)
-    social_platforms_present: result.social_platforms_present || [],    // Our format (NEW)
+    social_metadata: result.social_metadata || null,
+    social_platforms_present: result.social_platforms_present || [],
 
-    // Website metadata - our format (NEW)
+    // Content insights
+    has_blog: result.has_blog || false,
+    content_insights: result.content_insights || null,
+
+    // Website metadata
     page_title: result.page_title || null,
     meta_description: result.meta_description || null,
-    is_mobile_friendly: result.is_mobile_friendly || null,
-    has_https: result.has_https || null,
 
-    // Prospect reference - our format (NEW)
+    // Screenshot
+    screenshot_url: result.screenshot_url || null,
+
+    // Prospect and project references
     prospect_id: result.prospect_id || null,
-
-    // Project reference - for project isolation
     project_id: result.project_id || null,
 
-    // Metadata
-    has_active_blog: result.has_blog || false,  // Their column name
-    website_status: 'active',
-    outreach_status: 'not_contacted',
-    source_app: 'analysis-engine',
-    modules_used: ['design', 'seo', 'content', 'social'],
+    // Status
+    status: 'ready_for_outreach',
 
     // Timestamps and costs
-    analyzed_at: result.analyzed_at,
-    analysis_cost: result.analysis_cost || 0,
-    analysis_time: result.analysis_time || 0
+    analyzed_at: result.analyzed_at || new Date().toISOString(),
+    analysis_cost: result.analysis_cost || null,
+    analysis_time: result.analysis_time || null
   };
 }
 
@@ -610,11 +710,13 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('');
   console.log('Endpoints:');
-  console.log(`  GET  /health              - Health check`);
-  console.log(`  POST /api/analyze-url     - Analyze single URL`);
-  console.log(`  POST /api/analyze         - Analyze prospects (SSE)`);
-  console.log(`  GET  /api/leads           - Get analyzed leads`);
-  console.log(`  GET  /api/stats           - Get statistics`);
+  console.log(`  GET    /health                  - Health check`);
+  console.log(`  POST   /api/analyze-url         - Analyze single URL`);
+  console.log(`  POST   /api/analyze             - Analyze prospects (SSE)`);
+  console.log(`  GET    /api/leads               - Get analyzed leads`);
+  console.log(`  DELETE /api/leads/:id           - Delete a lead`);
+  console.log(`  POST   /api/leads/batch-delete  - Delete multiple leads`);
+  console.log(`  GET    /api/stats               - Get statistics`);
   console.log('');
   console.log('Ready to analyze websites!');
   console.log('═══════════════════════════════════════════════════════════════');

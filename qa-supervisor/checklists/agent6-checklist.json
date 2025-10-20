@@ -1,7 +1,7 @@
 {
-  "agent": "Agent 6 - Pipeline Orchestrator",
+  "agent": "Pipeline Orchestrator",
   "agentDir": "pipeline-orchestrator",
-  "port": 3006,
+  "port": 3020,
   "checks": [
     {
       "category": "File Structure",
@@ -91,6 +91,17 @@
           "name": "Error handling present",
           "test": "checkErrorHandling",
           "minCoverage": 80
+        }
+      ]
+    },
+    {
+      "category": "Server Health",
+      "items": [
+        {
+          "name": "Server responds to health check",
+          "test": "healthCheck",
+          "port": 3020,
+          "endpoint": "/health"
         }
       ]
     },

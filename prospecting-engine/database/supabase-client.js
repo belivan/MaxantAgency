@@ -94,11 +94,12 @@ export async function updateProspect(id, updates) {
  * Get prospects with filters
  *
  * @param {object} filters - Query filters
- * @returns {Promise<Array>} Array of prospects
+ * @returns {Promise<{data: Array, total: number}>} Array of prospects and total count
  */
 export async function getProspects(filters = {}) {
   try {
-    let query = supabase.from('prospects').select('*');
+    // Build query with count
+    let query = supabase.from('prospects').select('*', { count: 'exact' });
 
     // Apply filters
     if (filters.status) {
@@ -117,28 +118,34 @@ export async function getProspects(filters = {}) {
       query = query.gte('google_rating', filters.minRating);
     }
 
-    if (filters.projectId) {
-      query = query.eq('project_id', filters.projectId);
-    }
+    // Note: For project-specific queries, use getProspectsByProject() instead
+    // The project_id column has been removed in favor of many-to-many via project_prospects
 
     if (filters.runId) {
       query = query.eq('run_id', filters.runId);
     }
 
-    // Limit and order
-    const limit = filters.limit || 50;
-    query = query.limit(limit).order('created_at', { ascending: false });
+    // Order first (before limit/offset)
+    query = query.order('created_at', { ascending: false });
 
-    const { data, error } = await query;
+    // Apply limit and offset for pagination
+    const limit = filters.limit || 50;
+    const offset = filters.offset || 0;
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
 
     if (error) {
       logError('Failed to fetch prospects', error, filters);
       throw error;
     }
 
-    logInfo('Prospects fetched', { count: data.length, filters });
+    logInfo('Prospects fetched', { count: data.length, total: count, filters });
 
-    return data;
+    return {
+      data: data || [],
+      total: count || 0
+    };
   } catch (error) {
     throw error;
   }
@@ -302,10 +309,7 @@ export async function saveOrLinkProspect(prospectData, projectId = null, metadat
 
     // If prospect doesn't exist, create it
     if (!prospect) {
-      prospect = await saveProspect({
-        ...prospectData,
-        project_id: projectId // Still set for backward compatibility
-      });
+      prospect = await saveProspect(prospectData);
       logInfo('New prospect created', {
         id: prospect.id,
         company: prospect.company_name
@@ -424,6 +428,31 @@ export async function deleteProspect(id) {
 }
 
 /**
+ * Delete multiple prospects by IDs
+ *
+ * @param {string[]} ids - Array of prospect IDs
+ * @returns {Promise<number>} Number of deleted prospects
+ */
+export async function deleteProspects(ids) {
+  try {
+    const { error, count } = await supabase
+      .from('prospects')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      logError('Failed to delete prospects', error, { count: ids.length });
+      throw error;
+    }
+
+    logInfo('Prospects deleted', { count: ids.length });
+    return ids.length;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
  * Get prospect statistics
  *
  * @param {object} filters - Optional filters
@@ -437,9 +466,8 @@ export async function getProspectStats(filters = {}) {
       query = query.eq('city', filters.city);
     }
 
-    if (filters.projectId) {
-      query = query.eq('project_id', filters.projectId);
-    }
+    // Note: For project-specific stats, query project_prospects and join with prospects
+    // The project_id column has been removed from prospects table
 
     const { data, error } = await query;
 

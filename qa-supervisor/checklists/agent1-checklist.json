@@ -1,5 +1,5 @@
 {
-  "agent": "Agent 1 - Prospecting Engine",
+  "agent": "Prospecting Engine",
   "agentDir": "prospecting-engine",
   "port": 3010,
   "checks": [
@@ -99,6 +99,17 @@
           "path": "prospecting-engine/database/schemas/prospects.json",
           "type": "file",
           "validate": "isValidJSON"
+        }
+      ]
+    },
+    {
+      "category": "Server Health",
+      "items": [
+        {
+          "name": "Server responds to health check",
+          "test": "healthCheck",
+          "port": 3010,
+          "endpoint": "/health"
         }
       ]
     },

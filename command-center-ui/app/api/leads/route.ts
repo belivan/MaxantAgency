@@ -5,10 +5,15 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+    // Try both naming conventions for environment variables
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase credentials:', {
+        hasUrl: !!supabaseUrl,
+        hasKey: !!supabaseKey
+      });
       return NextResponse.json(
         { success: false, error: 'Supabase credentials not configured' },
         { status: 500 }
@@ -34,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     // Apply filters
     if (grade) {
-      query = query.eq('lead_grade', grade);
+      query = query.eq('website_grade', grade);
     }
 
     if (industry) {

@@ -1,5 +1,5 @@
 {
-  "agent": "Agent 5 - Database Setup Tool",
+  "agent": "Database Tools",
   "agentDir": "database-tools",
   "checks": [
     {

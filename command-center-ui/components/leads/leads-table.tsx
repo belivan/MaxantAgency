@@ -5,7 +5,7 @@
  * Advanced table for viewing and managing analyzed leads
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Mail,
@@ -13,7 +13,12 @@ import {
   ExternalLink,
   ArrowUpDown,
   Filter,
-  X
+  X,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import {
   Table,
@@ -33,9 +38,20 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { GradeBadge } from './grade-badge';
 import { formatDate } from '@/lib/utils/format';
+import { deleteLeads } from '@/lib/api/analysis';
 import type { Lead, LeadGrade } from '@/lib/types';
 
 interface LeadsTableProps {
@@ -76,6 +92,14 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
   });
 
   const [showFilters, setShowFilters] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Delete confirmation state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Get unique values for filters
   const uniqueIndustries = useMemo(() => {
@@ -154,12 +178,37 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
     return result;
   }, [leads, filters, sortField, sortDirection]);
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAndSortedLeads.length / pageSize);
+  const paginatedLeads = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return filteredAndSortedLeads.slice(startIndex, endIndex);
+  }, [filteredAndSortedLeads, currentPage, pageSize]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortField, sortDirection]);
+
   // Selection handlers
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(filteredAndSortedLeads.map(l => l.id));
+      // Select all leads on current page only
+      setSelectedIds(prev => {
+        const pageIds = paginatedLeads.map(l => l.id);
+        const newIds = [...prev];
+        pageIds.forEach(id => {
+          if (!newIds.includes(id)) {
+            newIds.push(id);
+          }
+        });
+        return newIds;
+      });
     } else {
-      setSelectedIds([]);
+      // Deselect all leads on current page
+      const pageIds = paginatedLeads.map(l => l.id);
+      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
     }
   };
 
@@ -181,6 +230,28 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
     }
   };
 
+  // Delete handler
+  const handleDelete = async () => {
+    if (selectedIds.length === 0) return;
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteLeads(selectedIds);
+
+      // Refresh the page or call a refresh callback
+      window.location.reload();
+
+      // Clear selection
+      setSelectedIds([]);
+      setShowDeleteDialog(false);
+    } catch (error) {
+      console.error('Failed to delete leads:', error);
+      alert(`Failed to delete leads: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Filter reset
   const hasActiveFilters = filters.grade !== 'all' ||
     filters.hasEmail !== 'all' ||
@@ -198,9 +269,10 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
     });
   };
 
-  const allSelected = filteredAndSortedLeads.length > 0 &&
-    selectedIds.length === filteredAndSortedLeads.length;
-  const someSelected = selectedIds.length > 0 && !allSelected;
+  // Check if all leads on current page are selected
+  const allSelectedOnPage = paginatedLeads.length > 0 &&
+    paginatedLeads.every(lead => selectedIds.includes(lead.id));
+  const someSelectedOnPage = paginatedLeads.some(lead => selectedIds.includes(lead.id)) && !allSelectedOnPage;
 
   return (
     <Card>
@@ -222,6 +294,14 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                   onClick={() => setSelectedIds([])}
                 >
                   Clear Selection ({selectedIds.length})
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete ({selectedIds.length})
                 </Button>
                 <Button
                   size="sm"
@@ -357,9 +437,9 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={allSelected}
+                      checked={allSelectedOnPage}
                       onCheckedChange={handleSelectAll}
-                      aria-label="Select all leads"
+                      aria-label="Select all leads on page"
                     />
                   </TableHead>
                   <TableHead>
@@ -413,7 +493,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAndSortedLeads.map(lead => (
+                {paginatedLeads.map(lead => (
                   <TableRow
                     key={lead.id}
                     className="cursor-pointer hover:bg-muted/50"
@@ -465,14 +545,21 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                       </span>
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      <a
-                        href={lead.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
+                      {lead.url ? (
+                        <a
+                          href={lead.url.startsWith('http') ? lead.url : `https://${lead.url}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                          title="Visit website"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground" title="No website">
+                          —
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -480,7 +567,133 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
             </Table>
           </div>
         )}
+
+        {/* Pagination Controls */}
+        {filteredAndSortedLeads.length > 0 && (
+          <div className="flex items-center justify-between px-2 py-4 border-t">
+            <div className="flex items-center gap-4">
+              {/* Page Size Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Page Info */}
+              <div className="text-sm text-muted-foreground">
+                Showing {Math.min((currentPage - 1) * pageSize + 1, filteredAndSortedLeads.length)}-
+                {Math.min(currentPage * pageSize, filteredAndSortedLeads.length)} of {filteredAndSortedLeads.length}
+              </div>
+            </div>
+
+            {/* Page Navigation */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum;
+                  if (totalPages <= 5) {
+                    pageNum = i + 1;
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i;
+                  } else {
+                    pageNum = currentPage - 2 + i;
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCurrentPage(pageNum)}
+                      className="h-8 w-8 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages}
+                className="h-8 w-8 p-0"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.length} Lead{selectedIds.length !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected lead{selectedIds.length !== 1 ? 's' : ''} and all associated analysis data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }

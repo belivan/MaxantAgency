@@ -19,6 +19,7 @@ async function testEndToEnd() {
     industry: 'Italian Restaurants',
     city: 'Philadelphia',
     target: 'High-quality Italian restaurants with good reviews',
+    count: 5,  // FIX: Limit to 5 prospects for faster testing
     icp: {
       niches: ['restaurants', 'italian food', 'dining'],
       minRating: 4.0,
@@ -32,7 +33,6 @@ async function testEndToEnd() {
 
   // Pipeline Options - Test all features
   const options = {
-    maxResults: 5,              // Small sample for testing
     minRating: 4.0,             // Quality threshold
     verifyWebsites: true,       // Step 3: Website verification
     scrapeWebsites: true,       // Step 4: Website extraction

@@ -1,7 +1,7 @@
 {
-  "agent": "Agent 4 - Command Center UI",
+  "agent": "Command Center UI",
   "agentDir": "command-center-ui",
-  "port": 3004,
+  "port": 3000,
   "checks": [
     {
       "category": "File Structure",

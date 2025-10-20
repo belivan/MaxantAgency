@@ -99,7 +99,8 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
 
     const companies = await discoverCompanies(query, {
       minRating: options.minRating || 3.5,
-      maxResults: brief.count || 20
+      maxResults: brief.count || 20,
+      projectId: options.projectId // Pass project ID for smart filtering
     });
 
     results.found = companies.length;
@@ -305,6 +306,15 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
               company: company.name
             });
           }
+        }
+
+        // Merge social profiles from Google Maps (if any)
+        if (company.social_profiles_from_google) {
+          Object.assign(socialProfiles, company.social_profiles_from_google);
+          logInfo('Merged social profiles from Google Maps', {
+            company: company.name,
+            platforms: Object.keys(company.social_profiles_from_google)
+          });
         }
 
         // STEP 6: Scrape Social Metadata (if enabled)

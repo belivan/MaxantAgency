@@ -2,7 +2,8 @@ import { Client } from '@googlemaps/google-maps-services-js';
 import dotenv from 'dotenv';
 import { logInfo, logError, logApiRequest, logApiResponse } from '../shared/logger.js';
 import { costTracker } from '../shared/cost-tracker.js';
-import { prospectExists } from '../database/supabase-client.js';
+import { prospectExists, prospectExistsInProject } from '../database/supabase-client.js';
+import { validateWebsiteUrl } from '../shared/url-validator.js';
 
 dotenv.config();
 
@@ -38,73 +39,128 @@ export async function discoverCompanies(query, options = {}) {
     minRating = parseFloat(process.env.DEFAULT_MIN_RATING) || 3.5,
     maxResults = 20,
     radius = 50000, // 50km
-    language = 'en'
+    language = 'en',
+    projectId = null // For smart duplicate filtering
   } = options;
 
-  logInfo('Starting Google Maps discovery', { query, minRating, maxResults });
+  logInfo('Starting Google Maps discovery', {
+    query,
+    minRating,
+    maxResults,
+    projectId: projectId || 'none'
+  });
   logApiRequest('Google Maps Places API', 'textSearch', { query });
 
   try {
-    // Step 1: Text search to find places
-    const response = await client.textSearch({
-      params: {
+    const companies = [];
+    let pageToken = null;
+    let totalProcessed = 0;
+    let pageCount = 0;
+    const maxPages = 3; // Google limits to 60 results (3 pages × 20)
+
+    // Keep fetching pages until we have enough companies
+    while (companies.length < maxResults && pageCount < maxPages) {
+      pageCount++;
+
+      // Step 1: Text search to find places (with pagination)
+      const searchParams = {
         query,
         key: apiKey,
         language
-      },
-      timeout: 10000
-    });
+      };
 
-    const duration = Date.now() - startTime;
-    logApiResponse('Google Maps Places API', response.status, duration, {
-      results: response.data.results.length
-    });
+      if (pageToken) {
+        searchParams.pagetoken = pageToken;
+      }
 
-    // Track cost
-    costTracker.trackGoogleMaps(1);
+      const response = await client.textSearch({
+        params: searchParams,
+        timeout: 10000
+      });
 
-    if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-      throw new Error(`Google Maps API error: ${response.data.status}`);
-    }
+      const duration = Date.now() - startTime;
+      logApiResponse('Google Maps Places API', response.status, duration, {
+        results: response.data.results.length,
+        page: pageCount
+      });
 
-    if (response.data.results.length === 0) {
-      logInfo('No results found for query', { query });
-      return [];
-    }
+      // Track cost
+      costTracker.trackGoogleMaps(1);
 
-    // Step 2: Process and filter results
-    const companies = [];
-    let processed = 0;
+      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
+        throw new Error(`Google Maps API error: ${response.data.status}`);
+      }
 
-    for (const place of response.data.results) {
-      if (companies.length >= maxResults) {
+      if (response.data.results.length === 0) {
+        logInfo('No more results found', { query, page: pageCount });
         break;
       }
 
-      // Filter by rating
-      if (place.rating && place.rating < minRating) {
-        continue;
+      // Step 2: Process results from this page
+      for (const place of response.data.results) {
+        // Stop if we have enough NEW companies
+        if (companies.length >= maxResults) {
+          break;
+        }
+
+        // Filter by rating
+        if (place.rating && place.rating < minRating) {
+          continue;
+        }
+
+        // Skip if already in this project (smart duplicate filtering)
+        if (projectId && place.place_id) {
+          const existsInProject = await prospectExistsInProject(place.place_id, projectId);
+          if (existsInProject) {
+            logInfo('Skipping duplicate (already in project)', {
+              name: place.name,
+              projectId,
+              page: pageCount
+            });
+            continue; // Skip this one, keep searching for NEW prospects
+          }
+        }
+
+        // Extract company data
+        const company = await extractCompanyData(place);
+
+        if (company) {
+          companies.push(company);
+          totalProcessed++;
+
+          logInfo('Company discovered (NEW)', {
+            name: company.name,
+            rating: company.rating,
+            city: company.city,
+            page: pageCount
+          });
+        }
       }
 
-      // Extract company data
-      const company = await extractCompanyData(place);
+      // Check for next page token
+      pageToken = response.data.next_page_token;
 
-      if (company) {
-        companies.push(company);
-        processed++;
+      // If we have enough companies or no more pages, stop
+      if (companies.length >= maxResults || !pageToken) {
+        break;
+      }
 
-        logInfo('Company discovered', {
-          name: company.name,
-          rating: company.rating,
-          city: company.city
+      // Google requires a short delay before using next_page_token
+      if (pageToken) {
+        logInfo('Fetching next page of results...', {
+          currentCount: companies.length,
+          target: maxResults,
+          page: pageCount + 1
         });
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
     logInfo('Google Maps discovery complete', {
       query,
       found: companies.length,
-      processed,
+      totalProcessed,
+      pagesSearched: pageCount,
       duration_ms: Date.now() - startTime
     });
 
@@ -166,9 +222,22 @@ async function extractCompanyData(place) {
     // Determine industry from types
     const industry = determineIndustry(place.types || []);
 
+    // Validate website URL (Google Maps sometimes returns social URLs as website)
+    const websiteValidation = validateWebsiteUrl(details.website);
+    const initialSocialProfiles = {};
+
+    // If Google returned a social URL as website, track it for social_profiles later
+    if (websiteValidation.socialProfile) {
+      logInfo('Google Maps returned social URL as website, will move to social_profiles', {
+        company: place.name,
+        platform: websiteValidation.socialProfile.platform
+      });
+      initialSocialProfiles[websiteValidation.socialProfile.platform] = websiteValidation.socialProfile.url;
+    }
+
     return {
       name: place.name,
-      website: details.website || null,
+      website: websiteValidation.website,  // null if it was a social URL
       phone: details.formatted_phone_number || place.formatted_phone_number || null,
       address: place.formatted_address || details.formatted_address || null,
       city: addressComponents.city,
@@ -179,6 +248,7 @@ async function extractCompanyData(place) {
       types: place.types || [],
       industry: industry,
       location: place.geometry?.location || null,
+      social_profiles_from_google: initialSocialProfiles,  // Social URLs from Google
       source: 'google-maps'
     };
   } catch (error) {

@@ -2,20 +2,25 @@
 
 /**
  * Activity Feed Component
- * Shows recent activity across all engines
+ * Shows activity history across all engines with pagination
  */
 
-import { Search, ScanSearch, Mail, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Search, ScanSearch, Mail, MessageSquare, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatRelativeTime } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import type { ActivityFeedItem } from '@/lib/types';
+import type { ActivityPagination } from '@/lib/hooks/use-activity-feed';
 
 interface ActivityFeedProps {
   activities: ActivityFeedItem[];
-  maxItems?: number;
   loading?: boolean;
+  pagination?: ActivityPagination | null;
+  onNextPage?: () => void;
+  onPreviousPage?: () => void;
+  onGoToPage?: (page: number) => void;
 }
 
 const ACTIVITY_ICONS = {
@@ -100,13 +105,23 @@ function ActivitySkeleton() {
   );
 }
 
-export function ActivityFeed({ activities, maxItems = 10, loading = false }: ActivityFeedProps) {
-  const displayedActivities = activities.slice(0, maxItems);
-
+export function ActivityFeed({
+  activities,
+  loading = false,
+  pagination,
+  onNextPage,
+  onPreviousPage,
+  onGoToPage
+}: ActivityFeedProps) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Recent Activity</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Activity</CardTitle>
+        {pagination && (
+          <span className="text-xs text-muted-foreground">
+            {pagination.total} total
+          </span>
+        )}
       </CardHeader>
       <CardContent>
         {loading ? (
@@ -115,29 +130,52 @@ export function ActivityFeed({ activities, maxItems = 10, loading = false }: Act
               <ActivitySkeleton key={i} />
             ))}
           </div>
-        ) : displayedActivities.length === 0 ? (
+        ) : activities.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-sm text-muted-foreground">
-              No recent activity
+              No activity yet
             </p>
             <p className="text-xs text-muted-foreground mt-1">
               Start by generating prospects or analyzing leads
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
-            {displayedActivities.map((activity) => (
-              <ActivityItem key={activity.id} activity={activity} />
-            ))}
-          </div>
-        )}
+          <>
+            <div className="divide-y divide-border min-h-[450px]">
+              {activities.map((activity) => (
+                <ActivityItem key={activity.id} activity={activity} />
+              ))}
+            </div>
 
-        {activities.length > maxItems && (
-          <div className="mt-4 text-center">
-            <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              View all activity ({activities.length})
-            </button>
-          </div>
+            {/* Pagination Controls */}
+            {pagination && pagination.total_pages > 1 && (
+              <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
+                <div className="text-xs text-muted-foreground">
+                  Page {pagination.page} of {pagination.total_pages}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onPreviousPage}
+                    disabled={!pagination.has_previous || loading}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onNextPage}
+                    disabled={!pagination.has_more || loading}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

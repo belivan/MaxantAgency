@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { EmailPreviewCard } from './email-preview-card';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { composeEmail } from '@/lib/api/outreach';
+import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import type { Lead, ComposedEmail, EmailVariant } from '@/lib/types';
 
 interface EmailComposerProps {
@@ -30,18 +31,25 @@ export function EmailComposer({ lead, strategyId, onEmailGenerated }: EmailCompo
   const [composedEmail, setComposedEmail] = useState<ComposedEmail | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { startTask, updateTask, completeTask, errorTask } = useTaskProgress();
 
   const handleGenerate = async () => {
     setGenerating(true);
     setError(null);
 
+    const taskId = startTask('outreach', `Composing email for ${lead.company_name}`, 1);
+
     try {
-      const email = await composeEmail(lead.website, strategyId);
+      updateTask(taskId, 0, 'Generating personalized email...');
+      const email = await composeEmail(lead.url, strategyId);
       setComposedEmail(email);
+      updateTask(taskId, 1, 'Email generated!');
       onEmailGenerated?.(email);
+      completeTask(taskId);
     } catch (err: any) {
       console.error('Failed to generate email:', err);
       setError(err.message || 'Failed to generate email');
+      errorTask(taskId, err.message || 'Failed to generate email');
     } finally {
       setGenerating(false);
     }

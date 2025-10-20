@@ -120,7 +120,8 @@ app.post('/api/compose', async (req, res) => {
     const {
       url,
       lead: providedLead,
-      strategy = 'compliment-sandwich',
+      strategy_id,
+      strategy = strategy_id || 'compliment-sandwich',
       generateVariants = false,
       model = 'claude-haiku-3-5'
     } = req.body;
@@ -204,7 +205,12 @@ app.post('/api/compose', async (req, res) => {
         model_used: model,
         generation_time_ms: result.total_time || result.generation_time,
         cost: result.total_cost || result.cost,
-        status: 'pending' // All emails start as pending for review
+        status: 'pending', // All emails start as pending for review
+        has_variants: generateVariants,
+        subject_variants: generateVariants ? result.subjects : null,
+        body_variants: generateVariants ? result.bodies : null,
+        recommended_variant: generateVariants ? result.recommended : null,
+        variant_reasoning: generateVariants ? result.reasoning : null
     });
     } else {
       console.log(`   ⚠️  Test mode - skipping database save`);
@@ -258,7 +264,11 @@ app.post('/api/compose', async (req, res) => {
       generation_time_ms: result.total_time || result.generation_time_ms,
       validation_score: result.validation.score,
       company_name: lead.company_name,
-      url: lead.url
+      url: lead.url,
+      has_variants: generateVariants,
+      subject_variants: generateVariants ? result.subjects : null,
+      body_variants: generateVariants ? result.bodies : null,
+      recommended_variant: generateVariants ? result.recommended : null
     };
 
     res.json({

@@ -15,22 +15,23 @@ import { validateAgent3 } from './validators/agent3-validator.js';
 import { validateAgent4 } from './validators/agent4-validator.js';
 import { validateAgent5 } from './validators/agent5-validator.js';
 import { validateAgent6 } from './validators/agent6-validator.js';
+import { validateAgent7 } from './validators/agent7-validator.js';
 import logger from './shared/logger.js';
 
 const program = new Command();
 
 program
   .name('qa-supervisor')
-  .description('QA & Integration Supervisor for all agents')
+  .description('QA & Integration Supervisor for all engines')
   .version('1.0.0');
 
 // Main check command
 program
   .command('check')
   .description('Run all QA checks')
-  .option('-a, --agent <number>', 'Check specific agent only (1-6)')
+  .option('-a, --agent <number>', 'Check specific engine only (1-7)')
   .action(async (options) => {
-    logger.header('🔍 QA SUPERVISOR - Checking All Agents');
+    logger.header('🔍 QA SUPERVISOR - Checking All Engines');
 
     const results = {
       agents: [],
@@ -40,27 +41,28 @@ program
     };
 
     try {
-      // Map of agent validators
+      // Map of engine validators
       const validators = {
-        '1': { name: 'Agent 1 - Prospecting Engine', validate: validateAgent1 },
-        '2': { name: 'Agent 2 - Analysis Engine', validate: validateAgent2 },
-        '3': { name: 'Agent 3 - Outreach Engine', validate: validateAgent3 },
-        '4': { name: 'Agent 4 - Command Center UI', validate: validateAgent4 },
-        '5': { name: 'Agent 5 - Database Setup Tool', validate: validateAgent5 },
-        '6': { name: 'Agent 6 - Pipeline Orchestrator', validate: validateAgent6 }
+        '1': { name: 'Prospecting Engine', validate: validateAgent1 },
+        '2': { name: 'Analysis Engine', validate: validateAgent2 },
+        '3': { name: 'Outreach Engine', validate: validateAgent3 },
+        '4': { name: 'Command Center UI', validate: validateAgent4 },
+        '5': { name: 'Database Tools', validate: validateAgent5 },
+        '6': { name: 'Pipeline Orchestrator', validate: validateAgent6 },
+        '7': { name: 'QA Supervisor', validate: validateAgent7 }
       };
 
-      // Determine which agents to check
-      const agentsToCheck = options.agent
+      // Determine which engines to check
+      const enginesToCheck = options.agent
         ? [options.agent]
         : Object.keys(validators);
 
-      // Validate each agent
-      for (const agentNum of agentsToCheck) {
+      // Validate each engine
+      for (const agentNum of enginesToCheck) {
         const validator = validators[agentNum];
 
         if (!validator) {
-          logger.error(`Unknown agent: ${agentNum}`);
+          logger.error(`Unknown engine: ${agentNum}`);
           continue;
         }
 
@@ -93,10 +95,10 @@ program
       if (results.totalErrors > 0) {
         console.log('\n' + chalk.bold.red('Critical Issues:'));
 
-        for (const agent of results.agents) {
-          const errors = agent.details.filter(d => d.status === 'fail');
+        for (const engine of results.agents) {
+          const errors = engine.details.filter(d => d.status === 'fail');
           for (const error of errors) {
-            console.log(chalk.red(`  ❌ ${agent.agent}: ${error.name}`));
+            console.log(chalk.red(`  ❌ ${engine.agent}: ${error.name}`));
             if (error.message) {
               console.log(chalk.gray(`     ${error.message}`));
             }
@@ -108,10 +110,10 @@ program
       if (results.totalWarnings > 0) {
         console.log('\n' + chalk.bold.yellow('Warnings:'));
 
-        for (const agent of results.agents) {
-          const warnings = agent.details.filter(d => d.status === 'warn');
+        for (const engine of results.agents) {
+          const warnings = engine.details.filter(d => d.status === 'warn');
           for (const warning of warnings) {
-            console.log(chalk.yellow(`  ⚠️  ${agent.agent}: ${warning.name}`));
+            console.log(chalk.yellow(`  ⚠️  ${engine.agent}: ${warning.name}`));
             if (warning.message) {
               console.log(chalk.gray(`     ${warning.message}`));
             }
@@ -212,7 +214,7 @@ program
 program
   .command('watch')
   .description('Watch for changes and re-run checks')
-  .option('--agent <number>', 'Watch specific agent only (1-6)')
+  .option('--agent <number>', 'Watch specific engine only (1-7)')
   .action(async (options) => {
     try {
       const path = await import('path');
@@ -223,40 +225,41 @@ program
 
       const projectRoot = path.resolve(process.cwd(), '..');
 
-      const agentDirs = {
-        'Agent 1': path.join(projectRoot, 'prospecting-engine'),
-        'Agent 2': path.join(projectRoot, 'analysis-engine'),
-        'Agent 3': path.join(projectRoot, 'outreach-engine'),
-        'Agent 4': path.join(projectRoot, 'command-center-ui'),
-        'Agent 5': path.join(projectRoot, 'database-tools'),
-        'Agent 6': path.join(projectRoot, 'pipeline-orchestrator')
+      const engineDirs = {
+        'Engine 1': path.join(projectRoot, 'prospecting-engine'),
+        'Engine 2': path.join(projectRoot, 'analysis-engine'),
+        'Engine 3': path.join(projectRoot, 'outreach-engine'),
+        'Engine 4': path.join(projectRoot, 'command-center-ui'),
+        'Engine 5': path.join(projectRoot, 'database-tools'),
+        'Engine 6': path.join(projectRoot, 'pipeline-orchestrator'),
+        'Engine 7': path.join(projectRoot, 'qa-supervisor')
       };
 
-      // Filter to single agent if specified
-      let watchDirs = agentDirs;
+      // Filter to single engine if specified
+      let watchDirs = engineDirs;
       if (options.agent) {
-        const agentKey = `Agent ${options.agent}`;
-        if (agentDirs[agentKey]) {
-          watchDirs = { [agentKey]: agentDirs[agentKey] };
+        const engineKey = `Engine ${options.agent}`;
+        if (engineDirs[engineKey]) {
+          watchDirs = { [engineKey]: engineDirs[engineKey] };
         } else {
-          logger.error(`Unknown agent: ${options.agent}`);
+          logger.error(`Unknown engine: ${options.agent}`);
           process.exit(1);
         }
       }
 
-      const watcher = new FileWatcher(watchDirs, async (agentName, filename) => {
-        // Extract agent number from name
-        const agentNum = agentName.match(/Agent (\d)/)?.[1];
-        if (agentNum) {
-          const agentKey = `agent${agentNum}`;
+      const watcher = new FileWatcher(watchDirs, async (engineName, filename) => {
+        // Extract engine number from name
+        const engineNum = engineName.match(/Engine (\d)/)?.[1];
+        if (engineNum) {
+          const agentKey = `agent${engineNum}`;
 
           try {
             const result = await quickValidateAgent(agentKey);
 
             if (result.passed) {
-              logger.success(`${agentName} - All checks passed ✓`);
+              logger.success(`${engineName} - All checks passed ✓`);
             } else {
-              logger.error(`${agentName} - ${result.issues.length} issue(s) found`);
+              logger.error(`${engineName} - ${result.issues.length} issue(s) found`);
               for (const issue of result.issues) {
                 if (issue.type === 'security') {
                   logger.error(`  🔒 Security: ${issue.count} potential issue(s)`);
@@ -264,7 +267,7 @@ program
               }
             }
           } catch (error) {
-            logger.error(`${agentName} - Check failed: ${error.message}`);
+            logger.error(`${engineName} - Check failed: ${error.message}`);
           }
         }
       });
@@ -296,7 +299,7 @@ program
 
       const { quickValidateAll } = await import('./shared/quick-validator.js');
 
-      logger.info('Running quick security scan on all agents...');
+      logger.info('Running quick security scan on all engines...');
       console.log('');
 
       const result = await quickValidateAll();
@@ -310,9 +313,9 @@ program
       } else {
         logger.error('❌ Pre-commit checks failed!');
 
-        const failedAgents = result.results.filter(r => !r.passed);
-        for (const agent of failedAgents) {
-          logger.error(`  ${agent.agent}: ${agent.issues.length} issue(s)`);
+        const failedEngines = result.results.filter(r => !r.passed);
+        for (const engine of failedEngines) {
+          logger.error(`  ${engine.agent}: ${engine.issues.length} issue(s)`);
         }
 
         console.log('');

@@ -13,7 +13,6 @@
     {
       "name": "prospect_id",
       "type": "uuid",
-      "foreignKey": "prospects.id",
       "index": true,
       "description": "Foreign key to prospects table"
     },
@@ -231,7 +230,7 @@
     {
       "name": "project_id",
       "type": "uuid",
-      "description": "Associated project ID (if lead converts) - FK constraint pending projects table creation"
+      "description": "Associated project ID (if lead converts)"
     },
 
     {
@@ -285,6 +284,54 @@
       "column": "prospect_id",
       "references": "prospects.id",
       "onDelete": "SET NULL"
+    },
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "SET NULL"
+    }
+  ],
+
+  "constraints": [
+    {
+      "type": "check",
+      "name": "chk_overall_score_range",
+      "expression": "overall_score >= 0 AND overall_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_design_score_range",
+      "expression": "design_score >= 0 AND design_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_seo_score_range",
+      "expression": "seo_score >= 0 AND seo_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_content_score_range",
+      "expression": "content_score >= 0 AND content_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_social_score_range",
+      "expression": "social_score >= 0 AND social_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_analysis_cost_positive",
+      "expression": "analysis_cost IS NULL OR analysis_cost >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_page_load_time_positive",
+      "expression": "page_load_time IS NULL OR page_load_time >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_analysis_time_positive",
+      "expression": "analysis_time IS NULL OR analysis_time >= 0"
     }
   ]
 }

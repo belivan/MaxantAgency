@@ -15,7 +15,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { runProspectingPipeline } from './orchestrator.js';
-import { getProspects, getProspectById, getProspectStats } from './database/supabase-client.js';
+import { getProspects, getProspectById, getProspectStats, deleteProspect, deleteProspects } from './database/supabase-client.js';
 import { logInfo, logError } from './shared/logger.js';
 
 dotenv.config();
@@ -117,7 +117,8 @@ app.get('/api/prospects', async (req, res) => {
       minRating: req.query.minRating ? parseFloat(req.query.minRating) : undefined,
       projectId: req.query.projectId,
       runId: req.query.runId,
-      limit: req.query.limit ? parseInt(req.query.limit) : 50
+      limit: req.query.limit ? parseInt(req.query.limit) : 50,
+      offset: req.query.offset ? parseInt(req.query.offset) : 0
     };
 
     // Remove undefined filters
@@ -125,12 +126,13 @@ app.get('/api/prospects', async (req, res) => {
       filters[key] === undefined && delete filters[key]
     );
 
-    const prospects = await getProspects(filters);
+    const result = await getProspects(filters);
 
     res.json({
       success: true,
-      count: prospects.length,
-      prospects,
+      count: result.data.length,
+      total: result.total,
+      prospects: result.data,
       filters
     });
 
@@ -167,6 +169,65 @@ app.get('/api/prospects/:id', async (req, res) => {
   } catch (error) {
     logError('GET /api/prospects/:id failed', error);
 
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE /api/prospects/:id - Delete a prospect
+// ═══════════════════════════════════════════════════════════════════
+
+app.delete('/api/prospects/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await deleteProspect(id);
+
+    res.json({
+      success: true,
+      message: 'Prospect deleted successfully'
+    });
+
+  } catch (error) {
+    logError('DELETE /api/prospects/:id failed', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// POST /api/prospects/batch-delete - Delete multiple prospects
+// ═══════════════════════════════════════════════════════════════════
+
+app.post('/api/prospects/batch-delete', async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'An array of prospect IDs is required'
+      });
+    }
+
+    console.log(`[Batch Delete] Deleting ${ids.length} prospects`);
+
+    const deletedCount = await deleteProspects(ids);
+
+    res.json({
+      success: true,
+      deleted: deletedCount,
+      failed: 0,
+      message: `${deletedCount} prospect(s) deleted successfully`
+    });
+
+  } catch (error) {
+    logError('POST /api/prospects/batch-delete failed', error);
     res.status(500).json({
       success: false,
       error: error.message

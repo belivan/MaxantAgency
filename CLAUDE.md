@@ -439,5 +439,21 @@ All engines follow the same API patterns:
 - **Unit tests** test individual modules in isolation
 - **Integration tests** test entire workflows (e.g., prospect → analyze → compose → send)
 - **Validation tests** check schema definitions and configurations
-- All test files are named `test-*.js` and located in `{engine}/tests/`
+- All test files are named `test-*.js`
 - Tests output clear pass/fail counts: `✅ Passed: N`, `❌ Failed: N`
+
+### Test File Organization
+
+**Standard Pattern**: Place tests in `{engine}/tests/test-*.js`
+
+Examples:
+- `prospecting-engine/tests/test-google-maps.js` - Unit tests for Google Maps discoverer
+- `analysis-engine/tests/test-analyzers.js` - Unit tests for AI analyzers
+- `outreach-engine/tests/test-phase1-integration.js` - Integration tests
+
+**Outreach Engine Exception**: The outreach engine includes convenience test runners in its root directory for quick validation:
+- `test-batch-generation.js` - Quick batch testing
+- `test-end-to-end.js` - Full workflow test
+- `test-notion-sync.js` - Notion integration test
+
+These root-level test files complement (not replace) the `tests/` directory and provide easy access to common testing scenarios during development.

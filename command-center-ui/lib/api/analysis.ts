@@ -12,7 +12,7 @@ import type {
   PaginatedResponse
 } from '@/lib/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3000';
+const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
 
 /**
  * Analyze prospects by URLs
@@ -22,27 +22,22 @@ export async function analyzeProspects(
   prospectIds: string[],
   options: AnalysisOptions
 ): Promise<{ sseUrl: string; batchId: string }> {
-  const response = await fetch(`${API_BASE}/api/analyze`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      prospect_ids: prospectIds,
-      tier: options.tier,
-      modules: options.modules,
-      capture_screenshots: options.capture_screenshots ?? true
-    })
+  // Build the SSE URL with query parameters
+  const params = new URLSearchParams({
+    prospect_ids: prospectIds.join(','),
+    tier: options.tier,
+    modules: options.modules?.join(',') || '',
+    capture_screenshots: (options.capture_screenshots ?? true).toString()
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to start analysis');
-  }
+  const sseUrl = `${API_BASE}/api/analyze?${params.toString()}`;
 
-  const data = await response.json();
+  // Generate a client-side batch ID for tracking
+  const batchId = `batch_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
   return {
-    sseUrl: `${API_BASE}/api/analyze/stream?batchId=${data.batchId}`,
-    batchId: data.batchId
+    sseUrl,
+    batchId
   };
 }
 
@@ -95,15 +90,23 @@ export async function getLeads(filters?: LeadFilters): Promise<Lead[]> {
     params.set('offset', filters.offset.toString());
   }
 
-  const response = await fetch(`${API_BASE}/api/leads?${params.toString()}`);
+  // Call the Command Center UI's own /api/leads route (not Analysis Engine)
+  const response = await fetch(`/api/leads?${params.toString()}`);
 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch leads');
   }
 
-  const data: APIResponse<Lead[]> = await response.json();
-  return data.data || [];
+  const data: any = await response.json();
+  // UI API route returns {success, leads: [...]} format
+  const leads = data.leads || data.data || [];
+
+  // Map database field names to UI field names
+  return leads.map((lead: any) => ({
+    ...lead,
+    grade: lead.grade || lead.website_grade, // Map website_grade → grade
+  }));
 }
 
 /**
@@ -197,5 +200,41 @@ export async function reanalyzeLead(
 
   return {
     sseUrl: `${API_BASE}/api/analyze/stream?batchId=${data.batchId}`
+  };
+}
+
+/**
+ * Delete a lead
+ */
+export async function deleteLead(id: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/leads/${id}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete lead');
+  }
+}
+
+/**
+ * Delete multiple leads in batch
+ */
+export async function deleteLeads(ids: string[]): Promise<{ deleted: number; failed: number }> {
+  const response = await fetch(`${API_BASE}/api/leads/batch-delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete leads');
+  }
+
+  const data = await response.json();
+  return {
+    deleted: data.deleted || 0,
+    failed: data.failed || 0
   };
 }

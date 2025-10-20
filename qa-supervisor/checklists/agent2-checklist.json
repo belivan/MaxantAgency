@@ -1,6 +1,7 @@
 {
-  "agent": "Agent 2 - Analysis Engine",
+  "agent": "Analysis Engine",
   "agentDir": "analysis-engine",
+  "port": 3001,
   "checks": [
     {
       "category": "File Structure",
@@ -179,6 +180,17 @@
             "analyzers/content-analyzer.js",
             "analyzers/social-analyzer.js"
           ]
+        }
+      ]
+    },
+    {
+      "category": "Server Health",
+      "items": [
+        {
+          "name": "Server responds to health check",
+          "test": "healthCheck",
+          "port": 3001,
+          "endpoint": "/health"
         }
       ]
     },

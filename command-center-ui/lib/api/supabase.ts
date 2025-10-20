@@ -300,7 +300,12 @@ export async function getLeadsByIds(ids: string[]): Promise<any[]> {
     .in('id', ids);
 
   if (error) throw error;
-  return data || [];
+
+  // Map database field names to UI field names
+  return (data || []).map((lead: any) => ({
+    ...lead,
+    grade: lead.grade || lead.website_grade, // Map website_grade → grade
+  }));
 }
 
 // ============================================================================

@@ -5,22 +5,17 @@
  * Generate and manage prospects using ICP brief
  */
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, AlertCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ICPBriefEditor,
   ProspectConfigForm,
-  ProgressStream,
-  ProspectTable
+  ProgressStream
 } from '@/components/prospecting';
-import { LoadingOverlay } from '@/components/shared';
-import { getProspects } from '@/lib/api';
 import { parseJSON } from '@/lib/utils/validation';
 import { useEngineHealth } from '@/lib/hooks';
-import type { ProspectGenerationFormData, Prospect, SSEMessage } from '@/lib/types';
+import type { ProspectGenerationOptions } from '@/lib/types';
 
 interface ProgressLog {
   timestamp: string;
@@ -29,17 +24,11 @@ interface ProgressLog {
 }
 
 export default function ProspectingPage() {
-  const router = useRouter();
   const engineStatus = useEngineHealth();
 
   // ICP Brief state
   const [icpBrief, setIcpBrief] = useState('');
   const [icpValid, setIcpValid] = useState(false);
-
-  // Prospects state
-  const [prospects, setProspects] = useState<Prospect[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isLoadingProspects, setIsLoadingProspects] = useState(true);
 
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -49,6 +38,7 @@ export default function ProspectingPage() {
     label?: string;
   } | undefined>();
   const [logs, setLogs] = useState<ProgressLog[]>([]);
+  const [generatedCount, setGeneratedCount] = useState<number>(0);
 
   const addLog = (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
     setLogs(prev => [
@@ -61,33 +51,7 @@ export default function ProspectingPage() {
     ].slice(0, 50)); // Keep last 50 logs
   };
 
-  // Track if prospects have been loaded to prevent double execution in React StrictMode
-  const hasLoadedProspects = useRef(false);
-
-  // Load existing prospects on mount
-  useEffect(() => {
-    // Prevent double execution in React StrictMode (development)
-    if (hasLoadedProspects.current) return;
-    hasLoadedProspects.current = true;
-
-    const loadProspects = async () => {
-      try {
-        setIsLoadingProspects(true);
-        const data = await getProspects({ limit: 50, status: 'ready_for_analysis' });
-        setProspects(data);
-        addLog(`Loaded ${data.length} existing prospects`, 'info');
-      } catch (error: any) {
-        console.error('Failed to load prospects:', error);
-        addLog(`Failed to load prospects: ${error.message}`, 'error');
-      } finally {
-        setIsLoadingProspects(false);
-      }
-    };
-
-    loadProspects();
-  }, []);
-
-  const handleGenerate = async (config: ProspectGenerationFormData) => {
+  const handleGenerate = async (config: ProspectGenerationOptions) => {
     // Validate ICP brief
     const briefResult = parseJSON(icpBrief);
     if (!briefResult.success) {
@@ -96,8 +60,7 @@ export default function ProspectingPage() {
     }
 
     setIsGenerating(true);
-    setProspects([]);
-    setSelectedIds([]);
+    setGeneratedCount(0);
     setLogs([]);
     setProgress(undefined);
 
@@ -166,10 +129,8 @@ export default function ProspectingPage() {
                 // Handle completion
                 if (event.type === 'complete') {
                   addLog('Prospect generation completed!', 'success');
-                  if (event.results?.prospects) {
-                    setProspects(event.results.prospects);
-                    setSelectedIds(event.results.prospects.map((p: Prospect) => p.id));
-                  }
+                  const count = event.results?.prospects?.length || event.results?.count || 0;
+                  setGeneratedCount(count);
                   setIsGenerating(false);
                   return;
                 }
@@ -197,54 +158,28 @@ export default function ProspectingPage() {
     }
   };
 
-  const handleAnalyzeSelected = () => {
-    if (selectedIds.length === 0) {
-      addLog('Please select at least one prospect to analyze', 'warning');
-      return;
-    }
-
-    // Navigate to analysis page with selected prospects
-    router.push(`/analysis?prospect_ids=${selectedIds.join(',')}`);
-  };
-
   const isProspectingEngineOffline = engineStatus.prospecting === 'offline';
-  const isAnalysisEngineOffline = engineStatus.analysis === 'offline';
 
   return (
-    <>
-      <LoadingOverlay
-        isLoading={isGenerating || isLoadingProspects}
-        message={isGenerating ? "Generating prospects..." : "Loading prospects..."}
-      />
-      <div className="container mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Prospecting</h1>
-          <p className="text-muted-foreground">
-            Generate prospects using your Ideal Customer Profile brief
-          </p>
-        </div>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Prospecting</h1>
+        <p className="text-muted-foreground">
+          Generate prospects using your Ideal Customer Profile brief
+        </p>
+      </div>
 
-        {/* Engine Offline Warning */}
-        {isProspectingEngineOffline && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Prospecting Engine Offline</AlertTitle>
-            <AlertDescription>
-              The prospecting engine is not responding. Please start the prospecting-engine service (port 3010) to generate prospects.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {isAnalysisEngineOffline && prospects.length > 0 && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Analysis Engine Offline</AlertTitle>
-            <AlertDescription>
-              The analysis engine is not responding. You won't be able to analyze prospects until the analysis-engine service (port 3000) is started.
-            </AlertDescription>
-          </Alert>
-        )}
+      {/* Engine Offline Warning */}
+      {isProspectingEngineOffline && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Prospecting Engine Offline</AlertTitle>
+          <AlertDescription>
+            The prospecting engine is not responding. Please start the prospecting-engine service (port 3010) to generate prospects.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -276,33 +211,25 @@ export default function ProspectingPage() {
         />
       )}
 
-      {/* Results Section */}
-      {(prospects.length > 0 || isLoadingProspects) && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Prospects</h2>
-
-            {prospects.length > 0 && (
-              <Button
-                onClick={handleAnalyzeSelected}
-                disabled={selectedIds.length === 0 || isAnalysisEngineOffline}
-                size="lg"
-              >
-                Analyze {selectedIds.length} Selected
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            )}
-          </div>
-
-          <ProspectTable
-            prospects={prospects}
-            selectedIds={selectedIds}
-            onSelectionChange={setSelectedIds}
-            loading={isLoadingProspects}
-          />
-        </div>
+      {/* Success Message */}
+      {!isGenerating && generatedCount > 0 && (
+        <Alert className="bg-green-50 dark:bg-green-950 border-green-600">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertTitle className="text-green-900 dark:text-green-100">
+            Generation Complete!
+          </AlertTitle>
+          <AlertDescription className="text-green-800 dark:text-green-200">
+            Successfully generated <strong>{generatedCount} prospects</strong>.{' '}
+            <a
+              href="/analysis"
+              className="underline font-medium hover:text-green-950 dark:hover:text-green-50"
+            >
+              Go to the Analysis tab
+            </a>{' '}
+            to select and analyze them.
+          </AlertDescription>
+        </Alert>
       )}
-      </div>
-    </>
+    </div>
   );
 }

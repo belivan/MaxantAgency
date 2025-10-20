@@ -20,7 +20,7 @@ import type {
   APIResponse
 } from '@/lib/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_OUTREACH_API || 'http://localhost:3001';
+const API_BASE = process.env.NEXT_PUBLIC_OUTREACH_API || 'http://localhost:3002';
 
 // ============================================================================
 // EMAIL COMPOSITION
@@ -136,8 +136,8 @@ export async function getEmails(filters?: EmailFilters): Promise<Email[]> {
     throw new Error(error.message || 'Failed to fetch emails');
   }
 
-  const data: APIResponse<Email[]> = await response.json();
-  return data.data || [];
+  const data: any = await response.json();
+  return data.emails || [];
 }
 
 /**
@@ -346,8 +346,8 @@ export async function getSocialMessages(filters?: SocialMessageFilters): Promise
     throw new Error(error.message || 'Failed to fetch social messages');
   }
 
-  const data: APIResponse<SocialMessage[]> = await response.json();
-  return data.data || [];
+  const data: any = await response.json();
+  return data.messages || [];
 }
 
 /**
@@ -391,7 +391,22 @@ export async function getStrategies(): Promise<any[]> {
     throw new Error(error.message || 'Failed to fetch strategies');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Transform the response from {success, email: [...], social: [...]} to an array of strategy objects
+  const emailStrategies = (data.email || []).map((id: string) => ({
+    id,
+    name: id.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+    type: 'email' as const
+  }));
+
+  const socialStrategies = (data.social || []).map((id: string) => ({
+    id,
+    name: id.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+    type: 'social' as const
+  }));
+
+  return [...emailStrategies, ...socialStrategies];
 }
 
 /**

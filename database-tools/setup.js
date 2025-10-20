@@ -104,7 +104,9 @@ export async function runSetup(options = {}) {
   logger.info(`Generated ${counts.tables} CREATE TABLE statements`);
   logger.info(`Generated ${counts.indexes} CREATE INDEX statements`);
   if (!skipConstraints) {
-    logger.info(`Generated ${counts.constraints} ALTER TABLE (foreign keys)`);
+    logger.info(`Generated ${counts.foreignKeys} ALTER TABLE (foreign keys)`);
+    logger.info(`Generated ${counts.checkConstraints} ALTER TABLE (check constraints)`);
+    logger.info(`Generated ${counts.uniqueConstraints} ALTER TABLE (unique constraints)`);
   }
 
   logger.newline();
@@ -189,34 +191,68 @@ export async function runSetup(options = {}) {
   indexSpinner.succeed(`Created ${indexCount} indexes`);
   logger.newline();
 
-  // Create foreign keys
-  if (!skipConstraints) {
-    let constraintCount = 0;
-    const constraintSpinner = ora('Creating foreign key constraints...').start();
+  // Create constraints
+  let foreignKeyCount = 0;
+  let checkConstraintCount = 0;
+  let uniqueConstraintCount = 0;
 
+  if (!skipConstraints) {
+    // Create foreign keys
+    const fkSpinner = ora('Creating foreign key constraints...').start();
     for (const item of allSQL) {
       for (const constraintSQL of item.sql.constraints) {
         const result = await executeSQL(constraintSQL, verbose);
         if (result.success) {
-          constraintCount++;
+          foreignKeyCount++;
         } else {
-          logger.debug(`Constraint creation failed: ${result.error}`, verbose);
+          logger.debug(`Foreign key creation failed: ${result.error}`, verbose);
         }
       }
     }
+    fkSpinner.succeed(`Created ${foreignKeyCount} foreign key constraints`);
 
-    constraintSpinner.succeed(`Created ${constraintCount} foreign key constraints`);
+    // Create CHECK constraints
+    const checkSpinner = ora('Creating CHECK constraints...').start();
+    for (const item of allSQL) {
+      for (const checkSQL of item.sql.checkConstraints || []) {
+        const result = await executeSQL(checkSQL, verbose);
+        if (result.success) {
+          checkConstraintCount++;
+        } else {
+          logger.debug(`CHECK constraint creation failed: ${result.error}`, verbose);
+        }
+      }
+    }
+    checkSpinner.succeed(`Created ${checkConstraintCount} CHECK constraints`);
+
+    // Create UNIQUE constraints
+    const uniqueSpinner = ora('Creating UNIQUE constraints...').start();
+    for (const item of allSQL) {
+      for (const uniqueSQL of item.sql.uniqueConstraints || []) {
+        const result = await executeSQL(uniqueSQL, verbose);
+        if (result.success) {
+          uniqueConstraintCount++;
+        } else {
+          logger.debug(`UNIQUE constraint creation failed: ${result.error}`, verbose);
+        }
+      }
+    }
+    uniqueSpinner.succeed(`Created ${uniqueConstraintCount} UNIQUE constraints`);
   }
 
   logger.newline();
 
   // Summary
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+  const totalConstraints = foreignKeyCount + checkConstraintCount + uniqueConstraintCount;
 
   logger.summary('✅ Database setup complete!', {
     'Tables': counts.tables,
     'Indexes': indexCount,
-    'Constraints': skipConstraints ? 'skipped' : constraintCount,
+    'Foreign Keys': skipConstraints ? 'skipped' : foreignKeyCount,
+    'CHECK Constraints': skipConstraints ? 'skipped' : checkConstraintCount,
+    'UNIQUE Constraints': skipConstraints ? 'skipped' : uniqueConstraintCount,
+    'Total Constraints': skipConstraints ? 'skipped' : totalConstraints,
     'Duration': `${duration}s`
   });
 }
