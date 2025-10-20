@@ -145,32 +145,79 @@ app.post('/api/analyze', async (req, res) => {
     // Fetch prospects from database
     sendEvent('status', { message: 'Fetching prospects from database...' });
 
-    let query = supabase
-      .from('prospects')
-      .select('id, business_name, website, industry, city')
-      .not('website', 'is', null);
+    let query;
+    let prospects;
 
-    // Apply filters
-    if (filters.industry) {
-      query = query.eq('industry', filters.industry);
-    }
-    if (filters.city) {
-      query = query.ilike('city', `%${filters.city}%`);
-    }
-    if (filters.limit) {
-      query = query.limit(filters.limit);
+    // If projectId is provided, JOIN with project_prospects to filter by project
+    if (filters.projectId) {
+      query = supabase
+        .from('project_prospects')
+        .select('prospect_id, prospects(id, company_name, website, industry, city)')
+        .eq('project_id', filters.projectId)
+        .not('prospects.website', 'is', null);
+
+      // Apply filters (using Supabase nested syntax)
+      if (filters.industry) {
+        query = query.eq('prospects.industry', filters.industry);
+      }
+      if (filters.city) {
+        query = query.ilike('prospects.city', `%${filters.city}%`);
+      }
+      if (filters.limit) {
+        query = query.limit(filters.limit);
+      } else {
+        query = query.limit(10); // Default limit
+      }
+
+      const { data: projectProspects, error: fetchError } = await query;
+
+      if (fetchError) {
+        sendEvent('error', { error: 'Failed to fetch prospects', details: fetchError.message });
+        res.end();
+        return;
+      }
+
+      // Extract nested prospect data
+      prospects = projectProspects?.map(pp => ({
+        id: pp.prospects.id,
+        business_name: pp.prospects.company_name,
+        website: pp.prospects.website,
+        industry: pp.prospects.industry,
+        city: pp.prospects.city
+      })) || [];
+
     } else {
-      query = query.limit(10); // Default limit
+      // Query prospects globally if no projectId
+      query = supabase
+        .from('prospects')
+        .select('id, company_name as business_name, website, industry, city')
+        .not('website', 'is', null);
+
+      // Apply filters
+      if (filters.industry) {
+        query = query.eq('industry', filters.industry);
+      }
+      if (filters.city) {
+        query = query.ilike('city', `%${filters.city}%`);
+      }
+      if (filters.limit) {
+        query = query.limit(filters.limit);
+      } else {
+        query = query.limit(10); // Default limit
+      }
+
+      const { data: prospectData, error: fetchError } = await query;
+
+      if (fetchError) {
+        sendEvent('error', { error: 'Failed to fetch prospects', details: fetchError.message });
+        res.end();
+        return;
+      }
+
+      prospects = prospectData || [];
     }
 
-    const { data: prospects, error: fetchError } = await query;
-
-    if (fetchError) {
-      sendEvent('error', { error: 'Failed to fetch prospects', details: fetchError.message });
-      res.end();
-      return;
-    }
-
+    // Check if we found any prospects
     if (!prospects || prospects.length === 0) {
       sendEvent('error', { error: 'No prospects found matching filters' });
       res.end();
@@ -186,7 +233,8 @@ app.post('/api/analyze', async (req, res) => {
         prospect_id: p.id,
         company_name: p.business_name,
         industry: p.industry,
-        city: p.city
+        city: p.city,
+        project_id: filters.projectId || null  // Pass projectId through context
       }
     }));
 
@@ -536,6 +584,9 @@ function extractLeadData(result) {
 
     // Prospect reference - our format (NEW)
     prospect_id: result.prospect_id || null,
+
+    // Project reference - for project isolation
+    project_id: result.project_id || null,
 
     // Metadata
     has_active_blog: result.has_blog || false,  // Their column name
