@@ -368,6 +368,7 @@ app.post('/api/compose-batch', async (req, res) => {
     const {
       limit = 10,
       grade = null,
+      projectId = null,
       strategy = 'compliment-sandwich',
       model = 'claude-haiku-3-5'
     } = req.body;
@@ -375,6 +376,7 @@ app.post('/api/compose-batch', async (req, res) => {
     console.log(`\n📦 Starting batch email composition...`);
     console.log(`   Limit: ${limit}`);
     console.log(`   Grade: ${grade || 'all'}`);
+    console.log(`   Project: ${projectId || 'global'}`);
     console.log(`   Strategy: ${strategy}`);
 
     // Set up SSE
@@ -382,10 +384,11 @@ app.post('/api/compose-batch', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
-    // Get leads
+    // Get leads (filtered by project if specified)
     const leads = await getRegularLeads({
       limit,
-      grade
+      grade,
+      projectId
     });
 
     res.write(`data: ${JSON.stringify({
@@ -422,6 +425,7 @@ app.post('/api/compose-batch', async (req, res) => {
           model_used: model,
           generation_time_ms: result.generation_time,
           cost: result.cost,
+          project_id: projectId || lead.project_id || null,  // Use projectId from request or lead
           status: 'pending' // All emails start as pending for review
         });
 

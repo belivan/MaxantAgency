@@ -42,7 +42,8 @@ export async function getRegularLeads(filters = {}) {
     limit = 100,
     grade = null,
     minScore = null,
-    status = null
+    status = null,
+    projectId = null
   } = filters;
 
   // Validate limit
@@ -67,6 +68,10 @@ export async function getRegularLeads(filters = {}) {
 
     if (status) {
       query = query.eq('status', status);
+    }
+
+    if (projectId) {
+      query = query.eq('project_id', projectId);
     }
 
     if (limit) {
@@ -237,7 +242,8 @@ export async function saveComposedEmail(email) {
     body_variants,
     recommended_variant,
     variant_reasoning,
-    usage
+    usage,
+    project_id = null
   } = email;
 
   // Validate required fields
@@ -285,6 +291,7 @@ export async function saveComposedEmail(email) {
       variant_reasoning: variant_reasoning || null,
       quality_score: validation_score || null,
       validation_issues: validation_issues || null,
+      project_id: project_id || lead?.project_id || null,  // Project isolation
       status,
       ai_model: model_used || null,
       generation_cost: cost || null,
