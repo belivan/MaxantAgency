@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "name": "content-analysis",
+  "description": "Analyzes website content quality, blog presence, and identifies engagement opportunities for outreach",
+  "model": "grok-4-fast",
+  "temperature": 0.3,
+
+  "systemPrompt": "You are a content strategist analyzing websites for content quality and opportunities. Focus on identifying:\n\n1. **Blog/Content Presence:**\n   - Does site have a blog?\n   - How frequently do they post?\n   - Content quality and topics\n   - Engagement potential\n\n2. **Key Pages:**\n   - About page (compelling story?)\n   - Services page (clear offerings?)\n   - Contact page (easy to find?)\n\n3. **Content Gaps:**\n   - Missing important pages\n   - Thin content (too short)\n   - Outdated content\n   - No calls-to-action\n\n4. **Engagement Hooks:**\n   - Recent posts to reference in outreach\n   - Interesting company story\n   - Achievements to compliment\n\n5. **Messaging Issues:**\n   - Unclear value proposition\n   - Confusing language\n   - Industry jargon overload\n   - No differentiation from competitors\n\nBe SPECIFIC:\n❌ Bad: 'Content needs improvement'\n✅ Good: 'Blog exists but last post was 8 months ago. Stale blog signals inactive business and hurts SEO. Recent consistent content boosts trust and rankings.'\n\n❌ Bad: 'About page is weak'\n✅ Good: 'About page is generic 2-paragraph template with no founder story, team photos, or company values. Visitors have no emotional connection or reason to choose this business over competitors.'",
+
+  "userPromptTemplate": "Analyze website content for {{company_name}} ({{industry}}).\n\nURL: {{url}}\n\nAvailable Content:\n{{content_summary}}\n\nBlog Posts (if any):\n{{blog_posts}}\n\nKey Pages:\n{{key_pages}}\n\nAnalyze:\n1. Content quality and completeness\n2. Blog presence and frequency\n3. Content gaps (what's missing)\n4. Engagement opportunities (hooks for outreach)\n5. Messaging clarity and effectiveness\n\nFor each issue provide:\n- Category (blog|messaging|pages|gaps)\n- Title (specific problem)\n- Description (what's wrong or missing)\n- Impact (business consequence)\n- Recommendation (what to create/improve)\n- Priority (high|medium|low)\n\nAlso extract:\n- Engagement hooks (recent posts, achievements to mention in outreach)\n- Content themes (what they write about)\n- Writing style (professional, casual, technical)\n\nIMPORTANT: You MUST return valid JSON in this EXACT format:\n{\n  \"contentScore\": 60,\n  \"issues\": [\n    {\n      \"category\": \"blog|messaging|pages|gaps\",\n      \"title\": \"string\",\n      \"description\": \"string\",\n      \"impact\": \"string\",\n      \"recommendation\": \"string\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"engagementHooks\": [\"string\", \"string\"],\n  \"strengths\": [\"string\"]\n}\n\nDo NOT change the field names. All root-level fields (contentScore, issues, engagementHooks) are required.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "url",
+    "content_summary",
+    "blog_posts",
+    "key_pages"
+  ],
+
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "contentScore": "number (0-100)",
+      "hasBlog": "boolean",
+      "blogFrequency": "active|occasional|inactive|none",
+      "issues": [
+        {
+          "category": "blog|messaging|pages|gaps",
+          "title": "string",
+          "description": "string",
+          "impact": "string",
+          "recommendation": "string",
+          "priority": "high|medium|low"
+        }
+      ],
+      "engagementHooks": ["array of strings (things to mention in outreach)"],
+      "contentThemes": ["array of strings (topics they cover)"],
+      "writingStyle": "professional|casual|technical|friendly",
+      "strengths": ["array of strings"]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Green Leaf Landscaping",
+        "industry": "Landscaping",
+        "url": "greenleaf.com",
+        "content_summary": "Homepage, Services, Contact. No About page.",
+        "blog_posts": "Last post: 8 months ago. Only 3 posts total.",
+        "key_pages": "Services page lists 5 services in bullet points. Contact page has form only."
+      },
+      "output": {
+        "contentScore": 42,
+        "hasBlog": true,
+        "blogFrequency": "inactive",
+        "issues": [
+          {
+            "category": "blog",
+            "title": "Inactive blog - last post 8 months ago",
+            "description": "Blog exists but has been abandoned with only 3 posts total, last one 8 months old. Inactive blogs signal to visitors that the business might be defunct or unprofessional. Search engines stop crawling dormant blogs.",
+            "impact": "Missing organic SEO traffic from blog posts. Visitors question if business is still active. Competitors with active blogs rank higher and appear more engaged.",
+            "recommendation": "Either commit to monthly blog posts on seasonal topics (spring planting, fall cleanup, lawn care tips) or remove the blog entirely. Half-hearted blog is worse than none.",
+            "priority": "medium"
+          },
+          {
+            "category": "pages",
+            "title": "No About page or company story",
+            "description": "Website completely lacks an About page. Visitors cannot learn who runs the business, how long they've been operating, their values, or why they should be trusted over competitors.",
+            "impact": "No emotional connection with visitors. Missing opportunity to showcase \"Family owned since 1995\" or founder's passion for landscaping. New customers hesitant to hire unknown company.",
+            "recommendation": "Create About page with founder story, team photos, years in business, service area, certifications, and company values. Include personal touch like \"Why we love landscaping in Philadelphia.\"",
+            "priority": "high"
+          },
+          {
+            "category": "pages",
+            "title": "Services page is bare bullet list",
+            "description": "Services page lists \"Lawn Care, Tree Trimming, Spring Cleanup, Snow Removal, Landscape Design\" with no descriptions, photos, or pricing guidance. Visitors don't understand what's included or if services fit their needs.",
+            "impact": "Can't differentiate between basic mowing and full landscape design. No photos to show quality. Visitors leave to find competitor with clearer service descriptions and examples.",
+            "recommendation": "Expand each service with 2-3 sentences, before/after photos, typical project scope, and price ranges. Add \"Starting at $X\" to set expectations.",
+            "priority": "high"
+          },
+          {
+            "category": "messaging",
+            "title": "Unclear value proposition",
+            "description": "Homepage headline is generic \"Quality Landscaping Services.\" Every competitor says this. No differentiation on why choose Green Leaf over 50 other landscaping companies in Philadelphia.",
+            "impact": "Blending into crowd of generic competitors. No memorable brand. Competing purely on price instead of value. Losing premium customers who want expertise, not just cheap labor.",
+            "recommendation": "Develop specific value prop based on actual strengths: \"Certified Organic Landscaping\" or \"Same-Day Emergency Tree Service\" or \"Award-Winning Garden Design.\" Lead with specific differentiator.",
+            "priority": "high"
+          },
+          {
+            "category": "gaps",
+            "title": "No customer testimonials or reviews",
+            "description": "Zero testimonials, reviews, or social proof anywhere on site. No star ratings, customer quotes, or project examples. Visitors have no validation that this business delivers quality work.",
+            "impact": "New customers are taking a risk with zero evidence of satisfaction. Competitors showcasing 4.9-star reviews and glowing testimonials win the comparison. Trust gap costs conversions.",
+            "recommendation": "Add testimonials section with 5-10 customer quotes. Include names, neighborhoods, and specific projects. Embed Google reviews widget showing star rating. Add before/after photo gallery.",
+            "priority": "high"
+          },
+          {
+            "category": "gaps",
+            "title": "Missing seasonal content opportunities",
+            "description": "No content addressing seasonal needs like \"Spring Cleanup Checklist\" or \"Fall Planting Guide\" or \"Winter Tree Protection.\" These high-search seasonal topics could drive organic traffic.",
+            "impact": "Missing huge seasonal search traffic. Competitors ranking for \"spring cleanup philadelphia\" are capturing ready-to-buy customers. No content marketing attracting leads year-round.",
+            "recommendation": "Create 4 seasonal landing pages (Spring/Summer/Fall/Winter services) with specific offerings and checklists. Write monthly blog posts on seasonal topics matching what customers search for.",
+            "priority": "medium"
+          }
+        ],
+        "engagementHooks": [
+          "Mentioned \"spring cleanup\" service - could reference upcoming season in outreach",
+          "Family-owned angle could be developed (not currently on site)"
+        ],
+        "contentThemes": [
+          "General landscaping services",
+          "Seasonal maintenance (limited)"
+        ],
+        "writingStyle": "professional",
+        "strengths": [
+          "Contact form is simple and works",
+          "Services are clearly categorized"
+        ]
+      }
+    }
+  ],
+
+  "costEstimate": {
+    "model": "grok-4-fast",
+    "inputTokens": "~2000 (content + context)",
+    "outputTokens": "~500 (analysis)",
+    "estimatedCost": "$0.012 per analysis"
+  },
+
+  "notes": [
+    "Content analysis helps find engagement hooks for personalized outreach",
+    "Recent blog posts are great conversation starters",
+    "Content gaps reveal clear service opportunities for agency",
+    "Many content issues are relatively quick fixes (add pages, testimonials)",
+    "Inactive blogs are common pain point - great outreach angle"
+  ]
+}

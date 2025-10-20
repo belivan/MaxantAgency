@@ -1,0 +1,34 @@
+{
+  "name": "database-tools",
+  "version": "1.0.0",
+  "description": "CLI utility to automate Supabase database setup from JSON schemas",
+  "type": "module",
+  "main": "cli.js",
+  "bin": {
+    "db": "./cli.js"
+  },
+  "scripts": {
+    "db:setup": "node cli.js setup",
+    "db:migrate": "node cli.js migrate",
+    "db:seed": "node cli.js seed",
+    "db:validate": "node cli.js validate",
+    "db:generate": "node cli.js generate"
+  },
+  "keywords": [
+    "database",
+    "supabase",
+    "cli",
+    "schema",
+    "migration"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1",
+    "commander": "^11.1.0",
+    "inquirer": "^9.2.12",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1"
+  }
+}

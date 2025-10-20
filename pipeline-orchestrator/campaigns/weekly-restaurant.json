@@ -1,0 +1,139 @@
+{
+  "name": "Weekly Restaurant Outreach - Philadelphia",
+  "description": "Generate 20 restaurant prospects every Monday, analyze, compose, and send emails",
+
+  "schedule": {
+    "cron": "0 9 * * MON",
+    "timezone": "America/New_York",
+    "enabled": true
+  },
+
+  "budget": {
+    "daily": 5.00,
+    "weekly": 20.00,
+    "monthly": 80.00,
+    "perLead": 0.20
+  },
+
+  "steps": [
+    {
+      "name": "prospecting",
+      "engine": "prospecting",
+      "endpoint": "http://localhost:3010/api/prospect",
+      "method": "POST",
+      "params": {
+        "brief": {
+          "icp": {
+            "industry": "Restaurant",
+            "niches": ["Italian", "American", "French"]
+          },
+          "geo": {
+            "city": "Philadelphia, PA"
+          }
+        },
+        "count": 20,
+        "model": "grok-4-fast",
+        "verify": true
+      },
+      "timeout": 300000,
+      "retry": {
+        "attempts": 3,
+        "delay": 5000,
+        "backoff": "exponential"
+      },
+      "onSuccess": "continue",
+      "onFailure": "abort"
+    },
+
+    {
+      "name": "analysis",
+      "engine": "analysis",
+      "endpoint": "http://localhost:3000/api/analyze",
+      "method": "POST",
+      "params": {
+        "filters": {
+          "status": "ready_for_analysis",
+          "city": "Philadelphia, PA",
+          "limit": 50
+        },
+        "options": {
+          "tier": "tier2",
+          "modules": ["design", "seo", "content", "social"]
+        }
+      },
+      "timeout": 600000,
+      "retry": {
+        "attempts": 2,
+        "delay": 10000,
+        "backoff": "exponential"
+      },
+      "onSuccess": "continue",
+      "onFailure": "continue"
+    },
+
+    {
+      "name": "outreach-compose",
+      "engine": "outreach",
+      "endpoint": "http://localhost:3001/api/compose-batch",
+      "method": "POST",
+      "params": {
+        "filters": {
+          "grade": ["A", "B"],
+          "hasEmail": true,
+          "status": "ready_for_outreach"
+        },
+        "strategy": "compliment-sandwich",
+        "generateVariants": false,
+        "model": "haiku"
+      },
+      "timeout": 300000,
+      "retry": {
+        "attempts": 2,
+        "delay": 5000,
+        "backoff": "exponential"
+      },
+      "onSuccess": "continue",
+      "onFailure": "abort"
+    },
+
+    {
+      "name": "send-emails",
+      "engine": "sender",
+      "endpoint": "http://localhost:3001/api/send-batch",
+      "method": "POST",
+      "params": {
+        "filters": {
+          "status": "pending",
+          "quality_score_min": 80
+        },
+        "provider": "gmail",
+        "actualSend": false,
+        "delayMs": 5000
+      },
+      "timeout": 600000,
+      "retry": {
+        "attempts": 1,
+        "delay": 0
+      },
+      "onSuccess": "continue",
+      "onFailure": "log"
+    }
+  ],
+
+  "notifications": {
+    "onComplete": {
+      "email": "your-email@example.com",
+      "slack": null
+    },
+    "onFailure": {
+      "email": "your-email@example.com",
+      "slack": null
+    }
+  },
+
+  "metadata": {
+    "project_id": null,
+    "tags": ["restaurants", "philadelphia", "weekly"],
+    "owner": "maksant-agency"
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "name": "query-understanding",
+  "description": "Converts ICP brief into an optimized Google Maps search query",
+  "model": "grok-4-fast",
+  "temperature": 0.2,
+
+  "systemPrompt": "You are a search query optimization expert. Your task is to convert business target descriptions into highly effective Google Maps search queries that will find the most relevant businesses. Focus on clarity, specificity, and search intent.",
+
+  "userPromptTemplate": "Convert this ICP (Ideal Customer Profile) brief into an optimal Google Maps search query.\n\n**Target Industry:** {{industry}}\n**Location:** {{city}}\n**Target Description:** {{target_description}}\n\n**Guidelines:**\n- Create a concise, specific search query\n- Include the location (city/region)\n- Use terms that businesses actually use\n- Avoid overly technical jargon\n- Focus on the primary industry/service\n- Keep it under 10 words\n\n**Examples:**\n- ICP: \"Italian restaurants with outdoor seating in Philadelphia\" → Query: \"Italian restaurants Philadelphia\"\n- ICP: \"Emergency plumbers serving residential customers\" → Query: \"emergency plumber Philadelphia\"\n- ICP: \"High-end hair salons for women\" → Query: \"hair salon Philadelphia\"\n- ICP: \"Family law attorneys\" → Query: \"family lawyer Philadelphia\"\n\n**Important:**\n- Return ONLY the search query as plain text\n- Do NOT include quotes or extra formatting\n- Do NOT explain or add commentary\n- Do NOT include business type filters (Google Maps handles that)\n\nReturn just the query:",
+
+  "variables": ["industry", "city", "target_description"],
+
+  "examples": [
+    {
+      "input": {
+        "industry": "Italian Restaurants",
+        "city": "Philadelphia, PA",
+        "target_description": "Upscale Italian restaurants with good reviews"
+      },
+      "output": "Italian restaurants Philadelphia"
+    },
+    {
+      "input": {
+        "industry": "Plumbing",
+        "city": "Philadelphia, PA",
+        "target_description": "Emergency plumbers serving residential customers"
+      },
+      "output": "emergency plumber Philadelphia"
+    },
+    {
+      "input": {
+        "industry": "Legal Services",
+        "city": "Boston, MA",
+        "target_description": "Family law attorneys for divorce cases"
+      },
+      "output": "family lawyer Boston"
+    }
+  ],
+
+  "validation": {
+    "maxLength": 100,
+    "mustIncludeCity": true,
+    "outputFormat": "plain_text"
+  }
+}

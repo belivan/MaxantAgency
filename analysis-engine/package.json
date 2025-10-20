@@ -1,0 +1,40 @@
+{
+  "name": "analysis-engine",
+  "version": "2.0.0",
+  "description": "Web design agency focused website analysis engine",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tests/test-prompt-loader.js && node tests/test-analyzers.js && node tests/test-grading-system.js",
+    "test:prompts": "node tests/test-prompt-loader.js",
+    "test:analyzers": "node tests/test-analyzers.js",
+    "test:grading": "node tests/test-grading-system.js",
+    "test:design": "node tests/test-design-analysis.js",
+    "test:seo": "node tests/test-seo-analysis.js",
+    "test:full": "node tests/test-full-pipeline.js"
+  },
+  "keywords": [
+    "website-analysis",
+    "web-design",
+    "seo",
+    "ai-analysis"
+  ],
+  "author": "Maksant Agency",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "@supabase/supabase-js": "^2.75.1",
+    "playwright": "^1.40.0",
+    "openai": "^4.75.0",
+    "cheerio": "^1.0.0-rc.12",
+    "sharp": "^0.33.0",
+    "winston": "^3.11.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

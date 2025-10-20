@@ -1,0 +1,83 @@
+{
+  "agent": "Agent 5 - Database Setup Tool",
+  "agentDir": "database-tools",
+  "checks": [
+    {
+      "category": "File Structure",
+      "items": [
+        {
+          "name": "generators/ directory exists",
+          "path": "database-tools/generators",
+          "type": "directory"
+        },
+        {
+          "name": "runners/ directory exists",
+          "path": "database-tools/runners",
+          "type": "directory"
+        },
+        {
+          "name": "validators/ directory exists",
+          "path": "database-tools/validators",
+          "type": "directory"
+        },
+        {
+          "name": "templates/ directory exists",
+          "path": "database-tools/templates",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Core Files",
+      "items": [
+        {
+          "name": "cli.js exists",
+          "path": "database-tools/cli.js",
+          "type": "file"
+        },
+        {
+          "name": "package.json exists",
+          "path": "database-tools/package.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        }
+      ]
+    },
+    {
+      "category": "Schema Templates",
+      "items": [
+        {
+          "name": "prospects schema template exists",
+          "path": "database-tools/templates/prospects.json",
+          "type": "file",
+          "validate": "isValidJSON",
+          "required": false
+        },
+        {
+          "name": "leads schema template exists",
+          "path": "database-tools/templates/leads.json",
+          "type": "file",
+          "validate": "isValidJSON",
+          "required": false
+        },
+        {
+          "name": "composed_emails schema template exists",
+          "path": "database-tools/templates/composed_emails.json",
+          "type": "file",
+          "validate": "isValidJSON",
+          "required": false
+        }
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "items": [
+        {
+          "name": "No hardcoded database credentials",
+          "test": "checkSecurity",
+          "patterns": ["password\\s*=\\s*['\"]", "postgresql://.*:.*@"]
+        }
+      ]
+    }
+  ]
+}

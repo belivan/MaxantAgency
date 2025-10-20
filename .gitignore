@@ -48,3 +48,35 @@ email-composer/emails/sent/
 # Credentials and OAuth tokens
 .credentials.json
 **/. credentials.json
+
+# Screenshots and images
+screenshots/
+**/screenshots/
+analysis-results/
+**/analysis-results/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.bmp
+*.svg
+*.mp4
+*.avi
+*.mov
+
+# Backup and test files
+*.backup
+*.pre-refactor
+*-backup.js
+*-backup.ts
+*-test.json
+prospects-*.json
+
+# Empty/junk files
+nul
+**/nul
+
+# Process ID files
+*.pid
+**/*.pid

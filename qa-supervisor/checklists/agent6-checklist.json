@@ -1,0 +1,113 @@
+{
+  "agent": "Agent 6 - Pipeline Orchestrator",
+  "agentDir": "pipeline-orchestrator",
+  "port": 3006,
+  "checks": [
+    {
+      "category": "File Structure",
+      "items": [
+        {
+          "name": "campaigns/ directory exists",
+          "path": "pipeline-orchestrator/campaigns",
+          "type": "directory"
+        },
+        {
+          "name": "schedulers/ directory exists",
+          "path": "pipeline-orchestrator/schedulers",
+          "type": "directory"
+        },
+        {
+          "name": "executors/ directory exists",
+          "path": "pipeline-orchestrator/executors",
+          "type": "directory"
+        },
+        {
+          "name": "monitors/ directory exists",
+          "path": "pipeline-orchestrator/monitors",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Core Files",
+      "items": [
+        {
+          "name": "server.js exists",
+          "path": "pipeline-orchestrator/server.js",
+          "type": "file"
+        },
+        {
+          "name": "orchestrator.js exists",
+          "path": "pipeline-orchestrator/orchestrator.js",
+          "type": "file"
+        },
+        {
+          "name": "campaigns/campaign-manager.js exists",
+          "path": "pipeline-orchestrator/campaigns/campaign-manager.js",
+          "type": "file"
+        },
+        {
+          "name": "schedulers/cron-scheduler.js exists",
+          "path": "pipeline-orchestrator/schedulers/cron-scheduler.js",
+          "type": "file",
+          "required": false
+        }
+      ]
+    },
+    {
+      "category": "Step Executors",
+      "items": [
+        {
+          "name": "prospect-executor.js exists",
+          "path": "pipeline-orchestrator/executors/prospect-executor.js",
+          "type": "file"
+        },
+        {
+          "name": "analyze-executor.js exists",
+          "path": "pipeline-orchestrator/executors/analyze-executor.js",
+          "type": "file"
+        },
+        {
+          "name": "compose-executor.js exists",
+          "path": "pipeline-orchestrator/executors/compose-executor.js",
+          "type": "file"
+        },
+        {
+          "name": "send-executor.js exists",
+          "path": "pipeline-orchestrator/executors/send-executor.js",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "items": [
+        {
+          "name": "No hardcoded API keys",
+          "test": "checkSecurity",
+          "patterns": ["sk-", "xai-", "AKIA", "eyJhbGc"]
+        },
+        {
+          "name": "Error handling present",
+          "test": "checkErrorHandling",
+          "minCoverage": 80
+        }
+      ]
+    },
+    {
+      "category": "Budget & Monitoring",
+      "items": [
+        {
+          "name": "Budget enforcement logic exists",
+          "test": "manual",
+          "note": "Will verify in integration tests"
+        },
+        {
+          "name": "Campaign monitoring implemented",
+          "test": "manual",
+          "note": "Will verify in integration tests"
+        }
+      ]
+    }
+  ]
+}

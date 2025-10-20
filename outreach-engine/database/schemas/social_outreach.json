@@ -1,0 +1,235 @@
+{
+  "table": "social_outreach",
+  "description": "AI-generated social media DMs for Instagram, Facebook, and LinkedIn outreach",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier for the social DM"
+    },
+    {
+      "name": "lead_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Reference to the lead this DM is for"
+    },
+    {
+      "name": "url",
+      "type": "text",
+      "required": true,
+      "description": "Website URL of the prospect"
+    },
+    {
+      "name": "company_name",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Name of the company being contacted"
+    },
+    {
+      "name": "industry",
+      "type": "text",
+      "index": true,
+      "description": "Industry or business category"
+    },
+    {
+      "name": "contact_name",
+      "type": "text",
+      "description": "Name of the contact person on social media"
+    },
+    {
+      "name": "platform",
+      "type": "text",
+      "enum": ["instagram", "facebook", "linkedin", "twitter"],
+      "required": true,
+      "index": true,
+      "description": "Social media platform for outreach"
+    },
+    {
+      "name": "outreach_type",
+      "type": "text",
+      "enum": ["dm", "comment", "post_reply"],
+      "default": "dm",
+      "description": "Type of social outreach"
+    },
+    {
+      "name": "message_body",
+      "type": "text",
+      "required": true,
+      "description": "Generated DM message content"
+    },
+    {
+      "name": "character_count",
+      "type": "integer",
+      "description": "Character count of the message"
+    },
+    {
+      "name": "social_profile_url",
+      "type": "text",
+      "description": "URL to the prospect's social profile"
+    },
+    {
+      "name": "strategy",
+      "type": "text",
+      "description": "Strategy used (value-first, compliment-question, etc.)"
+    },
+    {
+      "name": "quality_score",
+      "type": "integer",
+      "description": "Validation quality score (0-100)"
+    },
+    {
+      "name": "validation_issues",
+      "type": "jsonb",
+      "description": "Array of platform-specific validation warnings"
+    },
+    {
+      "name": "platform_validation",
+      "type": "jsonb",
+      "description": "Platform-specific validation results (char limits, banned words, etc.)"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["pending", "ready", "sent", "responded", "failed"],
+      "default": "ready",
+      "index": true,
+      "description": "Current status in the sending pipeline"
+    },
+    {
+      "name": "sent_at",
+      "type": "timestamptz",
+      "description": "When the DM was sent"
+    },
+    {
+      "name": "responded_at",
+      "type": "timestamptz",
+      "description": "When the prospect responded"
+    },
+    {
+      "name": "response_text",
+      "type": "text",
+      "description": "Prospect's response message"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Reference to parent project"
+    },
+    {
+      "name": "campaign_id",
+      "type": "text",
+      "description": "Campaign identifier for tracking"
+    },
+    {
+      "name": "ai_model",
+      "type": "text",
+      "description": "AI model used (claude-haiku-3-5, etc.)"
+    },
+    {
+      "name": "generation_cost",
+      "type": "decimal",
+      "description": "Total API cost for generation (USD)"
+    },
+    {
+      "name": "generation_time_ms",
+      "type": "integer",
+      "description": "Time taken to generate (milliseconds)"
+    },
+    {
+      "name": "usage_input_tokens",
+      "type": "integer",
+      "description": "Input tokens used"
+    },
+    {
+      "name": "usage_output_tokens",
+      "type": "integer",
+      "description": "Output tokens used"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Timestamp when record was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Timestamp when record was last updated"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_social_outreach_platform_status",
+      "columns": ["platform", "status"]
+    },
+    {
+      "name": "idx_social_outreach_project_platform",
+      "columns": ["project_id", "platform"]
+    },
+    {
+      "name": "idx_social_outreach_company",
+      "columns": ["company_name"]
+    },
+    {
+      "name": "idx_social_outreach_sent_at",
+      "columns": ["sent_at"]
+    },
+    {
+      "name": "idx_social_outreach_responded",
+      "columns": ["responded_at"]
+    }
+  ],
+
+  "constraints": [
+    {
+      "type": "check",
+      "name": "chk_quality_score_range",
+      "expression": "quality_score >= 0 AND quality_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_character_count_positive",
+      "expression": "character_count > 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_generation_cost_positive",
+      "expression": "generation_cost >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_instagram_char_limit",
+      "expression": "platform != 'instagram' OR character_count <= 1000"
+    },
+    {
+      "type": "check",
+      "name": "chk_facebook_char_limit",
+      "expression": "platform != 'facebook' OR character_count <= 20000"
+    },
+    {
+      "type": "check",
+      "name": "chk_linkedin_char_limit",
+      "expression": "platform != 'linkedin' OR character_count <= 8000"
+    }
+  ],
+
+  "foreignKeys": [
+    {
+      "column": "lead_id",
+      "references": "leads.id",
+      "onDelete": "SET NULL"
+    },
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "CASCADE"
+    }
+  ]
+}

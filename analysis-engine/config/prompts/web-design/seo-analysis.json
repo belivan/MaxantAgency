@@ -1,0 +1,137 @@
+{
+  "version": "1.0",
+  "name": "seo-analysis",
+  "description": "Technical SEO audit analyzing HTML for on-page optimization opportunities",
+  "model": "grok-4-fast",
+  "temperature": 0.2,
+
+  "systemPrompt": "You are an SEO expert analyzing websites for technical on-page SEO improvements. Focus on verifiable, fixable issues in the HTML that a web design agency can address.\n\nAnalyze these elements:\n- Title tag (exists, length 50-60 chars, includes keywords)\n- Meta description (exists, length 150-160 chars, compelling)\n- Heading structure (H1 exists and is unique, H2/H3 hierarchy)\n- Image optimization (alt text, file sizes, formats)\n- URL structure (readable, descriptive, not too long)\n- Page speed indicators (large images, render-blocking scripts)\n- Mobile optimization signals in HTML\n- Internal linking structure\n- Schema markup presence\n- Open Graph tags for social sharing\n\nBe SPECIFIC and ACTIONABLE:\n❌ Bad: 'Improve SEO'\n✅ Good: 'Missing meta description entirely - search engines will use random text from page. Add compelling 155-character description with target keyword.'\n\n❌ Bad: 'Images need work'\n✅ Good: '7 out of 12 images missing alt text. Search engines can\\'t index image content and accessibility is poor. Add descriptive alt text to all images.'\n\nFor each issue:\n1. What's missing or wrong (specific HTML element)\n2. SEO impact (how this affects rankings/traffic)\n3. How to fix (specific technical change)\n4. Priority (high/medium/low based on impact)",
+
+  "userPromptTemplate": "Analyze this HTML for SEO issues:\n\nURL: {{url}}\nIndustry: {{industry}}\nPage Load Time: {{load_time}}ms\nTech Stack: {{tech_stack}}\n\nHTML Content:\n{{html}}\n\nIdentify specific technical SEO issues and opportunities. Focus on:\n1. On-page elements (title, meta, headings)\n2. Image optimization\n3. Page speed issues visible in HTML\n4. Mobile optimization\n5. Structured data opportunities\n\nFor each issue provide:\n- Category (meta|headings|images|speed|mobile|linking|schema)\n- Title (specific issue)\n- Description (what's wrong)\n- Fix (exact technical change needed)\n- Priority (high|medium|low)\n\nAlso identify quick SEO wins - easy fixes with good impact.\n\nIMPORTANT: You MUST return valid JSON in this EXACT format:\n{\n  \"seoScore\": 65,\n  \"issues\": [\n    {\n      \"category\": \"meta|headings|images|speed|mobile|linking|schema\",\n      \"title\": \"string\",\n      \"description\": \"string\",\n      \"fix\": \"string\",\n      \"priority\": \"high|medium|low\",\n      \"impact\": \"string\"\n    }\n  ],\n  \"opportunities\": [\"string\", \"string\"],\n  \"strengths\": [\"string\"]\n}\n\nDo NOT change the field names. All root-level fields are required.",
+
+  "variables": [
+    "url",
+    "industry",
+    "load_time",
+    "tech_stack",
+    "html"
+  ],
+
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "seoScore": "number (0-100)",
+      "issues": [
+        {
+          "category": "meta|headings|images|speed|mobile|linking|schema",
+          "title": "string",
+          "description": "string (specific problem)",
+          "fix": "string (how to fix)",
+          "priority": "high|medium|low",
+          "impact": "string (SEO consequence)"
+        }
+      ],
+      "opportunities": ["array of strings (quick wins)"],
+      "strengths": ["array of strings (what's done well)"]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "url": "restaurant.com",
+        "industry": "Restaurant",
+        "load_time": 3200,
+        "tech_stack": "WordPress",
+        "html": "<!DOCTYPE html><html><head><title>Home</title>...</head>..."
+      },
+      "output": {
+        "seoScore": 45,
+        "issues": [
+          {
+            "category": "meta",
+            "title": "Generic title tag \"Home\" with no keywords",
+            "description": "Title tag is simply \"Home\" with no mention of business name, location, or services. Title is the most important on-page SEO element and this tells search engines nothing about the page.",
+            "fix": "Change to: \"Best Italian Restaurant in Philadelphia | Joe's Pizza\" (under 60 characters, includes keywords and location)",
+            "priority": "high",
+            "impact": "Missing primary ranking signal. Not appearing in search for \"italian restaurant philadelphia\" despite quality food."
+          },
+          {
+            "category": "meta",
+            "title": "Meta description completely missing",
+            "description": "No meta description tag exists. Search engines will pull random text from the page for search results, often incoherent snippets that don't encourage clicks.",
+            "fix": "Add: <meta name=\"description\" content=\"Award-winning Italian restaurant in Center City Philadelphia. Authentic wood-fired pizza, fresh pasta. Dine-in & takeout.\"> (155 characters)",
+            "priority": "high",
+            "impact": "Low click-through rate from search results. Competitors with descriptions get more clicks even at same ranking."
+          },
+          {
+            "category": "headings",
+            "title": "Multiple H1 tags (4 found, should be 1)",
+            "description": "Page has 4 different H1 tags: logo text, \"Welcome\", \"Menu\", \"About\". Search engines are confused about page topic. H1 should be unique and describe main content.",
+            "fix": "Use single H1 for main headline: \"Authentic Italian Cuisine in Philadelphia\". Convert others to H2 or H3.",
+            "priority": "medium",
+            "impact": "Diluted topical relevance. Search engines unsure what page is about, reducing ranking for target keywords."
+          },
+          {
+            "category": "images",
+            "title": "7 images missing alt text",
+            "description": "7 out of 12 images have empty or missing alt attributes. Alt text is required for accessibility and helps search engines understand image content. Food photos with no alt text lose image search traffic.",
+            "fix": "Add descriptive alt text to each image: alt=\"Margherita pizza fresh from wood-fired oven\" (be specific and descriptive)",
+            "priority": "medium",
+            "impact": "Missing Google Images traffic. Failing accessibility standards (WCAG). Food images could drive discovery but aren't indexed."
+          },
+          {
+            "category": "speed",
+            "title": "Unoptimized images causing slow load",
+            "description": "Hero image is 3.2MB uncompressed JPG (2400x1600px) but displays at 800x533px. 5 other images also uncompimized, total 8.1MB of images. Page load time 3.2 seconds.",
+            "fix": "Compress and resize images: hero to <200KB WebP at 1600x1067px. Use responsive images with srcset. Enable lazy loading for below-fold images.",
+            "priority": "high",
+            "impact": "Page speed is Google ranking factor. Mobile visitors abandon slow sites. Losing rankings and traffic due to performance."
+          },
+          {
+            "category": "mobile",
+            "title": "No viewport meta tag for mobile",
+            "description": "Missing <meta name=\"viewport\"> tag means page doesn't adapt to mobile screen sizes properly. Text is tiny and requires zooming on phones.",
+            "fix": "Add: <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> in <head>",
+            "priority": "high",
+            "impact": "Failing Google's mobile-friendly test. Not eligible for mobile search rankings. 60%+ of restaurant searches are mobile."
+          },
+          {
+            "category": "schema",
+            "title": "No structured data markup",
+            "description": "Missing Schema.org markup for LocalBusiness and Restaurant. Not appearing in Google's local pack with hours, ratings, and rich results.",
+            "fix": "Add JSON-LD structured data with business name, address, hours, phone, price range, cuisineType. Use schema.org/Restaurant.",
+            "priority": "medium",
+            "impact": "Not showing in enhanced search results with hours, ratings, and quick info. Competitors with schema get more visibility."
+          }
+        ],
+        "opportunities": [
+          "Add viewport meta tag (5 minutes)",
+          "Write compelling meta description with keywords (10 minutes)",
+          "Fix title tag to include business name and location (5 minutes)",
+          "Add alt text to all images (20 minutes)",
+          "Add LocalBusiness schema markup (30 minutes)"
+        ],
+        "strengths": [
+          "Clean HTML structure with semantic elements",
+          "HTTPS enabled with valid SSL certificate"
+        ]
+      }
+    }
+  ],
+
+  "costEstimate": {
+    "model": "grok-4-fast",
+    "inputTokens": "~3000 (HTML content + context)",
+    "outputTokens": "~600 (issue list)",
+    "estimatedCost": "$0.018 per analysis (much cheaper than GPT-4)"
+  },
+
+  "notes": [
+    "SEO analysis is cheaper than design analysis (uses Grok not GPT-4o Vision)",
+    "Focus on technical fixes that agency can implement",
+    "Many SEO issues are quick wins (meta tags, alt text)",
+    "Combine multiple small issues into compelling package for outreach",
+    "Local SEO especially important for restaurants, services, retail"
+  ]
+}

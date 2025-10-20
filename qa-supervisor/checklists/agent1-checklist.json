@@ -1,0 +1,137 @@
+{
+  "agent": "Agent 1 - Prospecting Engine",
+  "agentDir": "prospecting-engine",
+  "port": 3010,
+  "checks": [
+    {
+      "category": "File Structure",
+      "items": [
+        {
+          "name": "config/prompts/ directory exists",
+          "path": "prospecting-engine/config/prompts",
+          "type": "directory"
+        },
+        {
+          "name": "discoverers/ directory exists",
+          "path": "prospecting-engine/discoverers",
+          "type": "directory"
+        },
+        {
+          "name": "enrichers/ directory exists",
+          "path": "prospecting-engine/enrichers",
+          "type": "directory"
+        },
+        {
+          "name": "validators/ directory exists",
+          "path": "prospecting-engine/validators",
+          "type": "directory"
+        },
+        {
+          "name": "extractors/ directory exists",
+          "path": "prospecting-engine/extractors",
+          "type": "directory"
+        },
+        {
+          "name": "database/schemas/ directory exists",
+          "path": "prospecting-engine/database/schemas",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Core Files",
+      "items": [
+        {
+          "name": "orchestrator.js exists",
+          "path": "prospecting-engine/orchestrator.js",
+          "type": "file"
+        },
+        {
+          "name": "server.js exists",
+          "path": "prospecting-engine/server.js",
+          "type": "file"
+        },
+        {
+          "name": "discoverers/google-maps.js exists",
+          "path": "prospecting-engine/discoverers/google-maps.js",
+          "type": "file"
+        },
+        {
+          "name": "extractors/website-scraper.js exists",
+          "path": "prospecting-engine/extractors/website-scraper.js",
+          "type": "file"
+        },
+        {
+          "name": "validators/relevance-checker.js exists",
+          "path": "prospecting-engine/validators/relevance-checker.js",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "category": "Prompts Externalized",
+      "items": [
+        {
+          "name": "query-understanding.json exists",
+          "path": "prospecting-engine/config/prompts/01-query-understanding.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "website-extraction.json exists",
+          "path": "prospecting-engine/config/prompts/04-website-extraction.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "relevance-check.json exists",
+          "path": "prospecting-engine/config/prompts/07-relevance-check.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        }
+      ]
+    },
+    {
+      "category": "Database Schema",
+      "items": [
+        {
+          "name": "prospects.json schema exists",
+          "path": "prospecting-engine/database/schemas/prospects.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        }
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "items": [
+        {
+          "name": "No hardcoded API keys",
+          "test": "checkSecurity",
+          "patterns": ["sk-", "xai-", "AKIA", "eyJhbGc"]
+        },
+        {
+          "name": "Error handling present",
+          "test": "checkErrorHandling",
+          "minCoverage": 80
+        }
+      ]
+    },
+    {
+      "category": "Performance",
+      "items": [
+        {
+          "name": "Target: 20 prospects in <3 min",
+          "test": "manual",
+          "note": "Performance test in Phase 4"
+        },
+        {
+          "name": "Cost per prospect <$0.15",
+          "test": "checkCost",
+          "target": 0.15,
+          "estimate": 0.09
+        }
+      ]
+    }
+  ]
+}

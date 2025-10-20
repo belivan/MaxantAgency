@@ -1,0 +1,146 @@
+{
+  "version": "1.0",
+  "name": "social-media-quality-validation",
+  "description": "Platform-specific validation rules for social media DMs",
+
+  "platforms": {
+    "instagram": {
+      "maxChars": 1000,
+      "optimalLength": [50, 150],
+      "maxSentences": 3,
+      "requiredTone": "super-casual",
+      "emojiUsage": "moderate",
+      "bannedWords": [
+        "website",
+        "click here",
+        "link",
+        "dm me",
+        "check out",
+        "visit",
+        "swipe up",
+        "link in bio"
+      ],
+      "bannedPatterns": [
+        "http://",
+        "https://",
+        "www.",
+        ".com",
+        ".net",
+        ".org"
+      ],
+      "bestPractices": [
+        "Comment on their recent post/story",
+        "Be genuine and specific",
+        "Keep it super brief",
+        "Low-pressure approach",
+        "Use casual language ('Hey' not 'Hello')",
+        "Moderate emoji usage",
+        "No hard pitch"
+      ],
+      "penalties": {
+        "contains_url": -50,
+        "contains_website_word": -30,
+        "too_formal": -20,
+        "too_long": -25,
+        "hard_pitch": -30
+      }
+    },
+
+    "facebook": {
+      "maxChars": 5000,
+      "optimalLength": [100, 200],
+      "maxSentences": 5,
+      "requiredTone": "friendly-conversational",
+      "emojiUsage": "light",
+      "bannedWords": [
+        "click here",
+        "buy now",
+        "limited time offer"
+      ],
+      "bannedPatterns": [],
+      "bestPractices": [
+        "Comment on recent business update",
+        "Friendly, community-focused",
+        "Slightly longer OK",
+        "Can mention business value",
+        "Conversational tone"
+      ],
+      "penalties": {
+        "too_salesy": -20,
+        "spam_words": -25,
+        "too_long": -15
+      }
+    },
+
+    "linkedin": {
+      "maxChars": 1900,
+      "optimalLength": [150, 300],
+      "maxSentences": 5,
+      "requiredTone": "professional-casual",
+      "emojiUsage": "minimal",
+      "bannedWords": [
+        "synergy",
+        "leverage",
+        "paradigm shift",
+        "thought leader",
+        "guru",
+        "ninja"
+      ],
+      "bannedPatterns": [],
+      "bestPractices": [
+        "Connect with value proposition",
+        "Professional tone",
+        "Business outcome focused",
+        "Can be more detailed",
+        "Lead with expertise"
+      ],
+      "penalties": {
+        "buzzwords": -15,
+        "too_casual": -20,
+        "too_long": -20,
+        "no_value": -25
+      }
+    }
+  },
+
+  "universal_rules": {
+    "maxExclamations": 2,
+    "noPlaceholders": true,
+    "mustBePersonalized": true,
+    "noSpamPatterns": true,
+    "appropriateToneForPlatform": true
+  },
+
+  "scoring": {
+    "withinCharLimit": 25,
+    "optimalLength": 20,
+    "appropriateTone": 20,
+    "noBannedWords": 20,
+    "personalized": 15,
+    "followsBestPractices": 10,
+    "noUrls": 10
+  },
+
+  "tone_detection": {
+    "super-casual": {
+      "indicators": ["hey", "cool", "awesome", "nice", "love", "btw"],
+      "avoid": ["hello", "dear", "regards", "sincerely", "pursuant"]
+    },
+    "friendly-conversational": {
+      "indicators": ["hi", "great", "noticed", "saw", "interested"],
+      "avoid": ["dear sir", "to whom", "regards"]
+    },
+    "professional-casual": {
+      "indicators": ["noticed", "interested", "value", "opportunity", "happy to"],
+      "avoid": ["lol", "omg", "btw", "hey there"]
+    }
+  },
+
+  "thresholds": {
+    "excellent": 85,
+    "good": 75,
+    "acceptable": 65,
+    "needsReview": 55,
+    "poor": 45
+  }
+}

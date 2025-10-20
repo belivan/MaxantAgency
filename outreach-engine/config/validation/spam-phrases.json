@@ -1,0 +1,217 @@
+{
+  "version": "1.0",
+  "name": "spam-phrase-detector",
+  "description": "Comprehensive list of spam trigger words and phrases to avoid in cold outreach",
+
+  "categories": {
+    "financial_spam": {
+      "severity": "critical",
+      "phrases": [
+        "make money fast",
+        "get rich quick",
+        "financial freedom",
+        "passive income",
+        "double your income",
+        "triple your revenue",
+        "10x your business",
+        "guaranteed profit",
+        "risk-free investment",
+        "once in a lifetime opportunity",
+        "limited time offer",
+        "act now",
+        "don't miss out",
+        "this won't last"
+      ]
+    },
+
+    "urgency_manipulation": {
+      "severity": "high",
+      "phrases": [
+        "urgent",
+        "act fast",
+        "hurry",
+        "limited time",
+        "expires soon",
+        "today only",
+        "don't wait",
+        "running out",
+        "last chance",
+        "final warning",
+        "time is running out",
+        "offer expires"
+      ]
+    },
+
+    "clickbait": {
+      "severity": "high",
+      "phrases": [
+        "you won't believe",
+        "shocking",
+        "secret",
+        "amazing",
+        "incredible",
+        "mind-blowing",
+        "life-changing",
+        "game-changing",
+        "revolutionary",
+        "breakthrough",
+        "miracle",
+        "the truth about"
+      ]
+    },
+
+    "sales_pressure": {
+      "severity": "medium",
+      "phrases": [
+        "buy now",
+        "order now",
+        "call now",
+        "click here now",
+        "sign up today",
+        "subscribe now",
+        "join today",
+        "start now",
+        "get started today",
+        "don't delay"
+      ]
+    },
+
+    "buzzwords": {
+      "severity": "medium",
+      "phrases": [
+        "leverage",
+        "synergy",
+        "paradigm shift",
+        "game changer",
+        "disruptive",
+        "best-in-class",
+        "world-class",
+        "cutting-edge",
+        "state-of-the-art",
+        "next-generation",
+        "innovative solution",
+        "thought leader",
+        "guru",
+        "ninja",
+        "rockstar"
+      ]
+    },
+
+    "false_promises": {
+      "severity": "critical",
+      "phrases": [
+        "guaranteed",
+        "proven results",
+        "100% success rate",
+        "no risk",
+        "risk-free",
+        "can't fail",
+        "foolproof",
+        "surefire",
+        "never fails",
+        "works every time"
+      ]
+    },
+
+    "generic_salesy": {
+      "severity": "low",
+      "phrases": [
+        "we offer",
+        "we provide",
+        "we specialize in",
+        "our services include",
+        "let me tell you about",
+        "I'd like to introduce",
+        "we're the leader",
+        "we're the best",
+        "industry-leading",
+        "award-winning solution"
+      ]
+    },
+
+    "superlatives": {
+      "severity": "low",
+      "phrases": [
+        "best ever",
+        "most amazing",
+        "greatest",
+        "perfect",
+        "ultimate",
+        "supreme",
+        "unbeatable",
+        "unmatched",
+        "unparalleled",
+        "incomparable"
+      ]
+    },
+
+    "free_stuff": {
+      "severity": "high",
+      "phrases": [
+        "free money",
+        "free cash",
+        "free gift",
+        "absolutely free",
+        "completely free",
+        "no cost",
+        "no charge",
+        "no obligation",
+        "free trial",
+        "free consultation"
+      ]
+    },
+
+    "caps_and_symbols": {
+      "severity": "high",
+      "patterns": [
+        "!!!",
+        "$$$",
+        "FREE!!!",
+        "URGENT!!!",
+        "LIMITED TIME!!!",
+        "ACT NOW!!!",
+        "GUARANTEED!!!",
+        "100%!!!"
+      ]
+    }
+  },
+
+  "spam_indicators": {
+    "excessive_punctuation": {
+      "max_exclamations": 1,
+      "max_question_marks": 2,
+      "max_consecutive_caps": 3
+    },
+    "suspicious_patterns": {
+      "multiple_dollar_signs": true,
+      "all_caps_words": 2,
+      "emoji_spam": 5
+    },
+    "url_spam": {
+      "max_urls": 2,
+      "suspicious_domains": [
+        "bit.ly",
+        "tinyurl.com",
+        "goo.gl"
+      ]
+    }
+  },
+
+  "exceptions": {
+    "allowed_in_context": [
+      "free"
+    ],
+    "notes": "Some words like 'free' are OK in specific contexts (e.g., 'feel free to reach out') but not in phrases like 'free money'"
+  },
+
+  "replacement_suggestions": {
+    "guaranteed": ["confident", "proven approach", "track record shows"],
+    "revolutionary": ["improved", "updated", "refined"],
+    "synergy": ["collaboration", "working together"],
+    "leverage": ["use", "apply", "take advantage of"],
+    "cutting-edge": ["modern", "current", "up-to-date"],
+    "game-changer": ["improvement", "significant update", "valuable change"],
+    "thought leader": ["expert", "specialist", "experienced in"],
+    "10x your business": ["grow your business", "increase revenue", "expand reach"]
+  }
+}

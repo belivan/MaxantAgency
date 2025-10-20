@@ -1,0 +1,37 @@
+{
+  "name": "pipeline-orchestrator",
+  "version": "1.0.0",
+  "description": "Agent 6 - Automated campaign orchestrator for lead generation pipeline",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tests/test-all-components.js",
+    "test:campaign": "node tests/test-campaign.js",
+    "test:scheduler": "node tests/test-scheduler.js",
+    "test:all": "node tests/test-all-components.js"
+  },
+  "keywords": [
+    "orchestrator",
+    "scheduler",
+    "automation",
+    "pipeline",
+    "campaigns"
+  ],
+  "author": "Maksant Agency",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.75.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.9",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0"
+  }
+}

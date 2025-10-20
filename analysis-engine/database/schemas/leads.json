@@ -1,0 +1,290 @@
+{
+  "table": "leads",
+  "description": "Analyzed leads ready for outreach - output from analysis engine",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique lead ID"
+    },
+    {
+      "name": "prospect_id",
+      "type": "uuid",
+      "foreignKey": "prospects.id",
+      "index": true,
+      "description": "Foreign key to prospects table"
+    },
+
+    {
+      "name": "company_name",
+      "type": "text",
+      "required": true,
+      "description": "Company/business name"
+    },
+    {
+      "name": "industry",
+      "type": "text",
+      "description": "Industry type (restaurant, dentist, law-firm, etc.)"
+    },
+    {
+      "name": "url",
+      "type": "text",
+      "required": true,
+      "unique": true,
+      "description": "Website URL"
+    },
+    {
+      "name": "city",
+      "type": "text",
+      "description": "Business city/location"
+    },
+
+    {
+      "name": "contact_email",
+      "type": "text",
+      "description": "Contact email (extracted from website or enriched)"
+    },
+    {
+      "name": "contact_phone",
+      "type": "text",
+      "description": "Contact phone (extracted from website)"
+    },
+    {
+      "name": "contact_name",
+      "type": "text",
+      "description": "Contact person name (if available)"
+    },
+
+    {
+      "name": "website_grade",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Letter grade A-F"
+    },
+    {
+      "name": "overall_score",
+      "type": "decimal",
+      "required": true,
+      "index": true,
+      "description": "Overall score 0-100"
+    },
+
+    {
+      "name": "design_score",
+      "type": "decimal",
+      "required": true,
+      "description": "Design analysis score 0-100"
+    },
+    {
+      "name": "seo_score",
+      "type": "decimal",
+      "required": true,
+      "description": "SEO analysis score 0-100"
+    },
+    {
+      "name": "content_score",
+      "type": "decimal",
+      "required": true,
+      "description": "Content analysis score 0-100"
+    },
+    {
+      "name": "social_score",
+      "type": "decimal",
+      "required": true,
+      "description": "Social media analysis score 0-100"
+    },
+
+    {
+      "name": "design_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of design issues found"
+    },
+    {
+      "name": "seo_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of SEO issues found"
+    },
+    {
+      "name": "content_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of content issues found"
+    },
+    {
+      "name": "social_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of social media issues found"
+    },
+
+    {
+      "name": "quick_wins",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of quick-win opportunities"
+    },
+
+    {
+      "name": "analysis_summary",
+      "type": "text",
+      "description": "Human-readable analysis summary (for email)"
+    },
+    {
+      "name": "top_issue",
+      "type": "jsonb",
+      "description": "Most critical issue (for outreach hook)"
+    },
+    {
+      "name": "one_liner",
+      "type": "text",
+      "description": "One-line critique for email subject/preview"
+    },
+    {
+      "name": "call_to_action",
+      "type": "text",
+      "description": "Suggested CTA for outreach email"
+    },
+
+    {
+      "name": "tech_stack",
+      "type": "text",
+      "description": "Detected technology stack (WordPress, Shopify, etc.)"
+    },
+    {
+      "name": "page_load_time",
+      "type": "integer",
+      "description": "Page load time in milliseconds"
+    },
+    {
+      "name": "is_mobile_friendly",
+      "type": "boolean",
+      "default": false,
+      "description": "Is the site mobile-friendly?"
+    },
+    {
+      "name": "has_https",
+      "type": "boolean",
+      "default": false,
+      "description": "Does the site use HTTPS?"
+    },
+
+    {
+      "name": "screenshot_url",
+      "type": "text",
+      "description": "URL to stored screenshot (S3 or similar)"
+    },
+
+    {
+      "name": "social_profiles",
+      "type": "jsonb",
+      "description": "Social media profile URLs"
+    },
+    {
+      "name": "social_platforms_present",
+      "type": "jsonb",
+      "description": "Array of social platforms found"
+    },
+    {
+      "name": "social_metadata",
+      "type": "jsonb",
+      "description": "Social media metadata and engagement data"
+    },
+
+    {
+      "name": "has_blog",
+      "type": "boolean",
+      "default": false,
+      "description": "Does the site have a blog?"
+    },
+    {
+      "name": "content_insights",
+      "type": "jsonb",
+      "description": "Content analysis insights and recommendations"
+    },
+
+    {
+      "name": "page_title",
+      "type": "text",
+      "description": "Page title tag"
+    },
+    {
+      "name": "meta_description",
+      "type": "text",
+      "description": "Meta description tag"
+    },
+
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["ready_for_outreach", "email_composed", "contacted", "replied", "not_interested"],
+      "default": "ready_for_outreach",
+      "index": true,
+      "description": "Lead status in outreach pipeline"
+    },
+
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "description": "Associated project ID (if lead converts) - FK constraint pending projects table creation"
+    },
+
+    {
+      "name": "analyzed_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When the analysis was performed"
+    },
+    {
+      "name": "analysis_cost",
+      "type": "decimal",
+      "description": "Cost of analysis in USD"
+    },
+    {
+      "name": "analysis_time",
+      "type": "integer",
+      "description": "Analysis time in milliseconds"
+    },
+
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Record creation timestamp"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Record last update timestamp"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_leads_status_grade",
+      "columns": ["status", "website_grade"]
+    },
+    {
+      "name": "idx_leads_industry_score",
+      "columns": ["industry", "overall_score"]
+    },
+    {
+      "name": "idx_leads_analyzed_at",
+      "columns": ["analyzed_at"]
+    }
+  ],
+
+  "foreignKeys": [
+    {
+      "column": "prospect_id",
+      "references": "prospects.id",
+      "onDelete": "SET NULL"
+    }
+  ]
+}

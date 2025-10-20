@@ -1,0 +1,96 @@
+{
+  "table": "campaigns",
+  "description": "Automated pipeline campaigns with scheduling and budget controls",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "name",
+      "type": "text",
+      "required": true,
+      "description": "Human-readable campaign name"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "description": "Optional campaign description"
+    },
+    {
+      "name": "config",
+      "type": "jsonb",
+      "required": true,
+      "description": "Full campaign configuration (steps, budget, notifications, metadata)"
+    },
+    {
+      "name": "schedule_cron",
+      "type": "text",
+      "description": "Cron expression for scheduling (e.g., '0 9 * * MON')"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["active", "paused", "completed", "error"],
+      "default": "active",
+      "description": "Current campaign status"
+    },
+    {
+      "name": "last_run_at",
+      "type": "timestamptz",
+      "description": "Timestamp of last execution"
+    },
+    {
+      "name": "next_run_at",
+      "type": "timestamptz",
+      "description": "Calculated next run time based on cron schedule"
+    },
+    {
+      "name": "total_runs",
+      "type": "integer",
+      "default": 0,
+      "description": "Total number of times campaign has been executed"
+    },
+    {
+      "name": "total_cost",
+      "type": "decimal(10,2)",
+      "default": 0,
+      "description": "Cumulative cost across all runs"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "description": "Optional project/client association"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_campaigns_status",
+      "columns": ["status"]
+    },
+    {
+      "name": "idx_campaigns_next_run",
+      "columns": ["next_run_at"]
+    },
+    {
+      "name": "idx_campaigns_project_id",
+      "columns": ["project_id"]
+    }
+  ],
+
+  "sql": "CREATE TABLE IF NOT EXISTS campaigns (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  name TEXT NOT NULL,\n  description TEXT,\n  config JSONB NOT NULL,\n  schedule_cron TEXT,\n  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'paused', 'completed', 'error')),\n  last_run_at TIMESTAMPTZ,\n  next_run_at TIMESTAMPTZ,\n  total_runs INTEGER DEFAULT 0,\n  total_cost DECIMAL(10,2) DEFAULT 0,\n  project_id UUID,\n  created_at TIMESTAMPTZ DEFAULT NOW(),\n  updated_at TIMESTAMPTZ DEFAULT NOW()\n);\n\nCREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);\nCREATE INDEX IF NOT EXISTS idx_campaigns_next_run ON campaigns(next_run_at);\nCREATE INDEX IF NOT EXISTS idx_campaigns_project_id ON campaigns(project_id);"
+}

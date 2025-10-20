@@ -1,0 +1,46 @@
+{
+  "name": "prospecting-engine",
+  "version": "2.0.0",
+  "description": "Universal company discovery and enrichment system",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "db:setup": "node database/setup.js",
+    "db:setup:dry": "node database/setup.js --dry-run",
+    "test": "node --test tests/**/*.js",
+    "test:discovery": "node tests/test-google-maps.js",
+    "test:extraction": "node tests/test-extraction.js",
+    "test:pipeline": "node tests/test-full-pipeline.js",
+    "test:phase-4": "node tests/test-phase-4-intelligence.js",
+    "test:e2e": "node tests/test-end-to-end.js"
+  },
+  "keywords": [
+    "prospecting",
+    "lead-generation",
+    "business-discovery",
+    "google-maps",
+    "web-scraping"
+  ],
+  "author": "Maxant Agency",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "@googlemaps/google-maps-services-js": "^3.3.0",
+    "@supabase/supabase-js": "^2.75.1",
+    "playwright": "^1.40.0",
+    "openai": "^4.75.0",
+    "winston": "^3.11.0",
+    "uuid": "^9.0.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

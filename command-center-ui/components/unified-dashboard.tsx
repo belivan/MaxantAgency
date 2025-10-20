@@ -244,7 +244,7 @@ export default function UnifiedDashboard() {
 
           if (leadsData.success && leadsData.leads) {
             const eligibleLeads = leadsData.leads.filter((lead: Lead) =>
-              (lead.grade === 'A' || lead.grade === 'B') &&
+              (lead.lead_grade === 'A' || lead.lead_grade === 'B') &&
               lead.contact_email &&
               lead.contact_email.trim() !== ''
             );

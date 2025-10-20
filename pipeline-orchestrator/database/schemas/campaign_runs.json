@@ -1,0 +1,94 @@
+{
+  "table": "campaign_runs",
+  "description": "Execution history and audit log for campaign runs",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "campaign_id",
+      "type": "uuid",
+      "required": true,
+      "foreignKey": {
+        "table": "campaigns",
+        "column": "id",
+        "onDelete": "CASCADE"
+      },
+      "description": "Reference to parent campaign"
+    },
+    {
+      "name": "started_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When the run started"
+    },
+    {
+      "name": "completed_at",
+      "type": "timestamptz",
+      "description": "When the run finished (success or failure)"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["running", "completed", "failed", "aborted"],
+      "default": "running",
+      "description": "Current run status"
+    },
+    {
+      "name": "steps_completed",
+      "type": "integer",
+      "default": 0,
+      "description": "Number of steps successfully completed"
+    },
+    {
+      "name": "steps_failed",
+      "type": "integer",
+      "default": 0,
+      "description": "Number of steps that failed"
+    },
+    {
+      "name": "results",
+      "type": "jsonb",
+      "description": "Detailed results from each step execution"
+    },
+    {
+      "name": "total_cost",
+      "type": "decimal(10,2)",
+      "default": 0,
+      "description": "Total cost for this run"
+    },
+    {
+      "name": "errors",
+      "type": "jsonb",
+      "description": "Array of error objects from failed steps"
+    },
+    {
+      "name": "trigger_type",
+      "type": "text",
+      "enum": ["scheduled", "manual"],
+      "default": "scheduled",
+      "description": "How the run was triggered"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_campaign_runs_campaign_id",
+      "columns": ["campaign_id"]
+    },
+    {
+      "name": "idx_campaign_runs_status",
+      "columns": ["status"]
+    },
+    {
+      "name": "idx_campaign_runs_started_at",
+      "columns": ["started_at"]
+    }
+  ],
+
+  "sql": "CREATE TABLE IF NOT EXISTS campaign_runs (\n  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n  campaign_id UUID NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,\n  started_at TIMESTAMPTZ DEFAULT NOW(),\n  completed_at TIMESTAMPTZ,\n  status TEXT DEFAULT 'running' CHECK (status IN ('running', 'completed', 'failed', 'aborted')),\n  steps_completed INTEGER DEFAULT 0,\n  steps_failed INTEGER DEFAULT 0,\n  results JSONB,\n  total_cost DECIMAL(10,2) DEFAULT 0,\n  errors JSONB,\n  trigger_type TEXT DEFAULT 'scheduled' CHECK (trigger_type IN ('scheduled', 'manual'))\n);\n\nCREATE INDEX IF NOT EXISTS idx_campaign_runs_campaign_id ON campaign_runs(campaign_id);\nCREATE INDEX IF NOT EXISTS idx_campaign_runs_status ON campaign_runs(status);\nCREATE INDEX IF NOT EXISTS idx_campaign_runs_started_at ON campaign_runs(started_at DESC);"
+}

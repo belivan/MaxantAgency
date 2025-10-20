@@ -1,0 +1,96 @@
+/**
+ * Prospects Data Hook
+ * Manages prospect data fetching and state
+ */
+
+import { useState, useEffect, useCallback } from 'react';
+import { getProspects, getProspect } from '@/lib/api';
+import type { Prospect, ProspectFilters } from '@/lib/types';
+
+export interface UseProspectsReturn {
+  prospects: Prospect[];
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  total: number;
+}
+
+export function useProspects(filters?: ProspectFilters): UseProspectsReturn {
+  const [prospects, setProspects] = useState<Prospect[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+
+  const fetchProspects = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await getProspects(filters);
+      setProspects(data);
+      setTotal(data.length);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch prospects');
+      setProspects([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    fetchProspects();
+  }, [fetchProspects]);
+
+  return {
+    prospects,
+    loading,
+    error,
+    refresh: fetchProspects,
+    total
+  };
+}
+
+export interface UseSingleProspectReturn {
+  prospect: Prospect | null;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+}
+
+export function useSingleProspect(id: string | null): UseSingleProspectReturn {
+  const [prospect, setProspect] = useState<Prospect | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchProspect = useCallback(async () => {
+    if (!id) {
+      setProspect(null);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = await getProspect(id);
+      setProspect(data);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch prospect');
+      setProspect(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchProspect();
+  }, [fetchProspect]);
+
+  return {
+    prospect,
+    loading,
+    error,
+    refresh: fetchProspect
+  };
+}

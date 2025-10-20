@@ -1,0 +1,56 @@
+{
+  "table": "prospects",
+  "description": "Example prospect data for testing",
+  "data": [
+    {
+      "company_name": "Zahav Restaurant",
+      "industry": "Restaurant",
+      "website": "https://zahavrestaurant.com",
+      "city": "Philadelphia, PA",
+      "google_rating": 4.6,
+      "google_review_count": 1847,
+      "google_place_id": "ChIJtest123",
+      "status": "ready_for_analysis"
+    },
+    {
+      "company_name": "Vetri Cucina",
+      "industry": "Restaurant",
+      "website": "https://vetricucina.com",
+      "city": "Philadelphia, PA",
+      "google_rating": 4.7,
+      "google_review_count": 892,
+      "google_place_id": "ChIJtest456",
+      "status": "ready_for_analysis"
+    },
+    {
+      "company_name": "Apex Plumbing Services",
+      "industry": "Home Services",
+      "website": "https://apexplumbingservices.com",
+      "city": "Philadelphia, PA",
+      "google_rating": 4.8,
+      "google_review_count": 342,
+      "google_place_id": "ChIJtest789",
+      "status": "ready_for_analysis"
+    },
+    {
+      "company_name": "Liberty Bell Taxi",
+      "industry": "Transportation",
+      "website": "https://libertybelltaxi.com",
+      "city": "Philadelphia, PA",
+      "google_rating": 4.2,
+      "google_review_count": 567,
+      "google_place_id": "ChIJtest101",
+      "status": "queued"
+    },
+    {
+      "company_name": "Bright Smile Orthodontics",
+      "industry": "Healthcare",
+      "website": "https://brightsmileortho.com",
+      "city": "Philadelphia, PA",
+      "google_rating": 4.9,
+      "google_review_count": 234,
+      "google_place_id": "ChIJtest202",
+      "status": "ready_for_analysis"
+    }
+  ]
+}

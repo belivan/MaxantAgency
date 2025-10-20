@@ -1,0 +1,44 @@
+{
+  "name": "qa-supervisor",
+  "version": "1.0.0",
+  "description": "QA & Integration Supervisor - Automated testing and validation for all agents",
+  "type": "module",
+  "main": "cli.js",
+  "scripts": {
+    "qa:check": "node cli.js check",
+    "qa:check:agent": "node cli.js check --agent",
+    "qa:integration": "node cli.js integration",
+    "qa:performance": "node cli.js performance",
+    "qa:report": "node cli.js report",
+    "qa:watch": "node cli.js watch",
+    "qa:pre-commit": "node cli.js pre-commit",
+    "qa:quality": "node cli.js quality",
+    "hooks:install": "node scripts/install-git-hooks.js",
+    "hooks:uninstall": "node scripts/uninstall-git-hooks.js"
+  },
+  "keywords": [
+    "qa",
+    "testing",
+    "integration",
+    "validation",
+    "quality-assurance"
+  ],
+  "author": "Maksant Agency",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.75.1",
+    "chalk": "^5.3.0",
+    "cheerio": "^1.0.0-rc.12",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1",
+    "fs-extra": "^11.2.0",
+    "open": "^10.2.0",
+    "ora": "^8.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "version": "1.0",
+  "name": "relevance-check",
+  "description": "Evaluates how well a prospect matches the ICP (Ideal Customer Profile)",
+  "model": "grok-4-fast",
+  "temperature": 0.1,
+
+  "systemPrompt": "You are a business qualification expert. Your task is to evaluate how well a prospect matches an Ideal Customer Profile (ICP). Provide an objective score based on industry match, location match, business size indicators, and other relevant factors. Be analytical and data-driven.",
+
+  "userPromptTemplate": "Evaluate this prospect against the ICP and assign a relevance score.\n\n**ICP (Ideal Customer Profile):**\nIndustry: {{icp_industry}}\nLocation: {{icp_city}}\nTarget Description: {{icp_target}}\nNiches: {{icp_niches}}\n\n**Prospect Data:**\nCompany Name: {{company_name}}\nIndustry: {{company_industry}}\nLocation: {{company_city}}, {{company_state}}\nGoogle Rating: {{company_rating}}/5.0 ({{company_reviews}} reviews)\nDescription: {{company_description}}\nServices: {{company_services}}\nWebsite Status: {{website_status}}\nSocial Profiles: {{social_count}} found\n\n**Scoring Criteria:**\n\n1. **Industry Match (40 points)**\n   - Exact match: 40 points\n   - Related industry: 20-30 points\n   - Different industry: 0-10 points\n\n2. **Location Match (20 points)**\n   - Same city: 20 points\n   - Same region/state: 10-15 points\n   - Different region: 0-5 points\n\n3. **Business Quality (20 points)**\n   - Rating 4.5+: 20 points\n   - Rating 4.0-4.4: 15 points\n   - Rating 3.5-3.9: 10 points\n   - Rating <3.5: 5 points\n\n4. **Online Presence (10 points)**\n   - Active website + social profiles: 10 points\n   - Active website only: 7 points\n   - Website issues or no social: 3-5 points\n\n5. **Data Completeness (10 points)**\n   - Contact info + description + services: 10 points\n   - Partial data: 5-7 points\n   - Minimal data: 0-3 points\n\n**Output Format (JSON):**\n{\n  \"score\": 85,\n  \"is_relevant\": true,\n  \"reasoning\": \"Exact industry match (40), same city (20), excellent rating (20), strong online presence (10), complete data (10). Total: 100 points.\",\n  \"industry_match\": 40,\n  \"location_match\": 20,\n  \"quality_score\": 20,\n  \"presence_score\": 10,\n  \"data_score\": 10,\n  \"recommendation\": \"High priority - excellent fit for ICP\"\n}\n\n**Rules:**\n- Score must be 0-100\n- is_relevant = true if score >= 60\n- is_relevant = false if score < 60\n- Be objective and data-driven\n- Provide clear reasoning\n- Return ONLY valid JSON\n\nEvaluate and return JSON:",
+
+  "variables": [
+    "icp_industry",
+    "icp_city",
+    "icp_target",
+    "icp_niches",
+    "company_name",
+    "company_industry",
+    "company_city",
+    "company_state",
+    "company_rating",
+    "company_reviews",
+    "company_description",
+    "company_services",
+    "website_status",
+    "social_count"
+  ],
+
+  "examples": [
+    {
+      "input": {
+        "icp_industry": "Italian Restaurants",
+        "icp_city": "Philadelphia",
+        "icp_target": "High-quality Italian restaurants",
+        "icp_niches": "restaurants, food service",
+        "company_name": "Vetri Cucina",
+        "company_industry": "Restaurant",
+        "company_city": "Philadelphia",
+        "company_state": "PA",
+        "company_rating": "4.6",
+        "company_reviews": "500",
+        "company_description": "Upscale Italian restaurant...",
+        "company_services": "Fine dining, Catering",
+        "website_status": "active",
+        "social_count": "3"
+      },
+      "output": {
+        "score": 95,
+        "is_relevant": true,
+        "reasoning": "Exact industry match (40), same city (20), excellent rating 4.6 (20), strong online presence with 3 social profiles (10), complete data (10). Total: 100. Slightly reduced due to upscale vs general Italian target.",
+        "industry_match": 40,
+        "location_match": 20,
+        "quality_score": 20,
+        "presence_score": 10,
+        "data_score": 10,
+        "recommendation": "Excellent fit - high priority prospect"
+      }
+    },
+    {
+      "input": {
+        "icp_industry": "Plumbing",
+        "icp_city": "Philadelphia",
+        "icp_target": "Residential plumbers",
+        "icp_niches": "home services, plumbing",
+        "company_name": "Joe's Plumbing",
+        "company_industry": "Plumbing",
+        "company_city": "Philadelphia",
+        "company_state": "PA",
+        "company_rating": "3.8",
+        "company_reviews": "45",
+        "company_description": null,
+        "company_services": null,
+        "website_status": "timeout",
+        "social_count": "0"
+      },
+      "output": {
+        "score": 55,
+        "is_relevant": false,
+        "reasoning": "Exact industry match (40), same city (20), moderate rating 3.8 (10), poor online presence - website timeout and no social (3), minimal data (2). Total: 75. Reduced to 55 due to lack of online presence.",
+        "industry_match": 40,
+        "location_match": 20,
+        "quality_score": 10,
+        "presence_score": 3,
+        "data_score": 2,
+        "recommendation": "Below threshold - poor online presence and limited data"
+      }
+    }
+  ],
+
+  "validation": {
+    "requiresJson": true,
+    "requiredFields": ["score", "is_relevant", "reasoning"],
+    "scoreRange": {
+      "min": 0,
+      "max": 100
+    }
+  }
+}

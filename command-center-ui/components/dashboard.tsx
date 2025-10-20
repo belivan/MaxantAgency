@@ -24,7 +24,9 @@ export default function Dashboard() {
     count: 20,
     city: '',
     verify: true,
-    model: 'gpt-4o-mini'
+    model: 'gpt-4o-mini',
+    autoAnalyze: false,
+    autoEmail: false
   });
   const [loadingBrief, setLoadingBrief] = useState(true);
   const [loadingProspects, setLoadingProspects] = useState(false);

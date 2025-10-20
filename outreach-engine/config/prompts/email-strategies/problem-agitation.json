@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "name": "problem-agitation",
+  "description": "Identifies critical problem, agitates the pain/urgency, then offers quick solution",
+  "recommended_for": ["C", "D", "F"],
+
+  "model": "claude-haiku-3-5",
+  "temperature": 0.7,
+
+  "systemPrompt": "You are a web design expert writing a direct, problem-focused cold email.\n\nRULES:\n1. Keep it SHORT: 2-4 sentences total, under 150 words\n2. Be SPECIFIC: Mention the exact problem you found\n3. AGITATE: Show the business cost/impact of NOT fixing this\n4. Business language: 'losing revenue' not 'broken CSS'\n5. Conversational tone: Helpful expert, not fear-mongering\n6. ONE call-to-action: Offer to share the fix\n7. Use their name if available\n\nSTRUCTURE:\n- Sentence 1: State the specific problem found on their site\n- Sentence 2: Agitate - quantify the business impact (lost customers, revenue, trust)\n- Sentence 3: Simple CTA (offer quick fix or consultation)\n\nDO NOT:\n- Sound alarmist or manipulative\n- Use fear-mongering language\n- Make exaggerated claims\n- Mention pricing\n- Use placeholder text\n- Over-promise results",
+
+  "userPromptTemplate": "Write a cold outreach email for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nWebsite: {{url}}\nGrade: {{grade}}\n\nCritical Problem Found:\n{{top_issue}}\n\nBusiness Impact:\n{{business_impact}}\n\nQuick Fix Available:\n{{quick_win}}\n\nRecipient: {{contact_name}} ({{contact_title}})\n\nYour Agency:\nName: {{sender_company}}\nWebsite: {{sender_website}}\nPhone: {{sender_phone}}\n\nWrite the email following the Problem-Agitation structure. Return ONLY the email body, no subject line. Sign with:\n\nBest,\n{{sender_name}}\n{{sender_company}}\n{{sender_website}}\n{{sender_phone}}",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "url",
+    "grade",
+    "top_issue",
+    "business_impact",
+    "quick_win",
+    "contact_name",
+    "contact_title",
+    "sender_company",
+    "sender_website",
+    "sender_phone",
+    "sender_name"
+  ],
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Philadelphia Dental Care",
+        "industry": "Healthcare",
+        "url": "phillydentalcare.com",
+        "grade": "C",
+        "top_issue": "Contact form is broken - returns 404 error when submitted",
+        "business_impact": "Every form submission is a lost appointment opportunity worth $200-500 in revenue",
+        "quick_win": "Fix form endpoint (30-minute fix)",
+        "contact_name": "Dr. Sarah",
+        "contact_title": "Owner",
+        "sender_company": "Maksant",
+        "sender_website": "https://maksant.com",
+        "sender_phone": "412-315-8398",
+        "sender_name": "Anton Yanovich"
+      },
+      "output": "Hi Dr. Sarah,\n\nI was checking out phillydentalcare.com and noticed your contact form throws a 404 error when patients try to submit it. If you're getting even 5 form submissions a week, that's potentially $1,000-2,500 in monthly revenue disappearing into a broken form. This is a 30-minute fix - want me to send over the details?\n\nBest,\nAnton Yanovich\nMaksant\nhttps://maksant.com\n412-315-8398"
+    },
+    {
+      "input": {
+        "company_name": "Green Thumb Landscaping",
+        "industry": "Home Services",
+        "url": "greenthumblandscaping.com",
+        "grade": "D",
+        "top_issue": "Website loads in 8.2 seconds - extremely slow",
+        "business_impact": "53% of mobile visitors leave sites that take longer than 3 seconds to load",
+        "quick_win": "Optimize images and caching (2-hour fix can reduce load time to under 2 seconds)",
+        "contact_name": "Mark",
+        "contact_title": "Owner",
+        "sender_company": "Maksant",
+        "sender_website": "https://maksant.com",
+        "sender_phone": "412-315-8398",
+        "sender_name": "Anton Yanovich"
+      },
+      "output": "Hi Mark,\n\nYour greenthumblandscaping.com site is taking 8.2 seconds to load - more than half your mobile visitors are bouncing before they even see your services. During landscaping season, that's a lot of quote requests going to faster competitors. I found a 2-hour fix that can get you under 2 seconds - interested?\n\nBest,\nAnton Yanovich\nMaksant\nhttps://maksant.com\n412-315-8398"
+    }
+  ],
+
+  "constraints": {
+    "maxWords": 150,
+    "maxSentences": 4,
+    "minSentences": 2,
+    "tone": "direct-helpful",
+    "required_elements": ["specific_problem", "business_impact_quantified", "quick_fix_offer", "cta"]
+  }
+}

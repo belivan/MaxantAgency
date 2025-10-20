@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "name": "design-critique",
+  "description": "Analyzes website screenshot for design and UX issues from a web design agency perspective",
+  "model": "gpt-4o",
+  "temperature": 0.4,
+
+  "systemPrompt": "You are an expert web designer and UX consultant working for a web design agency. Analyze website screenshots and identify SPECIFIC, ACTIONABLE design issues that your agency could fix.\n\nFocus on:\n- Visual hierarchy and layout problems\n- Call-to-action clarity and placement\n- Mobile responsiveness indicators (visible in screenshot)\n- Typography readability and hierarchy\n- Color contrast and accessibility issues\n- Image quality and optimization opportunities\n- Navigation usability and structure\n- Above-the-fold effectiveness\n- Trust signals and credibility elements\n\nBe SPECIFIC with examples:\n❌ Bad: 'Improve the layout'\n✅ Good: 'Hero section lacks clear CTA button - visitor doesn't know what action to take. Add prominent \"Book Now\" or \"Get Quote\" button above fold.'\n\n❌ Bad: 'Fix mobile issues'\n✅ Good: 'Mobile menu is collapsed with no visible hamburger icon. 60%+ of visitors on mobile devices cannot access navigation menu.'\n\nFor each issue, explain:\n1. What's wrong (specific observation)\n2. Business impact (how this hurts their revenue/leads)\n3. Difficulty to fix (quick-win, medium effort, or major project)\n\nYour agency specializes in quick wins and high-impact fixes.",
+
+  "userPromptTemplate": "Analyze this website screenshot for {{company_name}} in the {{industry}} industry.\n\nWebsite URL: {{url}}\nTech Stack: {{tech_stack}}\nPage Load Time: {{load_time}}ms\n\nIdentify 5-10 specific design and UX issues that a web design agency could fix. Prioritize issues that:\n1. Have clear business impact (losing leads, confusing visitors, poor conversions)\n2. Are visible and verifiable in the screenshot\n3. Include both quick-wins (easy fixes) and strategic improvements\n\nFor each issue, provide:\n- Category (design|ux|mobile|performance|trust)\n- Title (brief, specific)\n- Description (what's wrong, be detailed)\n- Impact (business consequence, quantify if possible)\n- Difficulty (quick-win|medium|major)\n- Priority (high|medium|low)\n\nAlso identify 2-3 positive aspects of the design to acknowledge in outreach.\n\nIMPORTANT: You MUST return valid JSON in this EXACT format:\n{\n  \"issues\": [\n    {\n      \"category\": \"design|ux|mobile|performance|trust\",\n      \"title\": \"string\",\n      \"description\": \"string\",\n      \"impact\": \"string\",\n      \"difficulty\": \"quick-win|medium|major\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"overallDesignScore\": 75,\n  \"positives\": [\"string\", \"string\"],\n  \"quickWinCount\": 3\n}\n\nDo NOT change the field names. Do NOT add extra fields at the root level. The 'positives' field must be an array of strings, not objects.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "url",
+    "tech_stack",
+    "load_time"
+  ],
+
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "issues": [
+        {
+          "category": "design|ux|mobile|performance|trust",
+          "title": "string",
+          "description": "string (detailed, specific)",
+          "impact": "string (business consequence)",
+          "difficulty": "quick-win|medium|major",
+          "priority": "high|medium|low"
+        }
+      ],
+      "overallDesignScore": "number (0-100)",
+      "positives": ["array of strings"],
+      "quickWinCount": "number"
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Joe's Pizza",
+        "industry": "Restaurant",
+        "url": "joespizza.com",
+        "tech_stack": "WordPress",
+        "load_time": 4500
+      },
+      "output": {
+        "issues": [
+          {
+            "category": "mobile",
+            "title": "Mobile menu completely hidden",
+            "description": "The mobile navigation menu is collapsed by default with no visible hamburger icon or menu button. Mobile users (likely 60%+ of traffic for a restaurant) cannot access the menu, locations, or contact information.",
+            "impact": "Directly losing online orders and phone inquiries from mobile visitors who can't find the menu or contact info. Estimated 40% of potential mobile customers abandon site.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "ux",
+            "title": "No clear call-to-action above fold",
+            "description": "Homepage shows only a large hero image with no prominent CTA button. Visitors don't know if they should order online, call, or visit. No \"Order Now\" or \"View Menu\" button visible without scrolling.",
+            "impact": "Confused visitors leave without taking action. Missing immediate conversion opportunity from 70% of visitors who don't scroll.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "design",
+            "title": "Low contrast text unreadable",
+            "description": "White text overlaid on light food images in hero section. Text is barely readable, especially on mobile devices or in bright conditions. Menu items use gray text on white background with insufficient contrast.",
+            "impact": "Poor accessibility - visitors strain to read content or give up. Fails WCAG accessibility standards, potentially excluding customers with visual impairments.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "trust",
+            "title": "No trust signals or social proof",
+            "description": "Homepage lacks reviews, ratings, photos of customers, awards, or years in business. No visible phone number or address in header. Visitors have no reason to trust this business over competitors.",
+            "impact": "New visitors are hesitant to order from unknown restaurant. Missing opportunity to showcase 4.8-star reviews or \"Family owned since 1985\" credibility.",
+            "difficulty": "medium",
+            "priority": "medium"
+          },
+          {
+            "category": "performance",
+            "title": "Massive unoptimized images slowing page",
+            "description": "Hero image is 3.2MB (should be <200KB). Multiple food photos are uncompressed JPGs at full resolution. Page load time of 4.5 seconds on mobile is 3x slower than recommended.",
+            "impact": "53% of mobile visitors abandon sites that take over 3 seconds to load (Google study). Losing half of potential customers before they see menu.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          }
+        ],
+        "overallDesignScore": 35,
+        "positives": [
+          "Food photography is high quality and appetizing",
+          "Color scheme (red and white) matches traditional pizzeria branding"
+        ],
+        "quickWinCount": 3
+      }
+    }
+  ],
+
+  "costEstimate": {
+    "model": "gpt-4o",
+    "inputTokens": "~2000 (screenshot + context)",
+    "outputTokens": "~800 (detailed analysis)",
+    "estimatedCost": "$0.015 per analysis"
+  },
+
+  "notes": [
+    "This prompt is optimized for web design agency outreach",
+    "Focus on issues that create clear value proposition for agency services",
+    "Quick-wins are particularly valuable for initial outreach",
+    "Business impact statements make issues tangible and urgent",
+    "Positives help build rapport before mentioning problems"
+  ]
+}

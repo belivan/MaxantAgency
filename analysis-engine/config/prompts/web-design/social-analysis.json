@@ -1,0 +1,172 @@
+{
+  "version": "1.0",
+  "name": "social-analysis",
+  "description": "Analyzes social media presence and consistency with website branding and messaging",
+  "model": "grok-4-fast",
+  "temperature": 0.3,
+
+  "systemPrompt": "You are a social media consultant analyzing business social profiles for consistency, quality, and integration with their website.\n\nAnalyze:\n1. **Profile Completeness:**\n   - Bio/description quality\n   - Profile photo (logo or personal)\n   - Contact info accessible\n   - Link to website\n\n2. **Branding Consistency:**\n   - Visual consistency with website (colors, logo)\n   - Message consistency across platforms\n   - Tone matches website (professional vs casual)\n\n3. **Content Quality:**\n   - Post frequency (active vs abandoned)\n   - Content type (photos, text, videos)\n   - Engagement (likes, comments relative to followers)\n\n4. **Website Integration:**\n   - Social links on website (visible? working?)\n   - Website content shared on social\n   - Cross-promotion between platforms\n\n5. **Opportunities:**\n   - Missing platforms for their industry\n   - Unused features (Instagram Stories, FB reviews)\n   - No call-to-action in posts\n\nBe SPECIFIC:\n❌ Bad: 'Social media needs work'\n✅ Good: 'Instagram has 1,200 followers but last post was 6 months ago. Abandoned social profiles signal inactive business. Recent engagement builds trust and drives website traffic.'\n\n❌ Bad: 'Branding is inconsistent'\n✅ Good: 'Website uses blue logo and professional photography. Instagram uses red filter and casual phone snapshots. Inconsistent branding confuses customers about business identity.'",
+
+  "userPromptTemplate": "Analyze social media presence for {{company_name}} ({{industry}}).\n\nWebsite: {{url}}\n\nSocial Profiles Found:\n{{social_profiles}}\n\nProfile Metadata (from scraping):\n{{social_metadata}}\n\nWebsite Branding:\n{{website_branding}}\n\nAnalyze:\n1. Profile completeness and quality\n2. Brand consistency with website\n3. Content activity and engagement\n4. Integration between website and social\n5. Missing opportunities\n\nFor each issue:\n- Category (completeness|consistency|activity|integration|missing)\n- Title (specific problem)\n- Description (what's wrong)\n- Impact (business consequence)\n- Recommendation (how to improve)\n- Priority (high|medium|low)\n\nAlso identify:\n- Best performing platform (most engaged)\n- Quick wins (easy improvements)\n- Content ideas that would work\n\nIMPORTANT: You MUST return valid JSON in this EXACT format:\n{\n  \"socialScore\": 55,\n  \"platformsPresent\": [\"instagram\", \"facebook\"],\n  \"mostActivePlatform\": \"instagram\",\n  \"issues\": [\n    {\n      \"category\": \"completeness|consistency|activity|integration|missing\",\n      \"platform\": \"instagram|facebook|linkedin|twitter\",\n      \"title\": \"string\",\n      \"description\": \"string\",\n      \"impact\": \"string\",\n      \"recommendation\": \"string\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"quickWins\": [\"string\"],\n  \"strengths\": [\"string\"]\n}\n\nDo NOT change the field names. All root-level fields (socialScore, platformsPresent, issues) are required.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "url",
+    "social_profiles",
+    "social_metadata",
+    "website_branding"
+  ],
+
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "socialScore": "number (0-100)",
+      "platformsPresent": ["array of platform names"],
+      "mostActiveP platform": "string",
+      "issues": [
+        {
+          "category": "completeness|consistency|activity|integration|missing",
+          "platform": "instagram|facebook|linkedin|twitter",
+          "title": "string",
+          "description": "string",
+          "impact": "string",
+          "recommendation": "string",
+          "priority": "high|medium|low"
+        }
+      ],
+      "quickWins": ["array of easy improvements"],
+      "strengths": ["array of what's done well"]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Bella Nails Salon",
+        "industry": "Beauty Salon",
+        "url": "bellanails.com",
+        "social_profiles": {
+          "instagram": "https://instagram.com/bellanailssalon",
+          "facebook": "https://facebook.com/BellaNailsSalon"
+        },
+        "social_metadata": {
+          "instagram": {
+            "followers": 1200,
+            "following": 850,
+            "posts": 45,
+            "lastPost": "6 months ago",
+            "bio": "Nails"
+          },
+          "facebook": {
+            "likes": 450,
+            "reviews": 0,
+            "lastPost": "3 months ago"
+          }
+        },
+        "website_branding": {
+          "colors": "pink and white",
+          "logo": "elegant script",
+          "tone": "professional and upscale"
+        }
+      },
+      "output": {
+        "socialScore": 35,
+        "platformsPresent": ["instagram", "facebook"],
+        "mostActivePlatform": "instagram",
+        "issues": [
+          {
+            "category": "activity",
+            "platform": "instagram",
+            "title": "Abandoned Instagram - last post 6 months ago",
+            "description": "Instagram has 1,200 followers but completely inactive for 6 months. Last post was March 2024. Followers expect regular content from beauty businesses. Inactive profile signals closed or unprofessional business.",
+            "impact": "1,200 followers are not being engaged. Missing daily opportunity to showcase work, attract new clients, and build trust. Competitors posting daily are capturing attention and bookings.",
+            "recommendation": "Commit to 3 posts per week minimum: nail art photos, before/afters, customer testimonials, new color arrivals, seasonal designs. Use Instagram Stories daily for casual updates. Schedule posts in advance if needed.",
+            "priority": "high"
+          },
+          {
+            "category": "completeness",
+            "platform": "instagram",
+            "title": "Instagram bio is just \"Nails\" with no information",
+            "description": "Bio contains only single word \"Nails\" - no business name, location, services, hours, or contact. Visitors can't tell where salon is located or how to book. No link to website.",
+            "impact": "Instagram visitors can't find salon or book appointments. No website traffic from Instagram. Missing call-to-action. Appearing unprofessional compared to competitors with detailed bios.",
+            "recommendation": "Update bio to: \"💅 Bella Nails Salon | Philadelphia\n✨ Gel, Acrylic, Nail Art\n📍 Center City | Walk-ins Welcome\n📱 Book: [link]\" Add booking link in bio.",
+            "priority": "high"
+          },
+          {
+            "category": "consistency",
+            "platform": "instagram",
+            "title": "Instagram filter style doesn't match upscale website branding",
+            "description": "Website has elegant pink/white branding with professional photography. Instagram uses heavy red/orange filters and casual phone photos with poor lighting. Looks like different businesses.",
+            "impact": "Brand confusion - website promises upscale experience but Instagram looks amateur. Losing upscale clientele who judge quality by social media. Inconsistent branding dilutes trust.",
+            "recommendation": "Match Instagram aesthetic to website: use natural lighting for nail photos, consistent pink/white color scheme, professional editing. Create cohesive brand identity across all touchpoints.",
+            "priority": "medium"
+          },
+          {
+            "category": "integration",
+            "platform": "facebook",
+            "title": "Facebook page has zero reviews enabled",
+            "description": "Facebook page exists but reviews feature is disabled. 450 page likes but no reviews visible. Reviews are critical trust signal for local businesses. Competitors with 4.5-star reviews appear more credible.",
+            "impact": "Missing powerful trust signal. New customers compare businesses and choose ones with verified reviews. Zero reviews = zero social proof. Possibly losing 30%+ of potential bookings to reviewed competitors.",
+            "recommendation": "Enable Facebook reviews immediately. Request reviews from satisfied clients (email, text, in-person). Respond to all reviews (positive and negative). Display review stars on website.",
+            "priority": "high"
+          },
+          {
+            "category": "missing",
+            "platform": "general",
+            "title": "Not using Instagram Stories or Reels",
+            "description": "No Instagram Stories or Reels detected. These formats get significantly more reach than static posts. Stories are perfect for showing daily work, last-minute openings, behind-scenes.",
+            "impact": "Missing 70%+ of potential Instagram reach. Stories and Reels are prioritized by Instagram algorithm. Competitors using these features are much more visible to local audience.",
+            "recommendation": "Post Instagram Stories 3-5 times per week: nail art of the day, available appointments, customer compliments, nail care tips. Create 1-2 Reels per week showing nail art process (time-lapse videos perform well).",
+            "priority": "medium"
+          },
+          {
+            "category": "integration",
+            "platform": "general",
+            "title": "Website social links are broken/missing",
+            "description": "Website footer has Instagram icon but link goes to 404 error. Facebook icon not present at all. Visitors cannot find social profiles from website.",
+            "impact": "Website visitors who want to see work examples on Instagram hit dead end. Missing opportunity to convert website traffic into social followers. Broken links appear unprofessional.",
+            "recommendation": "Fix Instagram link to correct profile URL. Add Facebook icon linking to page. Place social links in visible location (header and footer). Test all links to ensure they work.",
+            "priority": "medium"
+          },
+          {
+            "category": "missing",
+            "platform": "general",
+            "title": "No Google My Business optimization",
+            "description": "While not traditional social media, Google Business Profile is critical for local discovery. Current profile is unclaimed with outdated hours and 2 low-quality photos.",
+            "impact": "Not showing prominently in \"nail salon near me\" searches. Competitors with optimized Google profiles (photos, posts, reviews) rank higher in local pack. Missing map visibility costs walk-in traffic.",
+            "recommendation": "Claim and optimize Google Business Profile: add 20+ high-quality nail photos, update hours, post weekly updates, enable booking button, request reviews. Google posts are essentially free local SEO.",
+            "priority": "high"
+          }
+        ],
+        "quickWins": [
+          "Update Instagram bio with location, services, booking link (5 minutes)",
+          "Enable Facebook reviews and request from happy clients (10 minutes)",
+          "Fix broken Instagram link on website (2 minutes)",
+          "Post Instagram Story of today's nail art (3 minutes)"
+        ],
+        "strengths": [
+          "Has presence on both major platforms (Instagram and Facebook)",
+          "Decent follower count on Instagram (1,200) shows past engagement",
+          "Profile photos match branding (pink/white logo)"
+        ]
+      }
+    }
+  ],
+
+  "costEstimate": {
+    "model": "grok-4-fast",
+    "inputTokens": "~1500 (profiles + metadata)",
+    "outputTokens": "~400 (analysis)",
+    "estimatedCost": "$0.009 per analysis"
+  },
+
+  "notes": [
+    "Social analysis is optional - only run if prospect has social profiles",
+    "Many businesses have abandoned social - this is opportunity to offer social management",
+    "Branding inconsistency between website and social is extremely common",
+    "Facebook reviews are often disabled/ignored despite being valuable",
+    "Instagram Stories and Reels are underutilized by small businesses",
+    "Google Business Profile optimization usually grouped with social despite being different"
+  ]
+}

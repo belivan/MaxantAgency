@@ -1,0 +1,101 @@
+{
+  "version": "1.0",
+  "name": "value-first",
+  "description": "Lead with free helpful insight, very casual",
+  "platforms": ["instagram", "facebook", "linkedin"],
+
+  "model": "claude-haiku-3-5",
+  "temperature": 0.8,
+
+  "systemPrompt": "You are writing a casual, helpful Instagram/Facebook/LinkedIn DM to a business owner.\n\nRULES:\n1. SUPER SHORT: 1-3 sentences max, under 1000 characters for Instagram\n2. VERY CASUAL: Like texting a friend. Use 'Hey' not 'Hello'\n3. Lead with value: Share one specific finding\n4. NO LINKS: Instagram blocks DMs with URLs\n5. Don't mention 'website' directly (Instagram spam filter)\n6. End with a soft question, not a hard pitch\n7. Platform-specific tone:\n   - Instagram: Very casual, emoji-friendly, brief\n   - Facebook: Friendly, conversational\n   - LinkedIn: Professional-casual, value-driven\n\nSTRUCTURE:\n- Sentence 1: Casual intro + compliment on their social presence OR recent post\n- Sentence 2: One specific insight/finding (if you have website analysis)\n- Sentence 3: Soft question about if they'd like to chat\n\nDO NOT:\n- Use formal language\n- Include URLs or links\n- Sound like a sales message\n- Use the word 'website' (spam filter)\n- Pitch services directly\n- Include placeholder text",
+
+  "userPromptTemplate": "Write a {{platform}} DM for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nPlatform: {{platform}}\n\nTheir Social Profile:\nUsername: {{social_username}}\nBio: {{social_bio}}\nFollowers: {{follower_count}}\n\nFinding (if available):\n{{top_issue}}\n\nYour Name: {{sender_name}}\n\nReturn ONLY the DM text, no subject line, no extra commentary.",
+
+  "variables": [
+    "platform",
+    "company_name",
+    "industry",
+    "social_username",
+    "social_bio",
+    "follower_count",
+    "top_issue",
+    "sender_name"
+  ],
+
+  "platformSpecs": {
+    "instagram": {
+      "maxChars": 1000,
+      "optimalLength": "50-150 chars",
+      "tone": "super-casual",
+      "emojiUsage": "moderate",
+      "bannedWords": ["website", "click here", "link", "dm me", "check out"],
+      "bestPractices": [
+        "Comment on their recent post/story",
+        "Be genuine and specific",
+        "Keep it super brief",
+        "Low-pressure approach"
+      ]
+    },
+    "facebook": {
+      "maxChars": 5000,
+      "optimalLength": "100-200 chars",
+      "tone": "friendly-conversational",
+      "emojiUsage": "light",
+      "bannedWords": ["click here", "buy now"],
+      "bestPractices": [
+        "Comment on recent business update",
+        "Friendly, community-focused",
+        "Slightly longer OK"
+      ]
+    },
+    "linkedin": {
+      "maxChars": 1900,
+      "optimalLength": "150-300 chars",
+      "tone": "professional-casual",
+      "emojiUsage": "minimal",
+      "bannedWords": ["synergy", "leverage", "paradigm"],
+      "bestPractices": [
+        "Connect with value proposition",
+        "Professional tone",
+        "Business outcome focused"
+      ]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "platform": "instagram",
+        "company_name": "Apex Plumbing Services",
+        "industry": "Home Services - Plumbing",
+        "social_username": "@apexplumbingservices",
+        "social_bio": "Emergency plumbing | Pittsburgh PA | 24/7 service",
+        "follower_count": "450",
+        "top_issue": "Site loading very slow on mobile",
+        "sender_name": "Anton"
+      },
+      "output": "Hey! Just checked out your recent kitchen remodel post. Those pipe transitions look super clean - nice work showcasing your precision skills 👍🔧 Local plumbing game strong!"
+    },
+    {
+      "input": {
+        "platform": "linkedin",
+        "company_name": "Elite HVAC Solutions",
+        "industry": "Home Services - HVAC",
+        "social_username": "elite-hvac-solutions",
+        "social_bio": "Commercial & residential HVAC | Energy-efficient solutions",
+        "follower_count": "1200",
+        "top_issue": "No online booking on their website",
+        "sender_name": "Anton Yanovich"
+      },
+      "output": "Hi there - saw your recent post about energy-efficient commercial installs. Quick question: have you considered adding online booking for maintenance calls? Most HVAC companies I work with see 30-40% more appointments when customers can book directly instead of calling. Happy to share what's working if you're interested."
+    }
+  ],
+
+  "constraints": {
+    "maxChars": 1000,
+    "maxSentences": 3,
+    "minSentences": 1,
+    "tone": "casual-helpful",
+    "required_elements": ["compliment_or_insight", "soft_question_or_value"]
+  }
+}

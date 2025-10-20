@@ -1,0 +1,40 @@
+{
+  "version": "1.0",
+  "name": "website-extraction",
+  "description": "Extract business data from website screenshot using AI vision",
+  "model": "grok-vision-beta",
+  "temperature": 0.2,
+
+  "systemPrompt": "You are a business data extraction specialist. Analyze website screenshots and extract structured business information accurately. Focus on finding contact details, services offered, and company description. Return ONLY valid JSON.",
+
+  "userPromptTemplate": "Analyze this website screenshot for: {{company_name}}\n\nExtract the following information in JSON format:\n\n1. **Contact Information:**\n   - Email address (look for contact@, info@, hello@, etc.)\n   - Phone number (any format)\n   - Contact person name (if visible)\n\n2. **Business Description:**\n   - Brief description of what the company does (1-2 sentences)\n   - Keep it concise and factual\n\n3. **Services:**\n   - List of services offered (array of strings)\n   - Maximum 5 main services\n   - Use clear, simple service names\n\n4. **Social Media Links:**\n   - Instagram URL (if found)\n   - Facebook URL (if found)\n   - LinkedIn URL (if found)\n   - Twitter/X URL (if found)\n\nIMPORTANT:\n- If information is not visible, use null\n- Do NOT make up information\n- Do NOT include information from ads or third-party widgets\n- Focus on the main business content\n- Return ONLY valid JSON, no markdown, no extra text\n\nReturn in this EXACT format:\n{\n  \"contact_email\": \"email@example.com\" or null,\n  \"contact_phone\": \"(555) 123-4567\" or null,\n  \"contact_name\": \"John Doe\" or null,\n  \"description\": \"Brief company description\" or null,\n  \"services\": [\"Service 1\", \"Service 2\"] or [],\n  \"social_links\": {\n    \"instagram\": \"https://instagram.com/company\" or null,\n    \"facebook\": \"https://facebook.com/company\" or null,\n    \"linkedin\": \"https://linkedin.com/company/name\" or null,\n    \"twitter\": \"https://twitter.com/company\" or null\n  }\n}",
+
+  "variables": ["company_name"],
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Best Plumbing Co"
+      },
+      "output": {
+        "contact_email": "info@bestplumbing.com",
+        "contact_phone": "(215) 555-1234",
+        "contact_name": "Mike Johnson",
+        "description": "Full-service plumbing company serving Philadelphia and surrounding areas for over 20 years.",
+        "services": ["Emergency Plumbing", "Drain Cleaning", "Water Heater Installation", "Pipe Repair"],
+        "social_links": {
+          "instagram": null,
+          "facebook": "https://facebook.com/bestplumbingco",
+          "linkedin": null,
+          "twitter": null
+        }
+      }
+    }
+  ],
+
+  "validation": {
+    "requiresImage": true,
+    "outputFormat": "json",
+    "requiredFields": ["contact_email", "description", "services", "social_links"]
+  }
+}

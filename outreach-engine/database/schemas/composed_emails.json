@@ -1,0 +1,265 @@
+{
+  "table": "composed_emails",
+  "description": "AI-generated emails and social DMs ready for review and sending",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier for the composed email"
+    },
+    {
+      "name": "lead_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Reference to the lead this email is for"
+    },
+    {
+      "name": "url",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Website URL of the prospect"
+    },
+    {
+      "name": "company_name",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Name of the company being contacted"
+    },
+    {
+      "name": "industry",
+      "type": "text",
+      "index": true,
+      "description": "Industry or business category"
+    },
+    {
+      "name": "contact_email",
+      "type": "text",
+      "description": "Email address to send to"
+    },
+    {
+      "name": "contact_name",
+      "type": "text",
+      "description": "Name of the contact person"
+    },
+    {
+      "name": "contact_title",
+      "type": "text",
+      "description": "Job title of the contact person"
+    },
+    {
+      "name": "email_subject",
+      "type": "text",
+      "description": "Generated email subject line"
+    },
+    {
+      "name": "email_body",
+      "type": "text",
+      "required": true,
+      "description": "Generated email body content"
+    },
+    {
+      "name": "email_strategy",
+      "type": "text",
+      "description": "Strategy used (compliment-sandwich, problem-first, etc.)"
+    },
+    {
+      "name": "has_variants",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether A/B test variants were generated"
+    },
+    {
+      "name": "subject_variants",
+      "type": "jsonb",
+      "description": "Array of subject line variants for A/B testing"
+    },
+    {
+      "name": "body_variants",
+      "type": "jsonb",
+      "description": "Array of body variants for A/B testing"
+    },
+    {
+      "name": "recommended_variant",
+      "type": "jsonb",
+      "description": "AI-recommended best variant combination (subject + body indexes)"
+    },
+    {
+      "name": "variant_reasoning",
+      "type": "text",
+      "description": "AI explanation for recommended variant"
+    },
+    {
+      "name": "technical_reasoning",
+      "type": "text",
+      "description": "Technical explanation of personalization choices"
+    },
+    {
+      "name": "business_summary",
+      "type": "text",
+      "description": "Business-focused summary of the outreach"
+    },
+    {
+      "name": "verification_checklist",
+      "type": "jsonb",
+      "description": "Checklist of verification items before sending"
+    },
+    {
+      "name": "quality_score",
+      "type": "integer",
+      "description": "Validation quality score (0-100)"
+    },
+    {
+      "name": "validation_issues",
+      "type": "jsonb",
+      "description": "Array of validation warnings/errors"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["pending", "ready", "approved", "rejected", "sent", "failed", "bounced"],
+      "default": "ready",
+      "index": true,
+      "description": "Current status in the sending pipeline"
+    },
+    {
+      "name": "reviewed_at",
+      "type": "timestamptz",
+      "description": "When the email was manually reviewed"
+    },
+    {
+      "name": "sent_at",
+      "type": "timestamptz",
+      "description": "When the email was sent"
+    },
+    {
+      "name": "email_message_id",
+      "type": "text",
+      "description": "SMTP Message-ID from sent email"
+    },
+    {
+      "name": "notion_page_id",
+      "type": "text",
+      "description": "Notion page ID if synced to Notion"
+    },
+    {
+      "name": "synced_to_notion",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this email has been synced to Notion"
+    },
+    {
+      "name": "notion_sync_at",
+      "type": "timestamptz",
+      "description": "When the email was synced to Notion"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Reference to parent project"
+    },
+    {
+      "name": "campaign_id",
+      "type": "text",
+      "description": "Campaign identifier for tracking"
+    },
+    {
+      "name": "client_name",
+      "type": "text",
+      "description": "Client name for multi-tenant tracking"
+    },
+    {
+      "name": "source_app",
+      "type": "text",
+      "default": "outreach-engine",
+      "description": "Which app generated this email"
+    },
+    {
+      "name": "ai_model",
+      "type": "text",
+      "description": "AI model used (claude-haiku-3-5, etc.)"
+    },
+    {
+      "name": "generation_cost",
+      "type": "decimal",
+      "description": "Total API cost for generation (USD)"
+    },
+    {
+      "name": "generation_time_ms",
+      "type": "integer",
+      "description": "Time taken to generate (milliseconds)"
+    },
+    {
+      "name": "usage_input_tokens",
+      "type": "integer",
+      "description": "Input tokens used"
+    },
+    {
+      "name": "usage_output_tokens",
+      "type": "integer",
+      "description": "Output tokens used"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Timestamp when record was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Timestamp when record was last updated"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_composed_emails_status_created",
+      "columns": ["status", "created_at"]
+    },
+    {
+      "name": "idx_composed_emails_project_status",
+      "columns": ["project_id", "status"]
+    },
+    {
+      "name": "idx_composed_emails_company",
+      "columns": ["company_name"]
+    },
+    {
+      "name": "idx_composed_emails_sent_at",
+      "columns": ["sent_at"]
+    }
+  ],
+
+  "constraints": [
+    {
+      "type": "check",
+      "name": "chk_quality_score_range",
+      "expression": "quality_score >= 0 AND quality_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_generation_cost_positive",
+      "expression": "generation_cost >= 0"
+    }
+  ],
+
+  "foreignKeys": [
+    {
+      "column": "lead_id",
+      "references": "leads.id",
+      "onDelete": "SET NULL"
+    },
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "CASCADE"
+    }
+  ]
+}

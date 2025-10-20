@@ -1,0 +1,104 @@
+{
+  "agent": "Agent 4 - Command Center UI",
+  "agentDir": "command-center-ui",
+  "port": 3004,
+  "checks": [
+    {
+      "category": "File Structure",
+      "items": [
+        {
+          "name": "app/ directory exists (Next.js)",
+          "path": "command-center-ui/app",
+          "type": "directory"
+        },
+        {
+          "name": "components/ directory exists",
+          "path": "command-center-ui/components",
+          "type": "directory"
+        },
+        {
+          "name": "lib/ directory exists",
+          "path": "command-center-ui/lib",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Core Files",
+      "items": [
+        {
+          "name": "package.json exists",
+          "path": "command-center-ui/package.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "next.config.js exists",
+          "path": "command-center-ui/next.config.js",
+          "type": "file"
+        },
+        {
+          "name": "tailwind.config.ts exists",
+          "path": "command-center-ui/tailwind.config.ts",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "category": "Required Pages/Tabs",
+      "items": [
+        {
+          "name": "Dashboard page exists",
+          "path": "command-center-ui/app/page.tsx",
+          "type": "file"
+        },
+        {
+          "name": "Prospecting tab/page exists",
+          "path": "command-center-ui/app/prospecting",
+          "type": "directory"
+        },
+        {
+          "name": "Analysis tab/page exists",
+          "path": "command-center-ui/app/analysis",
+          "type": "directory"
+        },
+        {
+          "name": "Outreach tab/page exists",
+          "path": "command-center-ui/app/outreach",
+          "type": "directory"
+        },
+        {
+          "name": "Leads management page exists",
+          "path": "command-center-ui/app/leads",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "UI Components",
+      "items": [
+        {
+          "name": "components/ui/ directory exists (shadcn)",
+          "path": "command-center-ui/components/ui",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "items": [
+        {
+          "name": "No hardcoded API keys",
+          "test": "checkSecurity",
+          "patterns": ["sk-", "xai-", "AKIA", "eyJhbGc"]
+        },
+        {
+          "name": "TypeScript configuration valid",
+          "path": "command-center-ui/tsconfig.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        }
+      ]
+    }
+  ]
+}

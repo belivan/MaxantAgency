@@ -1,0 +1,198 @@
+/**
+ * Prompt Loader - Loads and processes JSON prompt configurations
+ *
+ * Loads prompts from config/prompts/ directory and handles variable substitution
+ */
+
+import { readFile } from 'fs/promises';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Cache loaded prompts to avoid repeated file reads
+const promptCache = new Map();
+
+/**
+ * Load a prompt configuration from JSON file
+ *
+ * @param {string} promptPath - Path relative to config/prompts/ (e.g., 'web-design/design-critique')
+ * @param {object} variables - Object with variables to substitute
+ * @returns {Promise<object>} Processed prompt ready for AI
+ */
+export async function loadPrompt(promptPath, variables = {}) {
+  // Build full path to JSON file
+  const fullPath = join(__dirname, '../config/prompts', `${promptPath}.json`);
+
+  // Check cache first
+  const cacheKey = promptPath;
+  let promptConfig;
+
+  if (promptCache.has(cacheKey)) {
+    promptConfig = promptCache.get(cacheKey);
+  } else {
+    // Load JSON file
+    try {
+      const fileContent = await readFile(fullPath, 'utf-8');
+      promptConfig = JSON.parse(fileContent);
+
+      // Validate prompt config
+      validatePromptConfig(promptConfig, promptPath);
+
+      // Cache it
+      promptCache.set(cacheKey, promptConfig);
+    } catch (error) {
+      throw new Error(`Failed to load prompt '${promptPath}': ${error.message}`);
+    }
+  }
+
+  // Substitute variables in user prompt template
+  const userPrompt = substituteVariables(
+    promptConfig.userPromptTemplate,
+    variables,
+    promptConfig.variables
+  );
+
+  return {
+    name: promptConfig.name,
+    model: promptConfig.model,
+    temperature: promptConfig.temperature,
+    systemPrompt: promptConfig.systemPrompt,
+    userPrompt,
+    outputFormat: promptConfig.outputFormat,
+    variables: promptConfig.variables,
+    costEstimate: promptConfig.costEstimate
+  };
+}
+
+/**
+ * Substitute variables in template string
+ *
+ * @param {string} template - Template with {{variable}} placeholders
+ * @param {object} variables - Values to substitute
+ * @param {array} requiredVars - List of required variable names
+ * @returns {string} Template with variables substituted
+ */
+function substituteVariables(template, variables, requiredVars = []) {
+  // Check all required variables are provided
+  const missingVars = requiredVars.filter(varName => !(varName in variables));
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required variables: ${missingVars.join(', ')}`);
+  }
+
+  // Replace {{variable}} with actual values
+  let result = template;
+
+  for (const [key, value] of Object.entries(variables)) {
+    const placeholder = `{{${key}}}`;
+    const replacement = value !== null && value !== undefined ? String(value) : '';
+    result = result.replaceAll(placeholder, replacement);
+  }
+
+  // Check for any remaining unreplaced placeholders
+  const remainingPlaceholders = result.match(/\{\{([^}]+)\}\}/g);
+  if (remainingPlaceholders) {
+    console.warn(`Warning: Unreplaced placeholders found: ${remainingPlaceholders.join(', ')}`);
+  }
+
+  return result;
+}
+
+/**
+ * Validate prompt configuration structure
+ *
+ * @param {object} config - Prompt config to validate
+ * @param {string} promptPath - Path for error messages
+ * @throws {Error} If config is invalid
+ */
+function validatePromptConfig(config, promptPath) {
+  const required = [
+    'version',
+    'name',
+    'description',
+    'model',
+    'temperature',
+    'systemPrompt',
+    'userPromptTemplate',
+    'outputFormat'
+  ];
+
+  for (const field of required) {
+    if (!config[field]) {
+      throw new Error(`Prompt '${promptPath}' missing required field: ${field}`);
+    }
+  }
+
+  // Validate temperature is in valid range
+  if (config.temperature < 0 || config.temperature > 1) {
+    throw new Error(`Prompt '${promptPath}' has invalid temperature: ${config.temperature} (must be 0-1)`);
+  }
+
+  // Validate output format has required fields
+  if (!config.outputFormat.type || !config.outputFormat.schema) {
+    throw new Error(`Prompt '${promptPath}' has invalid outputFormat (missing type or schema)`);
+  }
+}
+
+/**
+ * Get all available prompts in a category
+ *
+ * @param {string} category - Category name (e.g., 'web-design')
+ * @returns {Promise<string[]>} List of available prompt names
+ */
+export async function listPrompts(category) {
+  const { readdir } = await import('fs/promises');
+  const categoryPath = join(__dirname, '../config/prompts', category);
+
+  try {
+    const files = await readdir(categoryPath);
+    return files
+      .filter(f => f.endsWith('.json'))
+      .map(f => f.replace('.json', ''));
+  } catch (error) {
+    throw new Error(`Failed to list prompts in category '${category}': ${error.message}`);
+  }
+}
+
+/**
+ * Clear the prompt cache (useful for development/testing)
+ */
+export function clearPromptCache() {
+  promptCache.clear();
+}
+
+/**
+ * Get prompt metadata without loading full prompt
+ *
+ * @param {string} promptPath - Path to prompt
+ * @returns {Promise<object>} Metadata (name, description, model, cost estimate)
+ */
+export async function getPromptMetadata(promptPath) {
+  const fullPath = join(__dirname, '../config/prompts', `${promptPath}.json`);
+
+  try {
+    const fileContent = await readFile(fullPath, 'utf-8');
+    const config = JSON.parse(fileContent);
+
+    return {
+      name: config.name,
+      description: config.description,
+      model: config.model,
+      temperature: config.temperature,
+      variables: config.variables,
+      costEstimate: config.costEstimate
+    };
+  } catch (error) {
+    throw new Error(`Failed to load prompt metadata '${promptPath}': ${error.message}`);
+  }
+}
+
+// Export helper for easy usage
+export default {
+  loadPrompt,
+  listPrompts,
+  clearPromptCache,
+  getPromptMetadata,
+  substituteVariables
+};

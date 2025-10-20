@@ -1,0 +1,175 @@
+{
+  "version": "1.0",
+  "name": "email-quality-validation",
+  "description": "Quality validation rules for email outreach based on 2025 best practices",
+
+  "rules": {
+    "subject": {
+      "minLength": 50,
+      "maxLength": 70,
+      "optimalLength": [61, 70],
+      "bannedPhrases": [
+        "free",
+        "click here",
+        "limited time",
+        "act now",
+        "amazing offer",
+        "increase revenue",
+        "10x",
+        "guaranteed",
+        "you won't believe",
+        "incredible",
+        "urgent",
+        "don't miss",
+        "once in a lifetime"
+      ],
+      "requiredLowercase": true,
+      "noPunctuationAtEnd": true,
+      "maxExclamations": 0
+    },
+
+    "body": {
+      "maxWords": 200,
+      "maxSentences": 5,
+      "minSentences": 2,
+      "maxCharacters": 1200,
+      "bannedPhrases": [
+        "leverage",
+        "synergy",
+        "paradigm shift",
+        "cutting-edge",
+        "world-class",
+        "best-in-class",
+        "circle back",
+        "touch base",
+        "move the needle",
+        "low-hanging fruit",
+        "game changer",
+        "disrupt",
+        "revolutionize",
+        "solution provider",
+        "value-add"
+      ],
+      "requiredElements": [
+        "personalization",
+        "specific_finding",
+        "business_impact",
+        "call_to_action"
+      ],
+      "maxExclamations": 1,
+      "maxCapitalizedWords": 2
+    },
+
+    "placeholders": {
+      "mustNotContain": [
+        "{{",
+        "}}",
+        "[NAME]",
+        "[COMPANY]",
+        "[PLACEHOLDER]",
+        "[INSERT",
+        "PLACEHOLDER",
+        "TODO"
+      ]
+    },
+
+    "spam": {
+      "maxExclamations": 1,
+      "maxCapitalizedWords": 2,
+      "maxConsecutiveCaps": 3,
+      "bannedPatterns": [
+        "!!!",
+        "$$$",
+        "FREE!!!",
+        "CLICK NOW",
+        "BUY NOW",
+        "LIMITED TIME!!!",
+        "ACT FAST"
+      ],
+      "maxUrlCount": 2,
+      "bannedWords": [
+        "viagra",
+        "cialis",
+        "nigerian prince",
+        "inheritance",
+        "lottery"
+      ]
+    },
+
+    "personalization": {
+      "mustIncludeAtLeastOne": [
+        "company_name",
+        "contact_name",
+        "industry",
+        "location"
+      ],
+      "mustAvoidGeneric": [
+        "your business",
+        "your company",
+        "your website",
+        "your site"
+      ],
+      "requireSpecificFindings": true
+    },
+
+    "tone": {
+      "bannedSalesyPhrases": [
+        "we offer",
+        "we provide",
+        "we specialize in",
+        "our services include",
+        "we can help you",
+        "let me tell you about",
+        "I'd like to introduce",
+        "we're the best"
+      ],
+      "requiredHelpfulTone": true,
+      "maxSelfPromotion": 1
+    }
+  },
+
+  "scoring": {
+    "subjectLength": {
+      "61-70": 100,
+      "50-60": 85,
+      "71-80": 75,
+      "under50": 50,
+      "over80": 40
+    },
+    "bodyLength": {
+      "under100": 100,
+      "100-150": 95,
+      "150-200": 85,
+      "200-250": 70,
+      "over250": 50
+    },
+    "hasSpecificFinding": 20,
+    "hasBusinessImpact": 20,
+    "noBannedPhrases": 15,
+    "properTone": 10,
+    "noPlaceholders": 15,
+    "personalized": 10,
+    "nospam": 10
+  },
+
+  "penalties": {
+    "unfilled_placeholder": -30,
+    "banned_phrase_subject": -15,
+    "banned_phrase_body": -10,
+    "too_long": -20,
+    "too_short": -15,
+    "too_salesy": -20,
+    "spam_pattern": -25,
+    "generic_language": -10,
+    "no_specific_finding": -20,
+    "excessive_exclamations": -15
+  },
+
+  "thresholds": {
+    "excellent": 90,
+    "good": 80,
+    "acceptable": 70,
+    "needsReview": 60,
+    "poor": 50
+  }
+}

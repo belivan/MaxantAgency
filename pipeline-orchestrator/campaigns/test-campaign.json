@@ -1,0 +1,90 @@
+{
+  "name": "Test Campaign - Quick Validation",
+  "description": "Simple test campaign for validating the orchestrator (no schedule, manual trigger only)",
+
+  "schedule": {
+    "cron": null,
+    "timezone": "America/New_York",
+    "enabled": false
+  },
+
+  "budget": {
+    "daily": 1.00,
+    "weekly": 5.00,
+    "monthly": 20.00,
+    "perLead": 0.10
+  },
+
+  "steps": [
+    {
+      "name": "prospecting-test",
+      "engine": "prospecting",
+      "endpoint": "http://localhost:3010/api/prospect",
+      "method": "POST",
+      "params": {
+        "brief": {
+          "icp": {
+            "industry": "Restaurant",
+            "niches": ["Pizza"]
+          },
+          "geo": {
+            "city": "Philadelphia, PA"
+          }
+        },
+        "count": 5,
+        "model": "grok-4-fast",
+        "verify": false
+      },
+      "timeout": 120000,
+      "retry": {
+        "attempts": 2,
+        "delay": 3000,
+        "backoff": "exponential"
+      },
+      "onSuccess": "continue",
+      "onFailure": "abort"
+    },
+
+    {
+      "name": "analysis-test",
+      "engine": "analysis",
+      "endpoint": "http://localhost:3000/api/analyze",
+      "method": "POST",
+      "params": {
+        "filters": {
+          "status": "ready_for_analysis",
+          "city": "Philadelphia, PA",
+          "limit": 10
+        },
+        "options": {
+          "tier": "tier1",
+          "modules": ["design"]
+        }
+      },
+      "timeout": 300000,
+      "retry": {
+        "attempts": 1,
+        "delay": 5000
+      },
+      "onSuccess": "continue",
+      "onFailure": "log"
+    }
+  ],
+
+  "notifications": {
+    "onComplete": {
+      "email": null,
+      "slack": null
+    },
+    "onFailure": {
+      "email": null,
+      "slack": null
+    }
+  },
+
+  "metadata": {
+    "project_id": null,
+    "tags": ["test", "validation"],
+    "owner": "maksant-agency"
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "name": "Monthly Retail Outreach - Philadelphia",
+  "description": "Generate 50 retail prospects on the first of every month, analyze, compose, and queue emails",
+
+  "schedule": {
+    "cron": "0 8 1 * *",
+    "timezone": "America/New_York",
+    "enabled": true
+  },
+
+  "budget": {
+    "daily": 10.00,
+    "weekly": 40.00,
+    "monthly": 150.00,
+    "perLead": 0.15
+  },
+
+  "steps": [
+    {
+      "name": "prospecting-retail",
+      "engine": "prospecting",
+      "endpoint": "http://localhost:3010/api/prospect",
+      "method": "POST",
+      "params": {
+        "brief": {
+          "icp": {
+            "industry": "Retail",
+            "niches": ["Clothing", "Jewelry", "Gift Shop", "Home Decor"]
+          },
+          "geo": {
+            "city": "Philadelphia, PA"
+          }
+        },
+        "count": 50,
+        "model": "grok-4-fast",
+        "verify": true
+      },
+      "timeout": 600000,
+      "retry": {
+        "attempts": 3,
+        "delay": 10000,
+        "backoff": "exponential"
+      },
+      "onSuccess": "continue",
+      "onFailure": "abort"
+    },
+
+    {
+      "name": "analysis-retail",
+      "engine": "analysis",
+      "endpoint": "http://localhost:3000/api/analyze",
+      "method": "POST",
+      "params": {
+        "filters": {
+          "status": "ready_for_analysis",
+          "city": "Philadelphia, PA",
+          "industry": "Retail",
+          "limit": 100
+        },
+        "options": {
+          "tier": "tier3",
+          "modules": ["design", "seo", "content", "social", "performance"]
+        }
+      },
+      "timeout": 900000,
+      "retry": {
+        "attempts": 2,
+        "delay": 15000,
+        "backoff": "exponential"
+      },
+      "onSuccess": "continue",
+      "onFailure": "continue"
+    },
+
+    {
+      "name": "outreach-compose-retail",
+      "engine": "outreach",
+      "endpoint": "http://localhost:3001/api/compose-batch",
+      "method": "POST",
+      "params": {
+        "filters": {
+          "grade": ["A", "B"],
+          "hasEmail": true,
+          "status": "ready_for_outreach",
+          "industry": "Retail"
+        },
+        "strategy": "value-proposition",
+        "generateVariants": true,
+        "model": "sonnet"
+      },
+      "timeout": 600000,
+      "retry": {
+        "attempts": 2,
+        "delay": 10000,
+        "backoff": "exponential"
+      },
+      "onSuccess": "continue",
+      "onFailure": "abort"
+    },
+
+    {
+      "name": "queue-emails",
+      "engine": "sender",
+      "endpoint": "http://localhost:3001/api/queue-batch",
+      "method": "POST",
+      "params": {
+        "filters": {
+          "status": "pending",
+          "quality_score_min": 85
+        },
+        "scheduledDate": "auto",
+        "delayMs": 10000
+      },
+      "timeout": 300000,
+      "retry": {
+        "attempts": 1,
+        "delay": 0
+      },
+      "onSuccess": "continue",
+      "onFailure": "log"
+    }
+  ],
+
+  "notifications": {
+    "onComplete": {
+      "email": "your-email@example.com",
+      "slack": null
+    },
+    "onFailure": {
+      "email": "your-email@example.com",
+      "slack": null
+    }
+  },
+
+  "metadata": {
+    "project_id": null,
+    "tags": ["retail", "philadelphia", "monthly"],
+    "owner": "maksant-agency"
+  }
+}

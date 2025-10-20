@@ -1,0 +1,200 @@
+{
+  "table": "prospects",
+  "description": "Companies discovered during prospecting, ready for analysis",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier for the prospect"
+    },
+    {
+      "name": "company_name",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Name of the company"
+    },
+    {
+      "name": "industry",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Industry or business category"
+    },
+    {
+      "name": "website",
+      "type": "text",
+      "required": false,
+      "index": true,
+      "description": "Company website URL"
+    },
+    {
+      "name": "website_status",
+      "type": "text",
+      "enum": ["active", "timeout", "ssl_error", "not_found", "no_website"],
+      "default": "active",
+      "description": "Website accessibility status"
+    },
+    {
+      "name": "city",
+      "type": "text",
+      "index": true,
+      "description": "City location"
+    },
+    {
+      "name": "state",
+      "type": "text",
+      "description": "State or province"
+    },
+    {
+      "name": "address",
+      "type": "text",
+      "description": "Full street address"
+    },
+    {
+      "name": "contact_email",
+      "type": "text",
+      "description": "Contact email address"
+    },
+    {
+      "name": "contact_phone",
+      "type": "text",
+      "description": "Contact phone number"
+    },
+    {
+      "name": "contact_name",
+      "type": "text",
+      "description": "Contact person name"
+    },
+    {
+      "name": "description",
+      "type": "text",
+      "description": "Company description or bio"
+    },
+    {
+      "name": "services",
+      "type": "jsonb",
+      "description": "Array of services offered by the company"
+    },
+    {
+      "name": "google_place_id",
+      "type": "text",
+      "unique": true,
+      "description": "Google Maps Place ID (unique)"
+    },
+    {
+      "name": "google_rating",
+      "type": "decimal",
+      "description": "Google Maps rating (1.0 - 5.0)"
+    },
+    {
+      "name": "google_review_count",
+      "type": "integer",
+      "description": "Number of Google reviews"
+    },
+    {
+      "name": "social_profiles",
+      "type": "jsonb",
+      "description": "Social media profile URLs (instagram, facebook, linkedin, twitter)"
+    },
+    {
+      "name": "social_metadata",
+      "type": "jsonb",
+      "description": "Scraped metadata from social profiles (followers, bio, etc.)"
+    },
+    {
+      "name": "icp_match_score",
+      "type": "integer",
+      "description": "Relevance score to ICP (0-100)"
+    },
+    {
+      "name": "is_relevant",
+      "type": "boolean",
+      "default": true,
+      "description": "Whether prospect matches ICP criteria"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["ready_for_analysis", "queued", "analyzing", "analyzed", "error"],
+      "default": "ready_for_analysis",
+      "index": true,
+      "description": "Processing status in pipeline"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "foreignKey": "projects.id",
+      "description": "Reference to parent project"
+    },
+    {
+      "name": "run_id",
+      "type": "text",
+      "index": true,
+      "description": "Batch run identifier (UUID)"
+    },
+    {
+      "name": "source",
+      "type": "text",
+      "default": "prospecting-engine",
+      "description": "Data source identifier"
+    },
+    {
+      "name": "discovery_cost",
+      "type": "decimal",
+      "description": "Total API costs for discovering this prospect (USD)"
+    },
+    {
+      "name": "discovery_time_ms",
+      "type": "integer",
+      "description": "Time taken to discover and enrich (milliseconds)"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Timestamp when record was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Timestamp when record was last updated"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_prospects_status_city",
+      "columns": ["status", "city"]
+    },
+    {
+      "name": "idx_prospects_industry_rating",
+      "columns": ["industry", "google_rating"]
+    },
+    {
+      "name": "idx_prospects_project_status",
+      "columns": ["project_id", "status"]
+    },
+    {
+      "name": "idx_prospects_run_id",
+      "columns": ["run_id"]
+    }
+  ],
+
+  "constraints": [
+    {
+      "type": "check",
+      "name": "chk_google_rating_range",
+      "expression": "google_rating >= 1.0 AND google_rating <= 5.0"
+    },
+    {
+      "type": "check",
+      "name": "chk_icp_match_score_range",
+      "expression": "icp_match_score >= 0 AND icp_match_score <= 100"
+    }
+  ]
+}

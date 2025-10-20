@@ -1,0 +1,202 @@
+{
+  "agent": "Agent 2 - Analysis Engine",
+  "agentDir": "analysis-engine",
+  "checks": [
+    {
+      "category": "File Structure",
+      "items": [
+        {
+          "name": "config/prompts/web-design/ directory exists",
+          "path": "analysis-engine/config/prompts/web-design",
+          "type": "directory"
+        },
+        {
+          "name": "analyzers/ directory exists",
+          "path": "analysis-engine/analyzers",
+          "type": "directory"
+        },
+        {
+          "name": "grading/ directory exists",
+          "path": "analysis-engine/grading",
+          "type": "directory"
+        },
+        {
+          "name": "shared/ directory exists",
+          "path": "analysis-engine/shared",
+          "type": "directory"
+        },
+        {
+          "name": "tests/ directory exists",
+          "path": "analysis-engine/tests",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Core Files",
+      "items": [
+        {
+          "name": "design-analyzer.js exists",
+          "path": "analysis-engine/analyzers/design-analyzer.js",
+          "type": "file"
+        },
+        {
+          "name": "seo-analyzer.js exists",
+          "path": "analysis-engine/analyzers/seo-analyzer.js",
+          "type": "file"
+        },
+        {
+          "name": "content-analyzer.js exists",
+          "path": "analysis-engine/analyzers/content-analyzer.js",
+          "type": "file"
+        },
+        {
+          "name": "social-analyzer.js exists",
+          "path": "analysis-engine/analyzers/social-analyzer.js",
+          "type": "file"
+        },
+        {
+          "name": "analyzers/index.js (barrel export) exists",
+          "path": "analysis-engine/analyzers/index.js",
+          "type": "file"
+        },
+        {
+          "name": "shared/prompt-loader.js exists",
+          "path": "analysis-engine/shared/prompt-loader.js",
+          "type": "file"
+        },
+        {
+          "name": "shared/ai-client.js exists",
+          "path": "analysis-engine/shared/ai-client.js",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "category": "Prompts Externalized",
+      "items": [
+        {
+          "name": "design-critique.json exists",
+          "path": "analysis-engine/config/prompts/web-design/design-critique.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "seo-analysis.json exists",
+          "path": "analysis-engine/config/prompts/web-design/seo-analysis.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "content-analysis.json exists",
+          "path": "analysis-engine/config/prompts/web-design/content-analysis.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "social-analysis.json exists",
+          "path": "analysis-engine/config/prompts/web-design/social-analysis.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "industry-critique.json exists",
+          "path": "analysis-engine/config/prompts/web-design/industry-critique.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        }
+      ]
+    },
+    {
+      "category": "Grading System",
+      "items": [
+        {
+          "name": "weights.json exists",
+          "path": "analysis-engine/grading/weights.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "grader.js exists (to be created in Phase 3)",
+          "path": "analysis-engine/grading/grader.js",
+          "type": "file",
+          "required": false
+        },
+        {
+          "name": "critique-generator.js exists (Phase 3)",
+          "path": "analysis-engine/grading/critique-generator.js",
+          "type": "file",
+          "required": false
+        }
+      ]
+    },
+    {
+      "category": "Tests",
+      "items": [
+        {
+          "name": "test-prompt-loader.js exists",
+          "path": "analysis-engine/tests/test-prompt-loader.js",
+          "type": "file"
+        },
+        {
+          "name": "test-analyzers.js exists",
+          "path": "analysis-engine/tests/test-analyzers.js",
+          "type": "file"
+        },
+        {
+          "name": "Prompt loader tests pass",
+          "test": "runTest",
+          "command": "cd analysis-engine && node tests/test-prompt-loader.js",
+          "expectSuccess": true
+        },
+        {
+          "name": "Analyzer tests pass",
+          "test": "runTest",
+          "command": "cd analysis-engine && node tests/test-analyzers.js",
+          "expectSuccess": true
+        }
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "items": [
+        {
+          "name": "No hardcoded API keys",
+          "test": "checkSecurity",
+          "patterns": ["sk-", "xai-", "AKIA", "eyJhbGc"]
+        },
+        {
+          "name": "Error handling present in analyzers",
+          "test": "checkErrorHandling",
+          "minCoverage": 80
+        },
+        {
+          "name": "Exports are properly defined",
+          "test": "checkExports",
+          "modules": [
+            "analyzers/design-analyzer.js",
+            "analyzers/seo-analyzer.js",
+            "analyzers/content-analyzer.js",
+            "analyzers/social-analyzer.js"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Performance",
+      "items": [
+        {
+          "name": "Target cost per lead: <$0.15",
+          "test": "checkCost",
+          "target": 0.15,
+          "estimate": 0.033
+        },
+        {
+          "name": "Estimated analysis time acceptable",
+          "test": "manual",
+          "note": "Will test when orchestrator is built"
+        }
+      ]
+    }
+  ]
+}

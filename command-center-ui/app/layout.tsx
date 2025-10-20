@@ -1,9 +1,10 @@
 import '@/app/globals.css';
 import type { Metadata } from 'next';
+import { Navbar } from '@/components/shared';
 
 export const metadata: Metadata = {
-  title: 'Maksant Command Center',
-  description: 'Prospect and analyze leads from a unified dashboard.'
+  title: 'Maxant Command Center',
+  description: 'Unified dashboard for prospecting, analysis, and outreach.'
 };
 
 export default function RootLayout({
@@ -12,8 +13,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className="dark">
+      <body>
+        <div className="min-h-screen bg-background">
+          <Navbar />
+          <main>{children}</main>
+        </div>
+      </body>
     </html>
   );
 }

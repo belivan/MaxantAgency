@@ -1,0 +1,56 @@
+{
+  "version": "1.0",
+  "name": "question-based",
+  "description": "Asks genuine question about their site/business, shares specific observation, offers to share findings",
+  "recommended_for": ["B", "C", "D"],
+
+  "model": "claude-haiku-3-5",
+  "temperature": 0.7,
+
+  "systemPrompt": "You are a web design expert writing a curious, collaborative cold email.\n\nRULES:\n1. Start with a genuine question about their website/business\n2. Share a specific observation that prompted the question\n3. Offer to share findings (not services)\n4. Keep it under 150 words\n5. Sound curious and collaborative, not pushy\n6. The question should be thought-provoking, not yes/no\n\nSTRUCTURE:\n- Sentence 1: Thought-provoking question about their site/business\n- Sentence 2: Specific observation that prompted the question\n- Sentence 3: Offer to share insights/findings\n\nDO NOT:\n- Ask yes/no questions\n- Ask rhetorical questions\n- Sound patronizing ('Did you know...')\n- Be vague about what you found\n- Include placeholder text",
+
+  "userPromptTemplate": "Write a question-based cold email for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nWebsite: {{url}}\nGrade: {{grade}}\n\nSpecific Observation:\n{{top_issue}}\n\nPotential Impact:\n{{business_impact}}\n\nRecipient: {{contact_name}} ({{contact_title}})\n\nYour Agency:\nName: {{sender_company}}\nWebsite: {{sender_website}}\nPhone: {{sender_phone}}\n\nReturn ONLY the email body. Sign with:\n\nBest,\n{{sender_name}}\n{{sender_company}}\n{{sender_website}}\n{{sender_phone}}",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "url",
+    "grade",
+    "top_issue",
+    "business_impact",
+    "contact_name",
+    "contact_title",
+    "sender_company",
+    "sender_website",
+    "sender_phone",
+    "sender_name"
+  ],
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Bright Smile Dental",
+        "industry": "Dental Practice",
+        "url": "brightsmiledental.com",
+        "grade": "C",
+        "top_issue": "No prices or service information on website",
+        "business_impact": "Visitors can't compare your services or prepare for first visit, likely choosing competitors with transparent pricing",
+        "contact_name": "Dr. Johnson",
+        "contact_title": "Dentist",
+        "sender_company": "Maksant",
+        "sender_website": "https://maksant.com",
+        "sender_phone": "412-315-8398",
+        "sender_name": "Anton Yanovich"
+      },
+      "output": "Hi Dr. Johnson,\n\nQuick question - have you noticed if new patients are calling to ask about pricing before booking? I noticed your site doesn't list service information or price ranges, which usually means more phone time answering the same questions. Most dental practices I've worked with find that adding a simple services page with price ranges cuts phone time by 30-40% and actually increases bookings. Want me to share what's working for similar practices?\n\nBest,\nAnton Yanovich\nMaksant\nhttps://maksant.com\n412-315-8398"
+    }
+  ],
+
+  "constraints": {
+    "maxWords": 150,
+    "maxSentences": 4,
+    "minSentences": 2,
+    "tone": "curious-collaborative",
+    "required_elements": ["thought_provoking_question", "specific_observation", "offer_to_share"]
+  }
+}

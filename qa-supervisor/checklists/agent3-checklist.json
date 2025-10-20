@@ -1,0 +1,111 @@
+{
+  "agent": "Agent 3 - Outreach Engine",
+  "agentDir": "outreach-engine",
+  "port": 3001,
+  "checks": [
+    {
+      "category": "File Structure",
+      "items": [
+        {
+          "name": "config/prompts/ directory exists",
+          "path": "outreach-engine/config/prompts",
+          "type": "directory"
+        },
+        {
+          "name": "generators/ directory exists",
+          "path": "outreach-engine/generators",
+          "type": "directory"
+        },
+        {
+          "name": "validators/ directory exists",
+          "path": "outreach-engine/validators",
+          "type": "directory"
+        },
+        {
+          "name": "senders/ directory exists",
+          "path": "outreach-engine/senders",
+          "type": "directory"
+        }
+      ]
+    },
+    {
+      "category": "Core Files",
+      "items": [
+        {
+          "name": "server.js exists",
+          "path": "outreach-engine/server.js",
+          "type": "file"
+        },
+        {
+          "name": "generators/email-generator.js exists",
+          "path": "outreach-engine/generators/email-generator.js",
+          "type": "file"
+        },
+        {
+          "name": "validators/email-validator.js exists",
+          "path": "outreach-engine/validators/email-validator.js",
+          "type": "file"
+        },
+        {
+          "name": "senders/smtp-sender.js exists",
+          "path": "outreach-engine/senders/smtp-sender.js",
+          "type": "file"
+        }
+      ]
+    },
+    {
+      "category": "Strategy Prompts",
+      "items": [
+        {
+          "name": "compliment-sandwich.json exists",
+          "path": "outreach-engine/config/prompts/strategies/compliment-sandwich.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "problem-agitation.json exists",
+          "path": "outreach-engine/config/prompts/strategies/problem-agitation.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        },
+        {
+          "name": "industry-insight.json exists",
+          "path": "outreach-engine/config/prompts/strategies/industry-insight.json",
+          "type": "file",
+          "validate": "isValidJSON"
+        }
+      ]
+    },
+    {
+      "category": "Code Quality",
+      "items": [
+        {
+          "name": "No hardcoded API keys or credentials",
+          "test": "checkSecurity",
+          "patterns": ["sk-", "xai-", "AKIA", "eyJhbGc", "password\\s*=\\s*['\"]"]
+        },
+        {
+          "name": "Error handling present",
+          "test": "checkErrorHandling",
+          "minCoverage": 80
+        }
+      ]
+    },
+    {
+      "category": "Performance",
+      "items": [
+        {
+          "name": "Email generation <2 seconds",
+          "test": "manual",
+          "note": "Performance test in Phase 4"
+        },
+        {
+          "name": "Cost per email <$0.01",
+          "test": "checkCost",
+          "target": 0.01,
+          "estimate": 0.003
+        }
+      ]
+    }
+  ]
+}
