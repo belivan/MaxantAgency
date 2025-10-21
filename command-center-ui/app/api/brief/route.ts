@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDefaultBrief } from '@/lib/orchestrator';
+import { getDefaultBrief } from '@/lib/api/orchestrator';
 
 export const dynamic = 'force-dynamic';
 

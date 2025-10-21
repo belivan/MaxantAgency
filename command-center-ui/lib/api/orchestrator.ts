@@ -1,179 +1,83 @@
-/**
- * Pipeline Orchestrator API Client (Agent 6)
- * Port: 3020
- */
+import fs from 'fs/promises';
+import path from 'path';
+import { pathToFileURL } from 'url';
+import { ensureSharedEnv } from '@/lib/server/server-utils';
 
-import type {
-  Campaign,
-  CampaignConfig,
-  CampaignRun,
-  CampaignStats
-} from '@/lib/types';
+let orchestratorModulePromise: Promise<any> | null = null;
+let supabaseModulePromise: Promise<any> | null = null;
+let analyzerModulePromise: Promise<any> | null = null;
 
-const API_BASE = process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020';
+function getRepoRoot() {
+  return path.resolve(process.cwd(), '..');
+}
 
-/**
- * Create a new campaign
- */
-export async function createCampaign(config: CampaignConfig): Promise<Campaign> {
-  const response = await fetch(`${API_BASE}/api/campaigns`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(config)
+async function importFromRepo(relativePath: string) {
+  const absolute = path.resolve(getRepoRoot(), relativePath);
+  const fileUrl = pathToFileURL(absolute).href;
+  console.log('[orchestrator] Attempting import:', {
+    relativePath,
+    absolute,
+    fileUrl,
+    cwd: process.cwd(),
+    repoRoot: getRepoRoot()
   });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to create campaign');
-  }
-
-  const data = await response.json();
-  return data.campaign;
-}
-
-/**
- * Get all campaigns
- */
-export async function getCampaigns(filters?: {
-  status?: string;
-  project_id?: string;
-}): Promise<Campaign[]> {
-  const params = new URLSearchParams();
-  if (filters?.status) params.set('status', filters.status);
-  if (filters?.project_id) params.set('project_id', filters.project_id);
-
-  const response = await fetch(`${API_BASE}/api/campaigns?${params.toString()}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch campaigns');
-  }
-
-  const data = await response.json();
-  return data.campaigns || [];
-}
-
-/**
- * Get a single campaign by ID
- */
-export async function getCampaign(id: string): Promise<Campaign> {
-  const response = await fetch(`${API_BASE}/api/campaigns/${id}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch campaign');
-  }
-
-  const data = await response.json();
-  return data.campaign;
-}
-
-/**
- * Manually trigger a campaign run
- */
-export async function runCampaign(id: string): Promise<{ success: boolean; message: string }> {
-  const response = await fetch(`${API_BASE}/api/campaigns/${id}/run`, {
-    method: 'POST'
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to run campaign');
-  }
-
-  return await response.json();
-}
-
-/**
- * Get campaign run history
- */
-export async function getCampaignRuns(campaignId: string, limit = 50): Promise<CampaignRun[]> {
-  const response = await fetch(`${API_BASE}/api/campaigns/${campaignId}/runs?limit=${limit}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch campaign runs');
-  }
-
-  const data = await response.json();
-  return data.runs || [];
-}
-
-/**
- * Pause a campaign
- */
-export async function pauseCampaign(id: string): Promise<{ success: boolean; status: string }> {
-  const response = await fetch(`${API_BASE}/api/campaigns/${id}/pause`, {
-    method: 'PUT'
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to pause campaign');
-  }
-
-  return await response.json();
-}
-
-/**
- * Resume a paused campaign
- */
-export async function resumeCampaign(id: string): Promise<{ success: boolean; status: string }> {
-  const response = await fetch(`${API_BASE}/api/campaigns/${id}/resume`, {
-    method: 'PUT'
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to resume campaign');
-  }
-
-  return await response.json();
-}
-
-/**
- * Delete a campaign
- */
-export async function deleteCampaign(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/campaigns/${id}`, {
-    method: 'DELETE'
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to delete campaign');
+  try {
+    return await import(fileUrl);
+  } catch (error: any) {
+    console.error('[orchestrator] Import failed:', error.message);
+    console.error('[orchestrator] Error stack:', error.stack);
+    throw error;
   }
 }
 
-/**
- * Get orchestrator statistics
- */
-export async function getOrchestratorStats(): Promise<CampaignStats> {
-  const response = await fetch(`${API_BASE}/api/stats`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to fetch stats');
+async function getOrchestratorModule() {
+  if (!orchestratorModulePromise) {
+    orchestratorModulePromise = importFromRepo('client-orchestrator/index.js');
   }
-
-  const data = await response.json();
-  return data.stats;
+  return orchestratorModulePromise;
 }
 
-/**
- * Check orchestrator health
- */
-export async function checkOrchestratorHealth(): Promise<{
-  status: string;
-  service: string;
-  version: string;
-  activeCampaigns: number;
-}> {
-  const response = await fetch(`${API_BASE}/api/health`);
-
-  if (!response.ok) {
-    throw new Error('Orchestrator is not healthy');
+async function getSupabaseModule() {
+  if (!supabaseModulePromise) {
+    supabaseModulePromise = importFromRepo('client-orchestrator/supabase.js');
   }
+  return supabaseModulePromise;
+}
 
-  return await response.json();
+async function getAnalyzerModule() {
+  if (!analyzerModulePromise) {
+    analyzerModulePromise = importFromRepo('website-audit-tool/analyzer.js');
+  }
+  return analyzerModulePromise;
+}
+
+export async function runProspectorBridge(options: any) {
+  ensureSharedEnv();
+  const { runProspector } = await getOrchestratorModule();
+  return runProspector(options);
+}
+
+export async function markProspectStatusBridge(urls: string[], status: string) {
+  ensureSharedEnv();
+  const { markProspectStatus } = await getSupabaseModule();
+  if (typeof markProspectStatus === 'function') {
+    await markProspectStatus(urls, status);
+  }
+}
+
+export async function analyzeWebsitesBridge(urls: string[], options: any, onProgress?: (payload: any) => void) {
+  ensureSharedEnv();
+  const { analyzeWebsites } = await getAnalyzerModule();
+  return analyzeWebsites(urls, options, onProgress || (() => {}));
+}
+
+export async function getDefaultBrief() {
+  ensureSharedEnv();
+  try {
+    const briefPath = path.resolve(getRepoRoot(), 'client-orchestrator/brief.json');
+    const contents = await fs.readFile(briefPath, 'utf8');
+    return JSON.parse(contents);
+  } catch (error) {
+    return null;
+  }
 }

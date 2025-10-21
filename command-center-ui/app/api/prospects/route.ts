@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDefaultBrief } from '@/lib/orchestrator';
+import { getDefaultBrief } from '@/lib/api/orchestrator';
 import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
