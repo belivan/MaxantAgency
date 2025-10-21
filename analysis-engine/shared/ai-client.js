@@ -162,7 +162,8 @@ async function callOpenAICompatible({
     }
 
     // Enable JSON mode if requested
-    if (jsonMode) {
+    // Note: GPT-5 doesn't support response_format parameter, relies on prompt instructions
+    if (jsonMode && model !== 'gpt-5') {
       requestBody.response_format = { type: 'json_object' };
     }
 

@@ -354,8 +354,8 @@ export default function AnalysisPage() {
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Prospect Selector */}
-        <div className="lg:col-span-2">
+        {/* Left Column - Prospect Selector + Prompts */}
+        <div className="lg:col-span-2 space-y-6">
           <ProspectSelector
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
@@ -363,6 +363,17 @@ export default function AnalysisPage() {
             projectId={selectedProjectId}
             onProjectChange={setSelectedProjectId}
           />
+
+          {/* Prompt Editor */}
+          {!promptsLoading && defaultPrompts && currentPrompts && (
+            <PromptEditor
+              prompts={currentPrompts}
+              defaultPrompts={defaultPrompts}
+              onChange={setCurrentPrompts}
+              locked={leadsCount > 0 && !hasModifiedPrompts()}
+              leadsCount={leadsCount}
+            />
+          )}
         </div>
 
         {/* Right Column - Analysis Config */}
@@ -375,19 +386,6 @@ export default function AnalysisPage() {
           />
         </div>
       </div>
-
-      {/* Prompt Editor - Full Width Section */}
-      {!promptsLoading && defaultPrompts && currentPrompts && (
-        <div className="mt-6">
-          <PromptEditor
-            prompts={currentPrompts}
-            defaultPrompts={defaultPrompts}
-            onChange={setCurrentPrompts}
-            locked={leadsCount > 0 && !hasModifiedPrompts()}
-            leadsCount={leadsCount}
-          />
-        </div>
-      )}
 
       </div>
     </>

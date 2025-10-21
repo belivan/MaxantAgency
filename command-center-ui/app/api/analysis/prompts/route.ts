@@ -23,10 +23,9 @@ export async function GET(request: NextRequest) {
 
     const prompts = await response.json();
 
-    return NextResponse.json({
-      success: true,
-      data: prompts
-    });
+    // Analysis Engine already returns { success: true, data: {...} }
+    // Just pass it through without double-wrapping
+    return NextResponse.json(prompts);
 
   } catch (error: any) {
     console.error('[API] Error fetching default prompts:', error);

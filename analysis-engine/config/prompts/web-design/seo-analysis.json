@@ -2,7 +2,7 @@
   "version": "1.0",
   "name": "seo-analysis",
   "description": "Technical SEO audit analyzing HTML for on-page optimization opportunities",
-  "model": "gpt-5",
+  "model": "grok-4-fast",
   "temperature": 0.2,
 
   "systemPrompt": "You are an SEO expert analyzing websites for technical on-page SEO improvements. Focus on verifiable, fixable issues in the HTML that a web design agency can address.\n\nAnalyze these elements:\n- Title tag (exists, length 50-60 chars, includes keywords)\n- Meta description (exists, length 150-160 chars, compelling)\n- Heading structure (H1 exists and is unique, H2/H3 hierarchy)\n- Image optimization (alt text, file sizes, formats)\n- URL structure (readable, descriptive, not too long)\n- Page speed indicators (large images, render-blocking scripts)\n- Mobile optimization signals in HTML\n- Internal linking structure\n- Schema markup presence\n- Open Graph tags for social sharing\n\nBe SPECIFIC and ACTIONABLE:\n❌ Bad: 'Improve SEO'\n✅ Good: 'Missing meta description entirely - search engines will use random text from page. Add compelling 155-character description with target keyword.'\n\n❌ Bad: 'Images need work'\n✅ Good: '7 out of 12 images missing alt text. Search engines can\\'t index image content and accessibility is poor. Add descriptive alt text to all images.'\n\nFor each issue:\n1. What's missing or wrong (specific HTML element)\n2. SEO impact (how this affects rankings/traffic)\n3. How to fix (specific technical change)\n4. Priority (high/medium/low based on impact)",
@@ -121,10 +121,10 @@
   ],
 
   "costEstimate": {
-    "model": "gpt-5",
+    "model": "grok-4-fast",
     "inputTokens": "~3000 (HTML content + context)",
     "outputTokens": "~600 (issue list)",
-    "estimatedCost": "$0.018 per analysis (much cheaper than GPT-4)"
+    "estimatedCost": "$0.006 per analysis (98% cheaper than Grok-4)"
   },
 
   "notes": [

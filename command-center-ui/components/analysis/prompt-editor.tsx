@@ -221,7 +221,6 @@ export function PromptEditor({
 
                 {/* Quick Info */}
                 <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                  <span>Model: <strong>{prompt.model}</strong></span>
                   <span>Temperature: <strong>{prompt.temperature}</strong></span>
                   {prompt.costEstimate && (
                     <span>Cost: <strong>{prompt.costEstimate.estimatedCost}</strong></span>
@@ -231,18 +230,6 @@ export function PromptEditor({
 
               {isExpanded && (
                 <CardContent className="space-y-4 pt-0">
-                  {/* Model Selection */}
-                  <div className="space-y-2">
-                    <Label htmlFor={`${key}-model`}>AI Model</Label>
-                    <Input
-                      id={`${key}-model`}
-                      value={prompt.model}
-                      onChange={(e) => updatePrompt(key, 'model', e.target.value)}
-                      disabled={locked || !isEditing}
-                      className={locked || !isEditing ? 'opacity-60 cursor-not-allowed' : ''}
-                    />
-                  </div>
-
                   {/* Temperature */}
                   <div className="space-y-2">
                     <Label htmlFor={`${key}-temp`}>
