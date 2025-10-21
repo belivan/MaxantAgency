@@ -19,8 +19,8 @@ const __dirname = path.dirname(__filename);
 export async function loadAllSchemas(verbose = false) {
   const schemas = [];
 
-  // Shared schemas directory (in database-tools itself)
-  const sharedSchemasDir = path.resolve(__dirname, '..', 'database', 'schemas');
+  // Shared schemas directory (in database-tools/shared/schemas)
+  const sharedSchemasDir = path.resolve(__dirname, 'schemas');
 
   // Agent directories to scan (relative to database-tools/)
   const agentDirs = [
