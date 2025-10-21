@@ -15,10 +15,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // Build query
+    // Build query with project name join
     let query = supabase
       .from('leads')
-      .select('*', { count: 'exact' })
+      .select('*, projects(name)', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

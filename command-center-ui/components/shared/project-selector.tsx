@@ -51,26 +51,21 @@ export function ProjectSelector({
   }, []);
 
   const handleChange = (newValue: string) => {
-    if (newValue === 'global') {
-      onChange(null);
-    } else {
-      onChange(newValue);
-    }
+    onChange(newValue);
   };
 
   return (
     <div className={className}>
       <Label htmlFor="project-selector">{label}</Label>
       <Select
-        value={value || 'global'}
+        value={value || undefined}
         onValueChange={handleChange}
         disabled={loading}
       >
         <SelectTrigger id="project-selector" className="w-full">
-          <SelectValue placeholder={loading ? 'Loading projects...' : 'Select project'} />
+          <SelectValue placeholder={loading ? 'Loading projects...' : 'Select a project'} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="global">Global (All Projects)</SelectItem>
           {projects.map((project) => (
             <SelectItem key={project.id} value={project.id}>
               {project.name}

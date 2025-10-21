@@ -129,3 +129,25 @@ export async function updateProject(
 
   return data.data;
 }
+
+/**
+ * Delete projects by IDs
+ */
+export async function deleteProjects(projectIds: string[]): Promise<{ deleted: number }> {
+  const deletePromises = projectIds.map(id =>
+    fetch(`/api/projects/${id}`, {
+      method: 'DELETE',
+    })
+  );
+
+  const responses = await Promise.all(deletePromises);
+
+  // Check for any failures
+  const failures = responses.filter(r => !r.ok);
+  if (failures.length > 0) {
+    const firstError = await failures[0].json();
+    throw new Error(firstError.error || 'Failed to delete some projects');
+  }
+
+  return { deleted: projectIds.length };
+}

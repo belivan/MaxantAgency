@@ -1,0 +1,94 @@
+{
+  "version": "2.0",
+  "name": "lead-priority-scorer",
+  "description": "AI-powered lead qualification using 6-dimension framework: quality gap, budget, urgency, industry fit, company size, engagement potential",
+  "model": "gpt-5",
+  "temperature": 0.3,
+  "systemPrompt": "You are an expert sales qualification AI for a web design agency. Your job is to score leads based on their likelihood to convert into paying customers.\n\nYou evaluate leads across 6 key dimensions:\n\n1. QUALITY GAP (0-25 points): How badly does their website need help?\n   - Broken/outdated: 25 pts\n   - Many issues: 20 pts\n   - Some issues: 15 pts\n   - Few issues: 10 pts\n   - Excellent: 5 pts\n\n2. BUDGET LIKELIHOOD (0-25 points): Can they afford our services?\n   - Premium tech stack (Shopify Plus, HubSpot, custom): 25 pts\n   - Mid-tier tech (Shopify, Squarespace, WordPress): 20 pts\n   - Budget tech (Wix, GoDaddy): 10 pts\n   - Basic/none: 5 pts\n   Also consider: employee count, location count, pricing visibility\n\n3. URGENCY (0-20 points): Do they need help NOW?\n   - Broken features/site down: 20 pts\n   - Outdated content (>2 years): 15 pts\n   - Somewhat stale (1-2 years): 10 pts\n   - Recently updated: 5 pts\n   Also consider: seasonal business timing, competitive pressure\n\n4. INDUSTRY FIT (0-15 points): Do we have experience in their industry?\n   - Perfect fit (restaurant, dental, law): 15 pts\n   - Good fit (retail, services, health): 12 pts\n   - Okay fit (tech, finance, real estate): 8 pts\n   - Poor fit (enterprise, industrial): 5 pts\n\n5. COMPANY SIZE (0-10 points): Are they in our sweet spot?\n   - 5-50 employees: 10 pts\n   - 2-5 employees: 8 pts\n   - 50-200 employees: 6 pts\n   - 1 employee or 200+: 3 pts\n\n6. ENGAGEMENT POTENTIAL (0-5 points): Can we reach decision makers?\n   - Direct owner email/phone: 5 pts\n   - Generic contact info: 3 pts\n   - Contact form only: 1 pt\n\nTOTAL SCORE: 0-100\n- 75-100: HOT lead (immediate outreach priority)\n- 50-74: WARM lead (qualified, follow up soon)\n- 0-49: COLD lead (low priority, nurture campaign)\n\nBe realistic and data-driven. Consider the full picture, not just website quality.\n\nIMPORTANT: Return valid JSON in this EXACT format:\n{\n  \"lead_priority\": 75,\n  \"priority_tier\": \"hot\",\n  \"budget_likelihood\": \"high\",\n  \"fit_score\": 85,\n  \"quality_gap_score\": 22,\n  \"budget_score\": 20,\n  \"urgency_score\": 15,\n  \"industry_fit_score\": 15,\n  \"company_size_score\": 8,\n  \"engagement_score\": 5,\n  \"reasoning\": \"Detailed 2-3 sentence explanation of why this score was assigned, highlighting key factors.\"\n}\n\nDo NOT change field names or structure.",
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "lead_priority": "number (0-100)",
+      "priority_tier": "hot|warm|cold",
+      "budget_likelihood": "high|medium|low",
+      "fit_score": "number (0-100)",
+      "quality_gap_score": "number (0-25)",
+      "budget_score": "number (0-25)",
+      "urgency_score": "number (0-20)",
+      "industry_fit_score": "number (0-15)",
+      "company_size_score": "number (0-10)",
+      "engagement_score": "number (0-5)",
+      "reasoning": "string (2-3 sentences)"
+    }
+  },
+  "userPromptTemplate": "Evaluate this lead and assign a priority score (0-100):\n\nCOMPANY INFO:\n- Name: {{company_name}}\n- Industry: {{industry}}\n- Location: {{city}}, {{state}}\n- URL: {{url}}\n\nWEBSITE QUALITY:\n- Grade: {{website_grade}} ({{overall_score}}/100)\n- Design Score: {{design_score}}/100\n- SEO Score: {{seo_score}}/100\n- Content Score: {{content_score}}/100\n- Social Score: {{social_score}}/100\n- Mobile Friendly: {{is_mobile_friendly}}\n- HTTPS: {{has_https}}\n- Page Load Time: {{page_load_time}}ms\n- Tech Stack: {{tech_stack}}\n\nISSUES & OPPORTUNITIES:\n- Top Issue: {{top_issue}}\n- Quick Wins Available: {{quick_wins_count}}\n- Major Design Issues: {{design_issues_count}}\n\nBUSINESS INTELLIGENCE:\n- Years in Business: {{years_in_business}}\n- Founded Year: {{founded_year}}\n- Employee Count: {{employee_count}}\n- Location Count: {{location_count}}\n- Pricing Visible: {{pricing_visible}}\n- Pricing Range: {{pricing_range}}\n- Blog Active: {{blog_active}}\n- Content Last Updated: {{content_last_update}}\n- Decision Maker Email: {{decision_maker_email}}\n- Decision Maker Phone: {{decision_maker_phone}}\n- Owner Name: {{owner_name}}\n- Premium Features: {{premium_features}}\n- Budget Indicator: {{budget_indicator}}\n- Pages Crawled: {{pages_crawled}}\n\nCONTACT INFO:\n- Email: {{contact_email}}\n- Social Platforms: {{social_platforms_present}}\n\nEvaluate this lead across all 6 dimensions and provide a comprehensive priority score.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "lead_priority": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "priority_tier": {
+        "type": "string",
+        "enum": ["hot", "warm", "cold"]
+      },
+      "budget_likelihood": {
+        "type": "string",
+        "enum": ["high", "medium", "low"]
+      },
+      "fit_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "quality_gap_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 25
+      },
+      "budget_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 25
+      },
+      "urgency_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 20
+      },
+      "industry_fit_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 15
+      },
+      "company_size_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 10
+      },
+      "engagement_score": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 5
+      },
+      "reasoning": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "lead_priority",
+      "priority_tier",
+      "budget_likelihood",
+      "fit_score",
+      "quality_gap_score",
+      "budget_score",
+      "urgency_score",
+      "industry_fit_score",
+      "company_size_score",
+      "engagement_score",
+      "reasoning"
+    ]
+  }
+}

@@ -233,6 +233,79 @@
     },
 
     {
+      "name": "lead_priority",
+      "type": "integer",
+      "index": true,
+      "description": "AI-scored lead quality/priority (0-100, higher = better)"
+    },
+    {
+      "name": "lead_priority_reasoning",
+      "type": "text",
+      "description": "AI-generated explanation for the priority score"
+    },
+    {
+      "name": "priority_tier",
+      "type": "text",
+      "enum": ["hot", "warm", "cold"],
+      "index": true,
+      "description": "Categorical priority tier - hot: 75-100, warm: 50-74, cold: 0-49"
+    },
+    {
+      "name": "budget_likelihood",
+      "type": "text",
+      "enum": ["high", "medium", "low"],
+      "description": "Estimated budget capacity based on business signals"
+    },
+    {
+      "name": "fit_score",
+      "type": "integer",
+      "description": "How well the prospect fits the Ideal Customer Profile (0-100)"
+    },
+
+    {
+      "name": "quality_gap_score",
+      "type": "integer",
+      "description": "Quality gap dimension score (0-25) - how much improvement potential exists"
+    },
+    {
+      "name": "budget_score",
+      "type": "integer",
+      "description": "Budget dimension score (0-25) - estimated budget capacity"
+    },
+    {
+      "name": "urgency_score",
+      "type": "integer",
+      "description": "Urgency dimension score (0-20) - how urgently they need help"
+    },
+    {
+      "name": "industry_fit_score",
+      "type": "integer",
+      "description": "Industry fit dimension score (0-15) - how well they match target industry"
+    },
+    {
+      "name": "company_size_score",
+      "type": "integer",
+      "description": "Company size dimension score (0-10) - company size assessment"
+    },
+    {
+      "name": "engagement_score",
+      "type": "integer",
+      "description": "Engagement dimension score (0-5) - social media engagement level"
+    },
+
+    {
+      "name": "business_intelligence",
+      "type": "jsonb",
+      "description": "Extracted business intelligence data (years in business, employee count, pricing, decision makers, etc.)"
+    },
+
+    {
+      "name": "crawl_metadata",
+      "type": "jsonb",
+      "description": "Multi-page crawl metadata (pages crawled, links found, crawl time, failed pages)"
+    },
+
+    {
       "name": "project_id",
       "type": "uuid",
       "description": "Associated project ID (if lead converts)"
@@ -281,6 +354,14 @@
     {
       "name": "idx_leads_analyzed_at",
       "columns": ["analyzed_at"]
+    },
+    {
+      "name": "idx_leads_priority_tier_score",
+      "columns": ["priority_tier", "lead_priority"]
+    },
+    {
+      "name": "idx_leads_priority_budget_status",
+      "columns": ["priority_tier", "budget_likelihood", "status"]
     }
   ],
 
@@ -337,6 +418,16 @@
       "type": "check",
       "name": "chk_analysis_time_positive",
       "expression": "analysis_time IS NULL OR analysis_time >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_lead_priority_range",
+      "expression": "lead_priority IS NULL OR (lead_priority >= 0 AND lead_priority <= 100)"
+    },
+    {
+      "type": "check",
+      "name": "chk_fit_score_range",
+      "expression": "fit_score IS NULL OR (fit_score >= 0 AND fit_score <= 100)"
     }
   ]
 }

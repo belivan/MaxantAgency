@@ -34,8 +34,11 @@ export interface Lead {
   // Company info
   company_name: string;
   website: string;
+  url?: string; // Website URL (alias for website)
   industry?: string;
   location?: string;
+  city?: string;
+  state?: string;
 
   // Contact info
   contact_email?: string;
@@ -48,6 +51,21 @@ export interface Lead {
   analysis_summary: string;
   quick_wins: string[];
 
+  // Lead Priority (AI-scored)
+  lead_priority?: number;                    // 0-100 overall score
+  lead_priority_reasoning?: string;          // AI explanation
+  priority_tier?: 'hot' | 'warm' | 'cold';   // Auto-calculated tier
+  budget_likelihood?: 'high' | 'medium' | 'low';
+  fit_score?: number;                        // 0-100 score
+
+  // Dimension Scores (6 factors that make up lead_priority)
+  quality_gap_score?: number;                // 0-25
+  budget_score?: number;                     // 0-25
+  urgency_score?: number;                    // 0-20
+  industry_fit_score?: number;               // 0-15
+  company_size_score?: number;               // 0-10
+  engagement_score?: number;                 // 0-5
+
   // Detailed analysis
   design_score?: number;
   design_issues?: Issue[];
@@ -56,6 +74,8 @@ export interface Lead {
   seo_issues?: Issue[];
   seo_title?: string;
   seo_description?: string;
+  page_title?: string;
+  meta_description?: string;
 
   content_score?: number;
   content_issues?: Issue[];
@@ -70,9 +90,13 @@ export interface Lead {
 
   performance_score?: number;
   performance_issues?: Issue[];
+  page_load_time?: number;
 
   accessibility_score?: number;
   accessibility_issues?: Issue[];
+
+  // Technical details
+  tech_stack?: string;
 
   // Social media analysis
   social_profiles?: SocialProfile[];
@@ -82,6 +106,30 @@ export interface Lead {
   // Screenshots
   screenshot_url?: string;
   mobile_screenshot_url?: string;
+
+  // Business Intelligence (extracted from website)
+  business_intelligence?: {
+    years_in_business?: number;
+    founded_year?: number;
+    employee_count?: number | null;
+    location_count?: number | null;
+    pricing_visible?: boolean;
+    pricing_range?: { min?: number; max?: number } | null;
+    blog_active?: boolean;
+    content_last_update?: string | null;
+    decision_maker_accessible?: boolean;
+    owner_name?: string | null;
+    premium_features?: string[];
+    budget_indicator?: 'high' | 'medium' | 'low';
+  };
+
+  // Crawl Metadata (multi-page analysis)
+  crawl_metadata?: {
+    pages_crawled?: number;
+    links_found?: number;
+    crawl_time?: number;
+    failed_pages?: number;
+  };
 
   // Metadata
   analysis_tier: 'tier1' | 'tier2' | 'tier3';
@@ -99,6 +147,7 @@ export interface Lead {
 
 export interface LeadFilters {
   grade?: LeadGrade | LeadGrade[];
+  priority_tier?: 'hot' | 'warm' | 'cold';
   min_score?: number;
   max_score?: number;
   has_email?: boolean;
@@ -107,7 +156,7 @@ export interface LeadFilters {
   location?: string;
   project_id?: string;
   analysis_tier?: Lead['analysis_tier'] | Lead['analysis_tier'][];
-  sort_by?: 'grade' | 'score' | 'date' | 'company_name';
+  sort_by?: 'grade' | 'score' | 'date' | 'company_name' | 'lead_priority';
   sort_order?: 'asc' | 'desc';
   limit?: number;
   offset?: number;

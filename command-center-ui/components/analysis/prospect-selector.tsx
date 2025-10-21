@@ -29,13 +29,15 @@ interface ProspectSelectorProps {
   onSelectionChange: (ids: string[]) => void;
   preSelectedIds?: string[];
   projectId?: string | null;
+  onProjectChange?: (projectId: string | null) => void;
 }
 
 export function ProspectSelector({
   selectedIds,
   onSelectionChange,
   preSelectedIds,
-  projectId
+  projectId,
+  onProjectChange
 }: ProspectSelectorProps) {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<ProspectFilters>({
@@ -78,19 +80,26 @@ export function ProspectSelector({
   }, [projectId]);
 
   // Auto-select pre-selected prospects on load
-  useState(() => {
+  useEffect(() => {
     if (preSelectedIds && preSelectedIds.length > 0 && selectedIds.length === 0) {
       onSelectionChange(preSelectedIds);
     }
-  });
+  }, [preSelectedIds, selectedIds.length, onSelectionChange]);
 
   const handleFilterChange = (key: keyof ProspectFilters, value: any) => {
+    const normalizedValue = value === '' ? undefined : value;
+
     setFilters(prev => ({
       ...prev,
-      [key]: value === '' ? undefined : value,
+      [key]: normalizedValue,
       offset: 0 // Reset to first page when filters change
     }));
     setPage(1);
+
+    // Notify parent if project filter changed
+    if (key === 'project_id' && onProjectChange) {
+      onProjectChange(normalizedValue || null);
+    }
   };
 
   const handlePageChange = (newPage: number) => {
@@ -213,7 +222,7 @@ export function ProspectSelector({
             </Button>
 
             <div className="text-sm text-muted-foreground">
-              {prospects.length} prospects found
+              {total > 0 ? `${total} prospect${total === 1 ? '' : 's'} found` : 'No prospects found'}
             </div>
           </div>
         </CardContent>
@@ -232,6 +241,14 @@ export function ProspectSelector({
       ) : (
         /* Prospects Table */
         <>
+          {/* Results Summary */}
+          {total > 0 && (
+            <div className="mb-3 text-sm text-muted-foreground">
+              Showing <span className="font-medium text-foreground">{startIndex}-{endIndex}</span> of{' '}
+              <span className="font-medium text-foreground">{total}</span> prospect{total === 1 ? '' : 's'}
+            </div>
+          )}
+
           <ProspectTable
             prospects={prospects}
             selectedIds={selectedIds}

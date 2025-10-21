@@ -16,6 +16,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeWebsite, analyzeMultiple, getBatchSummary } from './orchestrator.js';
+import { collectAnalysisPrompts } from './shared/prompt-loader.js';
 
 // Load environment variables
 dotenv.config();
@@ -43,6 +44,27 @@ app.get('/health', (req, res) => {
     version: '2.0.0',
     timestamp: new Date().toISOString()
   });
+});
+
+/**
+ * GET /api/prompts/default
+ * Get default analysis prompts configuration
+ */
+app.get('/api/prompts/default', async (req, res) => {
+  try {
+    const prompts = await collectAnalysisPrompts();
+
+    res.json({
+      success: true,
+      data: prompts
+    });
+  } catch (error) {
+    console.error('Error loading default prompts:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to load default prompts'
+    });
+  }
 });
 
 /**
@@ -130,13 +152,20 @@ app.post('/api/analyze-url', async (req, res) => {
  */
 app.post('/api/analyze', async (req, res) => {
   try {
-    const { prospect_ids, filters = {} } = req.body;
+    const { prospect_ids, filters = {}, project_id, custom_prompts } = req.body;
+
+    // Merge project_id into filters if provided at top level
+    if (project_id) {
+      filters.projectId = project_id;
+    }
 
     // DEBUG: Log what we received
     console.log('📥 Analysis Request Received:', {
       prospect_ids,
       prospect_count: prospect_ids?.length,
       filters,
+      project_id,
+      custom_prompts: custom_prompts ? 'Custom prompts provided' : 'Using defaults',
       body: req.body
     });
 
@@ -257,6 +286,49 @@ app.post('/api/analyze', async (req, res) => {
 
     sendEvent('status', { message: `Found ${prospects.length} prospects to analyze` });
 
+    // Save analysis prompts to project (if project_id is provided)
+    if (filters.projectId) {
+      try {
+        sendEvent('status', { message: 'Saving analysis prompts to project...' });
+
+        const { collectAnalysisPrompts } = await import('./shared/prompt-loader.js');
+        const analysisPrompts = await collectAnalysisPrompts();
+
+        // Fetch current analysis_config to merge with prompts
+        const { data: projectData, error: fetchError } = await supabase
+          .from('projects')
+          .select('analysis_config')
+          .eq('id', filters.projectId)
+          .single();
+
+        if (fetchError) {
+          console.error('⚠️ Failed to fetch project for prompt save:', fetchError);
+        } else {
+          // Merge prompts with existing config
+          const existingConfig = projectData?.analysis_config || {};
+          const updatedConfig = {
+            ...existingConfig,
+            prompts: analysisPrompts,
+            prompts_updated_at: new Date().toISOString()
+          };
+
+          const { error: updateError } = await supabase
+            .from('projects')
+            .update({ analysis_config: updatedConfig })
+            .eq('id', filters.projectId);
+
+          if (updateError) {
+            console.error('⚠️ Failed to save analysis prompts to project:', updateError);
+          } else {
+            console.log('✅ Saved analysis prompts to project:', filters.projectId);
+          }
+        }
+      } catch (error) {
+        console.error('⚠️ Error saving analysis prompts:', error);
+        // Don't fail the analysis if prompt save fails
+      }
+    }
+
     // Prepare targets for analysis
     const targets = prospects.map(p => ({
       url: p.website,
@@ -274,6 +346,7 @@ app.post('/api/analyze', async (req, res) => {
     // Analyze with progress updates
     const results = await analyzeMultiple(targets, {
       concurrency: 2,
+      customPrompts: custom_prompts, // Pass custom prompts if provided
       onProgress: (progress) => {
         sendEvent('progress', {
           url: progress.url,
@@ -287,13 +360,28 @@ app.post('/api/analyze', async (req, res) => {
         console.log('💾 onComplete called:', { url: result.url, success: result.success });
 
         if (result.success) {
+          // DEBUG: Log what orchestrator returned
+          console.log('🔍 DEBUG - Result from orchestrator:', {
+            has_lead_priority: result.lead_priority !== undefined,
+            lead_priority: result.lead_priority,
+            priority_tier: result.priority_tier,
+            has_business_intelligence: result.business_intelligence !== undefined,
+            has_crawl_metadata: result.crawl_metadata !== undefined
+          });
+
           // Save to leads table
           const leadData = extractLeadData(result);
-          console.log('📝 Lead data prepared:', {
+
+          // DEBUG: Log what extractLeadData produced
+          console.log('📝 DEBUG - Extracted lead data:', {
             url: leadData.url,
             company: leadData.company_name,
             grade: leadData.website_grade,
-            score: leadData.website_score
+            score: leadData.overall_score,
+            lead_priority: leadData.lead_priority,
+            priority_tier: leadData.priority_tier,
+            has_business_intelligence: leadData.business_intelligence !== undefined,
+            has_crawl_metadata: leadData.crawl_metadata !== undefined
           });
 
           const { data: savedData, error: insertError } = await supabase
@@ -691,6 +779,27 @@ function extractLeadData(result) {
     // Prospect and project references
     prospect_id: result.prospect_id || null,
     project_id: result.project_id || null,
+
+    // AI Lead Scoring (NEW v2.0)
+    lead_priority: result.lead_priority || null,
+    lead_priority_reasoning: result.lead_priority_reasoning || null,
+    priority_tier: result.priority_tier || null,
+    budget_likelihood: result.budget_likelihood || null,
+    fit_score: result.fit_score || null,
+
+    // Lead Priority Dimension Scores (NEW v2.0)
+    quality_gap_score: result.quality_gap_score || null,
+    budget_score: result.budget_score || null,
+    urgency_score: result.urgency_score || null,
+    industry_fit_score: result.industry_fit_score || null,
+    company_size_score: result.company_size_score || null,
+    engagement_score: result.engagement_score || null,
+
+    // Business Intelligence (NEW v2.0)
+    business_intelligence: result.business_intelligence || null,
+
+    // Crawl Metadata (NEW v2.0)
+    crawl_metadata: result.crawl_metadata || null,
 
     // Status
     status: 'ready_for_outreach',

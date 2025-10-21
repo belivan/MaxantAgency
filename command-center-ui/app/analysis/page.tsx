@@ -6,35 +6,18 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ProspectSelector, AnalysisConfig, AnalysisProgress } from '@/components/analysis';
-import { ProjectSelector } from '@/components/shared/project-selector';
+import { ProspectSelector, AnalysisConfig } from '@/components/analysis';
+import { PromptEditor, type AnalysisPrompts } from '@/components/analysis/prompt-editor';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
-import { analyzeProspects, updateProject } from '@/lib/api';
+import { updateProject, getProject, createProject } from '@/lib/api';
 import type { AnalysisOptionsFormData, SSEMessage, LeadGrade } from '@/lib/types';
 
-interface CurrentAnalysis {
-  company_name: string;
-  website: string;
-  steps: Array<{
-    name: string;
-    status: 'pending' | 'active' | 'completed' | 'error';
-  }>;
-}
-
-interface CompletedLead {
-  company_name: string;
-  website: string;
-  grade: LeadGrade;
-  score: number;
-  timestamp: string;
-}
 
 export default function AnalysisPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const engineStatus = useEngineHealth();
   const { startTask, updateTask, addLog, completeTask, errorTask } = useTaskProgress();
@@ -43,11 +26,9 @@ export default function AnalysisPage() {
   const preSelectedIds = searchParams.get('prospect_ids')?.split(',') || [];
   const urlProjectId = searchParams.get('project_id');
 
-  // Project selection state
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
-
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
 
   // Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -56,8 +37,12 @@ export default function AnalysisPage() {
     current: number;
     total: number;
   } | undefined>();
-  const [currentAnalysis, setCurrentAnalysis] = useState<CurrentAnalysis | undefined>();
-  const [completedLeads, setCompletedLeads] = useState<CompletedLead[]>([]);
+
+  // Prompt state
+  const [defaultPrompts, setDefaultPrompts] = useState<AnalysisPrompts | null>(null);
+  const [currentPrompts, setCurrentPrompts] = useState<AnalysisPrompts | null>(null);
+  const [leadsCount, setLeadsCount] = useState(0);
+  const [promptsLoading, setPromptsLoading] = useState(true);
 
   // SSE connection
   const { status, error: sseError } = useSSE({
@@ -71,46 +56,97 @@ export default function AnalysisPage() {
           current: message.data.current || 0,
           total: message.data.total || 100
         });
-
-        // Update current analysis
-        if (message.data.currentSite) {
-          setCurrentAnalysis({
-            company_name: message.data.currentSite.company_name,
-            website: message.data.currentSite.website,
-            steps: message.data.currentSite.steps || []
-          });
-        }
-      } else if (message.type === 'log') {
-        // Handle individual site completion
-        if (message.data.lead) {
-          setCompletedLeads(prev => [
-            {
-              company_name: message.data.lead.company_name,
-              website: message.data.lead.website,
-              grade: message.data.lead.grade,
-              score: message.data.lead.overall_score,
-              timestamp: new Date().toISOString()
-            },
-            ...prev
-          ]);
-        }
       } else if (message.type === 'complete') {
         setIsAnalyzing(false);
         setSseUrl(null);
-        setCurrentAnalysis(undefined);
       } else if (message.type === 'error') {
         setIsAnalyzing(false);
         setSseUrl(null);
-        setCurrentAnalysis(undefined);
       }
     },
     onError: (error) => {
       console.error('SSE Error:', error);
       setIsAnalyzing(false);
       setSseUrl(null);
-      setCurrentAnalysis(undefined);
     }
   });
+
+  // Load default prompts on mount
+  useEffect(() => {
+    async function loadDefaultPrompts() {
+      try {
+        setPromptsLoading(true);
+        const response = await fetch('/api/analysis/prompts');
+        const result = await response.json();
+
+        if (result.success) {
+          setDefaultPrompts(result.data);
+          setCurrentPrompts(result.data);
+        }
+      } catch (error) {
+        console.error('Failed to load default prompts:', error);
+      } finally {
+        setPromptsLoading(false);
+      }
+    }
+
+    loadDefaultPrompts();
+  }, []);
+
+  // Load project-specific prompts and leads count when project changes
+  useEffect(() => {
+    async function loadProjectData() {
+      if (!selectedProjectId) {
+        setCurrentPrompts(defaultPrompts);
+        setLeadsCount(0);
+        return;
+      }
+
+      try {
+        const project = await getProject(selectedProjectId);
+
+        if (project.analysis_prompts) {
+          setCurrentPrompts(project.analysis_prompts);
+        } else {
+          setCurrentPrompts(defaultPrompts);
+        }
+
+        const leadsResponse = await fetch(`/api/leads?project_id=${selectedProjectId}`);
+        const leadsResult = await leadsResponse.json();
+
+        if (leadsResult.success) {
+          setLeadsCount(leadsResult.total || 0);
+        }
+      } catch (error) {
+        console.error('Failed to load project data:', error);
+      }
+    }
+
+    if (defaultPrompts) {
+      loadProjectData();
+    }
+  }, [selectedProjectId, defaultPrompts]);
+
+  // Helper: Check if prompts have been modified
+  const hasModifiedPrompts = () => {
+    if (!currentPrompts || !defaultPrompts) return false;
+
+    const keys: Array<keyof AnalysisPrompts> = ['design', 'seo', 'content', 'social'];
+
+    return keys.some((key) => {
+      const current = currentPrompts[key] as any;
+      const defaultVal = defaultPrompts[key] as any;
+
+      if (!current || !defaultVal) return false;
+
+      return (
+        current.model !== defaultVal.model ||
+        current.temperature !== defaultVal.temperature ||
+        current.systemPrompt !== defaultVal.systemPrompt ||
+        current.userPromptTemplate !== defaultVal.userPromptTemplate
+      );
+    });
+  };
 
   const handleAnalyze = async (config: AnalysisOptionsFormData) => {
     if (selectedIds.length === 0) {
@@ -119,21 +155,58 @@ export default function AnalysisPage() {
     }
 
     setIsAnalyzing(true);
-    setCompletedLeads([]);
     setProgress(undefined);
-    setCurrentAnalysis(undefined);
 
-    // Save analysis config to project if one is selected
-    if (selectedProjectId) {
+    let effectiveProjectId = selectedProjectId;
+
+    // AUTO-FORK LOGIC: If prompts modified AND leads exist, create new project
+    if (selectedProjectId && hasModifiedPrompts() && leadsCount > 0) {
       try {
-        await updateProject(selectedProjectId, {
+        console.log('[Auto-Fork] Prompts modified + leads exist → Creating new project');
+
+        // Fetch original project data
+        const originalProject = await getProject(selectedProjectId);
+
+        // Create new project with modified prompts
+        const newProject = await createProject({
+          name: `${originalProject.name} (v2)`,
+          client_name: originalProject.client_name,
+          description: `Forked from ${originalProject.name} with custom analysis prompts`,
+          status: 'active',
+          budget: originalProject.budget,
+          icp_brief: originalProject.icp_brief,
+          analysis_prompts: currentPrompts // Save the modified prompts
+        });
+
+        console.log('[Auto-Fork] Created new project:', newProject.id);
+        alert(`Created new project: "${newProject.name}" with custom prompts`);
+
+        // Use the new project for this analysis
+        effectiveProjectId = newProject.id;
+        setSelectedProjectId(newProject.id);
+      } catch (error: any) {
+        console.error('[Auto-Fork] Failed to create new project:', error);
+        alert(`Failed to create new project: ${error.message}`);
+        setIsAnalyzing(false);
+        return;
+      }
+    }
+
+    // Save analysis config and prompts to project if one is selected
+    if (effectiveProjectId) {
+      try {
+        await updateProject(effectiveProjectId, {
           analysis_config: {
             tier: config.tier,
             modules: config.modules,
-            capture_screenshots: config.capture_screenshots ?? true
-          }
+            capture_screenshots: config.capture_screenshots ?? true,
+            max_pages: config.max_pages ?? 30,
+            level_2_sample_rate: config.level_2_sample_rate ?? 0.5,
+            max_crawl_time: config.max_crawl_time ?? 120
+          },
+          analysis_prompts: currentPrompts // Save prompts
         });
-        console.log('✅ Saved analysis config to project:', selectedProjectId);
+        console.log('✅ Saved analysis config and prompts to project:', effectiveProjectId);
       } catch (error: any) {
         console.error('Failed to save analysis config:', error);
         // Don't block analysis if config save fails
@@ -155,7 +228,11 @@ export default function AnalysisPage() {
         count: selectedIds.length,
         tier: config.tier,
         modules: config.modules,
-        project_id: selectedProjectId
+        max_pages: config.max_pages,
+        level_2_sample_rate: config.level_2_sample_rate,
+        max_crawl_time: config.max_crawl_time,
+        project_id: effectiveProjectId,
+        custom_prompts: hasModifiedPrompts()
       });
 
       const response = await fetch(`${API_BASE}/api/analyze`, {
@@ -166,7 +243,11 @@ export default function AnalysisPage() {
           tier: config.tier,
           modules: config.modules,
           capture_screenshots: config.capture_screenshots ?? true,
-          project_id: selectedProjectId
+          max_pages: config.max_pages ?? 30,
+          level_2_sample_rate: config.level_2_sample_rate ?? 0.5,
+          max_crawl_time: config.max_crawl_time ?? 120,
+          project_id: effectiveProjectId,
+          custom_prompts: currentPrompts // Send custom prompts to engine
         })
       });
 
@@ -256,17 +337,8 @@ export default function AnalysisPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Analysis</h1>
           <p className="text-muted-foreground">
-            Analyze prospects to generate detailed leads with grades
+            Analyze prospects with AI-powered lead scoring • Multi-page crawling • Business intelligence extraction
           </p>
-        </div>
-
-        {/* Project Selector */}
-        <div className="max-w-xs">
-          <ProjectSelector
-            value={selectedProjectId}
-            onChange={setSelectedProjectId}
-            label="Filter by Project"
-          />
         </div>
 
         {/* Engine Offline Warning */}
@@ -289,6 +361,7 @@ export default function AnalysisPage() {
             onSelectionChange={setSelectedIds}
             preSelectedIds={preSelectedIds}
             projectId={selectedProjectId}
+            onProjectChange={setSelectedProjectId}
           />
         </div>
 
@@ -303,25 +376,19 @@ export default function AnalysisPage() {
         </div>
       </div>
 
-      {/* Progress Section */}
-      {(isAnalyzing || completedLeads.length > 0) && (
-        <AnalysisProgress
-          status={status}
-          progress={progress}
-          currentAnalysis={currentAnalysis}
-          completedLeads={completedLeads}
-          error={sseError?.message}
-        />
-      )}
-
-      {/* Auto-redirect Notice */}
-      {status === 'closed' && completedLeads.length > 0 && (
-        <div className="rounded-lg bg-green-100 dark:bg-green-950 border border-green-600 p-4">
-          <p className="text-sm font-medium text-green-900 dark:text-green-100">
-            Analysis complete! Redirecting to Leads page...
-          </p>
+      {/* Prompt Editor - Full Width Section */}
+      {!promptsLoading && defaultPrompts && currentPrompts && (
+        <div className="mt-6">
+          <PromptEditor
+            prompts={currentPrompts}
+            defaultPrompts={defaultPrompts}
+            onChange={setCurrentPrompts}
+            locked={leadsCount > 0 && !hasModifiedPrompts()}
+            leadsCount={leadsCount}
+          />
         </div>
       )}
+
       </div>
     </>
   );

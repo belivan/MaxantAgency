@@ -11,8 +11,8 @@ export interface Prospect {
   city?: string;
   state?: string;
   country?: string;
-  rating?: number;
-  review_count?: number;
+  google_rating?: number;
+  google_review_count?: number;
   phone?: string;
   address?: string;
   google_maps_url?: string;
@@ -27,6 +27,7 @@ export interface Prospect {
 
   // Metadata
   project_id?: string;
+  project_name?: string;
   run_id?: string;
   verified: boolean;
   created_at: string;
@@ -52,7 +53,7 @@ export interface ProspectFilters {
 export interface ProspectGenerationOptions {
   count: number;
   city?: string;
-  model: 'grok-4-fast' | 'gpt-4o-mini' | 'gpt-5-mini' | 'claude-sonnet-4-5';
+  model: 'grok-4-fast' | 'gpt-4o' | 'gpt-5' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
   verify: boolean;
   project_id?: string;
 }

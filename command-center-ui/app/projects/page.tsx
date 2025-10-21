@@ -189,6 +189,7 @@ export default function ProjectsPage() {
               onProjectClick={(project) => {
                 window.location.href = `/projects/${project.id}`;
               }}
+              onDeleteComplete={refresh}
             />
           )}
 

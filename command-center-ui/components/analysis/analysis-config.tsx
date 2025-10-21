@@ -2,20 +2,31 @@
 
 /**
  * Analysis Configuration Component
- * Configure analysis depth (tier) and modules
+ * Configure multi-page crawling and analysis options
+ *
+ * NEW ARCHITECTURE (v2.0):
+ * - No more tier selection (always runs full analysis)
+ * - Multi-page crawling enabled by default
+ * - AI lead scoring always enabled
+ * - All core modules: design, SEO, content, performance, social
+ * - Per-module AI model selection
  */
 
+import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Settings, Loader2, Sparkles } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Settings, Loader2, Sparkles, Zap, TrendingUp, Bot } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { analysisOptionsSchema, type AnalysisOptionsFormData } from '@/lib/utils/validation';
 import { calculateAnalysisCost } from '@/lib/utils/cost-calculator';
 import { formatCurrency } from '@/lib/utils/format';
+import { Badge } from '@/components/ui/badge';
+import { ModelSelector, type ModuleModelSelection } from './model-selector';
 
 interface AnalysisConfigProps {
   prospectCount: number;
@@ -24,38 +35,41 @@ interface AnalysisConfigProps {
   disabled?: boolean;
 }
 
-const TIERS = [
-  {
-    value: 'tier1',
-    label: 'Tier 1 - Basic',
-    description: 'Fast analysis, essential metrics',
-    cost: 0.04,
-    modules: ['design']
-  },
-  {
-    value: 'tier2',
-    label: 'Tier 2 - Standard',
-    description: 'Balanced depth and speed',
-    cost: 0.08,
-    modules: ['design', 'seo']
-  },
-  {
-    value: 'tier3',
-    label: 'Tier 3 - Deep',
-    description: 'Comprehensive analysis',
-    cost: 0.15,
-    modules: ['design', 'seo', 'content', 'performance']
-  }
+// Available AI models
+const AI_MODELS = [
+  // Anthropic Claude
+  { value: 'claude-sonnet-4.5', label: 'Claude Sonnet 4.5', provider: 'Anthropic', description: 'Best coding model', cost: '$$', speed: 'Fast' },
+  { value: 'claude-opus-4.1', label: 'Claude Opus 4.1', provider: 'Anthropic', description: 'Most powerful', cost: '$$$', speed: 'Slow' },
+  { value: 'claude-haiku-4.5', label: 'Claude Haiku 4.5', provider: 'Anthropic', description: 'Fast & cheap', cost: '$', speed: 'Very Fast' },
+
+  // xAI Grok
+  { value: 'grok-4', label: 'Grok 4', provider: 'xAI', description: '256K context, tools', cost: '$$', speed: 'Fast' },
+  { value: 'grok-4-fast', label: 'Grok 4 Fast', provider: 'xAI', description: '98% cost reduction', cost: '$', speed: 'Very Fast' },
+  { value: 'grok-3', label: 'Grok 3', provider: 'xAI', description: 'Previous flagship', cost: '$$', speed: 'Fast' },
+
+  // OpenAI GPT
+  { value: 'gpt-5', label: 'GPT-5', provider: 'OpenAI', description: 'Newest flagship', cost: '$$$', speed: 'Medium' },
+  { value: 'gpt-4.1', label: 'GPT-4.1', provider: 'OpenAI', description: '1M context', cost: '$$', speed: 'Fast' },
+  { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', provider: 'OpenAI', description: 'Smaller & faster', cost: '$', speed: 'Very Fast' },
+  { value: 'gpt-4o', label: 'GPT-4o', provider: 'OpenAI', description: 'Multimodal vision', cost: '$$', speed: 'Fast' }
 ] as const;
 
-const ALL_MODULES = [
-  { value: 'design', label: 'Design Analysis', description: 'UI/UX issues, visual hierarchy' },
-  { value: 'seo', label: 'SEO Analysis', description: 'Meta tags, structure, keywords' },
-  { value: 'content', label: 'Content Analysis', description: 'Copy quality, messaging' },
-  { value: 'performance', label: 'Performance', description: 'Load times, optimization' },
-  { value: 'accessibility', label: 'Accessibility', description: 'WCAG compliance, a11y' },
-  { value: 'social', label: 'Social Media', description: 'Social profiles, presence' }
+// Core modules always run (cannot be disabled)
+const CORE_MODULES = [
+  { value: 'design', label: 'Design Analysis', description: 'Vision-based screenshot analysis', defaultModel: 'gpt-4o' },
+  { value: 'seo', label: 'SEO Analysis', description: 'Technical SEO + keywords', defaultModel: 'grok-4-fast' },
+  { value: 'content', label: 'Content Analysis', description: 'Copy quality + messaging', defaultModel: 'grok-4-fast' },
+  { value: 'performance', label: 'Performance', description: 'Page speed + optimization', defaultModel: 'grok-4-fast' },
+  { value: 'social', label: 'Social Media', description: 'Social profiles + presence', defaultModel: 'grok-4-fast' }
 ] as const;
+
+// Optional modules (can be toggled)
+const OPTIONAL_MODULES = [
+  { value: 'accessibility', label: 'Accessibility', description: 'WCAG compliance (adds +$0.003)', defaultModel: 'grok-4-fast' }
+] as const;
+
+// AI Lead Scoring
+const LEAD_SCORING_DEFAULT_MODEL = 'claude-sonnet-4.5';
 
 export function AnalysisConfig({
   prospectCount,
@@ -63,6 +77,18 @@ export function AnalysisConfig({
   isLoading,
   disabled
 }: AnalysisConfigProps) {
+  // Initialize default model selections
+  const [modelSelections, setModelSelections] = useState<ModuleModelSelection>(() => {
+    const defaults: ModuleModelSelection = {};
+    CORE_MODULES.forEach(m => {
+      defaults[m.value] = m.defaultModel;
+    });
+    OPTIONAL_MODULES.forEach(m => {
+      defaults[m.value] = m.defaultModel;
+    });
+    return defaults;
+  });
+
   const {
     control,
     handleSubmit,
@@ -71,110 +97,125 @@ export function AnalysisConfig({
   } = useForm<AnalysisOptionsFormData>({
     resolver: zodResolver(analysisOptionsSchema),
     defaultValues: {
-      tier: 'tier2',
-      modules: ['design', 'seo'],
+      tier: 'tier3', // Deprecated but kept for backward compatibility
+      modules: ['design', 'seo', 'content', 'performance', 'social'], // Always include core modules
       capture_screenshots: true,
+      max_pages: 30,
+      level_2_sample_rate: 0.5, // 50% sampling for level-2+ pages
+      max_crawl_time: 120, // 2 minutes
+      model_selections: modelSelections,
       autoEmail: false,
       autoAnalyze: false
     }
   });
 
-  const tier = watch('tier');
   const modules = watch('modules');
   const captureScreenshots = watch('capture_screenshots');
+  const maxPages = watch('max_pages') || 30;
+  const sampleRate = watch('level_2_sample_rate') || 0.5;
+  const maxCrawlTime = watch('max_crawl_time') || 120;
+
+  const includeAccessibility = modules?.includes('accessibility');
 
   // Calculate estimated cost
-  const estimatedCost = calculateAnalysisCost(
-    prospectCount,
-    tier,
-    modules,
-    { captureScreenshots }
-  );
+  // New cost: ~$0.014/lead (based on testing)
+  const baseCost = 0.014; // Multi-page crawling + 5 modules + AI lead scoring
+  const accessibilityCost = includeAccessibility ? 0.003 : 0;
+  const costPerLead = baseCost + accessibilityCost;
+  const estimatedCost = costPerLead * prospectCount;
+
+  // Handle form submission with model selections
+  const handleFormSubmit = (data: AnalysisOptionsFormData) => {
+    onSubmit({
+      ...data,
+      model_selections: modelSelections
+    });
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Settings className="w-5 h-5" />
-          <span>Analysis Configuration</span>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center space-x-2">
+              <Settings className="w-5 h-5" />
+              <span>Analysis Configuration</span>
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Multi-page crawling + AI lead scoring + custom models
+            </CardDescription>
+          </div>
+          <Badge variant="outline" className="flex items-center space-x-1">
+            <Zap className="w-3 h-3" />
+            <span>v2.0</span>
+          </Badge>
+        </div>
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Analysis Tier */}
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+
+          {/* Core Modules (Always Enabled) */}
           <div className="space-y-3">
-            <Label>Analysis Depth</Label>
-            <Controller
-              name="tier"
-              control={control}
-              render={({ field }) => (
-                <RadioGroup
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={disabled || isLoading}
+            <Label className="flex items-center space-x-2">
+              <span>Core Analysis Modules</span>
+              <Badge variant="secondary" className="text-xs">Always On</Badge>
+            </Label>
+            <div className="space-y-2">
+              {CORE_MODULES.map((module) => (
+                <div
+                  key={module.value}
+                  className="flex items-start space-x-3 rounded-lg border p-3 bg-muted/50"
                 >
-                  {TIERS.map((t) => (
-                    <div
-                      key={t.value}
-                      className="flex items-start space-x-3 rounded-lg border p-4 hover:bg-accent/50 cursor-pointer"
-                    >
-                      <RadioGroupItem value={t.value} id={t.value} className="mt-1" />
-                      <div className="flex-1">
-                        <Label htmlFor={t.value} className="cursor-pointer">
-                          <div className="font-medium">{t.label}</div>
-                          <div className="text-sm text-muted-foreground">{t.description}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {formatCurrency(t.cost)}/lead • Includes: {t.modules.join(', ')}
-                          </div>
-                        </Label>
+                  <Checkbox
+                    id={module.value}
+                    checked={true}
+                    disabled={true}
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor={module.value} className="cursor-default">
+                      <div className="font-medium">{module.label}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {module.description}
                       </div>
-                    </div>
-                  ))}
-                </RadioGroup>
-              )}
-            />
-            {errors.tier && (
-              <p className="text-sm text-destructive">{errors.tier.message}</p>
-            )}
+                    </Label>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Analysis Modules */}
+          {/* Optional Modules */}
           <div className="space-y-3">
-            <Label>Additional Modules</Label>
+            <Label>Optional Modules</Label>
             <Controller
               name="modules"
               control={control}
               render={({ field }) => (
                 <div className="space-y-2">
-                  {ALL_MODULES.map((module) => {
+                  {OPTIONAL_MODULES.map((module) => {
                     const isChecked = field.value?.includes(module.value as any);
-                    const isBaselineModule = TIERS.find(t => t.value === tier)?.modules.includes(module.value as any);
 
                     return (
                       <div
                         key={module.value}
-                        className="flex items-start space-x-3 rounded-lg border p-3"
+                        className="flex items-start space-x-3 rounded-lg border p-3 hover:bg-accent/50 cursor-pointer"
                       >
                         <Checkbox
                           id={module.value}
                           checked={isChecked}
                           onCheckedChange={(checked) => {
+                            const coreModules = ['design', 'seo', 'content', 'performance', 'social'];
                             const newModules = checked
-                              ? [...(field.value || []), module.value]
-                              : field.value?.filter(m => m !== module.value);
+                              ? [...coreModules, module.value]
+                              : coreModules;
                             field.onChange(newModules);
                           }}
-                          disabled={disabled || isBaselineModule}
+                          disabled={disabled || isLoading}
                         />
                         <div className="flex-1">
                           <Label htmlFor={module.value} className="cursor-pointer">
-                            <div className="font-medium flex items-center space-x-2">
-                              <span>{module.label}</span>
-                              {isBaselineModule && (
-                                <span className="text-xs text-muted-foreground">(Included)</span>
-                              )}
-                            </div>
+                            <div className="font-medium">{module.label}</div>
                             <div className="text-xs text-muted-foreground">
                               {module.description}
                             </div>
@@ -186,9 +227,101 @@ export function AnalysisConfig({
                 </div>
               )}
             />
-            {errors.modules && (
-              <p className="text-sm text-destructive">{errors.modules.message}</p>
-            )}
+          </div>
+
+          {/* AI Model Selection */}
+          <ModelSelector
+            modules={CORE_MODULES}
+            models={AI_MODELS}
+            selectedModels={modelSelections}
+            onChange={setModelSelections}
+            disabled={disabled || isLoading}
+          />
+
+          {/* Multi-Page Crawling Configuration */}
+          <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+            <div className="flex items-center space-x-2">
+              <TrendingUp className="w-4 h-4" />
+              <Label className="font-semibold">Multi-Page Crawling</Label>
+            </div>
+
+            {/* Max Pages */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="max_pages" className="text-sm">Max Pages to Crawl</Label>
+                <span className="text-sm font-medium">{maxPages} pages</span>
+              </div>
+              <Controller
+                name="max_pages"
+                control={control}
+                render={({ field }) => (
+                  <Slider
+                    id="max_pages"
+                    min={5}
+                    max={50}
+                    step={5}
+                    value={[field.value || 30]}
+                    onValueChange={(value) => field.onChange(value[0])}
+                    disabled={disabled || isLoading}
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Crawls all level-1 pages (main nav) + sampled level-2+ pages
+              </p>
+            </div>
+
+            {/* Sample Rate */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="sample_rate" className="text-sm">Level-2+ Sample Rate</Label>
+                <span className="text-sm font-medium">{Math.round(sampleRate * 100)}%</span>
+              </div>
+              <Controller
+                name="level_2_sample_rate"
+                control={control}
+                render={({ field }) => (
+                  <Slider
+                    id="sample_rate"
+                    min={0.25}
+                    max={1.0}
+                    step={0.05}
+                    value={[field.value || 0.5]}
+                    onValueChange={(value) => field.onChange(value[0])}
+                    disabled={disabled || isLoading}
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Percentage of sub-pages to analyze (50% recommended)
+              </p>
+            </div>
+
+            {/* Max Crawl Time */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="max_crawl_time" className="text-sm">Max Crawl Time</Label>
+                <span className="text-sm font-medium">{maxCrawlTime}s</span>
+              </div>
+              <Controller
+                name="max_crawl_time"
+                control={control}
+                render={({ field }) => (
+                  <Slider
+                    id="max_crawl_time"
+                    min={30}
+                    max={300}
+                    step={30}
+                    value={[field.value || 120]}
+                    onValueChange={(value) => field.onChange(value[0])}
+                    disabled={disabled || isLoading}
+                  />
+                )}
+              />
+              <p className="text-xs text-muted-foreground">
+                Maximum time to spend crawling each website
+              </p>
+            </div>
           </div>
 
           {/* Screenshots Toggle */}
@@ -198,7 +331,7 @@ export function AnalysisConfig({
                 Capture Screenshots
               </Label>
               <p className="text-xs text-muted-foreground">
-                Take desktop and mobile screenshots (+$0.005/lead)
+                For GPT-4o Vision design analysis (included in price)
               </p>
             </div>
             <Controller
@@ -215,6 +348,27 @@ export function AnalysisConfig({
             />
           </div>
 
+          {/* AI Lead Scoring (Always On) */}
+          <div className="rounded-lg border p-4 bg-primary/5">
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                checked={true}
+                disabled={true}
+              />
+              <div className="flex-1">
+                <Label className="cursor-default">
+                  <div className="font-medium flex items-center space-x-2">
+                    <span>AI Lead Scoring</span>
+                    <Badge variant="secondary" className="text-xs">Always On</Badge>
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    6-dimension framework: quality gap, budget, urgency, industry fit, company size, engagement
+                  </div>
+                </Label>
+              </div>
+            </div>
+          </div>
+
           {/* Cost Estimate */}
           <div className="rounded-lg bg-muted p-4 space-y-2">
             <div className="flex items-center justify-between">
@@ -222,8 +376,11 @@ export function AnalysisConfig({
               <span className="text-2xl font-bold">{formatCurrency(estimatedCost)}</span>
             </div>
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>{prospectCount} prospects</span>
-              <span>{formatCurrency(estimatedCost / (prospectCount || 1))} per lead</span>
+              <span>{prospectCount} prospect{prospectCount === 1 ? '' : 's'}</span>
+              <span>{formatCurrency(costPerLead)} per lead</span>
+            </div>
+            <div className="text-xs text-muted-foreground border-t pt-2 mt-2">
+              Includes: Multi-page crawling ({maxPages} pages avg) + 5 core modules + AI lead scoring
             </div>
           </div>
 
@@ -232,10 +389,19 @@ export function AnalysisConfig({
             type="submit"
             className="w-full"
             size="lg"
-            disabled={disabled || prospectCount === 0}
+            disabled={disabled || prospectCount === 0 || isLoading}
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Run Analysis on {prospectCount} Prospect{prospectCount === 1 ? '' : 's'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Analyze {prospectCount} Prospect{prospectCount === 1 ? '' : 's'}
+              </>
+            )}
           </Button>
         </form>
       </CardContent>

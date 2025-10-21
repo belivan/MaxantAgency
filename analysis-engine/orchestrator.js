@@ -2,12 +2,15 @@
  * Orchestrator - Coordinates the full website analysis pipeline
  *
  * PIPELINE:
- * 1. Capture screenshot and HTML
- * 2. Parse HTML for structured data
- * 3. Run all analyzers in parallel (design, SEO, content, social)
- * 4. Calculate grade and extract insights
- * 5. Generate critique for outreach
- * 6. Return complete analysis
+ * 1. Multi-page crawling (homepage + all level-1 + 50% level-2+)
+ * 2. Extract business intelligence from all crawled pages
+ * 3. Parse HTML for structured data
+ * 4. Run all analyzers in parallel (design, SEO, content, social)
+ * 5. Calculate grade and extract insights
+ * 6. Generate critique for outreach
+ * 7. Score lead priority (with business intelligence + website quality)
+ * 8. Calculate costs
+ * 9. Return complete analysis with business intelligence
  */
 
 import { captureWebsite } from './scrapers/screenshot-capture.js';
@@ -15,6 +18,9 @@ import { parseHTML, getContentSummary } from './scrapers/html-parser.js';
 import { runAllAnalyses, calculateTotalCost } from './analyzers/index.js';
 import { calculateGrade, extractQuickWins, getTopIssue } from './grading/grader.js';
 import { generateCritique, generateOneLiner } from './grading/critique-generator.js';
+import { scoreLeadPriority } from './analyzers/lead-scorer.js';
+import { crawlWebsite } from './scrapers/multi-page-crawler.js';
+import { extractBusinessIntelligence } from './scrapers/business-intelligence-extractor.js';
 
 /**
  * Run complete analysis pipeline for a single URL
@@ -25,11 +31,12 @@ import { generateCritique, generateOneLiner } from './grading/critique-generator
  * @param {string} context.industry - Industry type
  * @param {string} context.prospect_id - Prospect ID (for database)
  * @param {object} options - Analysis options
+ * @param {object} options.customPrompts - Custom AI prompts (optional)
  * @param {function} options.onProgress - Progress callback (optional)
  * @returns {Promise<object>} Complete analysis results
  */
 export async function analyzeWebsite(url, context = {}, options = {}) {
-  const { onProgress } = options;
+  const { customPrompts, onProgress } = options;
 
   const startTime = Date.now();
   const progress = (step, message) => {
@@ -39,18 +46,22 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
   };
 
   try {
-    // STEP 1: Capture screenshot and HTML
-    progress('capture', `Capturing ${url}...`);
-    const captureResult = await captureWebsite(url, {
-      timeout: 30000,
-      fullPage: true,
-      waitForNetworkIdle: true
+    // STEP 1: Multi-page crawling
+    progress('crawl', `Crawling website: ${url}...`);
+    const crawlResult = await crawlWebsite(url, {
+      maxTotalPages: 30,
+      maxCrawlTime: 120000, // 2 minutes
+      captureScreenshots: true, // Capture homepage screenshot for design analysis
+      onProgress: (crawlProgress) => {
+        progress('crawl', `Crawled ${crawlProgress.crawled}/${crawlProgress.total} pages...`);
+      }
     });
 
-    if (!captureResult.success) {
-      throw new Error(`Failed to capture website: ${captureResult.error}`);
+    if (!crawlResult || !crawlResult.homepage) {
+      throw new Error('Failed to crawl website: No homepage data returned');
     }
 
+    // Extract data from homepage (for backward compatibility and design analysis)
     const {
       screenshot,
       html,
@@ -58,9 +69,14 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       techStack,
       isMobileFriendly,
       pageLoadTime
-    } = captureResult;
+    } = crawlResult.homepage;
 
-    // STEP 2: Parse HTML
+    // STEP 2: Extract business intelligence from all crawled pages
+    progress('business-intelligence', 'Extracting business intelligence...');
+    const allPages = [crawlResult.homepage, ...crawlResult.pages].filter(p => p && p.html);
+    const businessIntel = extractBusinessIntelligence(allPages);
+
+    // STEP 3: Parse HTML
     progress('parse', 'Parsing HTML and extracting data...');
     const parsedData = parseHTML(html, url);
     const contentSummary = getContentSummary(parsedData);
@@ -73,13 +89,14 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       has_blog: parsedData.content.hasBlog
     };
 
-    // STEP 3: Run all analyzers in parallel
+    // STEP 4: Run all analyzers in parallel
     progress('analyze', 'Running design, SEO, content, and social analysis...');
     const analysisResults = await runAllAnalyses({
       url,
       screenshot,
       html,
       context: enrichedContext,
+      customPrompts, // Pass custom prompts to analyzers
       socialProfiles: parsedData.social.links,
       socialMetadata: {
         platformCount: parsedData.social.platformCount,
@@ -92,7 +109,7 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
     analysisResults.content.parsedData = parsedData.content;
     analysisResults.social.parsedData = parsedData.social;
 
-    // STEP 4: Calculate grade
+    // STEP 5: Calculate grade
     progress('grade', 'Calculating overall grade...');
 
     const scores = {
@@ -114,14 +131,61 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
 
     const gradeResults = calculateGrade(scores, gradeMetadata);
 
-    // STEP 5: Generate critique
+    // STEP 6: Generate critique
     progress('critique', 'Generating actionable critique...');
     const critique = generateCritique(analysisResults, gradeResults, enrichedContext);
 
-    // STEP 6: Calculate costs
+    // STEP 7: Score lead priority (with business intelligence)
+    progress('lead-scoring', 'Evaluating lead quality and priority...');
+    const leadPriorityData = await scoreLeadPriority({
+      company_name: context.company_name,
+      industry: context.industry,
+      url: crawlResult.homepage.url,
+      city: context.city,
+      state: context.state,
+      website_grade: gradeResults.grade,
+      overall_score: gradeResults.overallScore,
+      design_score: scores.design,
+      seo_score: scores.seo,
+      content_score: scores.content,
+      social_score: scores.social,
+      tech_stack: techStack?.cms || 'Unknown',
+      page_load_time: pageLoadTime,
+      is_mobile_friendly: isMobileFriendly,
+      has_https: pageMetadata?.hasHTTPS || false,
+      design_issues: analysisResults.design?.issues || [],
+      quick_wins: quickWins,
+      top_issue: getTopIssue(analysisResults),
+      one_liner: generateOneLiner(
+        context.company_name || 'This business',
+        critique.topIssue,
+        gradeResults.grade,
+        quickWins.length
+      ),
+      social_platforms_present: parsedData.social.platformsPresent,
+      contact_email: parsedData.content.contactInfo.emails[0] || null,
+
+      // Business intelligence from multi-page crawl
+      years_in_business: businessIntel.yearsInBusiness?.estimatedYears,
+      founded_year: businessIntel.yearsInBusiness?.foundedYear,
+      employee_count: businessIntel.companySize?.employeeCount,
+      location_count: businessIntel.companySize?.locationCount,
+      pricing_visible: businessIntel.pricingVisibility?.visible,
+      pricing_range: businessIntel.pricingVisibility?.priceRange,
+      blog_active: businessIntel.contentFreshness?.blogActive,
+      content_last_update: businessIntel.contentFreshness?.lastUpdate,
+      decision_maker_email: businessIntel.decisionMakerAccessibility?.hasDirectEmail,
+      decision_maker_phone: businessIntel.decisionMakerAccessibility?.hasDirectPhone,
+      owner_name: businessIntel.decisionMakerAccessibility?.ownerName,
+      premium_features: businessIntel.premiumFeatures?.detected || [],
+      budget_indicator: businessIntel.premiumFeatures?.budgetIndicator,
+      pages_crawled: crawlResult.metadata.totalPagesCrawled
+    });
+
+    // STEP 8: Calculate costs
     const analysisCost = calculateTotalCost(analysisResults);
 
-    // STEP 7: Compile final results
+    // STEP 9: Compile final results
     const totalTime = Date.now() - startTime;
     progress('complete', 'Analysis complete!');
 
@@ -129,10 +193,12 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       success: true,
 
       // Core results
-      url: captureResult.url,
+      url: crawlResult.homepage.url,
       company_name: context.company_name,
       industry: context.industry,
+      city: context.city,
       prospect_id: context.prospect_id,
+      project_id: context.project_id,
 
       // Grading
       grade: gradeResults.grade,
@@ -140,6 +206,21 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       grade_label: gradeResults.gradeLabel,
       grade_description: gradeResults.gradeDescription,
       outreach_angle: gradeResults.outreachAngle,
+
+      // Lead Priority (AI-scored)
+      lead_priority: leadPriorityData.lead_priority,
+      lead_priority_reasoning: leadPriorityData.lead_priority_reasoning,
+      priority_tier: leadPriorityData.priority_tier,
+      budget_likelihood: leadPriorityData.budget_likelihood,
+      fit_score: leadPriorityData.fit_score,
+
+      // Lead Priority Dimension Scores
+      quality_gap_score: leadPriorityData.quality_gap_score,
+      budget_score: leadPriorityData.budget_score,
+      urgency_score: leadPriorityData.urgency_score,
+      industry_fit_score: leadPriorityData.industry_fit_score,
+      company_size_score: leadPriorityData.company_size_score,
+      engagement_score: leadPriorityData.engagement_score,
 
       // Scores breakdown
       design_score: scores.design,
@@ -206,12 +287,42 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       analysis_time: totalTime,
       analyzed_at: new Date().toISOString(),
 
+      // Business Intelligence (from multi-page crawl)
+      business_intelligence: {
+        years_in_business: businessIntel.yearsInBusiness?.estimatedYears,
+        founded_year: businessIntel.yearsInBusiness?.foundedYear,
+        employee_count: businessIntel.companySize?.employeeCount,
+        location_count: businessIntel.companySize?.locationCount,
+        pricing_visible: businessIntel.pricingVisibility?.visible,
+        pricing_range: businessIntel.pricingVisibility?.priceRange,
+        blog_active: businessIntel.contentFreshness?.blogActive,
+        content_last_update: businessIntel.contentFreshness?.lastUpdate,
+        decision_maker_accessible: businessIntel.decisionMakerAccessibility?.hasDirectEmail || businessIntel.decisionMakerAccessibility?.hasDirectPhone,
+        owner_name: businessIntel.decisionMakerAccessibility?.ownerName,
+        premium_features: businessIntel.premiumFeatures?.detected || [],
+        budget_indicator: businessIntel.premiumFeatures?.budgetIndicator
+      },
+
+      // Crawl metadata
+      crawl_metadata: {
+        pages_crawled: crawlResult.metadata.totalPagesCrawled,
+        links_found: crawlResult.metadata.totalLinksFound,
+        crawl_time: crawlResult.metadata.crawlTime,
+        failed_pages: crawlResult.metadata.failedPages?.length || 0
+      },
+
       // Raw data (for debugging/detailed view)
       _raw: {
         analysisResults,
         gradeResults,
         parsedData,
-        techStack
+        techStack,
+        businessIntelligence: businessIntel,
+        crawlResult: {
+          homepage: crawlResult.homepage,
+          pagesDiscovered: crawlResult.pages.length,
+          metadata: crawlResult.metadata
+        }
       }
     };
 
@@ -223,7 +334,9 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       url,
       company_name: context.company_name,
       industry: context.industry,
+      city: context.city,
       prospect_id: context.prospect_id,
+      project_id: context.project_id,
       error: error.message,
       analyzed_at: new Date().toISOString(),
       analysis_time: Date.now() - startTime
@@ -237,12 +350,13 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
  * @param {array} targets - Array of {url, context} objects
  * @param {object} options - Analysis options
  * @param {number} options.concurrency - Max parallel analyses (default: 2)
+ * @param {object} options.customPrompts - Custom AI prompts to use instead of defaults
  * @param {function} options.onProgress - Progress callback
  * @param {function} options.onComplete - Completion callback per analysis
  * @returns {Promise<array>} Array of analysis results
  */
 export async function analyzeMultiple(targets, options = {}) {
-  const { concurrency = 2, onProgress, onComplete } = options;
+  const { concurrency = 2, customPrompts, onProgress, onComplete } = options;
 
   const results = [];
   const chunks = chunkArray(targets, concurrency);
@@ -254,6 +368,7 @@ export async function analyzeMultiple(targets, options = {}) {
     const chunkResults = await Promise.allSettled(
       chunk.map(({ url, context }) =>
         analyzeWebsite(url, context, {
+          customPrompts, // Pass custom prompts through
           onProgress: onProgress ? (progress) => {
             onProgress({
               ...progress,

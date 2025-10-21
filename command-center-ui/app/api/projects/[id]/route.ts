@@ -83,6 +83,35 @@ export async function PATCH(
     const projectId = params.id;
     const body = await request.json();
 
+    // ICP BRIEF LOCKING: Check if trying to update ICP brief when prospects exist
+    if (body.icp_brief !== undefined) {
+      const { data: prospects, error: prospectError } = await supabase
+        .from('project_prospects')
+        .select('id')
+        .eq('project_id', projectId)
+        .limit(1);
+
+      if (prospectError) {
+        console.error('Error checking prospects:', prospectError);
+        return NextResponse.json(
+          { success: false, error: 'Failed to validate ICP brief update' },
+          { status: 500 }
+        );
+      }
+
+      if (prospects && prospects.length > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Cannot modify ICP brief after prospects have been generated',
+            locked: true,
+            reason: 'ICP brief is locked because this project has existing prospects. Create a new project to use different ICP criteria.'
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     // Build update object
     const updateData: any = {
       updated_at: new Date().toISOString()

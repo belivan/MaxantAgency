@@ -31,6 +31,7 @@ export { analyzeSocial, hasSocialPresence, countInactivePlatforms } from './soci
  * @param {Buffer|string} data.screenshot - Screenshot for design analysis
  * @param {string} data.html - HTML content
  * @param {object} data.context - Shared context (company_name, industry, etc.)
+ * @param {object} data.customPrompts - Custom AI prompts (optional)
  * @param {object} data.socialProfiles - Social profile URLs (optional)
  * @param {object} data.socialMetadata - Social metadata (optional)
  * @returns {Promise<object>} All analysis results
@@ -41,6 +42,7 @@ export async function runAllAnalyses(data) {
     screenshot,
     html,
     context = {},
+    customPrompts = null,
     socialProfiles = null,
     socialMetadata = null
   } = data;
@@ -51,12 +53,12 @@ export async function runAllAnalyses(data) {
   const { analyzeContent } = await import('./content-analyzer.js');
   const { analyzeSocial } = await import('./social-analyzer.js');
 
-  // Run all analyses in parallel
+  // Run all analyses in parallel (pass custom prompts if provided)
   const [designResults, seoResults, contentResults, socialResults] = await Promise.allSettled([
-    analyzeDesign(url, screenshot, context),
-    analyzeSEO(url, html, context),
-    analyzeContent(url, html, context),
-    analyzeSocial(url, socialProfiles, socialMetadata, context)
+    analyzeDesign(url, screenshot, context, customPrompts?.design),
+    analyzeSEO(url, html, context, customPrompts?.seo),
+    analyzeContent(url, html, context, customPrompts?.content),
+    analyzeSocial(url, socialProfiles, socialMetadata, context, customPrompts?.social)
   ]);
 
   // Extract results (handle failures gracefully)

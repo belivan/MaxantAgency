@@ -19,9 +19,10 @@ import * as cheerio from 'cheerio';
  * @param {string} context.industry - Industry type
  * @param {object} context.blog_info - Blog information
  * @param {object} context.social_profiles - Social profile URLs
+ * @param {object} customPrompt - Custom prompt configuration (optional)
  * @returns {Promise<object>} Content analysis results
  */
-export async function analyzeContent(url, html, context = {}) {
+export async function analyzeContent(url, html, context = {}, customPrompt = null) {
   try {
     // Extract content data from HTML
     const $ = cheerio.load(html);
@@ -32,15 +33,32 @@ export async function analyzeContent(url, html, context = {}) {
     const blogPostsSummary = formatBlogPosts(contentData.blogPosts);
     const keyPagesSummary = formatKeyPages(contentData);
 
-    // Load content analysis prompt
-    const prompt = await loadPrompt('web-design/content-analysis', {
+    // Variables for prompt substitution
+    const variables = {
       company_name: context.company_name || 'this business',
       industry: context.industry || 'unknown industry',
       url: url,
       content_summary: contentSummary,
       blog_posts: blogPostsSummary,
       key_pages: keyPagesSummary
-    });
+    };
+
+    // Use custom prompt if provided, otherwise load default
+    let prompt;
+    if (customPrompt) {
+      console.log('[Content Analyzer] Using custom prompt configuration');
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      prompt = {
+        name: customPrompt.name,
+        model: customPrompt.model,
+        temperature: customPrompt.temperature,
+        systemPrompt: customPrompt.systemPrompt,
+        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
+        outputFormat: customPrompt.outputFormat
+      };
+    } else {
+      prompt = await loadPrompt('web-design/content-analysis', variables);
+    }
 
     // Call Grok-4-fast API
     const response = await callAI({

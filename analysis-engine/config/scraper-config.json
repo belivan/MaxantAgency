@@ -1,0 +1,218 @@
+{
+  "version": "1.0",
+  "description": "Configuration for multi-page website crawler and business intelligence extraction",
+
+  "crawling": {
+    "enabled": true,
+    "description": "Multi-page crawling settings",
+
+    "depth": {
+      "level_0": {
+        "enabled": true,
+        "description": "Homepage - always crawled",
+        "sample_rate": 1.0
+      },
+      "level_1": {
+        "enabled": true,
+        "description": "Main navigation pages (/about, /services, /contact, etc.)",
+        "sample_rate": 1.0,
+        "max_pages": 20,
+        "description_note": "Set to 1.0 to crawl ALL level-1 pages, or lower to sample"
+      },
+      "level_2_plus": {
+        "enabled": true,
+        "description": "Sub-pages (/services/web-design, /blog/post-1, /team/john, etc.)",
+        "sample_rate": 0.5,
+        "max_pages": 10,
+        "description_note": "50% sampling by default - adjust based on site size"
+      }
+    },
+
+    "timeouts": {
+      "page_load_timeout": 30000,
+      "wait_for_network_idle": true,
+      "network_idle_timeout": 2000,
+      "max_crawl_time": 120000,
+      "description": "Timeouts in milliseconds"
+    },
+
+    "limits": {
+      "max_total_pages": 30,
+      "max_concurrent_pages": 3,
+      "description": "Prevent crawling massive sites forever"
+    },
+
+    "filters": {
+      "same_domain_only": true,
+      "exclude_patterns": [
+        "/cart",
+        "/checkout",
+        "/login",
+        "/register",
+        "/account",
+        "/admin",
+        "/wp-admin",
+        "/wp-login",
+        "?add-to-cart=",
+        "?s=",
+        "?p=",
+        "#"
+      ],
+      "exclude_file_types": [
+        ".pdf",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".gif",
+        ".svg",
+        ".webp",
+        ".zip",
+        ".rar",
+        ".mp4",
+        ".mp3",
+        ".doc",
+        ".docx",
+        ".xls",
+        ".xlsx"
+      ],
+      "description": "Filter out non-HTML pages and cart/checkout flows"
+    }
+  },
+
+  "business_intelligence": {
+    "enabled": true,
+    "description": "Extract business intelligence from crawled pages",
+
+    "signals": {
+      "company_size": {
+        "enabled": true,
+        "sources": [
+          "team_pages",
+          "about_page",
+          "employee_count_mentions",
+          "location_count"
+        ],
+        "description": "Detect company size from team pages, locations, About page"
+      },
+
+      "years_in_business": {
+        "enabled": true,
+        "sources": [
+          "copyright_year",
+          "established_year",
+          "since_year",
+          "about_page_text"
+        ],
+        "description": "Extract business age from copyright, 'Since XXXX', 'Established XXXX'"
+      },
+
+      "pricing_visibility": {
+        "enabled": true,
+        "sources": [
+          "service_pages",
+          "pricing_pages",
+          "menu_prices",
+          "product_prices"
+        ],
+        "description": "Detect if pricing is visible on site"
+      },
+
+      "content_freshness": {
+        "enabled": true,
+        "sources": [
+          "blog_post_dates",
+          "news_dates",
+          "last_updated_dates",
+          "copyright_year"
+        ],
+        "description": "Measure content freshness and marketing activity"
+      },
+
+      "decision_maker_accessibility": {
+        "enabled": true,
+        "sources": [
+          "direct_email",
+          "direct_phone",
+          "owner_name",
+          "contact_form_only"
+        ],
+        "description": "How easy is it to reach the decision maker?"
+      },
+
+      "premium_features": {
+        "enabled": true,
+        "sources": [
+          "live_chat",
+          "booking_system",
+          "ecommerce_checkout",
+          "crm_integrations",
+          "member_portals"
+        ],
+        "description": "Detect premium features indicating budget investment"
+      }
+    },
+
+    "page_type_detection": {
+      "enabled": true,
+      "description": "Automatically identify page types for intelligent extraction",
+      "patterns": {
+        "about": ["about", "about-us", "who-we-are", "our-story", "company"],
+        "services": ["services", "what-we-do", "solutions", "offerings"],
+        "team": ["team", "staff", "employees", "our-team", "meet-the-team", "people"],
+        "contact": ["contact", "contact-us", "get-in-touch", "reach-us"],
+        "pricing": ["pricing", "plans", "packages", "rates"],
+        "portfolio": ["portfolio", "work", "projects", "case-studies", "gallery"],
+        "blog": ["blog", "news", "articles", "insights"],
+        "locations": ["locations", "offices", "branches", "stores"],
+        "testimonials": ["testimonials", "reviews", "clients", "success-stories"]
+      }
+    }
+  },
+
+  "performance": {
+    "screenshot_strategy": {
+      "homepage_only": false,
+      "all_pages": false,
+      "selected_pages": ["homepage", "about"],
+      "description": "Screenshots are expensive - be selective"
+    },
+
+    "html_storage": {
+      "store_full_html": false,
+      "store_parsed_data_only": true,
+      "description": "Don't store full HTML to save space"
+    },
+
+    "cache": {
+      "enabled": false,
+      "ttl": 86400000,
+      "description": "Cache crawl results for 24 hours (not implemented yet)"
+    }
+  },
+
+  "ai_analysis": {
+    "description": "AI analyzer settings for multi-page data",
+
+    "aggregation_strategy": {
+      "homepage_weight": 0.4,
+      "about_weight": 0.2,
+      "services_weight": 0.2,
+      "other_pages_weight": 0.2,
+      "description": "How to weight different pages in overall analysis"
+    },
+
+    "business_context_enrichment": {
+      "enabled": true,
+      "description": "Pass business intelligence to AI analyzers as context"
+    }
+  },
+
+  "notes": [
+    "Adjust sample_rate based on site size and analysis budget",
+    "Higher sample_rate = more accurate but slower and more expensive",
+    "For lead qualification, 50% level-2 sampling is usually sufficient",
+    "Always crawl ALL level-1 pages (main nav) for complete business intelligence",
+    "Exclude cart/checkout to avoid triggering analytics or sessions",
+    "File type exclusions prevent downloading PDFs, images, etc."
+  ]
+}

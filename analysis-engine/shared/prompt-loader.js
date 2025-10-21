@@ -74,7 +74,7 @@ export async function loadPrompt(promptPath, variables = {}) {
  * @param {array} requiredVars - List of required variable names
  * @returns {string} Template with variables substituted
  */
-function substituteVariables(template, variables, requiredVars = []) {
+export function substituteVariables(template, variables, requiredVars = []) {
   // Check all required variables are provided
   const missingVars = requiredVars.filter(varName => !(varName in variables));
   if (missingVars.length > 0) {
@@ -188,11 +188,66 @@ export async function getPromptMetadata(promptPath) {
   }
 }
 
+/**
+ * Get raw prompt configuration (for saving to project config)
+ * Returns the complete prompt config without variable substitution
+ *
+ * @param {string} promptPath - Path to prompt
+ * @returns {Promise<object>} Complete prompt configuration
+ */
+export async function getRawPromptConfig(promptPath) {
+  const fullPath = join(__dirname, '../config/prompts', `${promptPath}.json`);
+
+  try {
+    const fileContent = await readFile(fullPath, 'utf-8');
+    const config = JSON.parse(fileContent);
+
+    // Validate before returning
+    validatePromptConfig(config, promptPath);
+
+    return config;
+  } catch (error) {
+    throw new Error(`Failed to load raw prompt config '${promptPath}': ${error.message}`);
+  }
+}
+
+/**
+ * Collect all analysis prompts (for saving to project)
+ * Returns a snapshot of all prompts used in website analysis
+ *
+ * @returns {Promise<object>} Object with all prompt configurations
+ */
+export async function collectAnalysisPrompts() {
+  try {
+    const [designPrompt, seoPrompt, contentPrompt, socialPrompt] = await Promise.all([
+      getRawPromptConfig('web-design/design-critique'),
+      getRawPromptConfig('web-design/seo-analysis'),
+      getRawPromptConfig('web-design/content-analysis'),
+      getRawPromptConfig('web-design/social-analysis')
+    ]);
+
+    return {
+      design: designPrompt,
+      seo: seoPrompt,
+      content: contentPrompt,
+      social: socialPrompt,
+      _meta: {
+        collectedAt: new Date().toISOString(),
+        version: '1.0'
+      }
+    };
+  } catch (error) {
+    throw new Error(`Failed to collect analysis prompts: ${error.message}`);
+  }
+}
+
 // Export helper for easy usage
 export default {
   loadPrompt,
   listPrompts,
   clearPromptCache,
   getPromptMetadata,
+  getRawPromptConfig,
+  collectAnalysisPrompts,
   substituteVariables
 };

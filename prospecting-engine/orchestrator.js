@@ -23,15 +23,17 @@ import { extractWebsiteData } from './extractors/grok-extractor.js';
 import { extractFromDOM } from './extractors/dom-scraper.js';
 import { findSocialProfiles } from './enrichers/social-finder.js';
 import { scrapeSocialMetadata, closeBrowser as closeSocialBrowser } from './enrichers/social-scraper.js';
-import { saveOrLinkProspect, prospectExistsInProject, getProjectIcpBrief } from './database/supabase-client.js';
+import { saveOrLinkProspect, prospectExistsInProject, getProjectIcpBrief, saveProjectIcpAndPrompts } from './database/supabase-client.js';
 import { logInfo, logError, logWarn, logStepStart, logStepComplete } from './shared/logger.js';
 import { costTracker } from './shared/cost-tracker.js';
+import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 
 /**
  * Run the full prospecting pipeline
  *
  * @param {object} brief - ICP brief
  * @param {object} options - Pipeline options
+ * @param {string} options.model - AI model to use for all AI-powered steps (optional)
  * @param {function} onProgress - Progress callback for SSE
  * @returns {Promise<object>} Results summary
  */
@@ -65,10 +67,31 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           industry: projectIcpBrief.industry
         });
       } else {
-        logWarn('Project ICP brief not found, using provided brief for snapshot', {
+        logInfo('Project ICP brief not found, saving provided brief to project', {
           projectId: options.projectId
         });
-        projectIcpBrief = brief; // Fallback to provided brief
+
+        // Save the ICP brief AND prompts to the project BEFORE linking any prospects
+        // This ensures the ICP is saved while the project still has 0 prospects (unlocked)
+        try {
+          // Load all prospecting prompts
+          const prospectingPrompts = loadAllProspectingPrompts();
+
+          // Save both ICP brief and prompts
+          await saveProjectIcpAndPrompts(options.projectId, brief, prospectingPrompts);
+          logInfo('Successfully saved ICP brief and prompts to project', {
+            projectId: options.projectId,
+            industry: brief.industry,
+            promptCount: Object.keys(prospectingPrompts).length
+          });
+        } catch (saveError) {
+          logWarn('Failed to save ICP brief and prompts to project (continuing with generation)', {
+            projectId: options.projectId,
+            error: saveError.message
+          });
+        }
+
+        projectIcpBrief = brief; // Use provided brief for snapshots
       }
     } catch (error) {
       logWarn('Failed to fetch project ICP brief, using provided brief', {
@@ -96,7 +119,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
 
     logStepStart(1, 'Query Understanding');
     const step1Start = Date.now();
-    const query = await understandQuery(brief);
+    const query = await understandQuery(brief, options.model);
     logStepComplete(1, 'Query Understanding', Date.now() - step1Start, { query });
 
     if (onProgress) {
@@ -396,7 +419,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           try {
             logInfo('Checking ICP relevance', { company: company.name });
 
-            const relevanceResult = await checkRelevance(prospectData, brief);
+            const relevanceResult = await checkRelevance(prospectData, brief, options.model);
 
             icpScore = relevanceResult.score;
             isRelevant = relevanceResult.isRelevant;

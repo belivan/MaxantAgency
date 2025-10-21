@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { AlertCircle, CheckCircle2, FileJson } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileJson, Lock } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,8 @@ interface ICPBriefEditorProps {
   value: string;
   onChange: (value: string) => void;
   onValidChange?: (isValid: boolean) => void;
+  locked?: boolean;
+  prospectCount?: number;
 }
 
 const DEFAULT_BRIEF = {
@@ -76,7 +78,7 @@ const BRIEF_TEMPLATES = [
   }
 ];
 
-export function ICPBriefEditor({ value, onChange, onValidChange }: ICPBriefEditorProps) {
+export function ICPBriefEditor({ value, onChange, onValidChange, locked = false, prospectCount = 0 }: ICPBriefEditorProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (newValue: string) => {
@@ -118,7 +120,12 @@ export function ICPBriefEditor({ value, onChange, onValidChange }: ICPBriefEdito
           </CardTitle>
 
           <div className="flex items-center space-x-2">
-            {isValid ? (
+            {locked ? (
+              <Badge variant="secondary" className="flex items-center space-x-1">
+                <Lock className="w-3 h-3" />
+                <span>Locked ({prospectCount} prospects)</span>
+              </Badge>
+            ) : isValid ? (
               <Badge variant="default" className="flex items-center space-x-1">
                 <CheckCircle2 className="w-3 h-3" />
                 <span>Valid JSON</span>
@@ -134,6 +141,27 @@ export function ICPBriefEditor({ value, onChange, onValidChange }: ICPBriefEdito
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Locked Warning */}
+        {locked && (
+          <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950 p-4">
+            <div className="flex items-start space-x-3">
+              <Lock className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  ICP Brief Locked
+                </p>
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                  This project has {prospectCount} prospect{prospectCount !== 1 ? 's' : ''}.
+                  The ICP brief cannot be modified to maintain historical accuracy of prospect snapshots.
+                </p>
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-2">
+                  💡 <strong>Tip:</strong> Create a new project to use different ICP criteria.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Templates */}
         <div className="space-y-2">
           <Label>Quick Templates</Label>
@@ -144,6 +172,7 @@ export function ICPBriefEditor({ value, onChange, onValidChange }: ICPBriefEdito
                 variant="outline"
                 size="sm"
                 onClick={() => loadTemplate(template.brief)}
+                disabled={locked}
               >
                 {template.name}
               </Button>
@@ -152,7 +181,7 @@ export function ICPBriefEditor({ value, onChange, onValidChange }: ICPBriefEdito
               variant="outline"
               size="sm"
               onClick={formatJSON}
-              disabled={!isValid}
+              disabled={!isValid || locked}
             >
               Format JSON
             </Button>
@@ -171,9 +200,11 @@ export function ICPBriefEditor({ value, onChange, onValidChange }: ICPBriefEdito
             id="icp-brief"
             value={value}
             onChange={(e) => handleChange(e.target.value)}
+            disabled={locked}
             className={cn(
               'font-mono text-sm min-h-[300px]',
-              error && 'border-destructive focus-visible:ring-destructive'
+              error && 'border-destructive focus-visible:ring-destructive',
+              locked && 'opacity-60 cursor-not-allowed'
             )}
             placeholder={JSON.stringify(DEFAULT_BRIEF, null, 2)}
           />

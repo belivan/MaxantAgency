@@ -29,6 +29,7 @@ import { SocialMessageDetailModal } from '@/components/outreach/social-message-d
 import { ScheduledCampaignsTable } from '@/components/campaigns/scheduled-campaigns-table';
 import { CampaignRunsHistory } from '@/components/campaigns/campaign-runs-history';
 import { CampaignScheduleDialog } from '@/components/campaigns/campaign-schedule-dialog';
+import { formatDateTime } from '@/lib/utils/format';
 
 interface ProjectStats {
   prospects_count: number;
@@ -50,7 +51,13 @@ export default function ProjectDetailPage() {
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
-  const [stats, setStats] = useState<ProjectStats | null>(null);
+  const [stats, setStats] = useState<ProjectStats>({
+    prospects_count: 0,
+    leads_count: 0,
+    emails_count: 0,
+    campaigns_count: 0,
+    grade_distribution: { A: 0, B: 0, C: 0, D: 0, F: 0 }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -60,14 +67,18 @@ export default function ProjectDetailPage() {
     const loadProject = async () => {
       try {
         setLoading(true);
-        const [projectData, statsData] = await Promise.all([
+        const [projectData, statsResponse] = await Promise.all([
           getProject(projectId),
           fetch(`/api/projects/${projectId}/stats`).then(r => r.json())
         ]);
 
         setProject(projectData);
-        if (statsData.success) {
-          setStats(statsData.data);
+
+        if (statsResponse.success && statsResponse.data) {
+          setStats(statsResponse.data);
+        } else {
+          console.error('Stats API returned error:', statsResponse.error);
+          // Keep default stats values (zeros)
         }
       } catch (err: any) {
         console.error('Failed to load project:', err);
@@ -144,30 +155,30 @@ export default function ProjectDetailPage() {
         </div>
 
         {/* Project Stats Summary */}
-        {project && stats && (
+        {project && (
           <div className="grid gap-4 md:grid-cols-4">
             <StatCard
               icon={<DollarSign className="w-4 h-4" />}
               label="Budget"
-              value={formatCurrency(project.budget || 0)}
-              subtitle={`${formatCurrency(project.total_spent || 0)} spent`}
+              value={formatCurrency(Number(project.budget) || 0)}
+              subtitle={`${formatCurrency(Number(project.total_spent) || 0)} spent`}
             />
             <StatCard
               icon={<Users className="w-4 h-4" />}
               label="Prospects"
-              value={stats.prospects_count}
+              value={stats.prospects_count || 0}
               subtitle="Generated"
             />
             <StatCard
               icon={<TrendingUp className="w-4 h-4" />}
               label="Leads"
-              value={stats.leads_count}
-              subtitle={`${stats.grade_distribution.A} Grade A`}
+              value={stats.leads_count || 0}
+              subtitle={`${stats.grade_distribution?.A || 0} Grade A`}
             />
             <StatCard
               icon={<Mail className="w-4 h-4" />}
               label="Outreach"
-              value={stats.emails_count}
+              value={stats.emails_count || 0}
               subtitle="Emails composed"
             />
           </div>
@@ -223,7 +234,7 @@ function OverviewTab({
   onNavigateToTab
 }: {
   project: Project | null;
-  stats: ProjectStats | null;
+  stats: ProjectStats;
   onNavigateToTab: (tab: string) => void;
 }) {
   if (!project) return null;
@@ -235,33 +246,31 @@ function OverviewTab({
         <div className="rounded-lg border border-border bg-card p-6 space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <InfoRow label="Status" value={project.status} />
-            <InfoRow label="Budget" value={formatCurrency(project.budget || 0)} />
-            <InfoRow label="Total Spent" value={formatCurrency(project.total_spent || 0)} />
-            <InfoRow label="Created" value={formatDate(project.created_at)} />
+            <InfoRow label="Budget" value={formatCurrency(Number(project.budget) || 0)} />
+            <InfoRow label="Total Spent" value={formatCurrency(Number(project.total_spent) || 0)} />
+            <InfoRow label="Created" value={formatDateTime(project.created_at)} />
           </div>
         </div>
       </div>
 
-      {stats && (
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Performance Metrics</h3>
-          <div className="grid gap-4 md:grid-cols-3">
-            <MetricCard
-              label="Prospects Generated"
-              value={stats.prospects_count}
-            />
-            <MetricCard
-              label="Leads Analyzed"
-              value={stats.leads_count}
-              breakdown={`${stats.grade_distribution.A}A / ${stats.grade_distribution.B}B / ${stats.grade_distribution.C}C`}
-            />
-            <MetricCard
-              label="Outreach Sent"
-              value={stats.emails_count}
-            />
-          </div>
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Performance Metrics</h3>
+        <div className="grid gap-4 md:grid-cols-3">
+          <MetricCard
+            label="Prospects Generated"
+            value={stats.prospects_count}
+          />
+          <MetricCard
+            label="Leads Analyzed"
+            value={stats.leads_count}
+            breakdown={`${stats.grade_distribution.A}A / ${stats.grade_distribution.B}B / ${stats.grade_distribution.C}C`}
+          />
+          <MetricCard
+            label="Outreach Sent"
+            value={stats.emails_count}
+          />
         </div>
-      )}
+      </div>
 
       <div>
         <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
@@ -306,6 +315,7 @@ function ProspectsTab({ projectId }: { projectId: string }) {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [icpBriefOpen, setIcpBriefOpen] = useState(false);
+  const [analysisPromptsOpen, setAnalysisPromptsOpen] = useState(false);
 
   // Load prospects and project data
   useEffect(() => {
@@ -330,6 +340,7 @@ function ProspectsTab({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   const hasIcpBrief = project?.icp_brief && Object.keys(project.icp_brief).length > 0;
+  const hasAnalysisPrompts = project?.analysis_config?.prompts && Object.keys(project.analysis_config.prompts).length > 0;
   const hasProspects = prospects.length > 0;
 
   const handleDeleteComplete = () => {
@@ -393,6 +404,84 @@ function ProspectsTab({ projectId }: { projectId: string }) {
         </Collapsible>
       )}
 
+      {/* Analysis Prompts Section */}
+      {hasAnalysisPrompts && (
+        <Collapsible open={analysisPromptsOpen} onOpenChange={setAnalysisPromptsOpen}>
+          <Card>
+            <CardHeader>
+              <CollapsibleTrigger asChild>
+                <div className="flex items-center justify-between cursor-pointer">
+                  <div>
+                    <CardTitle className="text-lg">Analysis Configuration</CardTitle>
+                    <CardDescription>AI prompts used for website analysis</CardDescription>
+                  </div>
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${analysisPromptsOpen ? 'rotate-180' : ''}`}
+                  />
+                </div>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  {project?.analysis_config?.prompts?.design && (
+                    <div className="border-b pb-3">
+                      <p className="text-sm font-medium mb-1">Design Analysis</p>
+                      <p className="text-xs text-muted-foreground">
+                        Model: {project.analysis_config.prompts.design.model || 'N/A'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {project.analysis_config.prompts.design.description}
+                      </p>
+                    </div>
+                  )}
+                  {project?.analysis_config?.prompts?.seo && (
+                    <div className="border-b pb-3">
+                      <p className="text-sm font-medium mb-1">SEO Analysis</p>
+                      <p className="text-xs text-muted-foreground">
+                        Model: {project.analysis_config.prompts.seo.model || 'N/A'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {project.analysis_config.prompts.seo.description}
+                      </p>
+                    </div>
+                  )}
+                  {project?.analysis_config?.prompts?.content && (
+                    <div className="border-b pb-3">
+                      <p className="text-sm font-medium mb-1">Content Analysis</p>
+                      <p className="text-xs text-muted-foreground">
+                        Model: {project.analysis_config.prompts.content.model || 'N/A'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {project.analysis_config.prompts.content.description}
+                      </p>
+                    </div>
+                  )}
+                  {project?.analysis_config?.prompts?.social && (
+                    <div className="pb-3">
+                      <p className="text-sm font-medium mb-1">Social Media Analysis</p>
+                      <p className="text-xs text-muted-foreground">
+                        Model: {project.analysis_config.prompts.social.model || 'N/A'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {project.analysis_config.prompts.social.description}
+                      </p>
+                    </div>
+                  )}
+                  {project?.analysis_config?.prompts_updated_at && (
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">
+                        Last updated: {new Date(project.analysis_config.prompts_updated_at).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
+
       {/* Prospects Table or Empty State */}
       {!hasProspects && !loading ? (
         <div className="rounded-lg border border-border bg-card p-6">
@@ -442,26 +531,31 @@ function LeadsTab({ projectId }: { projectId: string }) {
   const [analysisConfigOpen, setAnalysisConfigOpen] = useState(false);
 
   // Load leads and project data
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [leadsData, projectData] = await Promise.all([
+        getLeads({ project_id: projectId }),
+        getProject(projectId)
+      ]);
+
+      setLeads(leadsData || []);
+      setProject(projectData);
+    } catch (err) {
+      console.error('Failed to load leads:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [leadsData, projectData] = await Promise.all([
-          getLeads({ project_id: projectId }),
-          getProject(projectId)
-        ]);
-
-        setLeads(leadsData || []);
-        setProject(projectData);
-      } catch (err) {
-        console.error('Failed to load leads:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
   }, [projectId]);
+
+  // Refresh function
+  const refreshLeads = () => {
+    loadData();
+  };
 
   const hasAnalysisConfig = project?.analysis_config && Object.keys(project.analysis_config).length > 0;
   const hasLeads = leads.length > 0;
@@ -550,6 +644,7 @@ function LeadsTab({ projectId }: { projectId: string }) {
           loading={loading}
           onLeadClick={handleLeadClick}
           onComposeEmails={handleComposeEmails}
+          onRefresh={refreshLeads}
         />
       )}
 
@@ -1031,10 +1126,3 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  });
-}

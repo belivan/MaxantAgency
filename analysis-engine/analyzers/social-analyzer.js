@@ -20,9 +20,10 @@ import { callAI, parseJSONResponse } from '../shared/ai-client.js';
  * @param {string} context.company_name - Company name
  * @param {string} context.industry - Industry type
  * @param {object} context.website_branding - Website branding info
+ * @param {object} customPrompt - Custom prompt configuration (optional)
  * @returns {Promise<object>} Social media analysis results
  */
-export async function analyzeSocial(url, socialProfiles, socialMetadata, context = {}) {
+export async function analyzeSocial(url, socialProfiles, socialMetadata, context = {}, customPrompt = null) {
   try {
     // Check if we have social profiles to analyze
     if (!socialProfiles || Object.keys(socialProfiles).length === 0) {
@@ -36,15 +37,32 @@ export async function analyzeSocial(url, socialProfiles, socialMetadata, context
     // Format website branding
     const brandingSummary = formatWebsiteBranding(context.website_branding);
 
-    // Load social analysis prompt
-    const prompt = await loadPrompt('web-design/social-analysis', {
+    // Variables for prompt substitution
+    const variables = {
       company_name: context.company_name || 'this business',
       industry: context.industry || 'unknown industry',
       url: url,
       social_profiles: profilesSummary,
       social_metadata: metadataSummary,
       website_branding: brandingSummary
-    });
+    };
+
+    // Use custom prompt if provided, otherwise load default
+    let prompt;
+    if (customPrompt) {
+      console.log('[Social Analyzer] Using custom prompt configuration');
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      prompt = {
+        name: customPrompt.name,
+        model: customPrompt.model,
+        temperature: customPrompt.temperature,
+        systemPrompt: customPrompt.systemPrompt,
+        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
+        outputFormat: customPrompt.outputFormat
+      };
+    } else {
+      prompt = await loadPrompt('web-design/social-analysis', variables);
+    }
 
     // Call Grok-4-fast API
     const response = await callAI({

@@ -110,7 +110,7 @@ export function ProspectTable({
   };
 
   if (loading) {
-    return <TableSkeleton rows={5} columns={6} />;
+    return <TableSkeleton rows={5} columns={8} />;
   }
 
   if (prospects.length === 0) {
@@ -178,6 +178,7 @@ export function ProspectTable({
                   className={isSomeSelected ? 'data-[state=checked]:bg-muted' : ''}
                 />
               </TableHead>
+              <TableHead>Project</TableHead>
               <TableHead>Company</TableHead>
               <TableHead>Industry</TableHead>
               <TableHead>Location</TableHead>
@@ -216,6 +217,12 @@ export function ProspectTable({
                     </div>
                   </TableCell>
 
+                  <TableCell>
+                    {prospect.project_name || (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+
                   <TableCell className="font-medium">
                     {prospect.company_name}
                     {prospect.verified && (
@@ -240,13 +247,13 @@ export function ProspectTable({
                   </TableCell>
 
                   <TableCell>
-                    {prospect.rating ? (
+                    {prospect.google_rating ? (
                       <div className="flex items-center space-x-1">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">{prospect.rating.toFixed(1)}</span>
-                        {prospect.review_count && (
+                        <span className="font-medium">{prospect.google_rating.toFixed(1)}</span>
+                        {prospect.google_review_count && (
                           <span className="text-xs text-muted-foreground">
-                            ({prospect.review_count})
+                            ({prospect.google_review_count})
                           </span>
                         )}
                       </div>

@@ -95,6 +95,37 @@ export function listPrompts() {
 }
 
 /**
+ * Load raw prompt configuration without variable substitution
+ * Used for saving prompts to database for historical tracking
+ *
+ * @param {string} promptPath - Name of prompt file (e.g., "01-query-understanding")
+ * @returns {object} Raw prompt configuration
+ */
+export function loadRawPrompt(promptPath) {
+  const promptFile = path.join(CONFIG_DIR, `${promptPath}.json`);
+
+  if (!fs.existsSync(promptFile)) {
+    throw new Error(`Prompt file not found: ${promptFile}`);
+  }
+
+  return JSON.parse(fs.readFileSync(promptFile, 'utf-8'));
+}
+
+/**
+ * Load all prospecting prompts as raw configurations
+ * Used for saving the complete prompt set to a project
+ *
+ * @returns {object} Object with all prompt configurations
+ */
+export function loadAllProspectingPrompts() {
+  return {
+    queryUnderstanding: loadRawPrompt('01-query-understanding'),
+    websiteExtraction: loadRawPrompt('04-website-extraction'),
+    relevanceCheck: loadRawPrompt('07-relevance-check')
+  };
+}
+
+/**
  * Validate a prompt configuration file
  *
  * @param {string} promptPath - Name of prompt file

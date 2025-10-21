@@ -28,32 +28,40 @@ interface ProspectConfigFormProps {
   onSubmit: (data: ProspectGenerationFormData) => void;
   isLoading?: boolean;
   disabled?: boolean;
+  locked?: boolean; // ICP is locked - can't generate with different ICP
+  prospectCount?: number; // Number of existing prospects for locked project
+  isLoadingProject?: boolean; // Whether project data is being loaded
 }
 
 const MODELS = [
   {
     value: 'grok-4-fast',
     label: 'Grok 4 Fast',
-    description: 'Recommended - Real companies via web search'
+    description: 'Fast & cheap - $0.20/$0.50 per 1M tokens'
   },
   {
-    value: 'gpt-4o-mini',
-    label: 'GPT-4o Mini',
-    description: 'Fast but may generate fake companies'
+    value: 'gpt-4o',
+    label: 'GPT-4o',
+    description: 'Balanced - $5/$15 per 1M tokens'
   },
   {
-    value: 'gpt-5-mini',
-    label: 'GPT-5 Mini',
-    description: 'Newer model, experimental'
+    value: 'gpt-5',
+    label: 'GPT-5',
+    description: 'Latest OpenAI - $1.25/$10 per 1M tokens'
   },
   {
     value: 'claude-sonnet-4-5',
     label: 'Claude Sonnet 4.5',
-    description: 'High quality, slower'
+    description: 'Best coding model - $3/$15 per 1M tokens'
+  },
+  {
+    value: 'claude-haiku-4-5',
+    label: 'Claude Haiku 4.5',
+    description: 'Fast & cheap - $0.80/$4 per 1M tokens'
   }
 ] as const;
 
-export function ProspectConfigForm({ onSubmit, isLoading, disabled }: ProspectConfigFormProps) {
+export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = false, prospectCount = 0, isLoadingProject = false }: ProspectConfigFormProps) {
   const {
     register,
     handleSubmit,
@@ -64,7 +72,6 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled }: ProspectCo
     resolver: zodResolver(prospectGenerationSchema),
     defaultValues: {
       count: 20,
-      city: '',
       model: 'grok-4-fast',
       verify: true
     }
@@ -110,23 +117,6 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled }: ProspectCo
             )}
             <p className="text-xs text-muted-foreground">
               Maximum 50 prospects per run
-            </p>
-          </div>
-
-          {/* City */}
-          <div className="space-y-2">
-            <Label htmlFor="city">City (Optional)</Label>
-            <Input
-              id="city"
-              placeholder="e.g., Philadelphia, PA"
-              {...register('city')}
-              disabled={disabled || isLoading}
-            />
-            {errors.city && (
-              <p className="text-sm text-destructive">{errors.city.message}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Leave empty to search nationwide
             </p>
           </div>
 

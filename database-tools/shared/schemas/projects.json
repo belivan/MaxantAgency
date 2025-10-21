@@ -79,6 +79,16 @@
       "name": "outreach_config",
       "type": "jsonb",
       "description": "Configuration for outreach generation (email strategy, tone, etc.)"
+    },
+    {
+      "name": "analysis_prompts",
+      "type": "jsonb",
+      "description": "Custom AI prompts for analysis (design, SEO, content, social). Locked after first analysis to preserve historical accuracy."
+    },
+    {
+      "name": "prospecting_prompts",
+      "type": "jsonb",
+      "description": "AI prompts used for prospecting (query understanding, website extraction, relevance check). Saved on first prospect generation to preserve historical accuracy."
     }
   ],
   "indexes": [

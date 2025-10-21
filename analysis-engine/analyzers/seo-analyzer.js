@@ -19,9 +19,10 @@ import * as cheerio from 'cheerio';
  * @param {string} context.industry - Industry type
  * @param {number} context.load_time - Page load time in seconds
  * @param {object} context.meta_info - Meta information from page
+ * @param {object} customPrompt - Custom prompt configuration (optional)
  * @returns {Promise<object>} SEO analysis results
  */
-export async function analyzeSEO(url, html, context = {}) {
+export async function analyzeSEO(url, html, context = {}, customPrompt = null) {
   try {
     // Extract SEO-relevant data from HTML (for metadata storage)
     const $ = cheerio.load(html);
@@ -31,14 +32,31 @@ export async function analyzeSEO(url, html, context = {}) {
     // Focus on <head> + first ~8KB of <body>
     const truncatedHTML = truncateHTML(html);
 
-    // Load SEO analysis prompt
-    const prompt = await loadPrompt('web-design/seo-analysis', {
+    // Variables for prompt substitution
+    const variables = {
       url: url,
       industry: context.industry || 'unknown industry',
       load_time: context.load_time ? String(context.load_time) : 'unknown',
       tech_stack: context.tech_stack || 'unknown',
       html: truncatedHTML
-    });
+    };
+
+    // Use custom prompt if provided, otherwise load default
+    let prompt;
+    if (customPrompt) {
+      console.log('[SEO Analyzer] Using custom prompt configuration');
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      prompt = {
+        name: customPrompt.name,
+        model: customPrompt.model,
+        temperature: customPrompt.temperature,
+        systemPrompt: customPrompt.systemPrompt,
+        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
+        outputFormat: customPrompt.outputFormat
+      };
+    } else {
+      prompt = await loadPrompt('web-design/seo-analysis', variables);
+    }
 
     // Call Grok-4-fast API
     const response = await callAI({

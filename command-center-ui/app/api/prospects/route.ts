@@ -33,10 +33,20 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // Build query
+    // Build query - use INNER join when filtering by project, LEFT join otherwise
+    const joinType = projectId ? '!inner' : '';
     let query = supabase
       .from('prospects')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        project_prospects${joinType}(
+          project_id,
+          projects(
+            id,
+            name
+          )
+        )
+      `, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -46,18 +56,26 @@ export async function GET(request: NextRequest) {
     }
 
     if (projectId) {
-      query = query.eq('project_id', projectId);
+      query = query.eq('project_prospects.project_id', projectId);
     }
 
     const { data, error, count } = await query;
+
+    // Transform data to flatten project info
+    const prospects = data?.map(prospect => ({
+      ...prospect,
+      project_name: prospect.project_prospects?.[0]?.projects?.name || null,
+      project_id: prospect.project_prospects?.[0]?.project_id || null,
+      project_prospects: undefined // Remove the nested structure
+    })) || [];
 
     if (error) throw error;
 
     return NextResponse.json({
       success: true,
-      prospects: data || [],
+      prospects: prospects,
       total: count || 0,
-      count: data?.length || 0
+      count: prospects.length
     });
   } catch (error: any) {
     console.error('Fetch prospects error:', error);

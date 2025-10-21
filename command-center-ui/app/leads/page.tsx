@@ -5,42 +5,22 @@
  * View and manage analyzed leads with detailed analysis
  */
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { LeadsTable, LeadDetailModal } from '@/components/leads';
-import { ProjectSelector } from '@/components/shared/project-selector';
 import { useLeads } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
 import { LoadingOverlay } from '@/components/shared';
-import type { Lead, LeadFilters } from '@/lib/types';
+import type { Lead } from '@/lib/types';
 
 export default function LeadsPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  // Get project_id from URL
-  const urlProjectId = searchParams.get('project_id');
-
-  // Project selection state
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
-
-  // Build filters based on selected project
-  const [filters, setFilters] = useState<LeadFilters>({
-    project_id: urlProjectId || undefined
-  });
-
-  const { leads, loading, error, refresh } = useLeads(filters);
+  const { leads, loading, error, refresh } = useLeads();
 
   // Detail modal state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-
-  // Update filters when project selection changes
-  useEffect(() => {
-    setFilters({
-      project_id: selectedProjectId || undefined
-    });
-  }, [selectedProjectId]);
 
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
@@ -72,15 +52,6 @@ export default function LeadsPage() {
           </p>
         </div>
 
-        {/* Project Selector */}
-        <div className="max-w-xs">
-          <ProjectSelector
-            value={selectedProjectId}
-            onChange={setSelectedProjectId}
-            label="Filter by Project"
-          />
-        </div>
-
       {/* Error State */}
       {error && (
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
@@ -98,6 +69,7 @@ export default function LeadsPage() {
           loading={loading}
           onLeadClick={handleLeadClick}
           onComposeEmails={handleComposeEmails}
+          onRefresh={refresh}
         />
       )}
 
@@ -120,22 +92,26 @@ export default function LeadsPage() {
             value={leads.length}
           />
           <StatCard
-            label="Grade A"
-            value={leads.filter(l => l.grade === 'A').length}
-            highlight="green"
+            label="🔥 Hot Leads"
+            value={leads.filter(l => (l.lead_priority || 0) >= 75).length}
+            highlight="red"
           />
           <StatCard
-            label="Grade B"
-            value={leads.filter(l => l.grade === 'B').length}
-            highlight="blue"
+            label="⭐ Warm Leads"
+            value={leads.filter(l => {
+              const priority = l.lead_priority || 0;
+              return priority >= 50 && priority < 75;
+            }).length}
+            highlight="yellow"
+          />
+          <StatCard
+            label="💰 High Budget"
+            value={leads.filter(l => l.budget_likelihood === 'high').length}
+            highlight="green"
           />
           <StatCard
             label="With Email"
             value={leads.filter(l => l.contact_email && l.contact_email.trim() !== '').length}
-          />
-          <StatCard
-            label="Avg Score"
-            value={Math.round(leads.reduce((sum, l) => sum + l.overall_score, 0) / leads.length)}
           />
         </div>
       )}
@@ -151,7 +127,7 @@ function StatCard({
 }: {
   label: string;
   value: string | number;
-  highlight?: 'green' | 'blue';
+  highlight?: 'green' | 'blue' | 'red' | 'yellow';
 }) {
   return (
     <div
@@ -160,6 +136,10 @@ function StatCard({
           ? 'bg-green-50 dark:bg-green-950/20 border-green-600'
           : highlight === 'blue'
           ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-600'
+          : highlight === 'red'
+          ? 'bg-red-50 dark:bg-red-950/20 border-red-600'
+          : highlight === 'yellow'
+          ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-600'
           : 'bg-card border-border'
       }`}
     >

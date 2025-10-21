@@ -2,6 +2,7 @@
   "name": "maksant-agency",
   "version": "1.0.0",
   "description": "Complete lead generation pipeline - unified interface",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "npm run dev:all",

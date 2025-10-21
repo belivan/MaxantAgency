@@ -1,24 +1,10 @@
-import fetch from 'node-fetch';
 import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import fs from 'fs';
 import { loadPrompt } from '../shared/prompt-loader.js';
+import { callAI, parseJSONResponse } from '../shared/ai-client.js';
 import { logInfo, logError, logDebug } from '../shared/logger.js';
 import { costTracker } from '../shared/cost-tracker.js';
 
-// Load env from this package then fall back to website-audit-tool/.env
 dotenv.config();
-try {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const auditEnv = path.resolve(__dirname, '../../website-audit-tool/.env');
-  if (fs.existsSync(auditEnv)) {
-    dotenv.config({ path: auditEnv, override: false });
-  }
-} catch {}
-
-const GROK_API_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
 
 /**
  * Check how well a prospect matches the ICP (Ideal Customer Profile)
@@ -27,21 +13,15 @@ const GROK_API_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
  *
  * @param {object} prospect - Prospect data
  * @param {object} brief - ICP brief
+ * @param {string} modelOverride - Optional model to use instead of prompt default
  * @returns {Promise<object>} Relevance score and analysis
  */
-export async function checkRelevance(prospect, brief) {
-  const apiKey = process.env.XAI_API_KEY;
-
-  if (!apiKey) {
-    // Fallback to simple rule-based scoring
-    logDebug('XAI_API_KEY not set, using rule-based scoring');
-    return calculateRuleBasedScore(prospect, brief);
-  }
-
+export async function checkRelevance(prospect, brief, modelOverride = null) {
   try {
     logDebug('Checking ICP relevance with AI', {
       company: prospect.company_name,
-      industry: prospect.industry
+      industry: prospect.industry,
+      model: modelOverride || 'default'
     });
 
     // Prepare variables for prompt
@@ -65,86 +45,52 @@ export async function checkRelevance(prospect, brief) {
     // Load prompt template
     const prompt = loadPrompt('07-relevance-check', variables);
 
-    // Call Grok API
-    const response = await fetch(GROK_API_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: prompt.model,
-        messages: [
-          {
-            role: 'system',
-            content: prompt.systemPrompt
-          },
-          {
-            role: 'user',
-            content: prompt.userPrompt
-          }
-        ],
-        temperature: prompt.temperature,
-        max_tokens: 500
-      })
+    // Use model override if provided, otherwise use prompt default
+    const model = modelOverride || prompt.model;
+
+    // Call AI
+    const result = await callAI({
+      model,
+      systemPrompt: prompt.systemPrompt,
+      userPrompt: prompt.userPrompt,
+      temperature: prompt.temperature,
+      maxTokens: 500,
+      jsonMode: true
     });
 
-    if (!response.ok) {
-      throw new Error(`Grok API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
     // Track cost
-    if (data.usage) {
-      costTracker.trackGrokAi(data.usage);
+    if (result.usage) {
+      costTracker.trackGrokAi(result.usage);
     }
 
-    // Extract and parse response
-    const content = data.choices?.[0]?.message?.content || '{}';
+    // Parse JSON response
+    const parsedResult = parseJSONResponse(result.content);
 
-    let result;
-    try {
-      // Try to parse JSON (Grok might wrap in markdown)
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) ||
-                       content.match(/```\n([\s\S]*?)\n```/) ||
-                       [null, content];
+    // Validate result
+    if (typeof parsedResult.score !== 'number' || typeof parsedResult.is_relevant !== 'boolean') {
+      throw new Error('Invalid response format');
+    }
 
-      result = JSON.parse(jsonMatch[1] || content);
+    logInfo('ICP relevance checked', {
+      company: prospect.company_name,
+      score: parsedResult.score,
+      is_relevant: parsedResult.is_relevant,
+      model
+    });
 
-      // Validate result
-      if (typeof result.score !== 'number' || typeof result.is_relevant !== 'boolean') {
-        throw new Error('Invalid response format');
+    return {
+      score: parsedResult.score,
+      isRelevant: parsedResult.is_relevant,
+      reasoning: parsedResult.reasoning || '',
+      recommendation: parsedResult.recommendation || '',
+      breakdown: {
+        industryMatch: parsedResult.industry_match || 0,
+        locationMatch: parsedResult.location_match || 0,
+        qualityScore: parsedResult.quality_score || 0,
+        presenceScore: parsedResult.presence_score || 0,
+        dataScore: parsedResult.data_score || 0
       }
-
-      logInfo('ICP relevance checked', {
-        company: prospect.company_name,
-        score: result.score,
-        is_relevant: result.is_relevant
-      });
-
-      return {
-        score: result.score,
-        isRelevant: result.is_relevant,
-        reasoning: result.reasoning || '',
-        recommendation: result.recommendation || '',
-        breakdown: {
-          industryMatch: result.industry_match || 0,
-          locationMatch: result.location_match || 0,
-          qualityScore: result.quality_score || 0,
-          presenceScore: result.presence_score || 0,
-          dataScore: result.data_score || 0
-        }
-      };
-
-    } catch (parseError) {
-      logError('Failed to parse relevance check response', parseError, {
-        content: content.slice(0, 200)
-      });
-
-      // Fallback to rule-based scoring
-      return calculateRuleBasedScore(prospect, brief);
-    }
+    };
 
   } catch (error) {
     logError('Relevance check failed, using fallback', error, {

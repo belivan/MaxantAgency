@@ -30,6 +30,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { GradeBadge } from './grade-badge';
+import { PriorityBadge } from './priority-badge';
+import { LeadDetailsCard } from './lead-details-card';
 import { formatDate } from '@/lib/utils/format';
 import type { Lead } from '@/lib/types';
 
@@ -67,6 +69,9 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
               <DialogTitle className="text-2xl flex items-center gap-3">
                 {lead.company_name}
                 <GradeBadge grade={lead.grade} size="md" showLabel />
+                {lead.lead_priority !== undefined && (
+                  <PriorityBadge priority={lead.lead_priority} size="md" showLabel />
+                )}
               </DialogTitle>
               <DialogDescription className="mt-2 flex items-center gap-4">
                 <a
@@ -165,8 +170,9 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
 
         {/* Tabbed Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="scoring">AI Scoring</TabsTrigger>
             <TabsTrigger value="design">
               Design {hasDesignIssues && `(${lead.design_issues.length})`}
             </TabsTrigger>
@@ -263,6 +269,11 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* AI Scoring Tab */}
+          <TabsContent value="scoring">
+            <LeadDetailsCard lead={lead} />
           </TabsContent>
 
           {/* Design Issues Tab */}

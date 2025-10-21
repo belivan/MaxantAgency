@@ -39,6 +39,16 @@ app.use((req, res, next) => {
 
 // ═══════════════════════════════════════════════════════════════════
 // POST /api/prospect - Generate prospects
+//
+// Request body:
+//   brief: { industry, city, target, count }
+//   options: {
+//     model: 'gpt-4o' | 'gpt-5' | 'grok-4-fast' | 'claude-3-5-sonnet-20241022' (optional)
+//     projectId: string (optional)
+//     minRating: number (optional)
+//     checkRelevance: boolean (optional, default: true)
+//     filterIrrelevant: boolean (optional, default: false)
+//   }
 // ═══════════════════════════════════════════════════════════════════
 
 app.post('/api/prospect', async (req, res) => {
@@ -114,8 +124,8 @@ app.get('/api/prospects', async (req, res) => {
       status: req.query.status,
       city: req.query.city,
       industry: req.query.industry,
-      minRating: req.query.minRating ? parseFloat(req.query.minRating) : undefined,
-      projectId: req.query.projectId,
+      minRating: req.query.min_rating ? parseFloat(req.query.min_rating) : undefined,
+      projectId: req.query.project_id || req.query.projectId, // Support both formats
       runId: req.query.runId,
       limit: req.query.limit ? parseInt(req.query.limit) : 50,
       offset: req.query.offset ? parseInt(req.query.offset) : 0

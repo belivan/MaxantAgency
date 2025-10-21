@@ -98,8 +98,21 @@ export async function updateProspect(id, updates) {
  */
 export async function getProspects(filters = {}) {
   try {
-    // Build query with count
-    let query = supabase.from('prospects').select('*', { count: 'exact' });
+    // Build query - use INNER join when filtering by project, LEFT join otherwise
+    const joinType = filters.projectId ? '!inner' : '';
+
+    let query = supabase
+      .from('prospects')
+      .select(`
+        *,
+        project_prospects${joinType}(
+          project_id,
+          projects(
+            id,
+            name
+          )
+        )
+      `, { count: 'exact' });
 
     // Apply filters
     if (filters.status) {
@@ -118,11 +131,12 @@ export async function getProspects(filters = {}) {
       query = query.gte('google_rating', filters.minRating);
     }
 
-    // Note: For project-specific queries, use getProspectsByProject() instead
-    // The project_id column has been removed in favor of many-to-many via project_prospects
-
     if (filters.runId) {
       query = query.eq('run_id', filters.runId);
+    }
+
+    if (filters.projectId) {
+      query = query.eq('project_prospects.project_id', filters.projectId);
     }
 
     // Order first (before limit/offset)
@@ -140,10 +154,18 @@ export async function getProspects(filters = {}) {
       throw error;
     }
 
-    logInfo('Prospects fetched', { count: data.length, total: count, filters });
+    // Transform data to flatten project info
+    const prospects = data?.map(prospect => ({
+      ...prospect,
+      project_name: prospect.project_prospects?.[0]?.projects?.name || null,
+      project_id: prospect.project_prospects?.[0]?.project_id || null,
+      project_prospects: undefined // Remove the nested structure
+    })) || [];
+
+    logInfo('Prospects fetched', { count: prospects.length, total: count, filters });
 
     return {
-      data: data || [],
+      data: prospects,
       total: count || 0
     };
   } catch (error) {
@@ -527,6 +549,112 @@ export async function getProjectIcpBrief(projectId) {
   } catch (error) {
     logError('Error fetching project ICP brief', error, { projectId });
     return null;
+  }
+}
+
+/**
+ * Save ICP brief to a project
+ * Called BEFORE generating prospects to ensure ICP is saved while project is unlocked
+ *
+ * @param {string} projectId - Project ID
+ * @param {object} icpBrief - ICP brief object
+ * @returns {Promise<object>} Updated project data
+ */
+export async function saveProjectIcpBrief(projectId, icpBrief) {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ icp_brief: icpBrief })
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) {
+      logError('Failed to save ICP brief to project', error, { projectId });
+      throw error;
+    }
+
+    logInfo('ICP brief saved to project', {
+      projectId,
+      industry: icpBrief.industry
+    });
+
+    return data;
+  } catch (error) {
+    logError('Error saving ICP brief to project', error, { projectId });
+    throw error;
+  }
+}
+
+/**
+ * Save prospecting prompts to a project
+ * Called alongside ICP brief save to preserve AI prompts for historical tracking
+ *
+ * @param {string} projectId - Project ID
+ * @param {object} prompts - Prospecting prompts object
+ * @returns {Promise<object>} Updated project data
+ */
+export async function saveProjectProspectingPrompts(projectId, prompts) {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ prospecting_prompts: prompts })
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) {
+      logError('Failed to save prospecting prompts to project', error, { projectId });
+      throw error;
+    }
+
+    logInfo('Prospecting prompts saved to project', {
+      projectId,
+      promptCount: Object.keys(prompts).length
+    });
+
+    return data;
+  } catch (error) {
+    logError('Error saving prospecting prompts to project', error, { projectId });
+    throw error;
+  }
+}
+
+/**
+ * Save both ICP brief and prospecting prompts in a single transaction
+ *
+ * @param {string} projectId - Project ID
+ * @param {object} icpBrief - ICP brief object
+ * @param {object} prompts - Prospecting prompts object
+ * @returns {Promise<object>} Updated project data
+ */
+export async function saveProjectIcpAndPrompts(projectId, icpBrief, prompts) {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({
+        icp_brief: icpBrief,
+        prospecting_prompts: prompts
+      })
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) {
+      logError('Failed to save ICP brief and prompts to project', error, { projectId });
+      throw error;
+    }
+
+    logInfo('ICP brief and prompts saved to project', {
+      projectId,
+      industry: icpBrief.industry,
+      promptCount: Object.keys(prompts).length
+    });
+
+    return data;
+  } catch (error) {
+    logError('Error saving ICP brief and prompts to project', error, { projectId });
+    throw error;
   }
 }
 

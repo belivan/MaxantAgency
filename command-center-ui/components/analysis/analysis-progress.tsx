@@ -5,12 +5,13 @@
  * Shows real-time SSE progress for website analysis
  */
 
-import { Activity, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { Activity, CheckCircle2, AlertCircle, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LoadingProgress } from '@/components/shared/loading-spinner';
 import { formatRelativeTime } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
+import { PriorityBadge, BudgetIndicatorBadge } from '@/components/leads';
 import type { SSEStatus, LeadGrade } from '@/lib/types';
 
 interface AnalysisStep {
@@ -29,6 +30,9 @@ interface CompletedLead {
   website: string;
   grade: LeadGrade;
   score: number;
+  lead_priority?: number;
+  priority_tier?: 'hot' | 'warm' | 'cold';
+  budget_likelihood?: 'high' | 'medium' | 'low';
   timestamp: string;
 }
 
@@ -84,18 +88,42 @@ function StepIndicator({ step }: { step: AnalysisStep }) {
 
 function CompletedLeadItem({ lead }: { lead: CompletedLead }) {
   return (
-    <div className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-muted/50 transition-colors">
+    <div className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
       <div className="flex items-center space-x-3 flex-1 min-w-0">
-        <Badge className={cn('font-bold', getGradeColor(lead.grade))}>
+        {/* Grade Badge */}
+        <Badge className={cn('font-bold text-xs', getGradeColor(lead.grade))}>
           {lead.grade}
         </Badge>
+
+        {/* Company Info */}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{lead.company_name}</p>
-          <p className="text-xs text-muted-foreground">
-            Score: {lead.score}/100
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-muted-foreground">
+              Grade: {lead.score}/100
+            </span>
+            {lead.lead_priority !== undefined && (
+              <>
+                <span className="text-xs text-muted-foreground">•</span>
+                <span className="text-xs text-muted-foreground">
+                  Priority: {lead.lead_priority}/100
+                </span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Priority & Budget Badges */}
+        <div className="flex items-center gap-2">
+          {lead.priority_tier && (
+            <PriorityBadge priority={lead.lead_priority || 0} size="sm" />
+          )}
+          {lead.budget_likelihood && (
+            <BudgetIndicatorBadge likelihood={lead.budget_likelihood} size="sm" />
+          )}
         </div>
       </div>
+
       <a
         href={lead.website}
         target="_blank"
@@ -188,6 +216,33 @@ export function AnalysisProgress({
               {currentAnalysis.steps.map((step, index) => (
                 <StepIndicator key={index} step={step} />
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Lead Priority Summary */}
+        {completedLeads.length > 0 && status === 'closed' && (
+          <div className="grid grid-cols-3 gap-3 p-4 rounded-lg bg-muted/50 border">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600 dark:text-red-500">
+                {completedLeads.filter(l => (l.lead_priority || 0) >= 75).length}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">🔥 Hot Leads</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-500">
+                {completedLeads.filter(l => {
+                  const p = l.lead_priority || 0;
+                  return p >= 50 && p < 75;
+                }).length}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">⭐ Warm Leads</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-500">
+                {completedLeads.filter(l => (l.lead_priority || 0) < 50).length}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">❄️ Cold Leads</div>
             </div>
           </div>
         )}

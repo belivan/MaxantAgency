@@ -18,7 +18,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import {
   Table,
@@ -49,8 +52,12 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { GradeBadge } from './grade-badge';
-import { formatDate } from '@/lib/utils/format';
+import { PriorityBadge, getPriorityTier } from './priority-badge';
+import { LeadDetailsCard } from './lead-details-card';
+import { BudgetIndicatorBadge, YearsInBusinessBadge, PremiumFeaturesBadge } from './business-intel-badges';
+import { formatDate, formatDateTime } from '@/lib/utils/format';
 import { deleteLeads } from '@/lib/api/analysis';
 import type { Lead, LeadGrade } from '@/lib/types';
 
@@ -59,32 +66,40 @@ interface LeadsTableProps {
   loading?: boolean;
   onLeadClick?: (lead: Lead) => void;
   onComposeEmails?: (leadIds: string[]) => void;
+  onRefresh?: () => void;
 }
 
-type SortField = 'company_name' | 'grade' | 'overall_score' | 'created_at';
+type SortField = 'company_name' | 'grade' | 'overall_score' | 'lead_priority' | 'created_at';
 type SortDirection = 'asc' | 'desc';
 
 interface LeadFilters {
   grade?: LeadGrade | 'all';
+  priority?: 'hot' | 'warm' | 'cold' | 'all';
   hasEmail?: 'all' | 'yes' | 'no';
   industry?: string;
   city?: string;
+  project?: string;
   search?: string;
 }
 
-export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: LeadsTableProps) {
+export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onRefresh }: LeadsTableProps) {
   const router = useRouter();
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+
+  // Expanded rows state
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
 
   // Sorting state
-  const [sortField, setSortField] = useState<SortField>('overall_score');
+  const [sortField, setSortField] = useState<SortField>('lead_priority');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
   // Filter state
   const [filters, setFilters] = useState<LeadFilters>({
     grade: 'all',
+    priority: 'all',
     hasEmail: 'all',
     industry: '',
     city: '',
@@ -103,13 +118,28 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
 
   // Get unique values for filters
   const uniqueIndustries = useMemo(() => {
-    const industries = new Set(leads.map(l => l.industry).filter(Boolean));
+    const industries = new Set(leads.map(l => l.industry).filter(Boolean) as string[]);
     return Array.from(industries).sort();
   }, [leads]);
 
   const uniqueCities = useMemo(() => {
-    const cities = new Set(leads.map(l => l.city).filter(Boolean));
+    const cities = new Set(leads.map(l => l.city).filter(Boolean) as string[]);
     return Array.from(cities).sort();
+  }, [leads]);
+
+  const uniqueProjects = useMemo(() => {
+    const projectsMap = new Map<string, { id: string; name: string }>();
+
+    leads.forEach(l => {
+      const projectId = l.project_id;
+      const projectName = (l as any).projects?.name;
+
+      if (projectId && projectName && !projectsMap.has(projectId)) {
+        projectsMap.set(projectId, { id: projectId, name: projectName });
+      }
+    });
+
+    return Array.from(projectsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [leads]);
 
   // Apply filters and sorting
@@ -119,6 +149,13 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
     // Apply filters
     if (filters.grade && filters.grade !== 'all') {
       result = result.filter(l => l.grade === filters.grade);
+    }
+
+    if (filters.priority && filters.priority !== 'all') {
+      result = result.filter(l => {
+        const tier = getPriorityTier(l.lead_priority || 0);
+        return tier === filters.priority;
+      });
     }
 
     if (filters.hasEmail === 'yes') {
@@ -133,6 +170,10 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
 
     if (filters.city) {
       result = result.filter(l => l.city === filters.city);
+    }
+
+    if (filters.project) {
+      result = result.filter(l => l.project_id === filters.project);
     }
 
     if (filters.search) {
@@ -161,6 +202,10 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
         case 'overall_score':
           aValue = a.overall_score;
           bValue = b.overall_score;
+          break;
+        case 'lead_priority':
+          aValue = a.lead_priority || 0;
+          bValue = b.lead_priority || 0;
           break;
         case 'created_at':
           aValue = new Date(a.created_at).getTime();
@@ -212,12 +257,29 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
     }
   };
 
-  const handleSelectLead = (leadId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedIds(prev => [...prev, leadId]);
+  const handleSelectLead = (leadId: string, checked: boolean, index: number, shiftKey: boolean = false) => {
+    if (shiftKey && lastClickedIndex !== null) {
+      // Shift-select: select all rows between lastClickedIndex and current index
+      const startIndex = Math.min(lastClickedIndex, index);
+      const endIndex = Math.max(lastClickedIndex, index);
+      const idsToSelect = paginatedLeads.slice(startIndex, endIndex + 1).map(l => l.id);
+
+      setSelectedIds(prev => {
+        // Merge with existing selection
+        const newSet = new Set([...prev, ...idsToSelect]);
+        return Array.from(newSet);
+      });
     } else {
-      setSelectedIds(prev => prev.filter(id => id !== leadId));
+      // Normal click: toggle single row
+      if (checked) {
+        setSelectedIds(prev => [...prev, leadId]);
+      } else {
+        setSelectedIds(prev => prev.filter(id => id !== leadId));
+      }
     }
+
+    // Update last clicked index for future shift-selects
+    setLastClickedIndex(index);
   };
 
   // Sort handler
@@ -230,6 +292,15 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
     }
   };
 
+  // Expand/collapse handler
+  const toggleExpanded = (leadId: string) => {
+    setExpandedIds(prev =>
+      prev.includes(leadId)
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+
   // Delete handler
   const handleDelete = async () => {
     if (selectedIds.length === 0) return;
@@ -238,12 +309,16 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
     try {
       const result = await deleteLeads(selectedIds);
 
-      // Refresh the page or call a refresh callback
-      window.location.reload();
-
       // Clear selection
       setSelectedIds([]);
       setShowDeleteDialog(false);
+
+      // Refresh the data
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Failed to delete leads:', error);
       alert(`Failed to delete leads: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -254,17 +329,21 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
 
   // Filter reset
   const hasActiveFilters = filters.grade !== 'all' ||
+    filters.priority !== 'all' ||
     filters.hasEmail !== 'all' ||
     filters.industry !== '' ||
     filters.city !== '' ||
+    filters.project !== '' ||
     filters.search !== '';
 
   const resetFilters = () => {
     setFilters({
       grade: 'all',
+      priority: 'all',
       hasEmail: 'all',
       industry: '',
       city: '',
+      project: '',
       search: ''
     });
   };
@@ -312,6 +391,17 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                 </Button>
               </>
             )}
+            {onRefresh && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRefresh}
+                disabled={loading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -340,13 +430,31 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
               {/* Search */}
               <Input
                 placeholder="Search companies..."
                 value={filters.search || ''}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
               />
+
+              {/* Project Filter */}
+              <Select
+                value={filters.project || 'all'}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, project: value === 'all' ? '' : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Projects" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {uniqueProjects.map(project => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Grade Filter */}
               <Select
@@ -363,6 +471,22 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                   <SelectItem value="C">Grade C</SelectItem>
                   <SelectItem value="D">Grade D</SelectItem>
                   <SelectItem value="F">Grade F</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Priority Filter */}
+              <Select
+                value={filters.priority || 'all'}
+                onValueChange={(value) => setFilters(prev => ({ ...prev, priority: value as any }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="All Priorities" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Priorities</SelectItem>
+                  <SelectItem value="hot">🔥 Hot Leads</SelectItem>
+                  <SelectItem value="warm">⭐ Warm Leads</SelectItem>
+                  <SelectItem value="cold">💤 Cold Leads</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -442,6 +566,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                       aria-label="Select all leads on page"
                     />
                   </TableHead>
+                  <TableHead className="w-12"></TableHead>
                   <TableHead>
                     <Button
                       variant="ghost"
@@ -468,16 +593,18 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleSort('overall_score')}
+                      onClick={() => handleSort('lead_priority')}
                       className="hover:bg-transparent"
                     >
-                      Score
+                      Priority
                       <ArrowUpDown className="ml-2 h-4 w-4" />
                     </Button>
                   </TableHead>
-                  <TableHead>Industry</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Budget</TableHead>
+                  <TableHead>Business Age</TableHead>
+                  <TableHead>Premium</TableHead>
                   <TableHead>Contact</TableHead>
+                  <TableHead>Project</TableHead>
                   <TableHead>
                     <Button
                       variant="ghost"
@@ -493,76 +620,134 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails }: Lea
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedLeads.map(lead => (
-                  <TableRow
-                    key={lead.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={(e) => {
-                      if ((e.target as HTMLElement).closest('input, button, a')) return;
-                      onLeadClick?.(lead);
-                    }}
-                  >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedIds.includes(lead.id)}
-                        onCheckedChange={(checked) => handleSelectLead(lead.id, checked as boolean)}
-                        aria-label={`Select ${lead.company_name}`}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{lead.company_name}</div>
-                      <div className="text-xs text-muted-foreground truncate max-w-[200px]">
-                        {lead.website}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <GradeBadge grade={lead.grade} size="sm" />
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-sm">{lead.overall_score}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">{lead.industry || '—'}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
-                        {lead.city && lead.state ? `${lead.city}, ${lead.state}` : lead.city || lead.state || '—'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {lead.contact_email ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <MailCheck className="w-3 h-3 text-green-600" />
-                          <span className="text-muted-foreground">Email</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">No email</span>
+                {paginatedLeads.map((lead, index) => {
+                  const isExpanded = expandedIds.includes(lead.id);
+                  const businessIntel = lead.business_intelligence;
+
+                  return (
+                    <>
+                      <TableRow
+                        key={lead.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={(e) => {
+                          if ((e.target as HTMLElement).closest('input, button, a')) return;
+                          onLeadClick?.(lead);
+                        }}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div
+                            onClick={(e) => {
+                              const isChecked = !selectedIds.includes(lead.id);
+                              handleSelectLead(lead.id, isChecked, index, e.shiftKey);
+                            }}
+                          >
+                            <Checkbox
+                              checked={selectedIds.includes(lead.id)}
+                              aria-label={`Select ${lead.company_name}`}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleExpanded(lead.id)}
+                            className="h-6 w-6 p-0"
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{lead.company_name}</div>
+                          <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            {lead.website}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <GradeBadge grade={lead.grade} size="sm" />
+                        </TableCell>
+                        <TableCell>
+                          <PriorityBadge priority={lead.lead_priority || 0} size="sm" />
+                        </TableCell>
+                        <TableCell>
+                          {lead.budget_likelihood ? (
+                            <BudgetIndicatorBadge indicator={lead.budget_likelihood} size="sm" showLabel={false} />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {businessIntel?.years_in_business ? (
+                            <YearsInBusinessBadge years={businessIntel.years_in_business} size="sm" />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {businessIntel?.premium_features && businessIntel.premium_features.length > 0 ? (
+                            <PremiumFeaturesBadge
+                              count={businessIntel.premium_features.length}
+                              features={businessIntel.premium_features}
+                              size="sm"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {lead.contact_email ? (
+                            <div className="flex items-center gap-1 text-sm">
+                              <MailCheck className="w-3 h-3 text-green-600" />
+                              <span className="text-muted-foreground">Email</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No email</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">
+                            {(lead as any).projects?.name || '—'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs text-muted-foreground">
+                            {lead.analyzed_at ? formatDateTime(lead.analyzed_at) : formatDate(lead.created_at)}
+                          </span>
+                        </TableCell>
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          {lead.url ? (
+                            <a
+                              href={lead.url.startsWith('http') ? lead.url : `https://${lead.url}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                              title="Visit website"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground" title="No website">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow key={`${lead.id}-expanded`}>
+                          <TableCell colSpan={12} className="p-0">
+                            <div className="p-4 bg-muted/30">
+                              <LeadDetailsCard lead={lead} />
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(lead.created_at)}
-                      </span>
-                    </TableCell>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      {lead.url ? (
-                        <a
-                          href={lead.url.startsWith('http') ? lead.url : `https://${lead.url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                          title="Visit website"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground" title="No website">
-                          —
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                    </>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

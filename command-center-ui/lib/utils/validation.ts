@@ -65,11 +65,7 @@ export const prospectGenerationSchema = z.object({
     .int('Count must be an integer')
     .min(1, 'Minimum count is 1')
     .max(50, 'Maximum count is 50'),
-  city: z.string()
-    .min(2, 'City must be at least 2 characters')
-    .optional()
-    .or(z.literal('')),
-  model: z.enum(['grok-4-fast', 'gpt-4o-mini', 'gpt-5-mini', 'claude-sonnet-4-5']),
+  model: z.enum(['grok-4-fast', 'gpt-4o', 'gpt-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
   verify: z.boolean().default(true),
   project_id: z.string().uuid().optional()
 });
@@ -81,11 +77,31 @@ export type ProspectGenerationFormData = z.infer<typeof prospectGenerationSchema
 // ============================================================================
 
 export const analysisOptionsSchema = z.object({
-  tier: z.enum(['tier1', 'tier2', 'tier3']),
+  tier: z.enum(['tier1', 'tier2', 'tier3']), // Deprecated but kept for backward compatibility
   modules: z.array(
     z.enum(['design', 'seo', 'content', 'performance', 'accessibility', 'social'])
   ).min(1, 'Select at least one module'),
   capture_screenshots: z.boolean().default(true),
+
+  // Multi-page crawling configuration (NEW v2.0)
+  max_pages: z.number()
+    .int('Max pages must be an integer')
+    .min(5, 'Minimum 5 pages')
+    .max(50, 'Maximum 50 pages')
+    .default(30),
+  level_2_sample_rate: z.number()
+    .min(0.25, 'Minimum 25% sample rate')
+    .max(1.0, 'Maximum 100% sample rate')
+    .default(0.5),
+  max_crawl_time: z.number()
+    .int('Max crawl time must be an integer')
+    .min(30, 'Minimum 30 seconds')
+    .max(300, 'Maximum 300 seconds')
+    .default(120),
+
+  // AI model selections per module (NEW v2.0)
+  model_selections: z.record(z.string()).optional(),
+
   autoEmail: z.boolean().default(false),
   autoAnalyze: z.boolean().default(false)
 });
