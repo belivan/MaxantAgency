@@ -53,6 +53,15 @@ function getAnthropicClient() {
 }
 
 /**
+ * Normalize model ID for API calls
+ * Strips UI-specific suffixes like '-vision' which are used for model selection UI
+ */
+function normalizeModelId(modelId) {
+  // Strip '-vision' suffix (used in UI to differentiate vision models)
+  return modelId.replace(/-vision$/, '');
+}
+
+/**
  * Call AI model with text or vision prompt
  *
  * @param {object} options - Call options
@@ -74,13 +83,16 @@ export async function callAI({
   jsonMode = false,
   maxTokens = 4096
 }) {
+  // Normalize model ID (strip UI-specific suffixes)
+  const normalizedModel = normalizeModelId(model);
+
   // Determine provider from model ID
-  const provider = getProvider(model);
+  const provider = getProvider(normalizedModel);
 
   if (provider === 'anthropic') {
-    return callClaude({ model, systemPrompt, userPrompt, temperature, image, maxTokens });
+    return callClaude({ model: normalizedModel, systemPrompt, userPrompt, temperature, image, maxTokens });
   } else {
-    return callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, image, jsonMode, maxTokens, provider });
+    return callOpenAICompatible({ model: normalizedModel, systemPrompt, userPrompt, temperature, image, jsonMode, maxTokens, provider });
   }
 }
 
@@ -284,9 +296,12 @@ function getProvider(modelId) {
     throw new Error(`Model ID must be a string, got ${typeof modelId}: ${JSON.stringify(modelId)}`);
   }
 
-  if (modelId.includes('grok')) return 'grok';
-  if (modelId.includes('gpt')) return 'openai';
-  if (modelId.includes('claude')) return 'anthropic';
+  // Normalize before checking (strip -vision suffix)
+  const normalized = normalizeModelId(modelId);
+
+  if (normalized.includes('grok')) return 'grok';
+  if (normalized.includes('gpt')) return 'openai';
+  if (normalized.includes('claude')) return 'anthropic';
 
   // Default to OpenAI
   return 'openai';

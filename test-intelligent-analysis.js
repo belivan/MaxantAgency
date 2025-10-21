@@ -4,7 +4,11 @@
  * This tests the new AI-powered page selection and multi-page analysis
  */
 
+import dotenv from 'dotenv';
 import { analyzeWebsiteIntelligent } from './analysis-engine/orchestrator.js';
+
+// Load environment variables from analysis-engine/.env
+dotenv.config({ path: './analysis-engine/.env' });
 
 async function testIntelligentAnalysis() {
   console.log('🧪 Testing Intelligent Multi-Page Analysis System\n');

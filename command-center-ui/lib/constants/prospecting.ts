@@ -63,7 +63,7 @@ export const TEXT_MODELS: readonly AIModel[] = [
 export const VISION_MODELS: readonly AIModel[] = [
   // OpenAI GPT models
   {
-    value: 'gpt-4o',
+    value: 'gpt-4o-vision',
     label: 'GPT-4o Vision',
     provider: 'OpenAI',
     description: 'Best vision model - $5/$15 per 1M tokens',
@@ -71,7 +71,7 @@ export const VISION_MODELS: readonly AIModel[] = [
     speed: 'Fast'
   },
   {
-    value: 'gpt-5',
+    value: 'gpt-5-vision',
     label: 'GPT-5 Vision',
     provider: 'OpenAI',
     description: 'Latest OpenAI multimodal - $1.25/$10 per 1M tokens',
@@ -81,16 +81,16 @@ export const VISION_MODELS: readonly AIModel[] = [
 
   // Anthropic Claude 4.x models
   {
-    value: 'claude-sonnet-4-5',
-    label: 'Claude Sonnet 4.5',
+    value: 'claude-sonnet-4-5-vision',
+    label: 'Claude Sonnet 4.5 Vision',
     provider: 'Anthropic',
     description: 'High quality vision - $3/$15 per 1M tokens',
     cost: '$$',
     speed: 'Fast'
   },
   {
-    value: 'claude-haiku-4-5',
-    label: 'Claude Haiku 4.5',
+    value: 'claude-haiku-4-5-vision',
+    label: 'Claude Haiku 4.5 Vision',
     provider: 'Anthropic',
     description: 'Fast vision - $0.80/$4 per 1M tokens',
     cost: '$',
@@ -121,7 +121,7 @@ export const PROSPECTING_MODULES: readonly ProspectingModule[] = [
     value: 'websiteExtraction',
     label: 'Website Extraction',
     description: 'Extracts business data from website screenshots and HTML',
-    defaultModel: 'gpt-4o'
+    defaultModel: 'gpt-4o-vision'
   },
   {
     value: 'relevanceCheck',
@@ -147,7 +147,7 @@ export function getDefaultProspectingModels(): Record<string, string> {
  */
 export function getDefaultModels(): { model: string; visionModel: string } {
   return {
-    model: 'grok-4-fast',     // Default text model (cheapest)
-    visionModel: 'gpt-4o'     // Default vision model (highest quality)
+    model: 'grok-4-fast',         // Default text model (cheapest)
+    visionModel: 'gpt-4o-vision'  // Default vision model (highest quality)
   };
 }

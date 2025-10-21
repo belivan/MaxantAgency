@@ -89,6 +89,16 @@
       "name": "prospecting_prompts",
       "type": "jsonb",
       "description": "AI prompts used for prospecting (query understanding, website extraction, relevance check). Saved on first prospect generation to preserve historical accuracy."
+    },
+    {
+      "name": "prospecting_model_selections",
+      "type": "jsonb",
+      "description": "AI model selections for prospecting modules (queryUnderstanding, websiteExtraction, relevanceCheck). Saved on first prospect generation to preserve historical accuracy."
+    },
+    {
+      "name": "analysis_model_selections",
+      "type": "jsonb",
+      "description": "AI model selections for analysis modules (design, SEO, content, social). Saved on first analysis to preserve historical accuracy."
     }
   ],
   "indexes": [
