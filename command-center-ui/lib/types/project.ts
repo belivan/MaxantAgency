@@ -13,6 +13,12 @@ export interface Project {
   // ICP Brief
   icp_brief?: Record<string, any>;
 
+  // Prompts and Models (saved for historical accuracy)
+  prospecting_prompts?: Record<string, any>;
+  prospecting_model_selections?: Record<string, string>;
+  analysis_prompts?: Record<string, any>;
+  analysis_model_selections?: Record<string, string>;
+
   // Analysis Config
   analysis_config?: Record<string, any>;
 
@@ -62,6 +68,10 @@ export interface CreateProjectRequest {
   name: string;
   description?: string;
   icp_brief?: Record<string, any>;
+  prospecting_prompts?: Record<string, any>;
+  prospecting_model_selections?: Record<string, string>;
+  analysis_prompts?: Record<string, any>;
+  analysis_model_selections?: Record<string, string>;
   budget_limit?: number;
   budget_alert_threshold?: number;
 }
@@ -70,6 +80,10 @@ export interface UpdateProjectRequest {
   name?: string;
   description?: string;
   icp_brief?: Record<string, any>;
+  prospecting_prompts?: Record<string, any>;
+  prospecting_model_selections?: Record<string, string>;
+  analysis_prompts?: Record<string, any>;
+  analysis_model_selections?: Record<string, string>;
   analysis_config?: Record<string, any>;
   outreach_config?: Record<string, any>;
   status?: ProjectStatus;
