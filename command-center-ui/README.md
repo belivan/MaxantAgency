@@ -94,32 +94,47 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## Architecture
+## Project Structure
 
 ```
-command-center-ui (Next.js)
-├─ app/
-│  ├─ page.tsx                    # Main entry
-│  └─ api/
-│     ├─ prospects/route.ts       # Generate prospects
-│     ├─ analyze/route.ts         # Run analyzer
-│     ├─ leads/route.ts           # Fetch analyzed leads
-│     ├─ compose/route.ts         # Compose emails
-│     ├─ emails/route.ts          # Fetch composed emails
-│     └─ stats/route.ts           # Dashboard statistics
+command-center-ui/
+├── app/              # Next.js pages and API routes
+│   ├── page.tsx      # Dashboard (/)
+│   ├── prospecting/  # Prospecting module
+│   ├── analysis/     # Analysis module
+│   ├── leads/        # Leads module
+│   ├── outreach/     # Outreach module (emails & social)
+│   ├── projects/     # Project management
+│   ├── analytics/    # Analytics & reporting
+│   └── api/          # API routes for all features
 │
-├─ components/
-│  ├─ unified-dashboard.tsx       # Main tabbed interface
-│  ├─ stats-overview.tsx          # Overview tab
-│  ├─ prospect-form.tsx           # Brief editor + generate
-│  ├─ prospect-table.tsx          # Generated prospects
-│  ├─ analyzer-panel.tsx          # Analyzer configuration
-│  ├─ leads-table.tsx             # Analyzed leads
-│  └─ email-composer.tsx          # Email composition
+├── components/       # React components (organized by feature)
+│   ├── ui/           # shadcn/ui primitives
+│   ├── shared/       # Reusable components
+│   ├── analysis/     # Analysis feature components
+│   ├── leads/        # Lead management components
+│   ├── outreach/     # Outreach feature components
+│   └── prospecting/  # Prospecting feature components
 │
-└─ lib/
-   └─ server-utils.ts             # Shared utilities
+├── lib/              # Utilities and business logic
+│   ├── api/          # API orchestration
+│   ├── database/     # Supabase client
+│   ├── server/       # Server utilities
+│   ├── utils/        # Domain utilities
+│   └── types/        # TypeScript definitions
+│
+├── docs/             # All documentation
+│   ├── features/     # Feature specifications
+│   ├── integration/  # Integration guides
+│   └── audits/       # System audits
+│
+└── tests/            # Test suites
+    ├── integration/  # Integration tests
+    ├── e2e/          # End-to-end tests
+    └── database/     # Database tests
 ```
+
+See [CLEANUP-PLAN.md](CLEANUP-PLAN.md) for detailed structure documentation.
 
 ### Data Flow
 
@@ -398,6 +413,30 @@ Restart dev server:
 ```bash
 npm run dev
 ```
+
+---
+
+## Documentation
+
+### Guides & References
+- [Cleanup Plan](CLEANUP-PLAN.md) - Detailed directory reorganization documentation
+- [Documentation Index](docs/README.md) - Complete documentation directory
+- [Testing Guide](tests/README.md) - Test suites and standards
+- [Components Guide](components/README.md) - Component architecture
+- [Lib Utilities Guide](lib/README.md) - Utility functions reference
+
+### Feature Documentation
+- [Fork Warning System](docs/features/fork-warning-system.md)
+- [Lead Detail Enhancements](docs/features/lead-detail-enhancements.md)
+- [Lead Detail Refactor](docs/features/lead-detail-refactor.md)
+
+### Integration & Security
+- [Client Orchestrator Integration](docs/integration/client-orchestrator.md)
+- [Security Guidelines](docs/security/security.md)
+
+### Reports & Audits
+- [UI Audit (2025-10-20)](docs/audits/ui-audit.md)
+- [Implementation Phases 6-8](docs/implementation/phases-6-8.md)
 
 ---
 
