@@ -473,9 +473,13 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     const { analyzeDesktopVisual } = await import('./analyzers/desktop-visual-analyzer.js');
     const { analyzeMobileVisual } = await import('./analyzers/mobile-visual-analyzer.js');
     const { analyzeSocial } = await import('./analyzers/social-analyzer.js');
+    const { analyzeAccessibility } = await import('./analyzers/accessibility-analyzer.js');
 
-    // Run all analyzers in parallel
-    const [seoResults, contentResults, desktopVisualResults, mobileVisualResults, socialResults] = await Promise.all([
+    // For accessibility, analyze all unique pages (most comprehensive)
+    const accessibilityPages = successfulPages;
+
+    // Run all analyzers in parallel (including accessibility)
+    const [seoResults, contentResults, desktopVisualResults, mobileVisualResults, socialResults, accessibilityResults] = await Promise.all([
       analyzeSEO(seoPages, enrichedContext, customPrompts?.seo),
       analyzeContent(contentPages, enrichedContext, customPrompts?.content),
       analyzeDesktopVisual(visualPages, enrichedContext, customPrompts?.desktopVisual),
@@ -483,7 +487,8 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       analyzeSocial(socialPages, parsedData.social.links, {
         platformCount: parsedData.social.platformCount,
         platformsPresent: parsedData.social.platformsPresent
-      }, enrichedContext, customPrompts?.social)
+      }, enrichedContext, customPrompts?.social),
+      analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
     ]);
 
     const analysisResults = {
@@ -491,7 +496,8 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       content: contentResults,
       desktopVisual: desktopVisualResults,
       mobileVisual: mobileVisualResults,
-      social: socialResults
+      social: socialResults,
+      accessibility: accessibilityResults
     };
 
     // PHASE 5: GRADING & INSIGHTS
@@ -555,6 +561,7 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       seo_score: scores.seo,
       content_score: scores.content,
       social_score: scores.social,
+      accessibility_score: Math.round(accessibilityResults?.accessibilityScore || 50),
 
       // Detailed analysis results
       design_issues_desktop: desktopVisualResults?.issues || [],
@@ -562,6 +569,9 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       seo_issues: seoResults?.issues || [],
       content_issues: contentResults?.issues || [],
       social_issues: socialResults?.issues || [],
+      accessibility_issues: accessibilityResults?.issues || [],
+      accessibility_wcag_level: accessibilityResults?.wcagLevel || 'AA',
+      accessibility_compliance: accessibilityResults?.compliance || 'unknown',
 
       // Quick wins and top issue
       quick_wins: quickWins,

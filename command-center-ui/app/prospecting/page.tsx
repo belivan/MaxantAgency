@@ -359,28 +359,6 @@ export default function ProspectingPage() {
         </p>
       </div>
 
-      {/* Project Selector */}
-      <div className="max-w-md">
-        <ProjectSelector
-          value={selectedProjectId}
-          onChange={setSelectedProjectId}
-          label="Project"
-        />
-        {selectedProjectId ? (
-          <p className="text-sm text-muted-foreground mt-2">
-            Prospects will be associated with this project, and your ICP brief will be saved.
-          </p>
-        ) : (
-          <Alert className="mt-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Project Required</AlertTitle>
-            <AlertDescription>
-              Select a project to generate prospects. All prospects must be associated with a project for proper organization and ICP tracking.
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
-
       {/* Engine Offline Warning */}
       {isProspectingEngineOffline && (
         <Alert variant="destructive">

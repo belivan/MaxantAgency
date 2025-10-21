@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { ProspectConfigForm } from './prospect-config-form';
 import { ProspectingModelSelector } from './model-selector';
 import { ProspectingPromptEditor } from './prompt-editor';
+import { ProjectSelector } from '@/components/shared';
 import { PROSPECTING_MODULES, PROSPECTING_MODELS } from '@/lib/constants/prospecting';
 import type { ProspectGenerationFormData } from '@/lib/utils/validation';
 import type { ProspectingPrompts } from '@/lib/types/prospect';
@@ -22,6 +23,9 @@ interface EnhancedProspectConfigFormProps {
   prospectCount?: number;
   isLoadingProject?: boolean;
   onPromptsChange?: (defaultPrompts: ProspectingPrompts, currentPrompts: ProspectingPrompts) => void;
+  // Project selection
+  selectedProjectId?: string | null;
+  onProjectChange?: (projectId: string | null) => void;
 }
 
 export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProps) {
@@ -86,6 +90,22 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
       {...props}
       onSubmit={handleSubmit}
     >
+      {/* Project Selection */}
+      {props.onProjectChange && (
+        <div className="space-y-2">
+          <ProjectSelector
+            value={props.selectedProjectId || null}
+            onChange={props.onProjectChange}
+            label="Project"
+          />
+          {!props.selectedProjectId && (
+            <p className="text-xs text-muted-foreground">
+              Select a project to save prospects and ICP brief
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Model Selection (Advanced) */}
       {!isLoadingPrompts && (
         <ProspectingModelSelector
