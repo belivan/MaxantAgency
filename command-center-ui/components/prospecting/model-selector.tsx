@@ -95,10 +95,15 @@ export function ProspectingModelSelector({
             className="w-full justify-between p-4 hover:bg-muted/50"
             disabled={disabled}
           >
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 flex-1">
               <Sparkles className="w-4 h-4" />
               <span className="font-semibold">AI Model Selection</span>
               <Badge variant="secondary" className="text-xs">Advanced</Badge>
+              {!isExpanded && Object.keys(selectedModels).length > 0 && (
+                <span className="text-xs text-muted-foreground ml-2">
+                  ({Object.keys(selectedModels).length} configured)
+                </span>
+              )}
             </div>
             {isExpanded ? (
               <ChevronUp className="w-4 h-4" />

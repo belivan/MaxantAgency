@@ -219,11 +219,12 @@ export async function getRawPromptConfig(promptPath) {
  */
 export async function collectAnalysisPrompts() {
   try {
-    const [designPrompt, seoPrompt, contentPrompt, socialPrompt] = await Promise.all([
+    const [designPrompt, seoPrompt, contentPrompt, socialPrompt, accessibilityPrompt] = await Promise.all([
       getRawPromptConfig('web-design/design-critique'),
       getRawPromptConfig('web-design/seo-analysis'),
       getRawPromptConfig('web-design/content-analysis'),
-      getRawPromptConfig('web-design/social-analysis')
+      getRawPromptConfig('web-design/social-analysis'),
+      getRawPromptConfig('web-design/accessibility-analysis')
     ]);
 
     return {
@@ -231,6 +232,7 @@ export async function collectAnalysisPrompts() {
       seo: seoPrompt,
       content: contentPrompt,
       social: socialPrompt,
+      accessibility: accessibilityPrompt,
       _meta: {
         collectedAt: new Date().toISOString(),
         version: '1.0'

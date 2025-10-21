@@ -68,8 +68,7 @@ prospecting-engine/
 │       ├── 01-query-understanding.json
 │       ├── 04-website-extraction.json
 │       ├── 07-relevance-check.json
-│       └── meta/
-│           └── system-instructions.json
+│       └── README.md         # Prompt system documentation
 │
 ├── discoverers/              # Step 2: Find companies
 │   ├── google-maps.js        # Google Places API integration
@@ -99,15 +98,30 @@ prospecting-engine/
 │
 ├── shared/
 │   ├── prompt-loader.js      # Load prompts from JSON
+│   ├── ai-client.js          # AI model client
 │   ├── logger.js             # Winston logger
-│   └── cost-tracker.js       # Track API costs
+│   ├── cost-tracker.js       # Track API costs
+│   └── rate-limiter.js       # API rate limiting
+│
+├── docs/                     # All documentation (organized by category)
+│   ├── README.md             # Documentation index
+│   ├── architecture/         # System design docs
+│   ├── features/             # Feature completion docs
+│   ├── setup/                # Setup guides
+│   ├── fixes/                # Bug fix summaries
+│   └── testing/              # Test reports
+│
+├── tests/                    # Test suite (organized by type)
+│   ├── unit/                 # Unit tests
+│   ├── integration/          # Integration & E2E tests
+│   ├── phase-tests/          # Phase validation tests
+│   ├── utils/                # Utility scripts
+│   ├── dev/                  # Development tests
+│   └── error-handling/       # Error & edge case tests
 │
 ├── orchestrator.js           # Main pipeline coordinator
 ├── server.js                 # Express API server
-└── tests/
-    ├── test-google-maps.js
-    ├── test-extraction.js
-    └── test-full-pipeline.js
+└── README.md                 # This file
 ```
 
 ---
@@ -315,15 +329,28 @@ View cost summary after each run.
 
 ## 📚 Documentation
 
-Comprehensive documentation for each phase:
+**[📖 Full Documentation Index](docs/README.md)** - Complete documentation organized by category
 
-- **[PHASE-1-COMPLETE.md](PHASE-1-COMPLETE.md)** - Foundation & infrastructure setup
-- **[PHASE-2-COMPLETE.md](PHASE-2-COMPLETE.md)** - Google Maps discovery & verification
-- **[PHASE-3-COMPLETE.md](PHASE-3-COMPLETE.md)** - Data extraction & social enrichment
-- **[PHASE-4-COMPLETE.md](PHASE-4-COMPLETE.md)** - AI intelligence layer (query optimization + relevance scoring)
-- **[TESTING-VALIDATION-COMPLETE.md](TESTING-VALIDATION-COMPLETE.md)** - Testing results & validation summary
-- **[PROJECT-STATUS-COMPLETE.md](PROJECT-STATUS-COMPLETE.md)** - Complete project overview & achievements
-- **[SETUP-GOOGLE-MAPS.md](SETUP-GOOGLE-MAPS.md)** - Google Maps API setup guide (required for full E2E testing)
+### Quick Links
+
+**Getting Started:**
+- [Setup: Google Maps API](docs/setup/SETUP-GOOGLE-MAPS.md) - Required for discovery
+- [Setup: Command Center](docs/setup/QUICK-START-COMMAND-CENTER.md) - UI integration
+
+**Architecture & Design:**
+- [Data Validation System](docs/architecture/DATA-VALIDATION-SYSTEM.md)
+- [Performance Analysis](docs/architecture/PERFORMANCE-ANALYSIS.md)
+- [Smart Caching](docs/architecture/SMART-CACHING.md)
+
+**Features & Phases:**
+- [Phase 2: Discovery](docs/features/PHASE-2-COMPLETE.md)
+- [Phase 3: Extraction](docs/features/PHASE-3-COMPLETE.md)
+- [Phase 4: Intelligence](docs/features/PHASE-4-COMPLETE.md)
+- [Project Status](docs/features/PROJECT-STATUS-COMPLETE.md)
+
+**Testing:**
+- [Test Report](docs/testing/TEST-REPORT.md)
+- [Testing Validation](docs/testing/TESTING-VALIDATION-COMPLETE.md)
 
 ---
 

@@ -64,10 +64,32 @@ app.post('/api/prospect', async (req, res) => {
     });
   }
 
-  if (!brief.industry && !brief.target) {
+  // Normalize brief format to handle both simple and comprehensive ICP brief formats
+  // Simple format: { industry: "...", target: "...", city: "..." }
+  // Comprehensive format: { industries: [...], target_description: "...", location: {...} }
+  let normalizedBrief = { ...brief };
+
+  if (!brief.industry && brief.industries) {
+    // Convert industries array to single industry string
+    normalizedBrief.industry = Array.isArray(brief.industries)
+      ? brief.industries.join(', ')
+      : brief.industries;
+  }
+
+  if (!brief.target && brief.target_description) {
+    normalizedBrief.target = brief.target_description;
+  }
+
+  if (!brief.city && brief.location) {
+    // Extract city from location object
+    normalizedBrief.city = brief.location.hq_city || brief.location.metro || '';
+  }
+
+  // Validate normalized brief
+  if (!normalizedBrief.industry && !normalizedBrief.target) {
     return res.status(400).json({
       success: false,
-      error: 'Brief must include "industry" or "target"'
+      error: 'Brief must include "industry"/"industries" or "target"/"target_description"'
     });
   }
 
@@ -101,8 +123,8 @@ app.post('/api/prospect', async (req, res) => {
       });
     }
 
-    // Run pipeline with custom prompts
-    const results = await runProspectingPipeline(brief, {
+    // Run pipeline with custom prompts and normalized brief
+    const results = await runProspectingPipeline(normalizedBrief, {
       ...options,
       customPrompts: custom_prompts
     }, onProgress);

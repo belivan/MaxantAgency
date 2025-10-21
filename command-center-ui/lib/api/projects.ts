@@ -158,20 +158,28 @@ export async function updateProject(
  * Delete projects by IDs
  */
 export async function deleteProjects(projectIds: string[]): Promise<{ deleted: number }> {
-  const deletePromises = projectIds.map(id =>
-    fetch(`/api/projects/${id}`, {
-      method: 'DELETE',
-    })
-  );
+  try {
+    const deletePromises = projectIds.map(id =>
+      fetch(`/api/projects/${id}`, {
+        method: 'DELETE',
+      }).catch(err => {
+        console.error(`Failed to delete project ${id}:`, err);
+        throw new Error(`Network error deleting project ${id}: ${err.message}`);
+      })
+    );
 
-  const responses = await Promise.all(deletePromises);
+    const responses = await Promise.all(deletePromises);
 
-  // Check for any failures
-  const failures = responses.filter(r => !r.ok);
-  if (failures.length > 0) {
-    const firstError = await failures[0].json();
-    throw new Error(firstError.error || 'Failed to delete some projects');
+    // Check for any failures
+    const failures = responses.filter(r => !r.ok);
+    if (failures.length > 0) {
+      const firstError = await failures[0].json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(firstError.error || 'Failed to delete some projects');
+    }
+
+    return { deleted: projectIds.length };
+  } catch (error: any) {
+    console.error('Delete projects error:', error);
+    throw new Error(error.message || 'Failed to delete projects');
   }
-
-  return { deleted: projectIds.length };
 }

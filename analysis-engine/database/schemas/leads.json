@@ -206,6 +206,12 @@
       "default": "[]",
       "description": "Array of WCAG accessibility violations found"
     },
+    {
+      "name": "accessibility_compliance",
+      "type": "jsonb",
+      "default": "{}",
+      "description": "WCAG 2.1 compliance details from accessibility analyzer (violations by level, compliance percentage, etc.)"
+    },
 
     {
       "name": "quick_wins",
@@ -261,7 +267,17 @@
     {
       "name": "screenshot_url",
       "type": "text",
-      "description": "URL to stored screenshot (S3 or similar)"
+      "description": "URL to stored screenshot (S3 or similar) - LEGACY"
+    },
+    {
+      "name": "screenshot_desktop_url",
+      "type": "text",
+      "description": "Local file path to desktop screenshot"
+    },
+    {
+      "name": "screenshot_mobile_url",
+      "type": "text",
+      "description": "Local file path to mobile screenshot"
     },
 
     {
@@ -475,7 +491,7 @@
     {
       "column": "project_id",
       "references": "projects.id",
-      "onDelete": "SET NULL"
+      "onDelete": "CASCADE"
     }
   ],
 

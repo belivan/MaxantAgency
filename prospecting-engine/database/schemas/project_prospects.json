@@ -53,6 +53,46 @@
       "default": "active",
       "index": true,
       "description": "Project-specific status for this prospect"
+    },
+    {
+      "name": "discovery_query",
+      "type": "text",
+      "description": "AI-generated search query that discovered this prospect for this project"
+    },
+    {
+      "name": "query_generation_model",
+      "type": "text",
+      "description": "AI model used for query understanding (e.g., 'grok-4-fast', 'gpt-4o')"
+    },
+    {
+      "name": "icp_brief_snapshot",
+      "type": "jsonb",
+      "description": "Snapshot of the project's ICP brief when this prospect was discovered"
+    },
+    {
+      "name": "prompts_snapshot",
+      "type": "jsonb",
+      "description": "Snapshot of all prompts used during discovery (queryUnderstanding, websiteExtraction, relevanceCheck)"
+    },
+    {
+      "name": "model_selections_snapshot",
+      "type": "jsonb",
+      "description": "Snapshot of model selections for each AI step during discovery"
+    },
+    {
+      "name": "relevance_reasoning",
+      "type": "text",
+      "description": "AI's explanation for why this prospect matches the project's ICP"
+    },
+    {
+      "name": "discovery_cost_usd",
+      "type": "decimal",
+      "description": "Total API cost to discover and enrich this prospect for this project (USD)"
+    },
+    {
+      "name": "discovery_time_ms",
+      "type": "integer",
+      "description": "Time taken to discover and enrich this prospect for this project (milliseconds)"
     }
   ],
 
@@ -91,6 +131,16 @@
       "type": "check",
       "name": "chk_custom_score_range",
       "expression": "custom_score IS NULL OR (custom_score >= 0 AND custom_score <= 100)"
+    },
+    {
+      "type": "check",
+      "name": "chk_discovery_cost_positive",
+      "expression": "discovery_cost_usd IS NULL OR discovery_cost_usd >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_discovery_time_positive",
+      "expression": "discovery_time_ms IS NULL OR discovery_time_ms >= 0"
     }
   ]
 }

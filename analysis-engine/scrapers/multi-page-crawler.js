@@ -584,7 +584,7 @@ export async function estimateCrawl(url) {
  */
 export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, options = {}) {
   const {
-    timeout = 30000,
+    timeout = 60000,  // Increased from 30s to 60s for slow websites
     concurrency = 3,
     onProgress = null
   } = options;
@@ -676,7 +676,7 @@ async function crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout) {
 
     // Navigate and screenshot desktop
     await desktopPage.goto(fullUrl, {
-      waitUntil: 'networkidle',
+      waitUntil: 'load',  // Changed from 'networkidle' to 'load' - more reliable for slow sites
       timeout
     });
 
@@ -704,7 +704,7 @@ async function crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout) {
 
     // Navigate and screenshot mobile
     await mobilePage.goto(fullUrl, {
-      waitUntil: 'networkidle',
+      waitUntil: 'load',  // Changed from 'networkidle' to 'load' - more reliable for slow sites
       timeout
     });
 

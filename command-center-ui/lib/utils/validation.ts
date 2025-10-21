@@ -65,8 +65,8 @@ export const prospectGenerationSchema = z.object({
     .int('Count must be an integer')
     .min(1, 'Minimum count is 1')
     .max(50, 'Maximum count is 50'),
-  model: z.enum(['grok-4-fast', 'gpt-4o', 'gpt-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
-  visionModel: z.enum(['gpt-4o', 'gpt-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
+  model: z.enum(['grok-4-fast', 'grok-4', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
+  visionModel: z.enum(['gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
   verify: z.boolean().default(true),
   project_id: z.string().uuid().optional(),
 
@@ -86,7 +86,7 @@ export type ProspectGenerationFormData = z.infer<typeof prospectGenerationSchema
 export const analysisOptionsSchema = z.object({
   tier: z.enum(['tier1', 'tier2', 'tier3']), // Deprecated but kept for backward compatibility
   modules: z.array(
-    z.enum(['design', 'seo', 'content', 'performance', 'accessibility', 'social'])
+    z.enum(['desktopVisual', 'mobileVisual', 'seo', 'content', 'social', 'accessibility'])
   ).min(1, 'Select at least one module'),
   capture_screenshots: z.boolean().default(true),
 
@@ -108,6 +108,9 @@ export const analysisOptionsSchema = z.object({
 
   // AI model selections per module (NEW v2.0)
   model_selections: z.record(z.string()).optional(),
+
+  // Custom AI prompts (NEW v2.0 - Prompt Editor)
+  custom_prompts: z.record(z.any()).optional(),
 
   autoEmail: z.boolean().default(false),
   autoAnalyze: z.boolean().default(false)

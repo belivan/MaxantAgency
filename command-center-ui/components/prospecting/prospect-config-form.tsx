@@ -25,9 +25,21 @@ interface ProspectConfigFormProps {
   prospectCount?: number; // Number of existing prospects for locked project
   isLoadingProject?: boolean; // Whether project data is being loaded
   children?: React.ReactNode; // Model selector and prompt editor content
+  icpValid?: boolean; // Whether ICP Brief is valid
+  selectedProjectId?: string | null; // Selected project ID
 }
 
-export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = false, prospectCount = 0, isLoadingProject = false, children }: ProspectConfigFormProps) {
+export function ProspectConfigForm({
+  onSubmit,
+  isLoading,
+  disabled,
+  locked = false,
+  prospectCount = 0,
+  isLoadingProject = false,
+  children,
+  icpValid = false,
+  selectedProjectId = null
+}: ProspectConfigFormProps) {
   const {
     register,
     handleSubmit,
@@ -54,12 +66,15 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
     { verify }
   );
 
+  // Button should be disabled if ICP Brief is invalid or no project selected
+  const isGenerateDisabled = disabled || isLoading || !icpValid || !selectedProjectId;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Settings2 className="w-5 h-5" />
-          <span>Prospect Settings</span>
+          <span>Step 2: Prospect Settings</span>
         </CardTitle>
       </CardHeader>
 
@@ -118,11 +133,24 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
             </p>
           </div>
 
+          {/* Validation Warning */}
+          {(!icpValid || !selectedProjectId) && (
+            <div className="rounded-lg border border-amber-500 bg-amber-50 dark:bg-amber-950 p-3">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                {!selectedProjectId ? (
+                  <>Please select a project to continue</>
+                ) : !icpValid ? (
+                  <>Please configure a valid ICP Brief in Step 1</>
+                ) : null}
+              </p>
+            </div>
+          )}
+
           {/* Submit Button */}
           <Button
             type="submit"
             className="w-full"
-            disabled={disabled || isLoading}
+            disabled={isGenerateDisabled}
           >
             {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Generate Prospects

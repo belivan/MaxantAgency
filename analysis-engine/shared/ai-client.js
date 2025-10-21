@@ -298,11 +298,10 @@ function calculateCost(modelId, usage) {
 
   // Pricing per 1M tokens (as of January 2025)
   const pricing = {
-    // OpenAI
+    // OpenAI (verified pricing Jan 2025)
     'gpt-4o': { input: 5, output: 15 },
     'gpt-4o-mini': { input: 0.15, output: 0.60 },
-    'gpt-5': { input: 1.25, output: 10 },
-    'gpt-5-mini': { input: 0.25, output: 2 },
+    'gpt-5-mini': { input: 0.25, output: 2 },  // GPT-5 Mini (real model)
 
     // Grok (xAI)
     'grok-4': { input: 3, output: 15 },

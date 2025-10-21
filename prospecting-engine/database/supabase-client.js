@@ -289,7 +289,16 @@ export async function linkProspectToProject(prospectId, projectId, metadata = {}
         run_id: metadata.run_id || null,
         notes: metadata.notes || null,
         custom_score: metadata.custom_score || null,
-        status: metadata.status || 'active'
+        status: metadata.status || 'active',
+        // AI metadata fields (new columns)
+        discovery_query: metadata.discovery_query || null,
+        query_generation_model: metadata.query_generation_model || null,
+        icp_brief_snapshot: metadata.icp_brief_snapshot || null,
+        prompts_snapshot: metadata.prompts_snapshot || null,
+        model_selections_snapshot: metadata.model_selections_snapshot || null,
+        relevance_reasoning: metadata.relevance_reasoning || null,
+        discovery_cost_usd: metadata.discovery_cost_usd || null,
+        discovery_time_ms: metadata.discovery_time_ms || null
       })
       .select()
       .single();

@@ -18,8 +18,32 @@ export const TEXT_MODELS: readonly AIModel[] = [
     cost: '$',
     speed: 'Very Fast'
   },
+  {
+    value: 'grok-4',
+    label: 'Grok 4',
+    provider: 'xAI',
+    description: 'Full Grok - $3/$15 per 1M tokens',
+    cost: '$$',
+    speed: 'Fast'
+  },
 
   // OpenAI GPT models
+  {
+    value: 'gpt-5-mini',
+    label: 'GPT-5 Mini',
+    provider: 'OpenAI',
+    description: 'Latest cheap - $0.25/$2 per 1M tokens',
+    cost: '$',
+    speed: 'Very Fast'
+  },
+  {
+    value: 'gpt-4o-mini',
+    label: 'GPT-4o Mini',
+    provider: 'OpenAI',
+    description: 'Budget vision - $0.15/$0.60 per 1M tokens',
+    cost: '$',
+    speed: 'Very Fast'
+  },
   {
     value: 'gpt-4o',
     label: 'GPT-4o',
@@ -39,20 +63,20 @@ export const TEXT_MODELS: readonly AIModel[] = [
 
   // Anthropic Claude 4.x models
   {
-    value: 'claude-sonnet-4-5',
-    label: 'Claude Sonnet 4.5',
-    provider: 'Anthropic',
-    description: 'Best coding model - $3/$15 per 1M tokens',
-    cost: '$$',
-    speed: 'Fast'
-  },
-  {
     value: 'claude-haiku-4-5',
     label: 'Claude Haiku 4.5',
     provider: 'Anthropic',
     description: 'Fast & cheap - $0.80/$4 per 1M tokens',
     cost: '$',
     speed: 'Very Fast'
+  },
+  {
+    value: 'claude-sonnet-4-5',
+    label: 'Claude Sonnet 4.5',
+    provider: 'Anthropic',
+    description: 'Best coding model - $3/$15 per 1M tokens',
+    cost: '$$',
+    speed: 'Fast'
   }
 ] as const;
 
@@ -61,7 +85,7 @@ export const TEXT_MODELS: readonly AIModel[] = [
  * (Website Extraction from screenshots)
  */
 export const VISION_MODELS: readonly AIModel[] = [
-  // OpenAI GPT models
+  // OpenAI GPT models (best vision support)
   {
     value: 'gpt-4o-vision',
     label: 'GPT-4o Vision',
@@ -71,6 +95,14 @@ export const VISION_MODELS: readonly AIModel[] = [
     speed: 'Fast'
   },
   {
+    value: 'gpt-4o-mini-vision',
+    label: 'GPT-4o Mini Vision',
+    provider: 'OpenAI',
+    description: 'Budget vision - $0.15/$0.60 per 1M tokens',
+    cost: '$',
+    speed: 'Very Fast'
+  },
+  {
     value: 'gpt-5-vision',
     label: 'GPT-5 Vision',
     provider: 'OpenAI',
@@ -78,16 +110,16 @@ export const VISION_MODELS: readonly AIModel[] = [
     cost: '$$',
     speed: 'Fast'
   },
-
-  // Anthropic Claude 4.x models
   {
-    value: 'claude-sonnet-4-5-vision',
-    label: 'Claude Sonnet 4.5 Vision',
-    provider: 'Anthropic',
-    description: 'High quality vision - $3/$15 per 1M tokens',
-    cost: '$$',
-    speed: 'Fast'
+    value: 'gpt-5-mini-vision',
+    label: 'GPT-5 Mini Vision',
+    provider: 'OpenAI',
+    description: 'Cheap multimodal - $0.25/$2 per 1M tokens',
+    cost: '$',
+    speed: 'Very Fast'
   },
+
+  // Anthropic Claude 4.x models (vision capable)
   {
     value: 'claude-haiku-4-5-vision',
     label: 'Claude Haiku 4.5 Vision',
@@ -95,6 +127,14 @@ export const VISION_MODELS: readonly AIModel[] = [
     description: 'Fast vision - $0.80/$4 per 1M tokens',
     cost: '$',
     speed: 'Very Fast'
+  },
+  {
+    value: 'claude-sonnet-4-5-vision',
+    label: 'Claude Sonnet 4.5 Vision',
+    provider: 'Anthropic',
+    description: 'High quality vision - $3/$15 per 1M tokens',
+    cost: '$$',
+    speed: 'Fast'
   }
 ] as const;
 

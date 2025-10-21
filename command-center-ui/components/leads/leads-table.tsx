@@ -66,6 +66,7 @@ interface LeadsTableProps {
   loading?: boolean;
   onLeadClick?: (lead: Lead) => void;
   onComposeEmails?: (leadIds: string[]) => void;
+  onSelectionChange?: (selectedIds: string[], selectedLeads: Lead[]) => void;
   onRefresh?: () => void;
 }
 
@@ -82,12 +83,20 @@ interface LeadFilters {
   search?: string;
 }
 
-export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onRefresh }: LeadsTableProps) {
+export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSelectionChange, onRefresh }: LeadsTableProps) {
   const router = useRouter();
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
+
+  // Notify parent when selection changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      const selectedLeads = leads.filter(lead => selectedIds.includes(lead.id));
+      onSelectionChange(selectedIds, selectedLeads);
+    }
+  }, [selectedIds, leads, onSelectionChange]);
 
   // Expanded rows state
   const [expandedIds, setExpandedIds] = useState<string[]>([]);

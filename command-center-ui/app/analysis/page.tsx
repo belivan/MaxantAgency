@@ -41,6 +41,7 @@ export default function AnalysisPage() {
   // Prompt state
   const [defaultPrompts, setDefaultPrompts] = useState<AnalysisPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<AnalysisPrompts | null>(null);
+  const [savedPrompts, setSavedPrompts] = useState<AnalysisPrompts | undefined>(undefined); // Project-saved prompts for comparison
   const [leadsCount, setLeadsCount] = useState(0);
   const [promptsLoading, setPromptsLoading] = useState(true);
 
@@ -98,6 +99,7 @@ export default function AnalysisPage() {
     async function loadProjectData() {
       if (!selectedProjectId) {
         setCurrentPrompts(defaultPrompts);
+        setSavedPrompts(undefined);
         setLeadsCount(0);
         return;
       }
@@ -105,10 +107,17 @@ export default function AnalysisPage() {
       try {
         const project = await getProject(selectedProjectId);
 
-        if (project.analysis_prompts) {
-          setCurrentPrompts(project.analysis_prompts);
+        // Check if project has saved analysis prompts
+        const projectPrompts = (project as any).analysis_prompts as AnalysisPrompts | undefined;
+
+        if (projectPrompts) {
+          // Project has saved prompts - use them and save for comparison
+          setCurrentPrompts(projectPrompts);
+          setSavedPrompts(projectPrompts);
         } else {
+          // No saved prompts - use defaults
           setCurrentPrompts(defaultPrompts);
+          setSavedPrompts(undefined);
         }
 
         const leadsResponse = await fetch(`/api/leads?project_id=${selectedProjectId}`);
@@ -127,26 +136,43 @@ export default function AnalysisPage() {
     }
   }, [selectedProjectId, defaultPrompts]);
 
-  // Helper: Check if prompts have been modified
+  // Helper: Check if prompts have been modified from saved state
   const hasModifiedPrompts = () => {
-    if (!currentPrompts || !defaultPrompts) return false;
+    if (!currentPrompts) return false;
 
-    const keys: Array<keyof AnalysisPrompts> = ['design', 'seo', 'content', 'social'];
+    // If no saved prompts, compare against defaults (first-time setup)
+    const comparisonBase = savedPrompts || defaultPrompts;
+    if (!comparisonBase) return false;
+
+    const keys: Array<keyof AnalysisPrompts> = ['design', 'seo', 'content', 'social', 'accessibility'];
 
     return keys.some((key) => {
       const current = currentPrompts[key] as any;
-      const defaultVal = defaultPrompts[key] as any;
+      const base = comparisonBase[key] as any;
 
-      if (!current || !defaultVal) return false;
+      if (!current || !base) return false;
 
       return (
-        current.model !== defaultVal.model ||
-        current.temperature !== defaultVal.temperature ||
-        current.systemPrompt !== defaultVal.systemPrompt ||
-        current.userPromptTemplate !== defaultVal.userPromptTemplate
+        current.model !== base.model ||
+        current.temperature !== base.temperature ||
+        current.systemPrompt !== base.systemPrompt ||
+        current.userPromptTemplate !== base.userPromptTemplate
       );
     });
   };
+
+  // Fork detection: Check if prompts modified
+  const modifiedPrompts = hasModifiedPrompts();
+
+  console.log('[Fork Detection - Analysis]', {
+    leadsCount,
+    modifiedPrompts,
+    savedPrompts: !!savedPrompts,
+    currentPrompts: !!currentPrompts,
+    defaultPrompts: !!defaultPrompts,
+    shouldShowWarning: leadsCount > 0 && modifiedPrompts,
+    promptsLocked: leadsCount > 0 && !modifiedPrompts
+  });
 
   const handleAnalyze = async (config: AnalysisOptionsFormData) => {
     if (selectedIds.length === 0) {
@@ -175,8 +201,8 @@ export default function AnalysisPage() {
           status: 'active',
           budget: originalProject.budget,
           icp_brief: originalProject.icp_brief,
-          analysis_prompts: currentPrompts // Save the modified prompts
-        });
+          analysis_prompts: currentPrompts || undefined // Save the modified prompts
+        } as any);
 
         console.log('[Auto-Fork] Created new project:', newProject.id);
         alert(`Created new project: "${newProject.name}" with custom prompts`);
@@ -192,137 +218,68 @@ export default function AnalysisPage() {
       }
     }
 
-    // Save analysis config and prompts to project if one is selected
+    // Save analysis prompts to project if one is selected
     if (effectiveProjectId) {
       try {
         await updateProject(effectiveProjectId, {
-          analysis_config: {
-            tier: config.tier,
-            modules: config.modules,
-            capture_screenshots: config.capture_screenshots ?? true,
-            max_pages: config.max_pages ?? 30,
-            level_2_sample_rate: config.level_2_sample_rate ?? 0.5,
-            max_crawl_time: config.max_crawl_time ?? 120
-          },
-          analysis_prompts: currentPrompts // Save prompts
-        });
-        console.log('✅ Saved analysis config and prompts to project:', effectiveProjectId);
+          analysis_prompts: currentPrompts || undefined
+        } as any);
+        console.log('✅ Saved analysis prompts to project:', effectiveProjectId);
       } catch (error: any) {
-        console.error('Failed to save analysis config:', error);
-        // Don't block analysis if config save fails
+        console.error('Failed to save analysis prompts:', error);
+        // Don't block analysis if save fails
       }
     }
 
-    // Start global progress task with descriptive title
+    // Start global progress task
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const taskTitle = `Analysis: ${selectedIds.length} prospects (${timestamp})`;
+    const taskTitle = `Intelligent Analysis: ${selectedIds.length} prospects (${timestamp})`;
     const taskId = startTask('analysis', taskTitle, selectedIds.length);
 
-    try {
-      // Make POST request and handle SSE stream directly
-      const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
+    const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
 
-      // DEBUG: Log what we're sending
-      console.log('🔍 Analysis Request:', {
-        prospect_ids: selectedIds,
-        count: selectedIds.length,
-        tier: config.tier,
-        modules: config.modules,
-        max_pages: config.max_pages,
-        level_2_sample_rate: config.level_2_sample_rate,
-        max_crawl_time: config.max_crawl_time,
-        project_id: effectiveProjectId,
-        custom_prompts: hasModifiedPrompts()
-      });
+    // Call intelligent multi-page analysis API
+    try {
+      addLog(taskId, 'Starting intelligent multi-page analysis...', 'info');
 
       const response = await fetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prospect_ids: selectedIds,
-          tier: config.tier,
-          modules: config.modules,
-          capture_screenshots: config.capture_screenshots ?? true,
-          max_pages: config.max_pages ?? 30,
-          level_2_sample_rate: config.level_2_sample_rate ?? 0.5,
-          max_crawl_time: config.max_crawl_time ?? 120,
-          project_id: effectiveProjectId,
-          custom_prompts: currentPrompts // Send custom prompts to engine
+          project_id: effectiveProjectId || undefined,
+          custom_prompts: currentPrompts || undefined
         })
       });
 
-      if (!response.ok || !response.body) {
-        throw new Error('Failed to start analysis');
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.statusText}`);
       }
 
-      // Read SSE stream
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
+      const result = await response.json();
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          // Stream ended - mark task as complete if not already
-          addLog(taskId, 'Analysis completed successfully!', 'success');
-          setIsAnalyzing(false);
-          completeTask(taskId);
-          break;
-        }
+      if (result.success) {
+        // Log each result
+        result.data.results.forEach((r: any, i: number) => {
+          updateTask(taskId, i + 1, `Completed ${i + 1}/${result.data.total}`);
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-
-              // Handle progress
-              if (data.type === 'progress' || data.step) {
-                const current = data.completed || 0;
-                setProgress({
-                  current,
-                  total: data.total || selectedIds.length
-                });
-                // Update global progress
-                const message = data.message || data.step || `Processing ${current}/${data.total || selectedIds.length}`;
-                updateTask(taskId, current, message);
-                addLog(taskId, message, 'info');
-              }
-
-              // Handle status messages
-              if (data.type === 'status') {
-                addLog(taskId, data.message || 'Status update', 'info');
-              }
-
-              // Handle log messages
-              if (data.type === 'log') {
-                const logType = data.error ? 'error' : data.level || 'info';
-                addLog(taskId, data.message || 'Log entry', logType as any);
-              }
-
-              // Handle completion - ONLY when explicitly complete, not partial progress
-              if (data.type === 'complete') {
-                addLog(taskId, 'Analysis completed successfully!', 'success');
-                setIsAnalyzing(false);
-                completeTask(taskId);
-              }
-
-              // Handle error
-              if (data.type === 'error' || data.error) {
-                throw new Error(data.error || data.message || 'Analysis failed');
-              }
-            } catch (parseError) {
-              console.error('Failed to parse SSE:', parseError);
-            }
+          if (r.success) {
+            addLog(taskId, `✓ ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
+          } else {
+            addLog(taskId, `✗ ${r.company_name}: ${r.error}`, 'error');
           }
-        }
+        });
+
+        addLog(taskId, `Analysis complete: ${result.data.successful}/${result.data.total} successful`, 'success');
+        completeTask(taskId);
+      } else {
+        throw new Error(result.error || 'Analysis failed');
       }
+
+      setIsAnalyzing(false);
     } catch (error: any) {
-      console.error('Failed to start analysis:', error);
-      alert(`Failed to start analysis: ${error.message}`);
+      console.error('Failed to analyze:', error);
+      alert(`Failed to analyze: ${error.message}`);
       errorTask(taskId, error.message);
       setIsAnalyzing(false);
     }
@@ -337,7 +294,7 @@ export default function AnalysisPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Analysis</h1>
           <p className="text-muted-foreground">
-            Analyze prospects with AI-powered lead scoring • Multi-page crawling • Business intelligence extraction
+            Analyze prospects with AI-powered website audits • 6 core modules • Custom model selection
           </p>
         </div>
 

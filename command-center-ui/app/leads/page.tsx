@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LeadsTable, LeadDetailModal } from '@/components/leads';
+import { LeadsTable, LeadDetailModal, ReportsSection } from '@/components/leads';
 import { useLeads } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
 import { LoadingOverlay } from '@/components/shared';
@@ -22,6 +22,9 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
+  // Selected leads for bulk operations
+  const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
+
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
     setDetailModalOpen(true);
@@ -35,6 +38,10 @@ export default function LeadsPage() {
   const handleComposeEmail = (leadId: string) => {
     // Navigate to outreach page with single lead
     router.push(`/outreach?lead_ids=${leadId}`);
+  };
+
+  const handleSelectionChange = (selectedIds: string[], leads: Lead[]) => {
+    setSelectedLeads(leads);
   };
 
   return (
@@ -63,14 +70,25 @@ export default function LeadsPage() {
       {loading && !leads.length ? (
         <LoadingSection title="Loading Leads" />
       ) : (
-        /* Leads Table */
-        <LeadsTable
-          leads={leads}
-          loading={loading}
-          onLeadClick={handleLeadClick}
-          onComposeEmails={handleComposeEmails}
-          onRefresh={refresh}
-        />
+        <>
+          {/* Leads Table */}
+          <LeadsTable
+            leads={leads}
+            loading={loading}
+            onLeadClick={handleLeadClick}
+            onComposeEmails={handleComposeEmails}
+            onSelectionChange={handleSelectionChange}
+            onRefresh={refresh}
+          />
+
+          {/* Reports Section */}
+          {leads.length > 0 && (
+            <ReportsSection
+              selectedLeads={selectedLeads}
+              onRefresh={refresh}
+            />
+          )}
+        </>
       )}
 
       {/* Lead Detail Modal */}
@@ -83,68 +101,7 @@ export default function LeadsPage() {
         }}
         onComposeEmail={handleComposeEmail}
       />
-
-      {/* Stats Summary */}
-      {leads.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-5 pt-4">
-          <StatCard
-            label="Total Leads"
-            value={leads.length}
-          />
-          <StatCard
-            label="🔥 Hot Leads"
-            value={leads.filter(l => (l.lead_priority || 0) >= 75).length}
-            highlight="red"
-          />
-          <StatCard
-            label="⭐ Warm Leads"
-            value={leads.filter(l => {
-              const priority = l.lead_priority || 0;
-              return priority >= 50 && priority < 75;
-            }).length}
-            highlight="yellow"
-          />
-          <StatCard
-            label="💰 High Budget"
-            value={leads.filter(l => l.budget_likelihood === 'high').length}
-            highlight="green"
-          />
-          <StatCard
-            label="With Email"
-            value={leads.filter(l => l.contact_email && l.contact_email.trim() !== '').length}
-          />
-        </div>
-      )}
       </div>
     </>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  highlight
-}: {
-  label: string;
-  value: string | number;
-  highlight?: 'green' | 'blue' | 'red' | 'yellow';
-}) {
-  return (
-    <div
-      className={`rounded-lg border p-4 ${
-        highlight === 'green'
-          ? 'bg-green-50 dark:bg-green-950/20 border-green-600'
-          : highlight === 'blue'
-          ? 'bg-blue-50 dark:bg-blue-950/20 border-blue-600'
-          : highlight === 'red'
-          ? 'bg-red-50 dark:bg-red-950/20 border-red-600'
-          : highlight === 'yellow'
-          ? 'bg-yellow-50 dark:bg-yellow-950/20 border-yellow-600'
-          : 'bg-card border-border'
-      }`}
-    >
-      <p className="text-sm text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
-    </div>
   );
 }

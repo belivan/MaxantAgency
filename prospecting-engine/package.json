@@ -10,11 +10,16 @@
     "db:setup": "node database/setup.js",
     "db:setup:dry": "node database/setup.js --dry-run",
     "test": "node --test tests/**/*.js",
-    "test:discovery": "node tests/test-google-maps.js",
-    "test:extraction": "node tests/test-extraction.js",
-    "test:pipeline": "node tests/test-full-pipeline.js",
-    "test:phase-4": "node tests/test-phase-4-intelligence.js",
-    "test:e2e": "node tests/test-end-to-end.js"
+    "test:unit": "node --test tests/unit/**/*.js",
+    "test:integration": "node --test tests/integration/**/*.js",
+    "test:discovery": "node tests/unit/test-google-maps.js",
+    "test:extraction": "node tests/unit/test-extraction.js",
+    "test:pipeline": "node tests/integration/test-full-pipeline.js",
+    "test:phase-4": "node tests/integration/test-phase-4-intelligence.js",
+    "test:e2e": "node tests/integration/test-end-to-end.js",
+    "test:comprehensive": "node tests/integration/test-comprehensive.js",
+    "utils:check-quality": "node tests/utils/check-data-quality.js",
+    "utils:fix-data": "node tests/utils/fix-bad-data.js"
   },
   "keywords": [
     "prospecting",

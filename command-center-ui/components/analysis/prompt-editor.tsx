@@ -43,6 +43,7 @@ export interface AnalysisPrompts {
   seo?: PromptConfig;
   content?: PromptConfig;
   social?: PromptConfig;
+  accessibility?: PromptConfig;
   industry?: PromptConfig;
   _meta?: {
     collectedAt: string;
@@ -69,7 +70,7 @@ export function PromptEditor({
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
 
-  const promptKeys: Array<keyof AnalysisPrompts> = ['design', 'seo', 'content', 'social'];
+  const promptKeys: Array<keyof AnalysisPrompts> = ['design', 'seo', 'content', 'social', 'accessibility'];
 
   const toggleExpand = (key: string) => {
     setExpandedPrompt(expandedPrompt === key ? null : key);

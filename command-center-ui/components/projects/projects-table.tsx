@@ -291,9 +291,25 @@ export function ProjectsTable({ projects, loading, onProjectClick, onDeleteCompl
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {selectedIds.length} Project{selectedIds.length !== 1 ? 's' : ''}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the selected project{selectedIds.length !== 1 ? 's' : ''} and all associated data (prospects, leads, emails).
+            <AlertDialogTitle className="text-destructive">
+              ⚠️ Delete {selectedIds.length} Project{selectedIds.length !== 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p className="font-semibold text-foreground">
+                This action CANNOT be undone!
+              </p>
+              <p>
+                Deleting {selectedIds.length} project{selectedIds.length !== 1 ? 's' : ''} will permanently delete:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>All prospect data linked to {selectedIds.length === 1 ? 'this' : 'these'} project{selectedIds.length !== 1 ? 's' : ''}</li>
+                <li>All analyzed leads (with scores and analysis)</li>
+                <li>All composed emails ready for outreach</li>
+                <li>All project configuration and settings</li>
+              </ul>
+              <p className="text-destructive font-medium">
+                Global prospects (not linked to projects) will remain safe.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -303,7 +319,7 @@ export function ProjectsTable({ projects, loading, onProjectClick, onDeleteCompl
               disabled={isDeleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? 'Deleting...' : `Delete ${selectedIds.length} Project${selectedIds.length !== 1 ? 's' : ''}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

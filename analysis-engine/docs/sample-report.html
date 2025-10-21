@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Joe&#039;s Pizza NYC - Website Audit Report</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0a0a;
+      --bg-secondary: #141414;
+      --bg-card: #1a1a1a;
+      --bg-card-hover: #1f1f1f;
+      --border-color: #2a2a2a;
+      --text-primary: #e8e8e8;
+      --text-secondary: #a0a0a0;
+      --text-muted: #707070;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-yellow: #f59e0b;
+      --accent-red: #ef4444;
+      --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+      --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      --gradient-danger: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      padding: 60px 20px;
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      margin-bottom: 40px;
+      border: 1px solid var(--border-color);
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-meta {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    .header-meta span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Grade Badge */
+    .grade-badge {
+      display: inline-block;
+      padding: 12px 32px;
+      font-size: 2rem;
+      font-weight: 700;
+      border-radius: 12px;
+      margin: 20px 0;
+      letter-spacing: 1px;
+    }
+
+    .grade-A { background: var(--gradient-success); }
+    .grade-B { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
+    .grade-C { background: var(--gradient-warning); }
+    .grade-D { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .grade-F { background: var(--gradient-danger); }
+
+    /* Score Cards */
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+
+    .score-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .score-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+
+    .score-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .score-card-title {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .score-value {
+      font-size: 2rem;
+      font-weight: 700;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .score-bar {
+      height: 6px;
+      background: var(--bg-secondary);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 1s ease;
+    }
+
+    .score-excellent { background: var(--gradient-success); }
+    .score-good { background: var(--gradient-primary); }
+    .score-warning { background: var(--gradient-warning); }
+    .score-poor { background: var(--gradient-danger); }
+
+    /* Section */
+    .section {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .section h2 {
+      font-size: 1.8rem;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+
+    .section h3 {
+      font-size: 1.3rem;
+      margin: 24px 0 12px;
+      color: var(--text-primary);
+    }
+
+    /* Quick Wins */
+    .quick-wins {
+      background: linear-gradient(135deg, #1a1f2e 0%, #1a2332 100%);
+      border: 1px solid #2a3f5f;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+    }
+
+    .quick-wins h3 {
+      color: var(--accent-blue);
+      font-size: 1.2rem;
+      margin-bottom: 16px;
+    }
+
+    .quick-win-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px;
+      margin: 8px 0;
+      background: var(--bg-card);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent-green);
+      transition: all 0.2s ease;
+    }
+
+    .quick-win-item:hover {
+      background: var(--bg-card-hover);
+      transform: translateX(4px);
+    }
+
+    .quick-win-icon {
+      font-size: 1.2rem;
+      min-width: 24px;
+    }
+
+    /* Issues */
+    .issue {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 16px 0;
+      border-left: 4px solid;
+      transition: all 0.2s ease;
+    }
+
+    .issue:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .issue-critical { border-left-color: var(--accent-red); }
+    .issue-high { border-left-color: var(--accent-red); }
+    .issue-medium { border-left-color: var(--accent-yellow); }
+    .issue-low { border-left-color: var(--accent-green); }
+
+    .issue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .issue-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      flex: 1;
+    }
+
+    .issue-badge {
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 12px;
+    }
+
+    .badge-critical { background: var(--accent-red); color: white; }
+    .badge-high { background: var(--accent-red); color: white; }
+    .badge-medium { background: var(--accent-yellow); color: black; }
+    .badge-low { background: var(--accent-green); color: white; }
+
+    .issue-content {
+      color: var(--text-secondary);
+      margin: 8px 0;
+      line-height: 1.7;
+    }
+
+    .issue-meta {
+      display: flex;
+      gap: 20px;
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      color: var(--text-primary);
+    }
+
+    tr:hover {
+      background: var(--bg-card);
+    }
+
+    /* Action Plan */
+    .action-phase {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .action-phase h3 {
+      margin-top: 0;
+      color: var(--accent-blue);
+    }
+
+    .action-phase-meta {
+      display: flex;
+      gap: 24px;
+      margin: 16px 0;
+      padding: 16px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .action-phase-meta strong {
+      color: var(--accent-green);
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      padding: 40px;
+      margin-top: 60px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+    }
+
+    /* Utility Classes */
+    .text-muted { color: var(--text-muted); }
+    .text-secondary { color: var(--text-secondary); }
+    .mb-1 { margin-bottom: 8px; }
+    .mb-2 { margin-bottom: 16px; }
+    .mb-3 { margin-bottom: 24px; }
+    .mt-1 { margin-top: 8px; }
+    .mt-2 { margin-top: 16px; }
+    .mt-3 { margin-top: 24px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .header h1 { font-size: 1.8rem; }
+      .score-grid { grid-template-columns: 1fr; }
+      .section { padding: 24px; }
+      .header-meta { gap: 15px; }
+    }
+
+    /* Print Styles */
+    @media print {
+      body { background: white; color: black; }
+      .section { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Joe&#039;s Pizza NYC</h1>
+      <div class="grade-badge grade-C">Grade C</div>
+      <div style="font-size: 1.2rem; color: var(--text-secondary); margin: 12px 0;">
+        Overall Score: <strong style="color: var(--text-primary);">58/100</strong>
+      </div>
+      <div class="header-meta">
+        <span>🏢 Restaurant</span>
+        <span>📍 New York, NY</span>
+        <span>📅 October 21, 2025</span>
+      </div>
+    </div>
+
+    <div class="score-grid">
+
+  <div class="score-card">
+    <div class="score-card-header">
+      <div class="score-card-title">Desktop Design</div>
+      <div class="score-value">60</div>
+    </div>
+    <div class="score-bar">
+      <div class="score-bar-fill score-warning" style="width: 60%"></div>
+    </div>
+  </div>
+
+  <div class="score-card">
+    <div class="score-card-header">
+      <div class="score-card-title">Mobile Design</div>
+      <div class="score-value">50</div>
+    </div>
+    <div class="score-bar">
+      <div class="score-bar-fill score-poor" style="width: 50%"></div>
+    </div>
+  </div>
+
+  <div class="score-card">
+    <div class="score-card-header">
+      <div class="score-card-title">SEO</div>
+      <div class="score-value">52</div>
+    </div>
+    <div class="score-bar">
+      <div class="score-bar-fill score-poor" style="width: 52%"></div>
+    </div>
+  </div>
+
+  <div class="score-card">
+    <div class="score-card-header">
+      <div class="score-card-title">Content</div>
+      <div class="score-value">62</div>
+    </div>
+    <div class="score-bar">
+      <div class="score-bar-fill score-warning" style="width: 62%"></div>
+    </div>
+  </div>
+
+  <div class="score-card">
+    <div class="score-card-header">
+      <div class="score-card-title">Social Media</div>
+      <div class="score-value">48</div>
+    </div>
+    <div class="score-bar">
+      <div class="score-bar-fill score-poor" style="width: 48%"></div>
+    </div>
+  </div>
+
+  <div class="score-card">
+    <div class="score-card-header">
+      <div class="score-card-title">Accessibility</div>
+      <div class="score-value">45</div>
+    </div>
+    <div class="score-bar">
+      <div class="score-bar-fill score-poor" style="width: 45%"></div>
+    </div>
+  </div>
+</div>
+
+<div class="quick-wins">
+  <h3>⚡ Quick Wins</h3>
+  <p class="text-secondary mb-2">High-impact improvements you can implement today:</p>
+  <div class="quick-win-item">
+    <div class="quick-win-icon">⚡</div>
+    <div>
+      <strong>Add &quot;Menu&quot; label to hamburger icon</strong>
+      <div class="text-muted mt-1">
+        <span>5 min</span>
+        <span> • Mobile navigation clarity</span>
+      </div>
+    </div>
+  </div>
+  <div class="quick-win-item">
+    <div class="quick-win-icon">⚡</div>
+    <div>
+      <strong>Fix missing meta description</strong>
+      <div class="text-muted mt-1">
+        <span>10 min</span>
+        <span> • SEO &amp; click-through rate</span>
+      </div>
+    </div>
+  </div>
+  <div class="quick-win-item">
+    <div class="quick-win-icon">⚡</div>
+    <div>
+      <strong>Increase &quot;Order Online&quot; button size by 2x</strong>
+      <div class="text-muted mt-1">
+        <span>10 min</span>
+        <span> • Mobile conversion boost</span>
+      </div>
+    </div>
+  </div>
+  <div class="quick-win-item">
+    <div class="quick-win-icon">⚡</div>
+    <div>
+      <strong>Add alt text to 12 food images</strong>
+      <div class="text-muted mt-1">
+        <span>30 min</span>
+        <span> • Accessibility + SEO</span>
+      </div>
+    </div>
+  </div>
+  <div class="quick-win-item">
+    <div class="quick-win-icon">⚡</div>
+    <div>
+      <strong>Fix viewport meta tag for mobile</strong>
+      <div class="text-muted mt-1">
+        <span>5 min</span>
+        <span> • Mobile-friendly test</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🖥️ Desktop Experience Analysis</h2>
+  <p><strong>Score:</strong> <span class="score-warning">60/100</span> <span class="text-muted">(Needs Work)</span></p>
+
+  <h3>High Priority</h3>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Hero section has competing visual elements</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">Desktop hero displays 5 different CTAs with equal visual weight - &quot;Order Now&quot;, &quot;View Menu&quot;, &quot;Call Us&quot;, &quot;Directions&quot;, &quot;Catering&quot;</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Desktop visitors spend 10-15 seconds scanning without clear next action</div>
+      <div><strong>Fix:</strong> Make &quot;Order Now&quot; primary CTA 2-3x larger, move others to secondary navigation</div>
+    </div>
+  </div>
+  <h3>Medium Priority</h3>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">Menu page has poor visual hierarchy</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">All menu items displayed with same font size, no visual distinction between categories</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Users have difficulty finding specific items</div>
+      <div><strong>Fix:</strong> Increase category headers to 24-28px, add subtle background colors</div>
+    </div>
+  </div>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">Contact information buried in footer</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">Phone number only appears in small footer text, not prominently displayed</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Desktop users seeking to call must scroll and search</div>
+      <div><strong>Fix:</strong> Add sticky &quot;Call Us&quot; button or prominent phone display in header</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📱 Mobile Experience Analysis</h2>
+  <p><strong>Score:</strong> <span class="score-poor">50/100</span> <span class="text-muted">(Poor)</span></p>
+  <p><strong>Mobile-Friendly Test:</strong> ❌ Not Mobile-Friendly</p>
+
+  <h3>Critical Issues</h3>
+  <div class="issue issue-critical">
+    <div class="issue-header">
+      <div class="issue-title">Hamburger menu icon has no label</div>
+      <div class="issue-badge badge-critical">CRITICAL</div>
+    </div>
+    <div class="issue-content">Mobile navigation uses hamburger icon without &quot;Menu&quot; text</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> 40% of mobile users don&#039;t recognize hamburger icons without labels</div>
+      <div><strong>Fix:</strong> Add &quot;Menu&quot; text label next to hamburger icon</div>
+    </div>
+  </div>
+  <h3>High Priority</h3>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Touch targets below minimum size</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">Menu item buttons are 36px tall, below 44px minimum for touchscreens</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Mobile users frequently mis-tap menu items</div>
+      <div><strong>Fix:</strong> Increase button height to 48px minimum</div>
+    </div>
+  </div>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Text too small on mobile</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">Body text is 12px, requiring users to zoom</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Poor readability, high bounce rate on mobile</div>
+      <div><strong>Fix:</strong> Increase base font size to 16px</div>
+    </div>
+  </div>
+  <h3>Medium Priority</h3>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">Images not optimized for mobile</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">Desktop-sized images (2000px+) served to mobile devices</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Slow page load on mobile networks (8-12 seconds)</div>
+      <div><strong>Fix:</strong> Implement responsive images with srcset</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🔍 SEO & Technical Analysis</h2>
+  <p><strong>Score:</strong> <span class="score-poor">52/100</span> <span class="text-muted">(Poor)</span></p>
+
+  <h3>Technical Snapshot</h3>
+  <table>
+    <tr><th>Metric</th><th>Value</th></tr>
+    <tr><td>Page Title</td><td>Home | Joe&#039;s Pizza</td></tr>
+    <tr><td>Meta Description</td><td>❌ Missing</td></tr>
+    <tr><td>Page Load Time</td><td>4200ms</td></tr>
+    <tr><td>HTTPS</td><td>✅ Yes</td></tr>
+  </table>
+
+  <h3>SEO Issues</h3>
+  <h3>Critical Issues</h3>
+  <div class="issue issue-critical">
+    <div class="issue-header">
+      <div class="issue-title">Generic title tag &quot;Home | Joe&#039;s Pizza&quot;</div>
+      <div class="issue-badge badge-critical">CRITICAL</div>
+    </div>
+    <div class="issue-content">Title tag missing location and keywords</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Missing critical ranking signal for local search</div>
+      <div><strong>Fix:</strong> Change to: &quot;Joe&#039;s Pizza NYC | Best New York Style Pizza in Manhattan&quot;</div>
+    </div>
+  </div>
+  <div class="issue issue-critical">
+    <div class="issue-header">
+      <div class="issue-title">Meta description completely missing</div>
+      <div class="issue-badge badge-critical">CRITICAL</div>
+    </div>
+    <div class="issue-content">No meta description tag exists</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Search engines pull random text, reducing click-through rate by 30-40%</div>
+      <div><strong>Fix:</strong> Add 155-character description: &quot;Authentic New York style pizza since 1975. Fresh ingredients, coal-fired oven. Order online for pickup or delivery in Manhattan.&quot;</div>
+    </div>
+  </div>
+  <h3>High Priority</h3>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Missing H1 heading</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">Homepage has no H1 tag</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Search engines can&#039;t identify page topic</div>
+      <div><strong>Fix:</strong> Add H1: &quot;Authentic New York Style Pizza Since 1975&quot;</div>
+    </div>
+  </div>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Images missing alt text</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">12 out of 15 images have empty alt attributes</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Missing image search traffic and accessibility issues</div>
+      <div><strong>Fix:</strong> Add descriptive alt text to all images</div>
+    </div>
+  </div>
+  <h3>Medium Priority</h3>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">No schema.org markup</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">No structured data for restaurant information</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Not eligible for rich snippets in search results</div>
+      <div><strong>Fix:</strong> Add LocalBusiness schema with address, hours, menu</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📝 Content Quality Analysis</h2>
+  <p><strong>Score:</strong> <span class="score-warning">62/100</span> <span class="text-muted">(Needs Work)</span></p>
+
+  <h3>Content Inventory</h3>
+  <table>
+    <tr><th>Metric</th><th>Value</th></tr>
+    <tr><td>Word Count</td><td>850</td></tr>
+    <tr><td>Blog</td><td>❌ No</td></tr>
+    <tr><td>CTAs</td><td>5</td></tr>
+  </table>
+
+  <h3>Content Issues</h3>
+  <h3>High Priority</h3>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Value proposition not clear above fold</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">Homepage doesn&#039;t clearly state what makes Joe&#039;s Pizza unique</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Visitors leave without understanding why to choose Joe&#039;s</div>
+      <div><strong>Fix:</strong> Add clear tagline: &quot;NYC&#039;s Original Coal-Fired Pizza Since 1975&quot;</div>
+    </div>
+  </div>
+  <h3>Medium Priority</h3>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">Menu lacks descriptions</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">Menu items listed with names and prices only, no descriptions</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Customers unclear on ingredients, leading to phone calls</div>
+      <div><strong>Fix:</strong> Add 1-2 sentence description for each specialty pizza</div>
+    </div>
+  </div>
+  <h3>Low Priority</h3>
+  <div class="issue issue-low">
+    <div class="issue-header">
+      <div class="issue-title">No about/story section</div>
+      <div class="issue-badge badge-low">LOW</div>
+    </div>
+    <div class="issue-content">Website lacks any information about restaurant history or values</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Missed opportunity to build emotional connection</div>
+      <div><strong>Fix:</strong> Add &quot;Our Story&quot; section on homepage</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📱 Social Media Presence</h2>
+  <p><strong>Score:</strong> <span class="score-poor">48/100</span> <span class="text-muted">(Poor)</span></p>
+
+  <h3>Platform Presence</h3>
+  <p>✅ Facebook &nbsp; ✅ Instagram &nbsp; </p>
+
+  <h3>Social Media Issues</h3>
+  <h3>High Priority</h3>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">No Instagram link despite active account</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">Restaurant has 15K Instagram followers but no link on website</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Missing social proof and engagement opportunity</div>
+      <div><strong>Fix:</strong> Add Instagram icon in header and footer linking to @joespizzanyc</div>
+    </div>
+  </div>
+  <h3>Medium Priority</h3>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">No social media icons visible</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">Facebook and Instagram links buried in footer as text</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Low social media traffic from website</div>
+      <div><strong>Fix:</strong> Add prominent social media icons in header</div>
+    </div>
+  </div>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">No customer reviews displayed</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">Website doesn&#039;t showcase Yelp or Google reviews</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Missing social proof that builds trust</div>
+      <div><strong>Fix:</strong> Add review widget showing recent 5-star reviews</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>♿ Accessibility (WCAG 2.1 AA)</h2>
+  <p><strong>Score:</strong> <span class="score-poor">45/100</span> <span class="text-muted">(Poor)</span></p>
+
+  <h3>Critical Issues</h3>
+  <div class="issue issue-critical">
+    <div class="issue-header">
+      <div class="issue-title">12 images missing alt text</div>
+      <div class="issue-badge badge-critical">CRITICAL</div>
+    </div>
+    <div class="issue-content">12 out of 15 images have empty or missing alt attributes</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Screen readers can&#039;t describe images, failing WCAG 2.1 Level A</div>
+      <div><strong>Fix:</strong> Add descriptive alt text to all images (e.g., &quot;Margherita pizza with fresh basil&quot;)</div>
+    </div>
+  </div>
+  <h3>High Priority</h3>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Low color contrast on CTA buttons</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">White text on light orange background (2.8:1 ratio, needs 4.5:1)</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Users with visual impairments can&#039;t read button text</div>
+      <div><strong>Fix:</strong> Change to darker orange (#D2691E) or add text shadow</div>
+    </div>
+  </div>
+  <div class="issue issue-high">
+    <div class="issue-header">
+      <div class="issue-title">Forms missing labels</div>
+      <div class="issue-badge badge-high">HIGH</div>
+    </div>
+    <div class="issue-content">Contact form inputs have placeholder text but no proper labels</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Screen reader users can&#039;t identify form fields</div>
+      <div><strong>Fix:</strong> Add visible labels or aria-label attributes</div>
+    </div>
+  </div>
+  <h3>Medium Priority</h3>
+  <div class="issue issue-medium">
+    <div class="issue-header">
+      <div class="issue-title">Keyboard navigation broken</div>
+      <div class="issue-badge badge-medium">MEDIUM</div>
+    </div>
+    <div class="issue-content">Can&#039;t tab through menu items, focus states missing</div>
+    <div class="issue-meta">
+      <div><strong>Impact:</strong> Keyboard-only users can&#039;t navigate site</div>
+      <div><strong>Fix:</strong> Add proper focus states and tabindex where needed</div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🏢 Business Intelligence</h2>
+  <table>
+    <tr><th>Attribute</th><th>Value</th></tr>
+    <tr><td>Years in Business</td><td>49</td></tr>
+    <tr><td>Employee Count</td><td>10-20</td></tr>
+    <tr><td>Price Range</td><td>$8-$18</td></tr>
+    <tr><td>Budget Indicator</td><td>Medium</td></tr>
+  </table>
+</div>
+
+<div class="section">
+  <h2>🎯 Lead Priority Assessment</h2>
+  <p><strong>Priority Score:</strong> 72/100</p>
+  <p><strong>Priority Tier:</strong> Warm</p>
+
+  <p class="text-secondary">Strong lead with clear improvement opportunities. Grade C indicates significant room for improvement. Active social media presence (15K followers) shows marketing awareness. Established business (49 years) with visible pricing suggests ability to invest. Quick wins available that could improve conversion rate immediately.</p>
+
+  <h3>Priority Dimensions</h3>
+  <div class="score-grid">
+
+    <div class="score-card">
+      <div class="score-card-header">
+        <div class="score-card-title">Quality Gap</div>
+        <div class="score-value">7/10</div>
+      </div>
+      <div class="score-bar">
+        <div class="score-bar-fill score-good" style="width: 70%"></div>
+      </div>
+    </div>
+
+    <div class="score-card">
+      <div class="score-card-header">
+        <div class="score-card-title">Budget</div>
+        <div class="score-value">6/10</div>
+      </div>
+      <div class="score-bar">
+        <div class="score-bar-fill score-warning" style="width: 60%"></div>
+      </div>
+    </div>
+
+    <div class="score-card">
+      <div class="score-card-header">
+        <div class="score-card-title">Urgency</div>
+        <div class="score-value">7/10</div>
+      </div>
+      <div class="score-bar">
+        <div class="score-bar-fill score-good" style="width: 70%"></div>
+      </div>
+    </div>
+
+    <div class="score-card">
+      <div class="score-card-header">
+        <div class="score-card-title">Industry Fit</div>
+        <div class="score-value">9/10</div>
+      </div>
+      <div class="score-bar">
+        <div class="score-bar-fill score-excellent" style="width: 90%"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>📋 Recommended Action Plan</h2>
+
+  <div class="action-phase">
+    <h3>Phase 1: Quick Wins (Week 1)</h3>
+    <div class="action-phase-meta">
+      <div><strong>Timeline:</strong> 1 week</div>
+      <div><strong>Estimated Time:</strong> ~4 hours</div>
+      <div><strong>Estimated Cost:</strong> $400-600</div>
+    </div>
+    <ul>
+      <li><strong>Add &quot;Menu&quot; label to hamburger icon</strong> - Mobile navigation clarity</li>
+      <li><strong>Fix missing meta description</strong> - SEO &amp; click-through rate</li>
+      <li><strong>Increase &quot;Order Online&quot; button size by 2x</strong> - Mobile conversion boost</li>
+      <li><strong>Add alt text to 12 food images</strong> - Accessibility + SEO</li>
+      <li><strong>Fix viewport meta tag for mobile</strong> - Mobile-friendly test</li>
+    </ul>
+  </div>
+
+  <div class="action-phase">
+    <h3>Phase 2: High-Impact Fixes (Month 1)</h3>
+    <div class="action-phase-meta">
+      <div><strong>Timeline:</strong> 1 month</div>
+      <div><strong>Estimated Time:</strong> ~20 hours</div>
+      <div><strong>Estimated Cost:</strong> $2,000-3,000</div>
+    </div>
+    <ul>
+      <li><strong>Hero section has competing visual elements</strong> - Desktop visitors spend 10-15 seconds scanning without clear next action</li>
+      <li><strong>Touch targets below minimum size</strong> - Mobile users frequently mis-tap menu items</li>
+      <li><strong>Text too small on mobile</strong> - Poor readability, high bounce rate on mobile</li>
+      <li><strong>Missing H1 heading</strong> - Search engines can&#039;t identify page topic</li>
+      <li><strong>Images missing alt text</strong> - Missing image search traffic and accessibility issues</li>
+    </ul>
+  </div>
+
+</div>
+
+<div class="section">
+  <h2>📎 Appendix</h2>
+
+  <h3>🤖 Analysis Configuration</h3>
+  <table>
+    <tr><th>Module</th><th>Model Used</th></tr>
+    <tr><td>Desktop Visual Analysis</td><td>gpt-4o</td></tr>
+    <tr><td>Mobile Visual Analysis</td><td>gpt-4o</td></tr>
+    <tr><td>SEO Analysis</td><td>grok-beta</td></tr>
+    <tr><td>Content Analysis</td><td>grok-beta</td></tr>
+    <tr><td>Social Media Analysis</td><td>grok-beta</td></tr>
+    <tr><td>Accessibility Analysis</td><td>grok-beta</td></tr>
+  </table>
+
+  <h3>Analysis Metadata</h3>
+  <table>
+    <tr><th>Metric</th><th>Value</th></tr>
+    <tr><td>Analyzed At</td><td>10/21/2025, 11:48:17 AM</td></tr>
+    <tr><td>Analysis Time</td><td>16.2s</td></tr>
+    <tr><td>Pages Crawled</td><td>8</td></tr>
+    <tr><td>Links Found</td><td>32</td></tr>
+  </table>
+</div>
+
+
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>Report generated by MaxantAgency Analysis Engine</p>
+      <p class="text-muted" style="margin-top: 8px;">10/21/2025, 11:48:17 AM</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -4,8 +4,8 @@
  * Express server with API endpoints for website analysis
  *
  * Endpoints:
- * - POST /api/analyze - Analyze prospects from database
- * - POST /api/analyze-url - Analyze single URL (testing/demo)
+ * - POST /api/analyze - Intelligent multi-page batch analysis
+ * - POST /api/analyze-url - Single-page analysis (testing/demo)
  * - GET /api/leads - Get analyzed leads with filters
  * - GET /api/stats - Get analysis statistics
  * - GET /health - Health check
@@ -15,7 +15,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
-import { analyzeWebsite, analyzeMultiple, getBatchSummary } from './orchestrator.js';
+import { analyzeWebsite, analyzeMultiple, getBatchSummary, analyzeWebsiteIntelligent } from './orchestrator.js';
 import { collectAnalysisPrompts } from './shared/prompt-loader.js';
 
 // Load environment variables
@@ -138,311 +138,221 @@ app.post('/api/analyze-url', async (req, res) => {
 });
 
 /**
- * POST /api/analyze
- * Analyze prospects from database using Server-Sent Events for progress
+ * POST /api/analyze-url-intelligent
+ * Analyze a single URL with intelligent multi-page analysis
  *
  * Body:
  * {
- *   "filters": {
- *     "industry": "restaurant",
- *     "city": "Philadelphia",
- *     "limit": 10
- *   }
+ *   "url": "https://example.com",
+ *   "company_name": "Example Company",
+ *   "industry": "restaurant",
+ *   "project_id": "uuid" (optional)
  * }
  */
+/**
+ * POST /api/analyze
+ * Analyze prospects with intelligent multi-page analysis
+ *
+ * Body:
+ * {
+ *   "prospect_ids": ["id1", "id2"],
+ *   "project_id": "uuid" (optional),
+ *   "custom_prompts": {...} (optional)
+ * }
+ */
+
 app.post('/api/analyze', async (req, res) => {
   try {
-    const { prospect_ids, filters = {}, project_id, custom_prompts } = req.body;
+    const { prospect_ids, project_id, custom_prompts } = req.body;
 
-    // Merge project_id into filters if provided at top level
-    if (project_id) {
-      filters.projectId = project_id;
+    if (!prospect_ids || prospect_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'prospect_ids is required'
+      });
     }
 
-    // DEBUG: Log what we received
-    console.log('📥 Analysis Request Received:', {
-      prospect_ids,
-      prospect_count: prospect_ids?.length,
-      filters,
-      project_id,
-      custom_prompts: custom_prompts ? 'Custom prompts provided' : 'Using defaults',
-      body: req.body
-    });
+    console.log(`[Intelligent Analysis] Starting batch analysis for ${prospect_ids.length} prospects`);
 
-    // Set up Server-Sent Events
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+    // Fetch prospects
+    const { data: prospects, error: fetchError } = await supabase
+      .from('prospects')
+      .select('id, company_name, website, industry')
+      .in('id', prospect_ids)
+      .not('website', 'is', null);
 
-    const sendEvent = (event, data) => {
-      res.write(`event: ${event}\n`);
-      res.write(`data: ${JSON.stringify(data)}\n\n`);
-    };
-
-    // Fetch prospects from database
-    sendEvent('status', { message: 'Fetching prospects from database...' });
-
-    let query;
-    let prospects;
-
-    // If specific prospect_ids are provided, fetch those prospects directly
-    if (prospect_ids && prospect_ids.length > 0) {
-      console.log('🔍 Querying prospects with IDs:', prospect_ids);
-
-      query = supabase
-        .from('prospects')
-        .select('id, company_name, website, industry, city, state')
-        .in('id', prospect_ids)
-        .not('website', 'is', null);
-
-      const { data: prospectData, error: fetchError } = await query;
-
-      if (fetchError) {
-        console.error('❌ Query failed:', fetchError);
-        sendEvent('error', { error: 'Failed to fetch prospects', details: fetchError.message });
-        res.end();
-        return;
-      }
-
-      prospects = prospectData || [];
-      console.log('✅ Found prospects:', prospects.map(p => ({ id: p.id, name: p.company_name, website: p.website })));
-    }
-    // If projectId is provided, JOIN with project_prospects to filter by project
-    else if (filters.projectId) {
-      query = supabase
-        .from('project_prospects')
-        .select('prospect_id, prospects(id, company_name, website, industry, city, state)')
-        .eq('project_id', filters.projectId)
-        .not('prospects.website', 'is', null);
-
-      // Apply filters (using Supabase nested syntax)
-      if (filters.industry) {
-        query = query.eq('prospects.industry', filters.industry);
-      }
-      if (filters.city) {
-        query = query.ilike('prospects.city', `%${filters.city}%`);
-      }
-      if (filters.limit) {
-        query = query.limit(filters.limit);
-      } else {
-        query = query.limit(10); // Default limit
-      }
-
-      const { data: projectProspects, error: fetchError } = await query;
-
-      if (fetchError) {
-        sendEvent('error', { error: 'Failed to fetch prospects', details: fetchError.message });
-        res.end();
-        return;
-      }
-
-      // Extract nested prospect data
-      prospects = projectProspects?.map(pp => ({
-        id: pp.prospects.id,
-        company_name: pp.prospects.company_name,
-        website: pp.prospects.website,
-        industry: pp.prospects.industry,
-        city: pp.prospects.city,
-        state: pp.prospects.state
-      })) || [];
-
-    } else {
-      // Query prospects globally if no projectId
-      query = supabase
-        .from('prospects')
-        .select('id, company_name, website, industry, city, state')
-        .not('website', 'is', null);
-
-      // Apply filters
-      if (filters.industry) {
-        query = query.eq('industry', filters.industry);
-      }
-      if (filters.city) {
-        query = query.ilike('city', `%${filters.city}%`);
-      }
-      if (filters.limit) {
-        query = query.limit(filters.limit);
-      } else {
-        query = query.limit(10); // Default limit
-      }
-
-      const { data: prospectData, error: fetchError } = await query;
-
-      if (fetchError) {
-        sendEvent('error', { error: 'Failed to fetch prospects', details: fetchError.message });
-        res.end();
-        return;
-      }
-
-      prospects = prospectData || [];
+    if (fetchError) {
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to fetch prospects',
+        details: fetchError.message
+      });
     }
 
-    // Check if we found any prospects
     if (!prospects || prospects.length === 0) {
-      sendEvent('error', { error: 'No prospects found matching filters' });
-      res.end();
-      return;
+      return res.status(404).json({
+        success: false,
+        error: 'No prospects found'
+      });
     }
 
-    sendEvent('status', { message: `Found ${prospects.length} prospects to analyze` });
+    console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze`);
 
-    // Save analysis prompts to project (if project_id is provided)
-    if (filters.projectId) {
+    // Analyze each prospect with intelligent multi-page analysis
+    const results = [];
+    for (const prospect of prospects) {
       try {
-        sendEvent('status', { message: 'Saving analysis prompts to project...' });
+        console.log(`[Intelligent Analysis] Analyzing ${prospect.company_name || prospect.website}...`);
 
-        const { collectAnalysisPrompts } = await import('./shared/prompt-loader.js');
-        const analysisPrompts = await collectAnalysisPrompts();
-
-        // Fetch current analysis_config to merge with prompts
-        const { data: projectData, error: fetchError } = await supabase
-          .from('projects')
-          .select('analysis_config')
-          .eq('id', filters.projectId)
-          .single();
-
-        if (fetchError) {
-          console.error('⚠️ Failed to fetch project for prompt save:', fetchError);
-        } else {
-          // Merge prompts with existing config
-          const existingConfig = projectData?.analysis_config || {};
-          const updatedConfig = {
-            ...existingConfig,
-            prompts: analysisPrompts,
-            prompts_updated_at: new Date().toISOString()
-          };
-
-          const { error: updateError } = await supabase
-            .from('projects')
-            .update({ analysis_config: updatedConfig })
-            .eq('id', filters.projectId);
-
-          if (updateError) {
-            console.error('⚠️ Failed to save analysis prompts to project:', updateError);
-          } else {
-            console.log('✅ Saved analysis prompts to project:', filters.projectId);
-          }
-        }
-      } catch (error) {
-        console.error('⚠️ Error saving analysis prompts:', error);
-        // Don't fail the analysis if prompt save fails
-      }
-    }
-
-    // Prepare targets for analysis
-    const targets = prospects.map(p => ({
-      url: p.website,
-      context: {
-        prospect_id: p.id,
-        company_name: p.company_name,
-        industry: p.industry,
-        city: p.city,
-        project_id: filters.projectId || null  // Pass projectId through context
-      }
-    }));
-
-    console.log('🎯 Targets prepared for analysis:', targets.map(t => ({ url: t.url, company: t.context.company_name })));
-
-    // Analyze with progress updates
-    const results = await analyzeMultiple(targets, {
-      concurrency: 2,
-      customPrompts: custom_prompts, // Pass custom prompts if provided
-      onProgress: (progress) => {
-        sendEvent('progress', {
-          url: progress.url,
-          step: progress.step,
-          message: progress.message,
-          completed: progress.completed,
-          total: progress.total
+        const result = await analyzeWebsiteIntelligent(prospect.website, {
+          company_name: prospect.company_name || 'Unknown Company',
+          industry: prospect.industry || 'unknown',
+          project_id: project_id || null
         });
-      },
-      onComplete: async (result, completed, total) => {
-        console.log('💾 onComplete called:', { url: result.url, success: result.success });
 
         if (result.success) {
-          // DEBUG: Log what orchestrator returned
-          console.log('🔍 DEBUG - Result from orchestrator:', {
-            has_lead_priority: result.lead_priority !== undefined,
-            lead_priority: result.lead_priority,
-            priority_tier: result.priority_tier,
-            has_business_intelligence: result.business_intelligence !== undefined,
-            has_crawl_metadata: result.crawl_metadata !== undefined
-          });
+          // Save to database
+          const leadData = {
+            url: result.url,
+            company_name: result.company_name,
+            industry: result.industry,
+            project_id: project_id || null,
 
-          // Save to leads table
-          const leadData = extractLeadData(result);
+            // Scores
+            overall_score: Math.round(result.overall_score),
+            website_grade: result.grade,
+            design_score: Math.round(result.design_score),
+            design_score_desktop: result.design_score_desktop || Math.round(result.design_score), // FIX #2: Desktop score
+            design_score_mobile: result.design_score_mobile || Math.round(result.design_score),   // FIX #2: Mobile score
+            seo_score: Math.round(result.seo_score),
+            content_score: Math.round(result.content_score),
+            social_score: Math.round(result.social_score),
+            accessibility_score: Math.round(result.accessibility_score || 50),
 
-          // DEBUG: Log what extractLeadData produced
-          console.log('📝 DEBUG - Extracted lead data:', {
-            url: leadData.url,
-            company: leadData.company_name,
-            grade: leadData.website_grade,
-            score: leadData.overall_score,
-            lead_priority: leadData.lead_priority,
-            priority_tier: leadData.priority_tier,
-            has_business_intelligence: leadData.business_intelligence !== undefined,
-            has_crawl_metadata: leadData.crawl_metadata !== undefined
-          });
+            // Issues and wins
+            design_issues: result.design_issues || [],
+            design_issues_desktop: result.design_issues_desktop || [],      // FIX #2: Desktop issues
+            design_issues_mobile: result.design_issues_mobile || [],        // FIX #2: Mobile issues
+            seo_issues: result.seo_issues || [],
+            content_issues: result.content_issues || [],
+            social_issues: result.social_issues || [],
+            accessibility_issues: result.accessibility_issues || [],
+            accessibility_compliance: result.accessibility_compliance || {}, // FIX #6: WCAG compliance
+            quick_wins: result.quick_wins || [],
 
-          const { data: savedData, error: insertError } = await supabase
+            // Top issue and one-liner
+            top_issue: result.top_issue || null,
+            one_liner: result.one_liner || null,
+
+            // Model tracking
+            seo_analysis_model: result.seo_analysis_model || null,
+            content_analysis_model: result.content_analysis_model || null,
+            desktop_visual_model: result.desktop_visual_model || null,
+            mobile_visual_model: result.mobile_visual_model || null,
+            social_analysis_model: result.social_analysis_model || null,
+            accessibility_analysis_model: result.accessibility_analysis_model || null,
+
+            // Screenshots (FIX #1: Homepage screenshots for reports)
+            screenshot_desktop_url: result.screenshot_desktop_url || null,
+            screenshot_mobile_url: result.screenshot_mobile_url || null,
+
+            // Social profiles (FIX #3: Required for DM generation)
+            social_profiles: result.social_profiles || {},
+            social_platforms_present: result.social_platforms_present || [],
+
+            // SEO/Tech metadata (FIX #7: Technical credibility)
+            tech_stack: result.tech_stack || null,
+            has_blog: result.has_blog || false,
+            has_https: result.has_https || false,
+            page_title: result.page_title || null,
+            meta_description: result.meta_description || null,
+
+            // Outreach support (FIX #4: Required by UI and outreach)
+            analysis_summary: result.analysis_summary || null,
+            call_to_action: result.call_to_action || null,
+            outreach_angle: result.outreach_angle || null,
+
+            // Crawl metadata (FIX #5: Enhanced error logging + ALL screenshots)
+            crawl_metadata: result.crawl_metadata || {},
+
+            // Intelligent analysis metadata
+            pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
+            pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
+            pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
+            ai_page_selection: result.intelligent_analysis?.ai_page_selection || null,
+
+            // Performance (FIX #3: Field name correction)
+            analysis_cost: result.analysis_cost || 0,
+            analysis_time: result.analysis_time || 0,  // FIXED: was analysis_time_seconds
+
+            // Timestamps
+            analyzed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+
+          const { error: saveError } = await supabase
             .from('leads')
             .upsert(leadData, { onConflict: 'url' });
 
-          if (insertError) {
-            console.error('❌ Database save failed:', insertError);
-            sendEvent('warning', {
-              message: `Failed to save lead ${result.url}`,
-              error: insertError.message
-            });
+          if (saveError) {
+            console.error(`[Intelligent Analysis] Failed to save lead ${prospect.website}:`, saveError);
           } else {
-            console.log('✅ Lead saved successfully:', leadData.url);
-            sendEvent('complete', {
-              url: result.url,
-              grade: result.grade,
-              score: result.overall_score,
-              completed,
-              total
-            });
+            console.log(`[Intelligent Analysis] ✓ ${prospect.company_name}: Grade ${result.grade} (${result.overall_score}/100)`);
           }
+
+          results.push({
+            success: true,
+            prospect_id: prospect.id,
+            url: prospect.website,
+            company_name: prospect.company_name,
+            grade: result.grade,
+            score: result.overall_score
+          });
         } else {
-          sendEvent('failed', {
-            url: result.url,
-            error: result.error,
-            completed,
-            total
+          console.error(`[Intelligent Analysis] ✗ ${prospect.company_name}: ${result.error}`);
+          results.push({
+            success: false,
+            prospect_id: prospect.id,
+            url: prospect.website,
+            company_name: prospect.company_name,
+            error: result.error
           });
         }
+      } catch (error) {
+        console.error(`[Intelligent Analysis] ✗ ${prospect.company_name}: ${error.message}`);
+        results.push({
+          success: false,
+          prospect_id: prospect.id,
+          url: prospect.website,
+          company_name: prospect.company_name,
+          error: error.message
+        });
+      }
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    console.log(`[Intelligent Analysis] Completed: ${successCount}/${prospects.length} successful`);
+
+    res.json({
+      success: true,
+      data: {
+        total: prospects.length,
+        successful: successCount,
+        failed: prospects.length - successCount,
+        results
       }
     });
 
-    // Send summary
-    const summary = getBatchSummary(results);
-    sendEvent('summary', summary);
-
-    sendEvent('done', { message: 'Analysis complete' });
-    res.end();
-
   } catch (error) {
-    console.error('[Analysis] Error:', error);
-    res.write(`event: error\n`);
-    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
-    res.end();
+    console.error('[Intelligent Analysis] Error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
   }
 });
 
-/**
- * GET /api/leads
- * Get analyzed leads with filters
- *
- * Query params:
- * - grade: Filter by letter grade (A, B, C, D, F)
- * - industry: Filter by industry
- * - hasEmail: Filter by has contact email (true/false)
- * - minScore: Minimum overall score
- * - status: Filter by status
- * - limit: Max results (default 50)
- * - offset: Pagination offset (default 0)
- */
 app.get('/api/leads', async (req, res) => {
   try {
     const {
@@ -689,6 +599,214 @@ app.post('/api/leads/batch-delete', async (req, res) => {
 });
 
 /**
+ * POST /api/reports/generate
+ * Generate a website audit report for a lead
+ *
+ * Body:
+ * {
+ *   "lead_id": "uuid",
+ *   "format": "markdown" | "html",  // Default: "markdown"
+ *   "sections": ["all"]              // For markdown only
+ * }
+ */
+app.post('/api/reports/generate', async (req, res) => {
+  try {
+    const { lead_id, format = 'markdown', sections = ['all'] } = req.body;
+
+    if (!lead_id) {
+      return res.status(400).json({
+        error: 'lead_id is required'
+      });
+    }
+
+    // Fetch lead from database
+    const { data: lead, error: fetchError } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', lead_id)
+      .single();
+
+    if (fetchError || !lead) {
+      return res.status(404).json({
+        error: 'Lead not found',
+        details: fetchError?.message
+      });
+    }
+
+    // Generate report
+    const { generateReport, generateStoragePath } = await import('./reports/report-generator.js');
+    const { uploadReport, saveReportMetadata } = await import('./reports/storage/supabase-storage.js');
+
+    const report = await generateReport(lead, { format, sections });
+
+    // Upload to Supabase Storage
+    const storagePath = generateStoragePath(lead, format);
+
+    // Determine content type based on format
+    const contentTypeMap = {
+      'markdown': 'text/markdown',
+      'html': 'text/html',
+      'pdf': 'application/pdf',
+      'json': 'application/json'
+    };
+    const contentType = contentTypeMap[format] || 'text/plain';
+
+    const uploadResult = await uploadReport(report.content, storagePath, contentType);
+
+    // Save metadata to database
+    const reportRecord = await saveReportMetadata({
+      lead_id,
+      project_id: lead.project_id,
+      report_type: 'website_audit',
+      format,
+      storage_path: uploadResult.path,
+      storage_bucket: 'reports',
+      file_size_bytes: Buffer.byteLength(report.content, 'utf8'),
+      company_name: lead.company_name,
+      website_url: lead.url,
+      overall_score: lead.overall_score,
+      website_grade: lead.website_grade,
+      config: { sections },
+      status: 'completed'
+    });
+
+    res.json({
+      success: true,
+      report: {
+        id: reportRecord.id,
+        storage_path: uploadResult.path,
+        metadata: report.metadata
+      }
+    });
+
+  } catch (error) {
+    console.error('[Report Generation] Error:', error);
+    res.status(500).json({
+      error: 'Failed to generate report',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/reports/:id/download
+ * Get download URL for a report
+ */
+app.get('/api/reports/:id/download', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { getReportById, getSignedUrl, incrementDownloadCount } = await import('./reports/storage/supabase-storage.js');
+
+    // Get report metadata
+    const report = await getReportById(id);
+
+    if (!report) {
+      return res.status(404).json({
+        error: 'Report not found'
+      });
+    }
+
+    // Get signed URL (valid for 1 hour)
+    const signedUrl = await getSignedUrl(report.storage_path, 3600);
+
+    // Increment download count
+    await incrementDownloadCount(id);
+
+    res.json({
+      success: true,
+      download_url: signedUrl,
+      report: {
+        id: report.id,
+        company_name: report.company_name,
+        format: report.format,
+        generated_at: report.generated_at
+      }
+    });
+
+  } catch (error) {
+    console.error('[Report Download] Error:', error);
+    res.status(500).json({
+      error: 'Failed to get download URL',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * GET /api/reports/lead/:lead_id
+ * Get all reports for a lead
+ */
+app.get('/api/reports/lead/:lead_id', async (req, res) => {
+  try {
+    const { lead_id } = req.params;
+
+    const { getReportsByLeadId } = await import('./reports/storage/supabase-storage.js');
+
+    const reports = await getReportsByLeadId(lead_id);
+
+    res.json({
+      success: true,
+      reports,
+      count: reports.length
+    });
+
+  } catch (error) {
+    console.error('[Get Reports] Error:', error);
+    res.status(500).json({
+      error: 'Failed to fetch reports',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * DELETE /api/reports/:id
+ * Delete a report
+ */
+app.delete('/api/reports/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { getReportById, deleteReport } = await import('./reports/storage/supabase-storage.js');
+
+    // Get report metadata
+    const report = await getReportById(id);
+
+    if (!report) {
+      return res.status(404).json({
+        error: 'Report not found'
+      });
+    }
+
+    // Delete from storage
+    await deleteReport(report.storage_path);
+
+    // Delete metadata from database
+    const { error: deleteError } = await supabase
+      .from('reports')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      throw new Error(`Failed to delete report metadata: ${deleteError.message}`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Report deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('[Delete Report] Error:', error);
+    res.status(500).json({
+      error: 'Failed to delete report',
+      details: error.message
+    });
+  }
+});
+
+/**
  * Extract lead data from analysis result for database insertion
  * Adapted to match existing leads table schema from website-audit-tool
  */
@@ -819,13 +937,17 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('');
   console.log('Endpoints:');
-  console.log(`  GET    /health                  - Health check`);
-  console.log(`  POST   /api/analyze-url         - Analyze single URL`);
-  console.log(`  POST   /api/analyze             - Analyze prospects (SSE)`);
-  console.log(`  GET    /api/leads               - Get analyzed leads`);
-  console.log(`  DELETE /api/leads/:id           - Delete a lead`);
-  console.log(`  POST   /api/leads/batch-delete  - Delete multiple leads`);
-  console.log(`  GET    /api/stats               - Get statistics`);
+  console.log(`  GET    /health                      - Health check`);
+  console.log(`  POST   /api/analyze-url             - Analyze single URL`);
+  console.log(`  POST   /api/analyze                 - Analyze prospects (SSE)`);
+  console.log(`  GET    /api/leads                   - Get analyzed leads`);
+  console.log(`  DELETE /api/leads/:id               - Delete a lead`);
+  console.log(`  POST   /api/leads/batch-delete      - Delete multiple leads`);
+  console.log(`  GET    /api/stats                   - Get statistics`);
+  console.log(`  POST   /api/reports/generate        - Generate website audit report`);
+  console.log(`  GET    /api/reports/:id/download    - Get report download URL`);
+  console.log(`  GET    /api/reports/lead/:lead_id   - Get all reports for a lead`);
+  console.log(`  DELETE /api/reports/:id             - Delete a report`);
   console.log('');
   console.log('Ready to analyze websites!');
   console.log('═══════════════════════════════════════════════════════════════');

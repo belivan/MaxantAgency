@@ -84,3 +84,11 @@ nul
 # Process ID files
 *.pid
 **/*.pid
+pid.txt
+
+# Test outputs and results
+test-output.*
+**/test-output.*
+test-*-results.txt
+batch-test-results.txt
+*-INVESTIGATION-SUMMARY.txt

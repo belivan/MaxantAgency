@@ -13,12 +13,13 @@
  * 9. Return complete analysis with business intelligence
  */
 
-import { captureWebsite, captureDualViewports } from './scrapers/screenshot-capture.js';
-import { parseHTML, getContentSummary } from './scrapers/html-parser.js';
+import { captureDualViewports } from './scrapers/screenshot-capture.js';
+import { parseHTML } from './scrapers/html-parser.js';
 import { runAllAnalyses, calculateTotalCost } from './analyzers/index.js';
 import { calculateGrade, extractQuickWins, getTopIssue } from './grading/grader.js';
 import { generateCritique, generateOneLiner } from './grading/critique-generator.js';
 import { scoreLeadPriority } from './analyzers/lead-scorer.js';
+import { saveDualScreenshots } from './utils/screenshot-storage.js';
 import { crawlWebsite, crawlSelectedPagesWithScreenshots } from './scrapers/multi-page-crawler.js';
 import { extractBusinessIntelligence } from './scrapers/business-intelligence-extractor.js';
 import { discoverAllPages } from './scrapers/sitemap-discovery.js';
@@ -77,6 +78,18 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
     progress('screenshots', 'Capturing desktop and mobile screenshots...');
     const dualScreenshots = await captureDualViewports(crawlResult.homepage.url);
 
+    // Save screenshots to local disk
+    progress('screenshots', 'Saving screenshots to disk...');
+    const screenshotPaths = await saveDualScreenshots(
+      {
+        desktop: dualScreenshots.desktop.screenshot,
+        mobile: dualScreenshots.mobile.screenshot
+      },
+      context.company_name || 'website'
+    );
+
+    console.log(`📸 Screenshots saved:\n   Desktop: ${screenshotPaths.desktop}\n   Mobile: ${screenshotPaths.mobile}`);
+
     // STEP 2: Extract business intelligence from all crawled pages
     progress('business-intelligence', 'Extracting business intelligence...');
     const allPages = [crawlResult.homepage, ...crawlResult.pages].filter(p => p && p.html);
@@ -85,7 +98,6 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
     // STEP 3: Parse HTML
     progress('parse', 'Parsing HTML and extracting data...');
     const parsedData = parseHTML(html, url);
-    const contentSummary = getContentSummary(parsedData);
 
     // Enhance context with parsed data
     const enrichedContext = {
@@ -275,6 +287,10 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       is_mobile_friendly: isMobileFriendly,
       has_https: pageMetadata?.hasHTTPS || false,
       has_blog: parsedData.content.hasBlog,
+
+      // Screenshot paths (local file paths)
+      screenshot_desktop_url: screenshotPaths.desktop,
+      screenshot_mobile_url: screenshotPaths.mobile,
 
       // Social
       social_profiles: parsedData.social.links,
@@ -610,6 +626,10 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       page_title: parsedData.seo.title,
       meta_description: parsedData.seo.description,
 
+      // Screenshots (homepage only - local file paths)
+      screenshot_desktop_url: homepage.screenshots?.desktop || null,
+      screenshot_mobile_url: homepage.screenshots?.mobile || null,
+
       // Performance metadata
       analysis_cost: analysisCost,
       analysis_time: totalTime,
@@ -625,6 +645,40 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
         pages_analyzed_social: socialPages.length,
         ai_page_selection: pageSelection.reasoning,
         discovery_sources: sitemap.sources
+      },
+
+      // Crawl metadata with detailed error logging
+      crawl_metadata: {
+        pages_discovered: sitemap.totalPages,
+        pages_crawled: successfulPages.length,
+        total_pages_attempted: crawledPages.length,
+        discovery_time_ms: sitemap.discoveryTime || 0,
+        crawl_time_ms: totalTime,
+        discovery_errors: sitemap.errors || {
+          sitemap: null,
+          robots: null,
+          navigation: null
+        },
+        failed_pages: crawledPages
+          .filter(p => !p.success)
+          .map(p => ({
+            url: p.url,
+            error: p.error,
+            fullUrl: p.fullUrl
+          })),
+        // All page screenshot URLs (just file paths, not binary data)
+        pages_analyzed: successfulPages.map(p => ({
+          url: p.url,
+          fullUrl: p.fullUrl,
+          screenshot_desktop_url: p.screenshots?.desktop || null,
+          screenshot_mobile_url: p.screenshots?.mobile || null,
+          analyzed_for: {
+            seo: seoPages.some(sp => sp.url === p.url),
+            content: contentPages.some(cp => cp.url === p.url),
+            visual: visualPages.some(vp => vp.url === p.url),
+            social: socialPages.some(sp => sp.url === p.url)
+          }
+        }))
       },
 
       // Raw data (for debugging)

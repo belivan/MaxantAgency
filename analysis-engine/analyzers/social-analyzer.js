@@ -48,8 +48,11 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
 
     // Variables for prompt substitution
     const variables = {
+      // Old prompt compatibility (single-page format)
+      url: context.baseUrl || pages?.[0]?.fullUrl || 'unknown',
       company_name: context.company_name || 'this business',
       industry: context.industry || 'unknown industry',
+      // New multi-page variables
       baseUrl: context.baseUrl || pages?.[0]?.fullUrl || 'unknown',
       pageCount: pages ? String(pages.length) : '1',
       social_profiles: profilesSummary,

@@ -81,7 +81,7 @@ const BRIEF_TEMPLATES = [
 
 export function ICPBriefEditor({ value, onChange, onValidChange, showForkWarning = false, prospectCount = 0 }: ICPBriefEditorProps) {
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true); // Always editing by default
 
   const handleChange = (newValue: string) => {
     onChange(newValue);
@@ -122,7 +122,7 @@ export function ICPBriefEditor({ value, onChange, onValidChange, showForkWarning
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center space-x-2">
             <FileJson className="w-5 h-5" />
-            <span>ICP Brief</span>
+            <span>Step 1: ICP Brief</span>
           </CardTitle>
 
           <div className="flex items-center space-x-2">
@@ -191,27 +191,12 @@ export function ICPBriefEditor({ value, onChange, onValidChange, showForkWarning
             id="icp-brief"
             value={value}
             onChange={(e) => handleChange(e.target.value)}
-            disabled={!isEditing}
             className={cn(
               'font-mono text-sm min-h-[300px]',
-              error && 'border-destructive focus-visible:ring-destructive',
-              !isEditing && 'opacity-60 cursor-not-allowed'
+              error && 'border-destructive focus-visible:ring-destructive'
             )}
             placeholder={JSON.stringify(DEFAULT_BRIEF, null, 2)}
           />
-        </div>
-
-        {/* Edit Button */}
-        <div className="flex items-center gap-2 pt-2 border-t">
-          <Button
-            type="button"
-            variant={isEditing ? 'default' : 'outline'}
-            size="sm"
-            onClick={toggleEdit}
-          >
-            <Edit2 className="w-3 h-3 mr-1" />
-            {isEditing ? 'Editing' : 'Edit'}
-          </Button>
         </div>
 
         {/* Error Message */}

@@ -83,34 +83,8 @@ export async function PATCH(
     const projectId = params.id;
     const body = await request.json();
 
-    // ICP BRIEF LOCKING: Check if trying to update ICP brief when prospects exist
-    if (body.icp_brief !== undefined) {
-      const { data: prospects, error: prospectError } = await supabase
-        .from('project_prospects')
-        .select('id')
-        .eq('project_id', projectId)
-        .limit(1);
-
-      if (prospectError) {
-        console.error('Error checking prospects:', prospectError);
-        return NextResponse.json(
-          { success: false, error: 'Failed to validate ICP brief update' },
-          { status: 500 }
-        );
-      }
-
-      if (prospects && prospects.length > 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Cannot modify ICP brief after prospects have been generated',
-            locked: true,
-            reason: 'ICP brief is locked because this project has existing prospects. Create a new project to use different ICP criteria.'
-          },
-          { status: 403 }
-        );
-      }
-    }
+    // NOTE: ICP brief locking removed - auto-fork feature on frontend handles this
+    // The frontend will create a new project if ICP brief is modified and prospects exist
 
     // Build update object
     const updateData: any = {
@@ -125,6 +99,8 @@ export async function PATCH(
     if (body.icp_brief !== undefined) updateData.icp_brief = body.icp_brief;
     if (body.analysis_config !== undefined) updateData.analysis_config = body.analysis_config;
     if (body.outreach_config !== undefined) updateData.outreach_config = body.outreach_config;
+    if (body.prospecting_prompts !== undefined) updateData.prospecting_prompts = body.prospecting_prompts;
+    if (body.prospecting_model_selections !== undefined) updateData.prospecting_model_selections = body.prospecting_model_selections;
 
     // Update project
     const { data: project, error } = await supabase

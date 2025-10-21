@@ -14,6 +14,7 @@ import axios from 'axios';
 import { parseString } from 'xml2js';
 import { JSDOM } from 'jsdom';
 import { promisify } from 'util';
+import { getChromeUserAgent } from '../shared/user-agents.js';
 
 const parseXml = promisify(parseString);
 
@@ -37,6 +38,11 @@ export async function discoverAllPages(baseUrl, options = {}) {
       sitemap: 0,
       robots: 0,
       navigation: 0
+    },
+    errors: {
+      sitemap: null,
+      robots: null,
+      navigation: null
     }
   };
 
@@ -47,6 +53,7 @@ export async function discoverAllPages(baseUrl, options = {}) {
     discovered.sources.sitemap = sitemapPages.length;
     console.log(`[Sitemap Discovery] Found ${sitemapPages.length} pages from sitemap.xml`);
   } catch (error) {
+    discovered.errors.sitemap = error.message;
     console.log(`[Sitemap Discovery] No sitemap.xml found: ${error.message}`);
   }
 
@@ -57,6 +64,7 @@ export async function discoverAllPages(baseUrl, options = {}) {
     discovered.sources.robots = robotsPages.length;
     console.log(`[Sitemap Discovery] Found ${robotsPages.length} pages from robots.txt`);
   } catch (error) {
+    discovered.errors.robots = error.message;
     console.log(`[Sitemap Discovery] No robots.txt sitemaps found: ${error.message}`);
   }
 
@@ -67,6 +75,7 @@ export async function discoverAllPages(baseUrl, options = {}) {
     discovered.sources.navigation = navPages.length;
     console.log(`[Sitemap Discovery] Found ${navPages.length} pages from navigation`);
   } catch (error) {
+    discovered.errors.navigation = error.message;
     console.log(`[Sitemap Discovery] Navigation scan failed: ${error.message}`);
   }
 
@@ -76,6 +85,7 @@ export async function discoverAllPages(baseUrl, options = {}) {
   discovered.totalPages = uniquePages.length;
 
   const discoveryTime = Date.now() - startTime;
+  discovered.discoveryTime = discoveryTime;
   console.log(`[Sitemap Discovery] Discovered ${discovered.totalPages} unique pages in ${discoveryTime}ms`);
 
   return discovered;
@@ -89,7 +99,7 @@ async function discoverFromSitemap(baseUrl, timeout) {
 
   const response = await axios.get(sitemapUrl, {
     timeout,
-    headers: { 'User-Agent': 'MaxantAgency-AnalysisBot/2.0' },
+    headers: { 'User-Agent': getChromeUserAgent() },
     validateStatus: (status) => status === 200
   });
 
@@ -141,7 +151,7 @@ async function discoverFromSitemap(baseUrl, timeout) {
 async function discoverFromSitemapUrl(sitemapUrl, timeout) {
   const response = await axios.get(sitemapUrl, {
     timeout,
-    headers: { 'User-Agent': 'MaxantAgency-AnalysisBot/2.0' },
+    headers: { 'User-Agent': getChromeUserAgent() },
     validateStatus: (status) => status === 200
   });
 
@@ -174,7 +184,7 @@ async function discoverFromRobots(baseUrl, timeout) {
 
   const response = await axios.get(robotsUrl, {
     timeout,
-    headers: { 'User-Agent': 'MaxantAgency-AnalysisBot/2.0' },
+    headers: { 'User-Agent': getChromeUserAgent() },
     validateStatus: (status) => status === 200
   });
 
@@ -210,7 +220,7 @@ async function discoverFromRobots(baseUrl, timeout) {
 async function discoverFromNavigation(baseUrl, timeout) {
   const response = await axios.get(baseUrl, {
     timeout,
-    headers: { 'User-Agent': 'MaxantAgency-AnalysisBot/2.0' },
+    headers: { 'User-Agent': getChromeUserAgent() },
     validateStatus: (status) => status === 200
   });
 

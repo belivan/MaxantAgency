@@ -128,6 +128,15 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
     });
     logStepComplete(1, 'Query Understanding', Date.now() - step1Start, { query });
 
+    // Store AI metadata for later (will be saved with each prospect)
+    const aiMetadata = {
+      discoveryQuery: query,
+      queryGenerationModel: options.model || customPrompts?.queryUnderstanding?.model || 'grok-4-fast',
+      icpBriefSnapshot: projectIcpBrief,
+      promptsSnapshot: customPrompts || loadAllProspectingPrompts(),
+      modelSelectionsSnapshot: options.modelSelections || null
+    };
+
     if (onProgress) {
       onProgress({
         type: 'step',
@@ -424,6 +433,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
         // STEP 7: ICP Relevance Check (AI-powered)
         let icpScore = null;
         let isRelevant = true;
+        let relevanceReasoning = null;
 
         if (options.checkRelevance !== false) {
           try {
@@ -436,12 +446,13 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
 
             icpScore = relevanceResult.score;
             isRelevant = relevanceResult.isRelevant;
+            relevanceReasoning = relevanceResult.reasoning; // Capture AI's explanation
 
             logInfo('ICP relevance determined', {
               company: company.name,
               score: icpScore,
               is_relevant: isRelevant,
-              reasoning: relevanceResult.reasoning
+              reasoning: relevanceReasoning
             });
 
             // If not relevant and filtering is enabled, skip this prospect
@@ -475,10 +486,21 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
         };
 
         // Save to database (or link to project if exists globally)
+        // Include AI metadata so it's saved in project_prospects table
         const savedProspect = await saveOrLinkProspect(
           prospect,
           options.projectId, // Link to project if specified
-          { run_id: runId }
+          {
+            run_id: runId,
+            discovery_query: aiMetadata.discoveryQuery,
+            query_generation_model: aiMetadata.queryGenerationModel,
+            icp_brief_snapshot: aiMetadata.icpBriefSnapshot,
+            prompts_snapshot: aiMetadata.promptsSnapshot,
+            model_selections_snapshot: aiMetadata.modelSelectionsSnapshot,
+            relevance_reasoning: relevanceReasoning,
+            discovery_cost_usd: 0, // Will calculate per-prospect cost later
+            discovery_time_ms: Date.now() - startTime
+          }
         );
         results.saved++;
         results.prospects.push(savedProspect);

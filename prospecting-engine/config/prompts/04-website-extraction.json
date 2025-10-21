@@ -2,7 +2,7 @@
   "version": "1.0",
   "name": "website-extraction",
   "description": "Extract business data from website screenshot using AI vision",
-  "model": "grok-4",
+  "model": "gpt-4o",
   "temperature": 0.2,
 
   "systemPrompt": "You are a business data extraction specialist. Analyze website screenshots and extract structured business information accurately. Focus on finding contact details, services offered, and company description. Return ONLY valid JSON.",

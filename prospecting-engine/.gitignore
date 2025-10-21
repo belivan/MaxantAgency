@@ -10,6 +10,7 @@ yarn.lock
 # Logs
 logs/
 *.log
+!logs/.gitkeep
 
 # Database
 database/generated-schema.sql
@@ -36,3 +37,7 @@ build/
 *.tmp
 tmp/
 temp/
+
+# Runtime artifacts
+screenshots/*.png
+!screenshots/.gitkeep

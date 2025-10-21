@@ -30,6 +30,8 @@ interface EnhancedProspectConfigFormProps {
   // Saved/initial values from project
   savedModelSelections?: Record<string, string>;
   savedPrompts?: ProspectingPrompts;
+  // Validation
+  icpValid?: boolean; // Whether ICP Brief is valid
 }
 
 export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProps) {
@@ -119,26 +121,26 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
         </div>
       )}
 
-      {/* Model Selection (Advanced) */}
+      {/* Model Selection (Advanced) - Always editable, even during generation */}
       {!isLoadingPrompts && (
         <ProspectingModelSelector
           modules={PROSPECTING_MODULES}
           models={PROSPECTING_MODELS}
           selectedModels={selectedModels}
           onChange={setSelectedModels}
-          disabled={props.disabled || props.isLoading}
+          disabled={props.disabled}
           showForkWarning={props.showForkWarning}
           prospectCount={props.prospectCount}
         />
       )}
 
-      {/* Prompt Editor (Expert) */}
+      {/* Prompt Editor (Expert) - Always editable, even during generation */}
       {!isLoadingPrompts && Object.keys(defaultPrompts).length > 0 && (
         <ProspectingPromptEditor
           prompts={customPrompts}
           defaultPrompts={defaultPrompts}
           onChange={setCustomPrompts}
-          disabled={props.disabled || props.isLoading}
+          disabled={props.disabled}
           showForkWarning={props.showForkWarning}
           prospectCount={props.prospectCount}
         />

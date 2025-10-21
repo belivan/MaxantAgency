@@ -240,3 +240,95 @@ export async function deleteLeads(ids: string[]): Promise<{ deleted: number; fai
     failed: data.failed || 0
   };
 }
+
+/**
+ * Report Types
+ */
+export interface Report {
+  id: string;
+  lead_id: string;
+  project_id?: string;
+  report_type: string;
+  format: 'markdown' | 'html';
+  storage_path: string;
+  storage_bucket: string;
+  file_size_bytes: number;
+  company_name: string;
+  website_url: string;
+  overall_score: number;
+  website_grade: string;
+  download_count: number;
+  status: 'pending' | 'completed' | 'failed';
+  generated_at: string;
+  last_downloaded_at?: string;
+}
+
+/**
+ * Generate a website audit report for a lead
+ */
+export async function generateReport(
+  leadId: string,
+  format: 'markdown' | 'html' = 'html'
+): Promise<Report> {
+  const response = await fetch(`${API_BASE}/api/reports/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      lead_id: leadId,
+      format,
+      sections: ['all']
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to generate report');
+  }
+
+  const data = await response.json();
+  return data.report;
+}
+
+/**
+ * Get all reports for a lead
+ */
+export async function getReportsByLeadId(leadId: string): Promise<Report[]> {
+  const response = await fetch(`${API_BASE}/api/reports/lead/${leadId}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch reports');
+  }
+
+  const data = await response.json();
+  return data.reports || [];
+}
+
+/**
+ * Get download URL for a report
+ */
+export async function getReportDownloadUrl(reportId: string): Promise<string> {
+  const response = await fetch(`${API_BASE}/api/reports/${reportId}/download`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get download URL');
+  }
+
+  const data = await response.json();
+  return data.download_url;
+}
+
+/**
+ * Delete a report
+ */
+export async function deleteReport(reportId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/reports/${reportId}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete report');
+  }
+}
