@@ -32,7 +32,6 @@ export default function ProspectingPage() {
   // Project selection state
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [icpBriefSaved, setIcpBriefSaved] = useState(false);
-  const [icpBriefLocked, setIcpBriefLocked] = useState(false);
   const [prospectCount, setProspectCount] = useState(0);
   const [isLoadingProject, setIsLoadingProject] = useState(false);
 
@@ -46,6 +45,9 @@ export default function ProspectingPage() {
   // Prompt state for auto-fork detection
   const [defaultPrompts, setDefaultPrompts] = useState<ProspectingPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<ProspectingPrompts | null>(null);
+
+  // Compute fork warnings (will trigger auto-fork if true)
+  const shouldShowForkWarning = prospectCount > 0;
 
   // Read project_id from URL params on mount
   useEffect(() => {
@@ -63,15 +65,14 @@ export default function ProspectingPage() {
     });
   }, [prospectCount]);
 
-  // Load project data and check if ICP brief is locked when project is selected
+  // Load project data when project is selected
   useEffect(() => {
     async function loadProjectData() {
       if (!selectedProjectId) {
         // Clear everything when no project selected
-        setIcpBriefLocked(false);
         setProspectCount(0);
         setIsLoadingProject(false);
-        setIcpBrief(''); // Clear ICP brief editor
+        setIcpBrief('');
         setIcpValid(false);
         return;
       }
@@ -87,62 +88,27 @@ export default function ProspectingPage() {
         ]);
 
         // Load project ICP brief if it exists
-        let hasIcpBrief = false;
         if (projectResponse.ok) {
           const projectData = await projectResponse.json();
-          hasIcpBrief = !!(projectData.success && projectData.data?.icp_brief);
-
-          console.log('[ICP Load] Project data loaded:', {
-            projectId: selectedProjectId,
-            projectName: projectData.data?.name,
-            hasIcpBrief,
-            icpBrief: projectData.data?.icp_brief
-          });
+          const hasIcpBrief = !!(projectData.success && projectData.data?.icp_brief);
 
           if (hasIcpBrief) {
             // Pre-fill ICP brief editor with project's saved ICP
             const formattedBrief = JSON.stringify(projectData.data.icp_brief, null, 2);
-            console.log('[ICP Load] Pre-filling ICP brief editor:', formattedBrief);
             setIcpBrief(formattedBrief);
             setIcpValid(true);
-          } else {
-            console.log('[ICP Load] No ICP brief found for project - editor will be empty');
           }
-        } else {
-          console.error('[ICP Load] Failed to fetch project data');
         }
 
         // Check prospect count
-        let count = 0;
         if (prospectsResponse.ok) {
           const prospectsData = await prospectsResponse.json();
-          count = prospectsData.data?.length || 0;
-          console.log('[Prospect Count] Raw API response:', {
-            success: prospectsData.success,
-            dataLength: prospectsData.data?.length,
-            data: prospectsData.data,
-            count
-          });
+          const count = prospectsData.data?.length || 0;
           setProspectCount(count);
-        } else {
-          console.error('[Prospect Count] Failed to fetch prospects');
         }
-
-        // ICP is locked if:
-        // 1. Project has an ICP brief saved (user clicked Generate), OR
-        // 2. Project has prospects (generation completed)
-        const shouldBeLocked = hasIcpBrief || count > 0;
-        setIcpBriefLocked(shouldBeLocked);
-
-        console.log('[ICP Lock Status]', {
-          hasIcpBrief,
-          prospectCount: count,
-          locked: shouldBeLocked
-        });
       } catch (error) {
         console.error('Failed to load project data:', error);
       } finally {
-        // Clear loading state
         setIsLoadingProject(false);
       }
     }
@@ -227,32 +193,20 @@ export default function ProspectingPage() {
         }
       }
 
-      // STEP 1: Save ICP brief to project FIRST (locks it immediately)
-      if (effectiveProjectId && !icpBriefLocked) {
+      // STEP 1: Save ICP brief to project
+      if (effectiveProjectId) {
         try {
           addTaskLog(taskId, 'Saving ICP brief to project...', 'info');
-          console.log('[ICP Lock] Saving ICP brief before generation starts');
 
           await updateProject(effectiveProjectId, {
             icp_brief: briefResult.data
           });
 
-          // Lock ICP immediately - user can't change it now
-          setIcpBriefLocked(true);
           setIcpBriefSaved(true);
-
-          addTaskLog(taskId, 'ICP brief locked for this project', 'success');
-          console.log('[ICP Lock] ICP brief saved and locked');
+          addTaskLog(taskId, 'ICP brief saved', 'success');
         } catch (err: any) {
-          console.error('[ICP Lock] Failed to save ICP brief:', err);
-
-          // If already locked, that's expected
-          if (err.message?.includes('Cannot modify ICP brief')) {
-            addTaskLog(taskId, 'ICP brief is already locked', 'info');
-          } else {
-            // Unexpected error - but continue with generation
-            addTaskLog(taskId, `Warning: Could not save ICP brief: ${err.message}`, 'warning');
-          }
+          console.error('Failed to save ICP brief:', err);
+          addTaskLog(taskId, `Warning: Could not save ICP brief: ${err.message}`, 'warning');
         }
       }
 
@@ -365,11 +319,6 @@ export default function ProspectingPage() {
                   generationCompleted = true; // Mark as completed
 
                   addTaskLog(taskId, `Successfully generated ${count} prospects`, 'success');
-                  console.log('[Generation Complete]', {
-                    count,
-                    projectId: selectedProjectId,
-                    icpLocked: icpBriefLocked
-                  });
 
                   completeTask(taskId);
                   return;
@@ -388,68 +337,14 @@ export default function ProspectingPage() {
         }
       } finally {
         reader.releaseLock();
-
-        // If generation was interrupted/cancelled and no prospects were created, unlock ICP
-        if (!generationCompleted && selectedProjectId && icpBriefLocked) {
-          try {
-            // Check if any prospects were actually created
-            const prospectsCheckResponse = await fetch(`/api/projects/${selectedProjectId}/prospects`);
-            const prospectsCheckData = await prospectsCheckResponse.json();
-            const currentProspectCount = prospectsCheckData.data?.length || 0;
-
-            // If no prospects exist, unlock the ICP by removing it
-            if (currentProspectCount === 0) {
-              console.log('[ICP Unlock] Generation interrupted with 0 prospects - unlocking ICP');
-              await updateProject(selectedProjectId, {
-                icp_brief: {} as any
-              });
-              setIcpBriefLocked(false);
-              setIcpBriefSaved(false);
-              addTaskLog(taskId, 'ICP unlocked (generation cancelled, no prospects created)', 'info');
-            }
-          } catch (unlockError) {
-            console.error('[ICP Unlock] Failed to unlock ICP after interruption:', unlockError);
-          }
-        }
       }
 
     } catch (error: any) {
       errorTask(taskId, `Failed to start generation: ${error.message}`);
-
-      // If generation failed and we just locked the ICP, unlock it (no prospects were created)
-      if (selectedProjectId && icpBriefLocked) {
-        try {
-          // Check if any prospects were actually created
-          const prospectsCheckResponse = await fetch(`/api/projects/${selectedProjectId}/prospects`);
-          const prospectsCheckData = await prospectsCheckResponse.json();
-          const currentProspectCount = prospectsCheckData.data?.length || 0;
-
-          // If no prospects exist, unlock the ICP by removing it
-          if (currentProspectCount === 0) {
-            console.log('[ICP Unlock] Generation failed with 0 prospects - unlocking ICP');
-            await updateProject(selectedProjectId, {
-              icp_brief: {} as any
-            });
-            setIcpBriefLocked(false);
-            setIcpBriefSaved(false);
-            addTaskLog(taskId, 'ICP unlocked (generation failed, no prospects created)', 'info');
-          }
-        } catch (unlockError) {
-          console.error('[ICP Unlock] Failed to unlock ICP:', unlockError);
-        }
-      }
     }
   };
 
   const isProspectingEngineOffline = engineStatus.prospecting === 'offline';
-
-  // Debug logging for render
-  console.log('[Prospecting Page Render]', {
-    selectedProjectId,
-    prospectCount,
-    icpBriefLocked,
-    icpValid
-  });
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -502,7 +397,7 @@ export default function ProspectingPage() {
             value={icpBrief}
             onChange={setIcpBrief}
             onValidChange={setIcpValid}
-            locked={icpBriefLocked}
+            showForkWarning={shouldShowForkWarning}
             prospectCount={prospectCount}
           />
         </div>
@@ -514,7 +409,7 @@ export default function ProspectingPage() {
             onPromptsChange={handlePromptsChange}
             isLoading={isProspecting}
             disabled={!selectedProjectId || !icpValid || isProspectingEngineOffline || isProspecting}
-            locked={icpBriefLocked}
+            showForkWarning={shouldShowForkWarning}
             prospectCount={prospectCount}
             isLoadingProject={isLoadingProject}
           />

@@ -18,7 +18,7 @@ interface EnhancedProspectConfigFormProps {
   onSubmit: (data: ProspectGenerationFormData) => void;
   isLoading?: boolean;
   disabled?: boolean;
-  locked?: boolean;
+  showForkWarning?: boolean;
   prospectCount?: number;
   isLoadingProject?: boolean;
   onPromptsChange?: (defaultPrompts: ProspectingPrompts, currentPrompts: ProspectingPrompts) => void;
@@ -82,13 +82,10 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
   };
 
   return (
-    <div className="space-y-4">
-      {/* Basic Configuration */}
-      <ProspectConfigForm
-        {...props}
-        onSubmit={handleSubmit}
-      />
-
+    <ProspectConfigForm
+      {...props}
+      onSubmit={handleSubmit}
+    >
       {/* Model Selection (Advanced) */}
       {!isLoadingPrompts && (
         <ProspectingModelSelector
@@ -109,6 +106,6 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
           disabled={props.disabled || props.isLoading}
         />
       )}
-    </div>
+    </ProspectConfigForm>
   );
 }
