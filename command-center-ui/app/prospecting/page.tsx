@@ -45,6 +45,9 @@ export default function ProspectingPage() {
   const [defaultPrompts, setDefaultPrompts] = useState<ProspectingPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<ProspectingPrompts | null>(null);
 
+  // Model selections for auto-fork detection
+  const [currentModelSelections, setCurrentModelSelections] = useState<Record<string, string> | null>(null);
+
   // Read project_id from URL params on mount
   useEffect(() => {
     const projectIdParam = searchParams.get('project_id');
@@ -144,6 +147,11 @@ export default function ProspectingPage() {
     setCurrentPrompts(current);
   };
 
+  // Callback to receive model selection changes from EnhancedProspectConfigForm
+  const handleModelsChange = (modelSelections: Record<string, string>) => {
+    setCurrentModelSelections(modelSelections);
+  };
+
   const handleGenerate = async (config: ProspectGenerationOptions) => {
     // Validate project selection
     if (!selectedProjectId) {
@@ -177,12 +185,13 @@ export default function ProspectingPage() {
           // Fetch original project data
           const originalProject = await getProject(selectedProjectId);
 
-          // Create new project with modified prompts
+          // Create new project with modified prompts and model selections
           const newProject = await createProject({
             name: `${originalProject.name} (v2)`,
-            description: `Forked from ${originalProject.name} with custom prospecting prompts`,
+            description: `Forked from ${originalProject.name} with custom prospecting prompts/models`,
             icp_brief: originalProject.icp_brief,
-            prospecting_prompts: currentPrompts // Save the modified prompts
+            prospecting_prompts: currentPrompts, // Save the modified prompts
+            prospecting_model_selections: currentModelSelections || undefined // Save the model selections
           });
 
           console.log('[Auto-Fork] Created new project:', newProject.id);
@@ -398,6 +407,7 @@ export default function ProspectingPage() {
           <EnhancedProspectConfigForm
             onSubmit={handleGenerate}
             onPromptsChange={handlePromptsChange}
+            onModelsChange={handleModelsChange}
             isLoading={isProspecting}
             disabled={isProspectingEngineOffline || isProspecting}
             showForkWarning={shouldShowPromptsForkWarning}

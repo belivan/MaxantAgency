@@ -23,6 +23,7 @@ interface EnhancedProspectConfigFormProps {
   prospectCount?: number;
   isLoadingProject?: boolean;
   onPromptsChange?: (defaultPrompts: ProspectingPrompts, currentPrompts: ProspectingPrompts) => void;
+  onModelsChange?: (modelSelections: ModuleModelSelection) => void;
   // Project selection
   selectedProjectId?: string | null;
   onProjectChange?: (projectId: string | null) => void;
@@ -73,6 +74,13 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
       props.onPromptsChange(defaultPrompts, customPrompts);
     }
   }, [defaultPrompts, customPrompts, isLoadingPrompts, props]);
+
+  // Notify parent when models change (for auto-fork detection)
+  useEffect(() => {
+    if (props.onModelsChange && !isLoadingPrompts && Object.keys(selectedModels).length > 0) {
+      props.onModelsChange(selectedModels);
+    }
+  }, [selectedModels, isLoadingPrompts, props]);
 
   // Wrap onSubmit to include model selections and custom prompts
   const handleSubmit = (data: ProspectGenerationFormData) => {

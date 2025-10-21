@@ -111,6 +111,11 @@
       "required": true,
       "description": "Social media analysis score 0-100"
     },
+    {
+      "name": "accessibility_score",
+      "type": "integer",
+      "description": "Accessibility/WCAG compliance score 0-100"
+    },
 
     {
       "name": "design_issues",
@@ -145,7 +150,37 @@
     {
       "name": "visual_analysis_model",
       "type": "text",
-      "description": "AI model used for visual analysis (gpt-5, grok-4, etc.)"
+      "description": "AI model used for desktop visual analysis (gpt-4o, gpt-5, grok-4, etc.) - legacy field"
+    },
+    {
+      "name": "seo_analysis_model",
+      "type": "text",
+      "description": "AI model used for SEO analysis (e.g., grok-4-fast)"
+    },
+    {
+      "name": "content_analysis_model",
+      "type": "text",
+      "description": "AI model used for content analysis (e.g., grok-4-fast)"
+    },
+    {
+      "name": "desktop_visual_model",
+      "type": "text",
+      "description": "AI model used for desktop visual analysis (e.g., gpt-4o)"
+    },
+    {
+      "name": "mobile_visual_model",
+      "type": "text",
+      "description": "AI model used for mobile visual analysis (e.g., gpt-4o)"
+    },
+    {
+      "name": "social_analysis_model",
+      "type": "text",
+      "description": "AI model used for social media analysis (e.g., grok-4-fast)"
+    },
+    {
+      "name": "accessibility_analysis_model",
+      "type": "text",
+      "description": "AI model used for accessibility analysis (e.g., grok-4-fast)"
     },
     {
       "name": "seo_issues",
@@ -164,6 +199,12 @@
       "type": "jsonb",
       "default": "[]",
       "description": "Array of social media issues found"
+    },
+    {
+      "name": "accessibility_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of WCAG accessibility violations found"
     },
 
     {

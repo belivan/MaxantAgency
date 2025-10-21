@@ -76,7 +76,9 @@ export async function createProject(projectData: {
   budget_alert_threshold?: number;
   icp_brief?: Record<string, any>;
   prospecting_prompts?: Record<string, any>;
+  prospecting_model_selections?: Record<string, string>;
   analysis_prompts?: Record<string, any>;
+  analysis_model_selections?: Record<string, string>;
   analysis_config?: Record<string, any>;
   outreach_config?: Record<string, any>;
 }): Promise<Project> {
@@ -113,6 +115,10 @@ export async function updateProject(
     budget?: number;
     client_name?: string;
     icp_brief?: Record<string, any>;
+    prospecting_prompts?: Record<string, any>;
+    prospecting_model_selections?: Record<string, string>;
+    analysis_prompts?: Record<string, any>;
+    analysis_model_selections?: Record<string, string>;
     analysis_config?: Record<string, any>;
     outreach_config?: Record<string, any>;
   }
