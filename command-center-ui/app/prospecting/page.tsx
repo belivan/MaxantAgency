@@ -11,7 +11,7 @@ import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ICPBriefEditor,
-  ProspectConfigForm
+  EnhancedProspectConfigForm
 } from '@/components/prospecting';
 import { ProjectSelector } from '@/components/shared';
 import { parseJSON } from '@/lib/utils/validation';
@@ -199,7 +199,7 @@ export default function ProspectingPage() {
         count: config.count
       };
 
-      // Prepare options
+      // Prepare options with model selections and custom prompts
       const options = {
         model: config.model,
         verify: config.verify,
@@ -211,7 +211,8 @@ export default function ProspectingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           brief,
-          options
+          options,
+          custom_prompts: config.custom_prompts || undefined
         })
       });
 
@@ -440,9 +441,9 @@ export default function ProspectingPage() {
           />
         </div>
 
-        {/* Right Column - Config Form */}
+        {/* Right Column - Enhanced Config Form */}
         <div>
-          <ProspectConfigForm
+          <EnhancedProspectConfigForm
             onSubmit={handleGenerate}
             isLoading={isProspecting}
             disabled={!selectedProjectId || !icpValid || isProspectingEngineOffline || isProspecting}

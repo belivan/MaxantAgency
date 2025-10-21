@@ -68,6 +68,11 @@ const VISION_MODELS = [
     description: 'Best vision model - $5/$15 per 1M tokens'
   },
   {
+    value: 'gpt-5',
+    label: 'GPT-5 Vision',
+    description: 'Latest OpenAI multimodal - $1.25/$10 per 1M tokens'
+  },
+  {
     value: 'claude-sonnet-4-5',
     label: 'Claude Sonnet 4.5',
     description: 'High quality vision - $3/$15 per 1M tokens'

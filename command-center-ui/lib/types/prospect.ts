@@ -50,13 +50,43 @@ export interface ProspectFilters {
   offset?: number;
 }
 
+/**
+ * AI Prompt Configuration
+ */
+export interface ProspectingPromptConfig {
+  version: string;
+  name: string;
+  model: string;
+  temperature: number;
+  systemPrompt: string;
+  userPromptTemplate: string;
+  variables: string[];
+  examples?: any[];
+}
+
+/**
+ * All prospecting prompts
+ */
+export interface ProspectingPrompts {
+  queryUnderstanding?: ProspectingPromptConfig;
+  websiteExtraction?: ProspectingPromptConfig;
+  relevanceCheck?: ProspectingPromptConfig;
+}
+
+/**
+ * Prospect generation options
+ */
 export interface ProspectGenerationOptions {
   count: number;
   city?: string;
   model: 'grok-4-fast' | 'gpt-4o' | 'gpt-5' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
-  visionModel: 'gpt-4o' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
+  visionModel: 'gpt-4o' | 'gpt-5' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
   verify: boolean;
   project_id?: string;
+
+  // Phase 2: Model Selection & Custom Prompts
+  model_selections?: Record<string, string>;
+  custom_prompts?: ProspectingPrompts;
 }
 
 export interface ProspectGenerationResponse {
