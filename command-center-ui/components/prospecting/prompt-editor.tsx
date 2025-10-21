@@ -193,6 +193,8 @@ export function ProspectingPromptEditor({
 
               if (!module || !promptConfig) return null;
 
+              const isEditing = editingModule === module.key;
+
               return (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -200,18 +202,6 @@ export function ProspectingPromptEditor({
                       <h3 className="font-semibold">{module.label}</h3>
                       <p className="text-xs text-muted-foreground">{module.description}</p>
                     </div>
-                    {isModified(module.key) && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleResetModule(module.key)}
-                        disabled={disabled}
-                      >
-                        <RotateCcw className="w-3 h-3 mr-1" />
-                        Reset
-                      </Button>
-                    )}
                   </div>
 
                   {/* System Prompt */}
@@ -226,9 +216,9 @@ export function ProspectingPromptEditor({
                       id={`system-${module.key}`}
                       value={promptConfig.systemPrompt}
                       onChange={(e) => handlePromptChange(module.key, 'systemPrompt', e.target.value)}
-                      disabled={disabled}
+                      disabled={disabled || !isEditing}
                       rows={8}
-                      className="font-mono text-xs"
+                      className={`font-mono text-xs ${disabled || !isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
@@ -244,9 +234,9 @@ export function ProspectingPromptEditor({
                       id={`user-${module.key}`}
                       value={promptConfig.userPromptTemplate}
                       onChange={(e) => handlePromptChange(module.key, 'userPromptTemplate', e.target.value)}
-                      disabled={disabled}
+                      disabled={disabled || !isEditing}
                       rows={6}
-                      className="font-mono text-xs"
+                      className={`font-mono text-xs ${disabled || !isEditing ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                   </div>
 
@@ -267,6 +257,35 @@ export function ProspectingPromptEditor({
                     <div>Version: {promptConfig.version}</div>
                     <div>Model: {promptConfig.model}</div>
                     <div>Name: {promptConfig.name}</div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    {!disabled && (
+                      <>
+                        <Button
+                          type="button"
+                          variant={isEditing ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => toggleEdit(module.key)}
+                        >
+                          <Edit2 className="w-3 h-3 mr-1" />
+                          {isEditing ? 'Editing' : 'Edit'}
+                        </Button>
+
+                        {isModified(module.key) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResetModule(module.key)}
+                          >
+                            <RotateCcw className="w-3 h-3 mr-1" />
+                            Reset to Default
+                          </Button>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               );

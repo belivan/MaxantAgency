@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { AlertCircle, CheckCircle2, FileJson, GitBranch } from 'lucide-react';
+import { AlertCircle, CheckCircle2, FileJson, GitBranch, Edit2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -81,6 +81,7 @@ const BRIEF_TEMPLATES = [
 
 export function ICPBriefEditor({ value, onChange, onValidChange, showForkWarning = false, prospectCount = 0 }: ICPBriefEditorProps) {
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleChange = (newValue: string) => {
     onChange(newValue);
@@ -107,6 +108,10 @@ export function ICPBriefEditor({ value, onChange, onValidChange, showForkWarning
       const formatted = JSON.stringify(result.data, null, 2);
       handleChange(formatted);
     }
+  };
+
+  const toggleEdit = () => {
+    setIsEditing(!isEditing);
   };
 
   const isValid = !error && value.trim().length > 0;
@@ -186,12 +191,27 @@ export function ICPBriefEditor({ value, onChange, onValidChange, showForkWarning
             id="icp-brief"
             value={value}
             onChange={(e) => handleChange(e.target.value)}
+            disabled={!isEditing}
             className={cn(
               'font-mono text-sm min-h-[300px]',
-              error && 'border-destructive focus-visible:ring-destructive'
+              error && 'border-destructive focus-visible:ring-destructive',
+              !isEditing && 'opacity-60 cursor-not-allowed'
             )}
             placeholder={JSON.stringify(DEFAULT_BRIEF, null, 2)}
           />
+        </div>
+
+        {/* Edit Button */}
+        <div className="flex items-center gap-2 pt-2 border-t">
+          <Button
+            type="button"
+            variant={isEditing ? 'default' : 'outline'}
+            size="sm"
+            onClick={toggleEdit}
+          >
+            <Edit2 className="w-3 h-3 mr-1" />
+            {isEditing ? 'Editing' : 'Edit'}
+          </Button>
         </div>
 
         {/* Error Message */}

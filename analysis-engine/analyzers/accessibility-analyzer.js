@@ -9,7 +9,7 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../shared/ai-client.js';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
 /**
  * Analyze accessibility using Grok-4-fast (Multi-page version)

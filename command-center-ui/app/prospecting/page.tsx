@@ -200,8 +200,10 @@ export default function ProspectingPage() {
         }
       }
 
-      // STEP 1: Save ICP brief to project
-      if (effectiveProjectId) {
+      // STEP 1: Save ICP brief to project (skip if we just forked, ICP already saved during creation)
+      const skipIcpSave = selectedProjectId !== effectiveProjectId; // We forked, ICP already set
+
+      if (effectiveProjectId && !skipIcpSave) {
         try {
           addTaskLog(taskId, 'Saving ICP brief to project...', 'info');
 
@@ -215,6 +217,10 @@ export default function ProspectingPage() {
           console.error('Failed to save ICP brief:', err);
           addTaskLog(taskId, `Warning: Could not save ICP brief: ${err.message}`, 'warning');
         }
+      } else if (skipIcpSave) {
+        // ICP brief already saved during fork
+        setIcpBriefSaved(true);
+        addTaskLog(taskId, 'ICP brief already saved during fork', 'info');
       }
 
       // STEP 2: Start prospect generation
@@ -230,7 +236,7 @@ export default function ProspectingPage() {
       const options = {
         model: config.model,
         verify: config.verify,
-        projectId: selectedProjectId || undefined
+        projectId: effectiveProjectId || undefined  // Use effectiveProjectId (may be forked project)
       };
 
       const response = await fetch(`${API_BASE}/api/prospect`, {
@@ -393,7 +399,7 @@ export default function ProspectingPage() {
             onSubmit={handleGenerate}
             onPromptsChange={handlePromptsChange}
             isLoading={isProspecting}
-            disabled={!icpValid || isProspectingEngineOffline || isProspecting}
+            disabled={isProspectingEngineOffline || isProspecting}
             showForkWarning={shouldShowPromptsForkWarning}
             prospectCount={prospectCount}
             isLoadingProject={isLoadingProject}

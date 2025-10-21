@@ -1,0 +1,49 @@
+🧪 Testing Intelligent Multi-Page Analysis System
+
+============================================================
+
+📊 Analyzing: https://www.anthropic.com
+🏭 Industry: Technology
+🏢 Company: Example Company
+
+⏳ [discovery] Discovering all pages on https://www.anthropic.com...
+[Sitemap Discovery] Discovering pages for https://www.anthropic.com...
+[Sitemap Discovery] Found 320 pages from sitemap.xml
+[Sitemap Discovery] Found 320 pages from robots.txt
+[Sitemap Discovery] Found 70 pages from navigation
+[Sitemap Discovery] Discovered 325 unique pages in 1214ms
+[Intelligent Analysis] Discovered 325 pages
+⏳ [discovery] Found 325 pages via sitemap/robots/navigation
+⏳ [selection] AI selecting optimal pages for each analysis module...
+[Page Selector] Analyzing 325 pages for Technology industry...
+[Page Selector] AI selection failed: XAI_API_KEY environment variable not set
+[Page Selector] Using fallback rule-based selection
+[Intelligent Analysis] AI selected pages: { seo: 2, content: 1, visual: 1, social: 1 }
+⏳ [selection] AI selected 2 unique pages to analyze
+⏳ [crawl] Crawling 2 selected pages with desktop + mobile screenshots...
+[Targeted Crawler] Crawling 2 selected pages for https://www.anthropic.com...
+⏳ [crawl] Crawled undefined/2 pages...
+[Targeted Crawler] Failed to crawl https://www.anthropic.com/contact-sales: page.goto: Timeout 30000ms exceeded.
+Call log:
+[2m  - navigating to "https://www.anthropic.com/contact-sales", waiting until "networkidle"[22m
+
+[Targeted Crawler] ✓ / (Desktop: captured, Mobile: captured)
+[Targeted Crawler] ✓ /contact-sales (Desktop: failed, Mobile: failed)
+[Targeted Crawler] Complete: 2 pages in 30824ms
+[Intelligent Analysis] Successfully crawled 1/2 pages
+⏳ [analyze] Running multi-page SEO, content, and visual analysis...
+Intelligent analysis failed: file:///c:/Users/anton/Desktop/MaxantAgency/analysis-engine/analyzers/accessibility-analyzer.js:12
+import cheerio from 'cheerio';
+       ^^^^^^^
+SyntaxError: The requested module 'cheerio' does not provide an export named 'default'
+    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:337:5)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)
+    at async analyzeWebsiteIntelligent (file:///c:/Users/anton/Desktop/MaxantAgency/analysis-engine/orchestrator.js:476:38)
+    at async testIntelligentAnalysis (file:///c:/Users/anton/Desktop/MaxantAgency/test-intelligent-analysis.js:27:20)
+
+============================================================
+✅ ANALYSIS COMPLETE!
+============================================================
+
+❌ Analysis failed: The requested module 'cheerio' does not provide an export named 'default'
