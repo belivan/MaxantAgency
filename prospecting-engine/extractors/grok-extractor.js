@@ -53,7 +53,7 @@ export async function extractWebsiteData(url, screenshot, companyName) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'grok-4',
+        model: prompt.model, // Use model from prompt config
         messages: [
           {
             role: 'system',
