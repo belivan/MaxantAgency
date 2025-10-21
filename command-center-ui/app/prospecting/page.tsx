@@ -133,10 +133,9 @@ export default function ProspectingPage() {
     });
   };
 
-  // Compute fork warnings for prompts/models (will trigger auto-fork if true)
-  const shouldShowPromptsForkWarning = prospectCount > 0 && hasModifiedPrompts();
-
-  // Fork warning for ICP brief changes (always show when prospects exist)
+  // Fork warnings: Show whenever prospects exist to warn that changes will trigger fork
+  // The actual auto-fork is triggered by hasModifiedPrompts() + prospectCount > 0 at generation time
+  const shouldShowPromptsForkWarning = prospectCount > 0;
   const shouldShowICPForkWarning = prospectCount > 0;
 
   // Callback to receive prompt changes from EnhancedProspectConfigForm

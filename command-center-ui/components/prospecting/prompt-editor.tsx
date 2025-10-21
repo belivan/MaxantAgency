@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, RotateCcw, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, FileText, RotateCcw, AlertCircle, Edit2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -53,6 +53,7 @@ export function ProspectingPromptEditor({
 }: ProspectingPromptEditorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeModule, setActiveModule] = useState<string | null>(null);
+  const [editingModule, setEditingModule] = useState<string | null>(null);
 
   const modules = [
     {
@@ -94,10 +95,16 @@ export function ProspectingPromptEditor({
       ...prompts,
       [moduleKey]: defaultPrompts[moduleKey as keyof ProspectingPrompts]
     });
+    setEditingModule(null);
   };
 
   const handleResetAll = () => {
     onChange(defaultPrompts);
+  };
+
+  const toggleEdit = (moduleKey: string) => {
+    if (disabled) return;
+    setEditingModule(editingModule === moduleKey ? null : moduleKey);
   };
 
   const isModified = (moduleKey: string): boolean => {

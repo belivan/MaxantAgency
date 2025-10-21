@@ -10,7 +10,7 @@ async function testIntelligentAnalysis() {
   console.log('🧪 Testing Intelligent Multi-Page Analysis System\n');
   console.log('='.repeat(60));
 
-  const testUrl = 'https://www.example.com'; // Replace with a real website
+  const testUrl = 'https://www.anthropic.com'; // Real website for testing
   const testContext = {
     company_name: 'Example Company',
     industry: 'Technology',
@@ -48,6 +48,7 @@ async function testIntelligentAnalysis() {
     console.log(`  SEO Score: ${result.seo_score}`);
     console.log(`  Content Score: ${result.content_score}`);
     console.log(`  Social Score: ${result.social_score}`);
+    console.log(`  Accessibility Score: ${result.accessibility_score} (${result.accessibility_wcag_level}: ${result.accessibility_compliance})`);
 
     console.log('\n🤖 INTELLIGENT ANALYSIS:');
     const intel = result.intelligent_analysis;
@@ -67,6 +68,9 @@ async function testIntelligentAnalysis() {
     }
     if (result.design_issues_mobile.length > 0) {
       console.log(`  Mobile: ${result.design_issues_mobile.slice(0, 3).map(i => i.title).join(', ')}`);
+    }
+    if (result.accessibility_issues && result.accessibility_issues.length > 0) {
+      console.log(`  Accessibility: ${result.accessibility_issues.slice(0, 3).map(i => i.title).join(', ')}`);
     }
 
     console.log('\n⚡ QUICK WINS:');
