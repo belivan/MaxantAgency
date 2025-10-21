@@ -13,7 +13,6 @@ import {
   ICPBriefEditor,
   EnhancedProspectConfigForm
 } from '@/components/prospecting';
-import { ProjectSelector } from '@/components/shared';
 import { parseJSON } from '@/lib/utils/validation';
 import { useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
@@ -45,12 +44,6 @@ export default function ProspectingPage() {
   // Prompt state for auto-fork detection
   const [defaultPrompts, setDefaultPrompts] = useState<ProspectingPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<ProspectingPrompts | null>(null);
-
-  // Compute fork warnings for prompts/models (will trigger auto-fork if true)
-  const shouldShowPromptsForkWarning = prospectCount > 0 && hasModifiedPrompts();
-
-  // Fork warning for ICP brief changes (always show when prospects exist)
-  const shouldShowICPForkWarning = prospectCount > 0;
 
   // Read project_id from URL params on mount
   useEffect(() => {
@@ -140,6 +133,12 @@ export default function ProspectingPage() {
     });
   };
 
+  // Compute fork warnings for prompts/models (will trigger auto-fork if true)
+  const shouldShowPromptsForkWarning = prospectCount > 0 && hasModifiedPrompts();
+
+  // Fork warning for ICP brief changes (always show when prospects exist)
+  const shouldShowICPForkWarning = prospectCount > 0;
+
   // Callback to receive prompt changes from EnhancedProspectConfigForm
   const handlePromptsChange = (defaults: ProspectingPrompts, current: ProspectingPrompts) => {
     setDefaultPrompts(defaults);
@@ -147,6 +146,12 @@ export default function ProspectingPage() {
   };
 
   const handleGenerate = async (config: ProspectGenerationOptions) => {
+    // Validate project selection
+    if (!selectedProjectId) {
+      alert('Please select a project to generate prospects');
+      return;
+    }
+
     // Validate ICP brief
     const briefResult = parseJSON(icpBrief);
     if (!briefResult.success) {
@@ -389,10 +394,12 @@ export default function ProspectingPage() {
             onSubmit={handleGenerate}
             onPromptsChange={handlePromptsChange}
             isLoading={isProspecting}
-            disabled={!selectedProjectId || !icpValid || isProspectingEngineOffline || isProspecting}
+            disabled={!icpValid || isProspectingEngineOffline || isProspecting}
             showForkWarning={shouldShowPromptsForkWarning}
             prospectCount={prospectCount}
             isLoadingProject={isLoadingProject}
+            selectedProjectId={selectedProjectId}
+            onProjectChange={setSelectedProjectId}
           />
         </div>
       </div>
