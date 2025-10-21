@@ -10,7 +10,7 @@ import { useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ProspectSelector, AnalysisConfig } from '@/components/analysis';
-import { PromptEditor, type AnalysisPrompts } from '@/components/analysis/prompt-editor';
+import { type AnalysisPrompts } from '@/components/analysis/prompt-editor';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { updateProject, getProject, createProject } from '@/lib/api';
@@ -354,8 +354,8 @@ export default function AnalysisPage() {
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Prospect Selector + Prompts */}
-        <div className="lg:col-span-2 space-y-6">
+        {/* Left Column - Prospect Selector */}
+        <div className="lg:col-span-2">
           <ProspectSelector
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
@@ -363,17 +363,6 @@ export default function AnalysisPage() {
             projectId={selectedProjectId}
             onProjectChange={setSelectedProjectId}
           />
-
-          {/* Prompt Editor */}
-          {!promptsLoading && defaultPrompts && currentPrompts && (
-            <PromptEditor
-              prompts={currentPrompts}
-              defaultPrompts={defaultPrompts}
-              onChange={setCurrentPrompts}
-              locked={leadsCount > 0 && !hasModifiedPrompts()}
-              leadsCount={leadsCount}
-            />
-          )}
         </div>
 
         {/* Right Column - Analysis Config */}
@@ -382,7 +371,12 @@ export default function AnalysisPage() {
             prospectCount={selectedIds.length}
             onSubmit={handleAnalyze}
             isLoading={isAnalyzing}
-            disabled={selectedIds.length === 0 || isAnalysisEngineOffline}
+            disabled={isAnalysisEngineOffline}
+            customPrompts={currentPrompts || undefined}
+            defaultPrompts={defaultPrompts || undefined}
+            onPromptsChange={setCurrentPrompts}
+            promptsLocked={leadsCount > 0 && !hasModifiedPrompts()}
+            leadsCount={leadsCount}
           />
         </div>
       </div>

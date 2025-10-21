@@ -13,13 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
 import { prospectGenerationSchema, type ProspectGenerationFormData } from '@/lib/utils/validation';
 import { calculateProspectingCost } from '@/lib/utils/cost-calculator';
 import { formatCurrency } from '@/lib/utils/format';
@@ -31,60 +24,10 @@ interface ProspectConfigFormProps {
   locked?: boolean; // ICP is locked - can't generate with different ICP
   prospectCount?: number; // Number of existing prospects for locked project
   isLoadingProject?: boolean; // Whether project data is being loaded
+  children?: React.ReactNode; // Model selector and prompt editor content
 }
 
-const TEXT_MODELS = [
-  {
-    value: 'grok-4-fast',
-    label: 'Grok 4 Fast',
-    description: 'Fast & cheap - $0.20/$0.50 per 1M tokens'
-  },
-  {
-    value: 'gpt-4o',
-    label: 'GPT-4o',
-    description: 'Balanced - $5/$15 per 1M tokens'
-  },
-  {
-    value: 'gpt-5',
-    label: 'GPT-5',
-    description: 'Latest OpenAI - $1.25/$10 per 1M tokens'
-  },
-  {
-    value: 'claude-sonnet-4-5',
-    label: 'Claude Sonnet 4.5',
-    description: 'Best coding model - $3/$15 per 1M tokens'
-  },
-  {
-    value: 'claude-haiku-4-5',
-    label: 'Claude Haiku 4.5',
-    description: 'Fast & cheap - $0.80/$4 per 1M tokens'
-  }
-] as const;
-
-const VISION_MODELS = [
-  {
-    value: 'gpt-4o',
-    label: 'GPT-4o Vision',
-    description: 'Best vision model - $5/$15 per 1M tokens'
-  },
-  {
-    value: 'gpt-5',
-    label: 'GPT-5 Vision',
-    description: 'Latest OpenAI multimodal - $1.25/$10 per 1M tokens'
-  },
-  {
-    value: 'claude-sonnet-4-5',
-    label: 'Claude Sonnet 4.5',
-    description: 'High quality vision - $3/$15 per 1M tokens'
-  },
-  {
-    value: 'claude-haiku-4-5',
-    label: 'Claude Haiku 4.5',
-    description: 'Fast vision - $0.80/$4 per 1M tokens'
-  }
-] as const;
-
-export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = false, prospectCount = 0, isLoadingProject = false }: ProspectConfigFormProps) {
+export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = false, prospectCount = 0, isLoadingProject = false, children }: ProspectConfigFormProps) {
   const {
     register,
     handleSubmit,
@@ -102,14 +45,12 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
   });
 
   const count = watch('count');
-  const model = watch('model');
-  const visionModel = watch('visionModel');
   const verify = watch('verify');
 
   // Calculate estimated cost
   const estimatedCost = calculateProspectingCost(
     count || 0,
-    model as any,
+    'grok-4-fast', // Default model for cost estimation
     { verify }
   );
 
@@ -145,74 +86,6 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
             </p>
           </div>
 
-          {/* Text Model */}
-          <div className="space-y-2">
-            <Label htmlFor="model">
-              Text AI Model <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={model}
-              onValueChange={(value) => setValue('model', value as any)}
-              disabled={disabled || isLoading}
-            >
-              <SelectTrigger id="model">
-                <SelectValue placeholder="Select text model" />
-              </SelectTrigger>
-              <SelectContent>
-                {TEXT_MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{m.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {m.description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.model && (
-              <p className="text-sm text-destructive">{errors.model.message}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              For query understanding & relevance check
-            </p>
-          </div>
-
-          {/* Vision Model */}
-          <div className="space-y-2">
-            <Label htmlFor="visionModel">
-              Vision AI Model <span className="text-destructive">*</span>
-            </Label>
-            <Select
-              value={visionModel}
-              onValueChange={(value) => setValue('visionModel', value as any)}
-              disabled={disabled || isLoading}
-            >
-              <SelectTrigger id="visionModel">
-                <SelectValue placeholder="Select vision model" />
-              </SelectTrigger>
-              <SelectContent>
-                {VISION_MODELS.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    <div className="flex flex-col items-start">
-                      <span className="font-medium">{m.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {m.description}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.visionModel && (
-              <p className="text-sm text-destructive">{errors.visionModel.message}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              For website screenshot extraction
-            </p>
-          </div>
-
           {/* Verify URLs */}
           <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
             <div className="space-y-0.5">
@@ -230,6 +103,9 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
               disabled={disabled || isLoading}
             />
           </div>
+
+          {/* Model Selection & Prompt Editor (if provided) */}
+          {children}
 
           {/* Cost Estimate */}
           <div className="rounded-lg bg-muted p-4 space-y-1">

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ForkWarningBadge } from './fork-warning-badge';
 
 export interface AIModel {
   value: string;
@@ -40,6 +41,8 @@ interface ProspectingModelSelectorProps {
   selectedModels: ModuleModelSelection;
   onChange: (selection: ModuleModelSelection) => void;
   disabled?: boolean;
+  showForkWarning?: boolean;
+  prospectCount?: number;
 }
 
 export function ProspectingModelSelector({
@@ -47,7 +50,9 @@ export function ProspectingModelSelector({
   models,
   selectedModels,
   onChange,
-  disabled
+  disabled,
+  showForkWarning = false,
+  prospectCount = 0
 }: ProspectingModelSelectorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -108,6 +113,14 @@ export function ProspectingModelSelector({
             <p className="text-sm text-muted-foreground">
               Choose which AI model to use for each prospecting module. Default selections are optimized for quality and cost.
             </p>
+
+            {/* Fork Warning */}
+            <ForkWarningBadge
+              show={showForkWarning}
+              prospectCount={prospectCount}
+              modificationType="models"
+              inline={true}
+            />
 
             {modules.map((module) => {
               const selectedModelValue = selectedModels[module.value] || module.defaultModel;

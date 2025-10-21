@@ -10,35 +10,74 @@ import { callAI, parseJSONResponse } from '../shared/ai-client.js';
 import * as cheerio from 'cheerio';
 
 /**
- * Analyze SEO using Grok-4-fast
+ * Analyze SEO using Grok-4-fast (Multi-page version)
  *
- * @param {string} url - Website URL
- * @param {string} html - Full HTML content
+ * @param {array} pages - Array of page objects
+ * @param {string} pages[].url - Page URL (relative path)
+ * @param {string} pages[].fullUrl - Full URL
+ * @param {string} pages[].html - Full HTML content
+ * @param {object} pages[].metadata - Page metadata (title, loadTime, etc.)
  * @param {object} context - Additional context
  * @param {string} context.company_name - Company name
  * @param {string} context.industry - Industry type
- * @param {number} context.load_time - Page load time in seconds
- * @param {object} context.meta_info - Meta information from page
+ * @param {string} context.baseUrl - Base website URL
  * @param {object} customPrompt - Custom prompt configuration (optional)
- * @returns {Promise<object>} SEO analysis results
+ * @returns {Promise<object>} SEO analysis results (aggregated from all pages)
  */
-export async function analyzeSEO(url, html, context = {}, customPrompt = null) {
+export async function analyzeSEO(pages, context = {}, customPrompt = null) {
   try {
-    // Extract SEO-relevant data from HTML (for metadata storage)
-    const $ = cheerio.load(html);
-    const seoData = extractSEOData($, url);
+    console.log(`[SEO Analyzer] Analyzing ${pages.length} pages for SEO issues...`);
 
-    // Truncate HTML to ~10KB to avoid excessive tokens
-    // Focus on <head> + first ~8KB of <body>
-    const truncatedHTML = truncateHTML(html);
+    // Extract SEO data from all pages
+    const pagesData = pages.map(page => {
+      const $ = cheerio.load(page.html);
+      const seoData = extractSEOData($, page.fullUrl || page.url);
+      const truncatedHTML = truncateHTML(page.html);
+
+      return {
+        url: page.url,
+        fullUrl: page.fullUrl || page.url,
+        title: page.metadata?.title || seoData.title,
+        loadTime: page.metadata?.loadTime || null,
+        seoData,
+        truncatedHTML
+      };
+    });
+
+    // Detect site-wide issues
+    const siteWideIssues = detectSiteWideIssues(pagesData);
+
+    // Build multi-page summary for AI
+    const pagesSummary = pagesData.map(p => ({
+      url: p.url,
+      title: p.seoData.title,
+      metaDescription: p.seoData.metaDescription,
+      headingStructure: p.seoData.headingStructure,
+      h1Count: p.seoData.h1Count,
+      imageCount: p.seoData.imageCount,
+      imagesWithoutAlt: p.seoData.imagesWithoutAlt,
+      hasSchema: p.seoData.hasSchema,
+      hasOG: p.seoData.hasOG,
+      hasCanonical: p.seoData.hasCanonical,
+      hasViewport: p.seoData.hasViewport,
+      urlStructure: p.seoData.urlStructure
+    }));
+
+    // Include first 2 pages' full HTML for detailed analysis
+    const detailedPages = pagesData.slice(0, 2).map(p => ({
+      url: p.url,
+      html: p.truncatedHTML
+    }));
 
     // Variables for prompt substitution
     const variables = {
-      url: url,
+      baseUrl: context.baseUrl || pages[0]?.fullUrl || 'unknown',
       industry: context.industry || 'unknown industry',
-      load_time: context.load_time ? String(context.load_time) : 'unknown',
+      pageCount: String(pages.length),
       tech_stack: context.tech_stack || 'unknown',
-      html: truncatedHTML
+      pagesSummary: JSON.stringify(pagesSummary, null, 2),
+      detailedPages: JSON.stringify(detailedPages, null, 2),
+      siteWideIssues: JSON.stringify(siteWideIssues, null, 2)
     };
 
     // Use custom prompt if provided, otherwise load default
@@ -73,6 +112,11 @@ export async function analyzeSEO(url, html, context = {}, customPrompt = null) {
     // Validate response
     validateSEOResponse(result);
 
+    // Add site-wide issues to the results
+    if (siteWideIssues.length > 0) {
+      result.issues = [...siteWideIssues, ...(result.issues || [])];
+    }
+
     // Add metadata
     return {
       ...result,
@@ -81,7 +125,8 @@ export async function analyzeSEO(url, html, context = {}, customPrompt = null) {
         model: prompt.model,
         cost: response.cost,
         timestamp: new Date().toISOString(),
-        seoData: seoData  // Include raw SEO data for debugging
+        pagesAnalyzed: pages.length,
+        pagesData: pagesSummary  // Include summary for debugging
       }
     };
 
@@ -109,6 +154,24 @@ export async function analyzeSEO(url, html, context = {}, customPrompt = null) {
       }
     };
   }
+}
+
+/**
+ * LEGACY: Analyze single page SEO (backward compatibility)
+ * Use analyzeSEO() with array for new implementations
+ */
+export async function analyzeSEOSinglePage(url, html, context = {}, customPrompt = null) {
+  const pages = [{
+    url: url,
+    fullUrl: url,
+    html: html,
+    metadata: {
+      title: null,
+      loadTime: context.load_time || null
+    }
+  }];
+
+  return analyzeSEO(pages, { ...context, baseUrl: url }, customPrompt);
 }
 
 /**
@@ -218,6 +281,149 @@ function analyzeURLStructure(url) {
   } catch {
     return 'Invalid URL';
   }
+}
+
+/**
+ * Detect site-wide SEO issues across multiple pages
+ */
+function detectSiteWideIssues(pagesData) {
+  const issues = [];
+
+  // Check for duplicate titles
+  const titles = {};
+  pagesData.forEach(page => {
+    const title = page.seoData.title;
+    if (title && title !== 'No title') {
+      if (titles[title]) {
+        titles[title].push(page.url);
+      } else {
+        titles[title] = [page.url];
+      }
+    }
+  });
+
+  const duplicateTitles = Object.entries(titles).filter(([_, urls]) => urls.length > 1);
+  if (duplicateTitles.length > 0) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'high',
+      title: 'Duplicate page titles detected',
+      description: `${duplicateTitles.length} title(s) are used on multiple pages, which hurts SEO`,
+      impact: 'Search engines may have difficulty distinguishing between pages',
+      recommendation: 'Make each page title unique and descriptive',
+      priority: 'high',
+      affectedPages: duplicateTitles.map(([title, urls]) => ({ title, urls }))
+    });
+  }
+
+  // Check for missing meta descriptions
+  const missingDescriptions = pagesData.filter(p =>
+    p.seoData.metaDescription === 'Missing' || !p.seoData.metaDescription
+  );
+
+  if (missingDescriptions.length > 0) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'medium',
+      title: `Missing meta descriptions on ${missingDescriptions.length} page(s)`,
+      description: 'Meta descriptions improve click-through rates from search results',
+      impact: 'Lower CTR from search results, missed opportunity for conversions',
+      recommendation: 'Add unique, compelling meta descriptions to all pages',
+      priority: 'medium',
+      affectedPages: missingDescriptions.map(p => p.url)
+    });
+  }
+
+  // Check for missing schema markup
+  const missingSchema = pagesData.filter(p => !p.seoData.hasSchema);
+  if (missingSchema.length === pagesData.length) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'medium',
+      title: 'No structured data (schema.org) found on any page',
+      description: 'Schema markup helps search engines understand your content better',
+      impact: 'Missing rich snippets in search results (reviews, ratings, prices)',
+      recommendation: 'Add JSON-LD structured data appropriate for your business type',
+      priority: 'medium'
+    });
+  }
+
+  // Check for missing Open Graph tags
+  const missingOG = pagesData.filter(p => !p.seoData.hasOG);
+  if (missingOG.length === pagesData.length) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'low',
+      title: 'No Open Graph meta tags found',
+      description: 'OG tags control how your pages appear when shared on social media',
+      impact: 'Poor social media previews when pages are shared',
+      recommendation: 'Add og:title, og:description, and og:image tags',
+      priority: 'medium'
+    });
+  }
+
+  // Check for missing viewport tags (mobile-friendliness)
+  const missingViewport = pagesData.filter(p => !p.seoData.hasViewport);
+  if (missingViewport.length === pagesData.length) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'critical',
+      title: 'Website is not mobile-friendly',
+      description: 'No viewport meta tag found on any page',
+      impact: 'Poor mobile experience, lower rankings in mobile search',
+      recommendation: 'Add <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+      priority: 'critical'
+    });
+  }
+
+  // Check for pages with multiple H1 tags
+  const multipleH1 = pagesData.filter(p => p.seoData.h1Count > 1);
+  if (multipleH1.length > 0) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'medium',
+      title: `${multipleH1.length} page(s) have multiple H1 tags`,
+      description: 'Each page should have exactly one H1 tag for best SEO',
+      impact: 'Diluted page topic signal to search engines',
+      recommendation: 'Use only one H1 per page, use H2-H6 for subheadings',
+      priority: 'medium',
+      affectedPages: multipleH1.map(p => ({ url: p.url, h1Count: p.seoData.h1Count }))
+    });
+  }
+
+  // Check for pages with no H1 tag
+  const noH1 = pagesData.filter(p => p.seoData.h1Count === 0);
+  if (noH1.length > 0) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'high',
+      title: `${noH1.length} page(s) missing H1 tag`,
+      description: 'Every page should have an H1 tag describing the main topic',
+      impact: 'Search engines may have difficulty understanding page content',
+      recommendation: 'Add descriptive H1 tag to each page',
+      priority: 'high',
+      affectedPages: noH1.map(p => p.url)
+    });
+  }
+
+  // Check for images without alt text
+  const totalImages = pagesData.reduce((sum, p) => sum + p.seoData.imageCount, 0);
+  const totalMissingAlt = pagesData.reduce((sum, p) => sum + p.seoData.imagesWithoutAlt, 0);
+
+  if (totalMissingAlt > 0) {
+    const percentageMissing = Math.round((totalMissingAlt / totalImages) * 100);
+    issues.push({
+      category: 'site-wide',
+      severity: percentageMissing > 50 ? 'high' : 'medium',
+      title: `${totalMissingAlt} of ${totalImages} images missing alt text (${percentageMissing}%)`,
+      description: 'Alt text improves accessibility and helps images rank in search',
+      impact: 'Poor accessibility, missed image SEO opportunities',
+      recommendation: 'Add descriptive alt text to all images',
+      priority: 'medium'
+    });
+  }
+
+  return issues;
 }
 
 /**

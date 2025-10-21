@@ -1,0 +1,209 @@
+{
+  "table": "page_analyses",
+  "description": "Stores per-page analysis results for multi-page intelligent analysis system. Screenshots are analyzed then discarded - only JSON results stored.",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier for page analysis record"
+    },
+    {
+      "name": "lead_id",
+      "type": "uuid",
+      "nullable": false,
+      "description": "Foreign key to leads table"
+    },
+    {
+      "name": "url",
+      "type": "text",
+      "nullable": false,
+      "description": "Page URL (relative path like /pricing or /about)"
+    },
+    {
+      "name": "full_url",
+      "type": "text",
+      "nullable": true,
+      "description": "Full absolute URL"
+    },
+    {
+      "name": "page_title",
+      "type": "text",
+      "nullable": true,
+      "description": "HTML page title"
+    },
+    {
+      "name": "page_type",
+      "type": "text",
+      "nullable": true,
+      "description": "Page classification: homepage, about, pricing, services, blog, etc."
+    },
+    {
+      "name": "seo_analyzed",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this page was included in SEO analysis"
+    },
+    {
+      "name": "seo_score",
+      "type": "integer",
+      "nullable": true,
+      "description": "SEO score for this specific page (0-100)"
+    },
+    {
+      "name": "seo_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of SEO issues found on this page"
+    },
+    {
+      "name": "content_analyzed",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this page was included in content analysis"
+    },
+    {
+      "name": "content_score",
+      "type": "integer",
+      "nullable": true,
+      "description": "Content quality score for this page (0-100)"
+    },
+    {
+      "name": "content_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of content issues found on this page"
+    },
+    {
+      "name": "visual_desktop_analyzed",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether desktop screenshot was analyzed"
+    },
+    {
+      "name": "visual_desktop_score",
+      "type": "integer",
+      "nullable": true,
+      "description": "Desktop visual design score (0-100)"
+    },
+    {
+      "name": "visual_desktop_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Desktop visual issues"
+    },
+    {
+      "name": "visual_mobile_analyzed",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether mobile screenshot was analyzed"
+    },
+    {
+      "name": "visual_mobile_score",
+      "type": "integer",
+      "nullable": true,
+      "description": "Mobile visual design score (0-100)"
+    },
+    {
+      "name": "visual_mobile_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Mobile visual issues"
+    },
+    {
+      "name": "social_analyzed",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this page was included in social analysis"
+    },
+    {
+      "name": "social_score",
+      "type": "integer",
+      "nullable": true,
+      "description": "Social proof score for this page (0-100)"
+    },
+    {
+      "name": "social_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Social proof issues found on this page"
+    },
+    {
+      "name": "load_time",
+      "type": "integer",
+      "nullable": true,
+      "description": "Page load time in milliseconds"
+    },
+    {
+      "name": "analysis_model",
+      "type": "text",
+      "nullable": true,
+      "description": "AI model used for analysis (e.g., gpt-4o, grok-4-fast)"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamp",
+      "default": "now()",
+      "description": "When this page analysis was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamp",
+      "default": "now()",
+      "description": "When this page analysis was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_page_analyses_lead_id",
+      "columns": ["lead_id"],
+      "description": "Fast lookup of all pages for a lead"
+    },
+    {
+      "name": "idx_page_analyses_url",
+      "columns": ["url"],
+      "description": "Fast lookup by page URL"
+    },
+    {
+      "name": "idx_page_analyses_page_type",
+      "columns": ["page_type"],
+      "description": "Fast filtering by page type"
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "lead_id",
+      "references": "leads.id",
+      "onDelete": "CASCADE",
+      "description": "Delete all page analyses when lead is deleted"
+    }
+  ],
+  "constraints": [
+    {
+      "name": "chk_seo_score_range",
+      "check": "seo_score IS NULL OR (seo_score >= 0 AND seo_score <= 100)",
+      "description": "Ensure SEO score is 0-100"
+    },
+    {
+      "name": "chk_content_score_range",
+      "check": "content_score IS NULL OR (content_score >= 0 AND content_score <= 100)",
+      "description": "Ensure content score is 0-100"
+    },
+    {
+      "name": "chk_visual_desktop_score_range",
+      "check": "visual_desktop_score IS NULL OR (visual_desktop_score >= 0 AND visual_desktop_score <= 100)",
+      "description": "Ensure desktop visual score is 0-100"
+    },
+    {
+      "name": "chk_visual_mobile_score_range",
+      "check": "visual_mobile_score IS NULL OR (visual_mobile_score >= 0 AND visual_mobile_score <= 100)",
+      "description": "Ensure mobile visual score is 0-100"
+    },
+    {
+      "name": "chk_social_score_range",
+      "check": "social_score IS NULL OR (social_score >= 0 AND social_score <= 100)",
+      "description": "Ensure social score is 0-100"
+    }
+  ]
+}

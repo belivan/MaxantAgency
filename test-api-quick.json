@@ -5,8 +5,8 @@
     "count": 1
   },
   "options": {
-    "model": "claude-haiku-4-5",
-    "visionModel": "claude-haiku-4-5",
+    "model": "grok-4-fast",
+    "visionModel": "gpt-5",
     "checkRelevance": false,
     "filterIrrelevant": false
   }

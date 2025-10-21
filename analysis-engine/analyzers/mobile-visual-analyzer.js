@@ -9,77 +9,146 @@ import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../shared/ai-client.js';
 
 /**
- * Analyze mobile visual design using GPT-4o Vision
+ * Analyze mobile visual design using GPT-4o Vision (Multi-page version)
  *
- * @param {string} url - Website URL
- * @param {Buffer} screenshotBuffer - Mobile screenshot as Buffer
+ * @param {array} pages - Array of page objects
+ * @param {string} pages[].url - Page URL (relative path)
+ * @param {string} pages[].fullUrl - Full URL
+ * @param {object} pages[].screenshots - Screenshot buffers
+ * @param {Buffer} pages[].screenshots.mobile - Mobile screenshot buffer
  * @param {object} context - Additional context
  * @param {string} context.company_name - Company name
  * @param {string} context.industry - Industry type
- * @param {string} context.url - Website URL (same as first param, for consistency)
+ * @param {string} context.baseUrl - Base website URL
  * @param {string} context.tech_stack - Technology stack
- * @param {number} context.load_time - Page load time in milliseconds
  * @param {object} customPrompt - Custom prompt configuration (optional)
- * @returns {Promise<object>} Mobile visual analysis results
+ * @returns {Promise<object>} Mobile visual analysis results (aggregated from all pages)
  */
-export async function analyzeMobileVisual(url, screenshotBuffer, context = {}, customPrompt = null) {
+export async function analyzeMobileVisual(pages, context = {}, customPrompt = null) {
   try {
-    // Validate screenshot buffer
-    if (!Buffer.isBuffer(screenshotBuffer)) {
-      throw new Error('screenshotBuffer must be a Buffer');
+    console.log(`[Mobile Visual Analyzer] Analyzing ${pages.length} mobile screenshots...`);
+
+    // Validate all screenshots
+    for (const page of pages) {
+      if (!page.screenshots?.mobile || !Buffer.isBuffer(page.screenshots.mobile)) {
+        throw new Error(`Missing or invalid mobile screenshot for page: ${page.url}`);
+      }
     }
 
-    // Variables for prompt substitution
-    const variables = {
-      company_name: context.company_name || 'this business',
-      industry: context.industry || 'unknown industry',
-      url: url,
-      tech_stack: context.tech_stack || 'unknown',
-      load_time: context.load_time ? String(context.load_time) : 'unknown'
-    };
+    // For multi-page analysis, we'll analyze the first 3 pages individually,
+    // then look for mobile UX consistency patterns
+    const pagesToAnalyze = pages.slice(0, 3);
 
-    // Use custom prompt if provided, otherwise load default
-    let prompt;
-    if (customPrompt) {
-      console.log('[Mobile Visual Analyzer] Using custom prompt configuration');
-      const { substituteVariables } = await import('../shared/prompt-loader.js');
-      prompt = {
-        name: customPrompt.name,
-        model: customPrompt.model,
-        temperature: customPrompt.temperature,
-        systemPrompt: customPrompt.systemPrompt,
-        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
-        outputFormat: customPrompt.outputFormat
+    // Analyze each page individually
+    const individualResults = [];
+    let totalCost = 0;
+
+    for (const page of pagesToAnalyze) {
+      console.log(`[Mobile Visual Analyzer] Analyzing page: ${page.url}`);
+
+      const variables = {
+        company_name: context.company_name || 'this business',
+        industry: context.industry || 'unknown industry',
+        url: page.fullUrl || page.url,
+        tech_stack: context.tech_stack || 'unknown',
+        pageContext: `Page: ${page.url}`,
+        totalPages: String(pages.length)
       };
-    } else {
-      prompt = await loadPrompt('web-design/mobile-visual-analysis', variables);
+
+      // Use custom prompt if provided, otherwise load default
+      let prompt;
+      if (customPrompt) {
+        const { substituteVariables } = await import('../shared/prompt-loader.js');
+        prompt = {
+          name: customPrompt.name,
+          model: customPrompt.model,
+          temperature: customPrompt.temperature,
+          systemPrompt: customPrompt.systemPrompt,
+          userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
+          outputFormat: customPrompt.outputFormat
+        };
+      } else {
+        prompt = await loadPrompt('web-design/mobile-visual-analysis', variables);
+      }
+
+      // Call GPT-4o Vision API with screenshot
+      const response = await callAI({
+        model: prompt.model,
+        systemPrompt: prompt.systemPrompt,
+        userPrompt: prompt.userPrompt,
+        temperature: prompt.temperature,
+        image: page.screenshots.mobile,
+        jsonMode: true
+      });
+
+      // Parse JSON response
+      const result = parseJSONResponse(response.content);
+      validateMobileVisualResponse(result);
+
+      individualResults.push({
+        url: page.url,
+        ...result
+      });
+
+      totalCost += response.cost || 0;
     }
 
-    // Call GPT-4o Vision API with screenshot
-    const response = await callAI({
-      model: prompt.model,
-      systemPrompt: prompt.systemPrompt,
-      userPrompt: prompt.userPrompt,
-      temperature: prompt.temperature,
-      image: screenshotBuffer,
-      jsonMode: true
+    // Detect mobile UX consistency issues across pages
+    const consistencyIssues = detectMobileConsistency(individualResults);
+
+    // Aggregate scores (weighted average)
+    const avgScore = Math.round(
+      individualResults.reduce((sum, r) => sum + r.visualScore, 0) / individualResults.length
+    );
+
+    // Aggregate all issues
+    const allIssues = [];
+    individualResults.forEach(result => {
+      result.issues.forEach(issue => {
+        allIssues.push({
+          ...issue,
+          page: result.url
+        });
+      });
     });
 
-    // Parse JSON response
-    const result = parseJSONResponse(response.content);
+    // Add consistency issues
+    allIssues.push(...consistencyIssues);
 
-    // Validate response
-    validateMobileVisualResponse(result);
+    // Aggregate positives
+    const allPositives = [];
+    individualResults.forEach(result => {
+      if (result.positives) {
+        result.positives.forEach(positive => {
+          allPositives.push({
+            ...positive,
+            page: result.url
+          });
+        });
+      }
+    });
+
+    // Count quick wins across all pages
+    const quickWinCount = allIssues.filter(issue => issue.difficulty === 'quick-win').length;
 
     // Add metadata
     return {
-      ...result,
+      visualScore: avgScore,
+      issues: allIssues,
+      positives: allPositives,
+      quickWinCount,
       _meta: {
         analyzer: 'mobile-visual',
-        model: prompt.model,
-        cost: response.cost,
+        model: customPrompt?.model || 'gpt-4o',
+        cost: totalCost,
         timestamp: new Date().toISOString(),
-        screenshotSize: screenshotBuffer.length
+        pagesAnalyzed: pagesToAnalyze.length,
+        totalScreenshotSize: pages.reduce((sum, p) => sum + (p.screenshots?.mobile?.length || 0), 0),
+        individualResults: individualResults.map(r => ({
+          url: r.url,
+          score: r.visualScore,
+          issueCount: r.issues.length
+        }))
       }
     };
 
@@ -93,7 +162,7 @@ export async function analyzeMobileVisual(url, screenshotBuffer, context = {}, c
         category: 'error',
         severity: 'high',
         title: 'Mobile visual analysis failed',
-        description: `Unable to analyze mobile screenshot: ${error.message}`,
+        description: `Unable to analyze mobile screenshots: ${error.message}`,
         impact: 'Cannot provide mobile-specific design recommendations',
         recommendation: 'Manual mobile design audit recommended',
         priority: 'high',
@@ -108,6 +177,85 @@ export async function analyzeMobileVisual(url, screenshotBuffer, context = {}, c
       }
     };
   }
+}
+
+/**
+ * LEGACY: Analyze single page mobile visual (backward compatibility)
+ * Use analyzeMobileVisual() with array for new implementations
+ */
+export async function analyzeMobileVisualSinglePage(url, screenshotBuffer, context = {}, customPrompt = null) {
+  const pages = [{
+    url: url,
+    fullUrl: url,
+    screenshots: {
+      mobile: screenshotBuffer
+    }
+  }];
+
+  return analyzeMobileVisual(pages, { ...context, baseUrl: url }, customPrompt);
+}
+
+/**
+ * Detect mobile UX consistency issues across multiple pages
+ */
+function detectMobileConsistency(individualResults) {
+  const issues = [];
+
+  if (individualResults.length < 2) {
+    return issues; // Need at least 2 pages to compare
+  }
+
+  // Check score variance (inconsistent mobile UX quality across pages)
+  const scores = individualResults.map(r => r.visualScore);
+  const avgScore = scores.reduce((sum, s) => sum + s, 0) / scores.length;
+  const variance = scores.reduce((sum, s) => sum + Math.pow(s - avgScore, 2), 0) / scores.length;
+  const stdDev = Math.sqrt(variance);
+
+  if (stdDev > 15) {
+    issues.push({
+      category: 'consistency',
+      severity: 'medium',
+      title: 'Inconsistent mobile UX quality across pages',
+      description: `Mobile experience varies significantly (std dev: ${Math.round(stdDev)}). Some pages work well on mobile while others don't.`,
+      impact: 'Frustrating mobile user experience, higher bounce rates',
+      recommendation: 'Apply consistent mobile design patterns across all pages',
+      priority: 'high',
+      difficulty: 'medium',
+      affectedPages: individualResults.map(r => ({ url: r.url, score: r.visualScore }))
+    });
+  }
+
+  // Check for common mobile issues across ALL pages (site-wide problems)
+  const issuesByCategory = {};
+  individualResults.forEach(result => {
+    result.issues.forEach(issue => {
+      const key = issue.category + ':' + issue.title;
+      if (!issuesByCategory[key]) {
+        issuesByCategory[key] = {
+          issue: issue,
+          count: 0,
+          pages: []
+        };
+      }
+      issuesByCategory[key].count++;
+      issuesByCategory[key].pages.push(result.url);
+    });
+  });
+
+  // Find mobile issues that appear on ALL pages
+  Object.values(issuesByCategory).forEach(({ issue, count, pages }) => {
+    if (count === individualResults.length) {
+      issues.push({
+        ...issue,
+        category: 'site-wide-mobile',
+        title: `Site-wide mobile issue: ${issue.title}`,
+        description: `This mobile issue appears on all ${count} analyzed pages: ${issue.description}`,
+        affectedPages: pages
+      });
+    }
+  });
+
+  return issues;
 }
 
 /**

@@ -1,0 +1,22 @@
+{
+  "name": "accessibility-analysis",
+  "model": "grok-4-fast",
+  "temperature": 0.2,
+  "systemPrompt": "You are a WCAG 2.1 accessibility expert. Analyze websites for compliance with WCAG Level AA standards.\n\nIMPORTANT: Return valid JSON in this EXACT format:\n{\n  \"accessibilityScore\": 75,\n  \"wcagLevel\": \"AA\",\n  \"compliance\": \"partial\",\n  \"issues\": [\n    {\n      \"category\": \"images\" | \"forms\" | \"navigation\" | \"color\" | \"structure\" | \"aria\" | \"keyboard\",\n      \"severity\": \"critical\" | \"high\" | \"medium\" | \"low\",\n      \"wcagCriterion\": \"1.1.1 Non-text Content (Level A)\",\n      \"title\": \"Issue title\",\n      \"description\": \"Detailed description\",\n      \"impact\": \"How this affects users\",\n      \"recommendation\": \"How to fix\",\n      \"priority\": \"critical\" | \"high\" | \"medium\" | \"low\"\n    }\n  ],\n  \"quickFixes\": [\"Fix 1\", \"Fix 2\"],\n  \"strengths\": [\"Strength 1\"]\n}\n\nDo NOT change field names.",
+  "userPromptTemplate": "Analyze {{company_name}} ({{industry}}) for WCAG 2.1 Level {{wcagLevel}} accessibility compliance.\n\nWebsite: {{baseUrl}}\nPages analyzed: {{pageCount}}\n\nPAGES DATA:\n{{pagesSummary}}\n\nSITE-WIDE ISSUES DETECTED:\n{{siteWideIssues}}\n\nAnalyze for:\n1. **Images**: Alt text (WCAG 1.1.1)\n2. **Forms**: Labels and instructions (WCAG 3.3.2, 1.3.1)\n3. **Keyboard Navigation**: Skip links, focus indicators (WCAG 2.1.1, 2.4.1)\n4. **Structure**: Heading hierarchy, landmarks (WCAG 1.3.1, 2.4.1)\n5. **ARIA**: Proper usage of roles, states, properties (WCAG 4.1.2)\n6. **Color Contrast**: (infer from context, WCAG 1.4.3)\n7. **Language**: Lang attribute (WCAG 3.1.1)\n\nProvide:\n- Accessibility score (0-100)\n- WCAG compliance level (\"full\", \"partial\", \"minimal\")\n- Issues by category with WCAG criteria references\n- Quick fixes (high-impact, low-effort improvements)\n- Strengths (what they're doing right)\n\nFocus on practical, actionable recommendations.",
+  "variables": {
+    "company_name": "this business",
+    "industry": "unknown",
+    "baseUrl": "website",
+    "pageCount": "1",
+    "pagesSummary": "{}",
+    "siteWideIssues": "[]",
+    "wcagLevel": "AA"
+  },
+  "outputFormat": "json",
+  "costEstimate": {
+    "model": "grok-4-fast",
+    "estimatedCost": "$0.006 per analysis",
+    "notes": "98% cheaper than Grok-4, suitable for accessibility checks"
+  }
+}

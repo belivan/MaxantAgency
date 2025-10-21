@@ -351,6 +351,27 @@
     },
 
     {
+      "name": "pages_discovered",
+      "type": "integer",
+      "description": "Total pages discovered in sitemap (intelligent analysis system)"
+    },
+    {
+      "name": "pages_crawled",
+      "type": "integer",
+      "description": "Number of pages actually crawled with screenshots (intelligent analysis)"
+    },
+    {
+      "name": "pages_analyzed",
+      "type": "integer",
+      "description": "Number of pages that received AI analysis (intelligent analysis)"
+    },
+    {
+      "name": "ai_page_selection",
+      "type": "jsonb",
+      "description": "AI's page selection decisions and reasoning (which pages for which modules)"
+    },
+
+    {
       "name": "analyzed_at",
       "type": "timestamptz",
       "default": "now()",

@@ -19,8 +19,10 @@ import { runAllAnalyses, calculateTotalCost } from './analyzers/index.js';
 import { calculateGrade, extractQuickWins, getTopIssue } from './grading/grader.js';
 import { generateCritique, generateOneLiner } from './grading/critique-generator.js';
 import { scoreLeadPriority } from './analyzers/lead-scorer.js';
-import { crawlWebsite } from './scrapers/multi-page-crawler.js';
+import { crawlWebsite, crawlSelectedPagesWithScreenshots } from './scrapers/multi-page-crawler.js';
 import { extractBusinessIntelligence } from './scrapers/business-intelligence-extractor.js';
+import { discoverAllPages } from './scrapers/sitemap-discovery.js';
+import { selectPagesForAnalysis, getUniquePagesToCrawl } from './scrapers/intelligent-page-selector.js';
 
 /**
  * Run complete analysis pipeline for a single URL
@@ -233,13 +235,20 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       engagement_score: leadPriorityData.engagement_score,
 
       // Scores breakdown
-      design_score: scores.design,
+      design_score: scores.design, // Legacy: Average of desktop + mobile
+      design_score_desktop: Math.round(analysisResults.desktopVisual?.visualScore || 50),
+      design_score_mobile: Math.round(analysisResults.mobileVisual?.visualScore || 50),
       seo_score: scores.seo,
       content_score: scores.content,
       social_score: scores.social,
 
       // Detailed analysis results
-      design_issues: analysisResults.design?.issues || [],
+      design_issues: analysisResults.design?.issues || [], // Legacy
+      design_issues_desktop: analysisResults.desktopVisual?.issues || [],
+      design_issues_mobile: analysisResults.mobileVisual?.issues || [],
+      desktop_critical_issues: analysisResults.desktopVisual?.issues?.filter(i => i.priority === 'high').length || 0,
+      mobile_critical_issues: analysisResults.mobileVisual?.issues?.filter(i => i.priority === 'high').length || 0,
+      visual_analysis_model: analysisResults.desktopVisual?._meta?.model || 'gpt-4o',
       seo_issues: analysisResults.seo?.issues || [],
       content_issues: analysisResults.content?.issues || [],
       social_issues: analysisResults.social?.issues || [],
@@ -345,6 +354,283 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       company_name: context.company_name,
       industry: context.industry,
       city: context.city,
+      prospect_id: context.prospect_id,
+      project_id: context.project_id,
+      error: error.message,
+      analyzed_at: new Date().toISOString(),
+      analysis_time: Date.now() - startTime
+    };
+  }
+}
+
+/**
+ * Run INTELLIGENT multi-page analysis pipeline (NEW!)
+ * Uses AI to select optimal pages per module
+ *
+ * @param {string} url - Website URL to analyze
+ * @param {object} context - Business context
+ * @param {string} context.company_name - Company name
+ * @param {string} context.industry - Industry type
+ * @param {string} context.prospect_id - Prospect ID (for database)
+ * @param {object} options - Analysis options
+ * @param {object} options.customPrompts - Custom AI prompts (optional)
+ * @param {function} options.onProgress - Progress callback (optional)
+ * @param {number} options.maxPagesPerModule - Max pages to analyze per module (default: 5)
+ * @returns {Promise<object>} Complete analysis results
+ */
+export async function analyzeWebsiteIntelligent(url, context = {}, options = {}) {
+  const { customPrompts, onProgress, maxPagesPerModule = 5 } = options;
+
+  const startTime = Date.now();
+  const progress = (step, message) => {
+    if (onProgress) {
+      onProgress({ step, message, timestamp: new Date().toISOString() });
+    }
+  };
+
+  try {
+    // PHASE 1: DISCOVERY - Find all pages without visiting them
+    progress('discovery', `Discovering all pages on ${url}...`);
+    const sitemap = await discoverAllPages(url, { timeout: 30000 });
+
+    console.log(`[Intelligent Analysis] Discovered ${sitemap.totalPages} pages`);
+    progress('discovery', `Found ${sitemap.totalPages} pages via sitemap/robots/navigation`);
+
+    // PHASE 2: AI PAGE SELECTION - Let AI choose which pages to analyze
+    progress('selection', 'AI selecting optimal pages for each analysis module...');
+    const pageSelection = await selectPagesForAnalysis(sitemap, {
+      industry: context.industry,
+      companyName: context.company_name,
+      maxPagesPerModule
+    });
+
+    console.log(`[Intelligent Analysis] AI selected pages:`, {
+      seo: pageSelection.seo_pages.length,
+      content: pageSelection.content_pages.length,
+      visual: pageSelection.visual_pages.length,
+      social: pageSelection.social_pages.length
+    });
+
+    // Get unique pages to crawl (union of all selections)
+    const uniquePages = getUniquePagesToCrawl(pageSelection);
+    progress('selection', `AI selected ${uniquePages.length} unique pages to analyze`);
+
+    // PHASE 3: TARGETED CRAWLING - Only crawl AI-selected pages with screenshots
+    progress('crawl', `Crawling ${uniquePages.length} selected pages with desktop + mobile screenshots...`);
+    const crawledPages = await crawlSelectedPagesWithScreenshots(url, uniquePages, {
+      timeout: 30000,
+      concurrency: 3,
+      onProgress: (crawlProgress) => {
+        progress('crawl', `Crawled ${crawlProgress.completed}/${uniquePages.length} pages...`);
+      }
+    });
+
+    console.log(`[Intelligent Analysis] Successfully crawled ${crawledPages.filter(p => p.success).length}/${uniquePages.length} pages`);
+
+    // Filter successful crawls
+    const successfulPages = crawledPages.filter(p => p.success);
+    if (successfulPages.length === 0) {
+      throw new Error('Failed to crawl any selected pages');
+    }
+
+    // Find homepage in crawled pages
+    const homepage = successfulPages.find(p => p.url === '/' || p.url === '') || successfulPages[0];
+
+    // PHASE 4: MULTI-PAGE ANALYSIS - Run analyzers on appropriate pages
+    progress('analyze', 'Running multi-page SEO, content, and visual analysis...');
+
+    // Prepare pages for each analyzer
+    const seoPages = successfulPages.filter(p =>
+      pageSelection.seo_pages.includes(p.url)
+    );
+
+    const contentPages = successfulPages.filter(p =>
+      pageSelection.content_pages.includes(p.url)
+    );
+
+    const visualPages = successfulPages.filter(p =>
+      pageSelection.visual_pages.includes(p.url)
+    );
+
+    const socialPages = successfulPages.filter(p =>
+      pageSelection.social_pages.includes(p.url)
+    );
+
+    // Extract metadata from homepage
+    const parsedData = parseHTML(homepage.html, url);
+
+    // Enhanced context
+    const enrichedContext = {
+      ...context,
+      baseUrl: url,
+      tech_stack: homepage.metadata?.techStack || 'Unknown',
+      has_blog: parsedData.content.hasBlog
+    };
+
+    // Import analyzers
+    const { analyzeSEO } = await import('./analyzers/seo-analyzer.js');
+    const { analyzeContent } = await import('./analyzers/content-analyzer.js');
+    const { analyzeDesktopVisual } = await import('./analyzers/desktop-visual-analyzer.js');
+    const { analyzeMobileVisual } = await import('./analyzers/mobile-visual-analyzer.js');
+    const { analyzeSocial } = await import('./analyzers/social-analyzer.js');
+
+    // Run all analyzers in parallel
+    const [seoResults, contentResults, desktopVisualResults, mobileVisualResults, socialResults] = await Promise.all([
+      analyzeSEO(seoPages, enrichedContext, customPrompts?.seo),
+      analyzeContent(contentPages, enrichedContext, customPrompts?.content),
+      analyzeDesktopVisual(visualPages, enrichedContext, customPrompts?.desktopVisual),
+      analyzeMobileVisual(visualPages, enrichedContext, customPrompts?.mobileVisual),
+      analyzeSocial(socialPages, parsedData.social.links, {
+        platformCount: parsedData.social.platformCount,
+        platformsPresent: parsedData.social.platformsPresent
+      }, enrichedContext, customPrompts?.social)
+    ]);
+
+    const analysisResults = {
+      seo: seoResults,
+      content: contentResults,
+      desktopVisual: desktopVisualResults,
+      mobileVisual: mobileVisualResults,
+      social: socialResults
+    };
+
+    // PHASE 5: GRADING & INSIGHTS
+    progress('grade', 'Calculating overall grade...');
+
+    const scores = {
+      design: Math.round(
+        ((desktopVisualResults?.visualScore || 50) +
+         (mobileVisualResults?.visualScore || 50)) / 2
+      ),
+      seo: seoResults?.seoScore || 50,
+      content: contentResults?.contentScore || 50,
+      social: socialResults?.socialScore || 50
+    };
+
+    const quickWins = extractQuickWins(analysisResults);
+
+    const gradeMetadata = {
+      quickWinCount: quickWins.length,
+      isMobileFriendly: true, // Visual analyzer checks this now
+      hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
+      siteAccessible: true,
+      industry: context.industry
+    };
+
+    const gradeResults = calculateGrade(scores, gradeMetadata);
+
+    // Generate critique
+    progress('critique', 'Generating actionable critique...');
+    const critique = generateCritique(analysisResults, gradeResults, enrichedContext);
+
+    // Calculate costs
+    const analysisCost = calculateTotalCost(analysisResults);
+
+    // Compile final results
+    const totalTime = Date.now() - startTime;
+    progress('complete', 'Intelligent multi-page analysis complete!');
+
+    return {
+      success: true,
+      analysis_mode: 'intelligent-multi-page',
+
+      // Core results
+      url: homepage.fullUrl,
+      company_name: context.company_name,
+      industry: context.industry,
+      prospect_id: context.prospect_id,
+      project_id: context.project_id,
+
+      // Grading
+      grade: gradeResults.grade,
+      overall_score: gradeResults.overallScore,
+      grade_label: gradeResults.gradeLabel,
+      grade_description: gradeResults.gradeDescription,
+      outreach_angle: gradeResults.outreachAngle,
+
+      // Scores breakdown
+      design_score: scores.design,
+      design_score_desktop: Math.round(desktopVisualResults?.visualScore || 50),
+      design_score_mobile: Math.round(mobileVisualResults?.visualScore || 50),
+      seo_score: scores.seo,
+      content_score: scores.content,
+      social_score: scores.social,
+
+      // Detailed analysis results
+      design_issues_desktop: desktopVisualResults?.issues || [],
+      design_issues_mobile: mobileVisualResults?.issues || [],
+      seo_issues: seoResults?.issues || [],
+      content_issues: contentResults?.issues || [],
+      social_issues: socialResults?.issues || [],
+
+      // Quick wins and top issue
+      quick_wins: quickWins,
+      top_issue: getTopIssue(analysisResults),
+
+      // Critique
+      analysis_summary: critique.summary,
+      critique_sections: critique.sections,
+      recommendations: critique.recommendations,
+      call_to_action: critique.callToAction,
+      one_liner: generateOneLiner(
+        context.company_name || 'This business',
+        critique.topIssue,
+        gradeResults.grade,
+        quickWins.length
+      ),
+
+      // Metadata
+      tech_stack: homepage.metadata?.techStack || 'Unknown',
+      has_blog: parsedData.content.hasBlog,
+      has_https: homepage.fullUrl?.startsWith('https://') || false,
+
+      // Social
+      social_profiles: parsedData.social.links,
+      social_platforms_present: parsedData.social.platformsPresent,
+
+      // Page title and meta
+      page_title: parsedData.seo.title,
+      meta_description: parsedData.seo.description,
+
+      // Performance metadata
+      analysis_cost: analysisCost,
+      analysis_time: totalTime,
+      analyzed_at: new Date().toISOString(),
+
+      // Intelligent analysis metadata
+      intelligent_analysis: {
+        pages_discovered: sitemap.totalPages,
+        pages_crawled: successfulPages.length,
+        pages_analyzed_seo: seoPages.length,
+        pages_analyzed_content: contentPages.length,
+        pages_analyzed_visual: visualPages.length,
+        pages_analyzed_social: socialPages.length,
+        ai_page_selection: pageSelection.reasoning,
+        discovery_sources: sitemap.sources
+      },
+
+      // Raw data (for debugging)
+      _raw: {
+        analysisResults,
+        gradeResults,
+        parsedData,
+        pageSelection,
+        sitemap: {
+          totalPages: sitemap.totalPages,
+          sources: sitemap.sources
+        }
+      }
+    };
+
+  } catch (error) {
+    console.error('Intelligent analysis failed:', error);
+
+    return {
+      success: false,
+      analysis_mode: 'intelligent-multi-page',
+      url,
+      company_name: context.company_name,
+      industry: context.industry,
       prospect_id: context.prospect_id,
       project_id: context.project_id,
       error: error.message,

@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ForkWarningBadge } from './fork-warning-badge';
 
 export interface ProspectingPromptConfig {
   version: string;
@@ -38,13 +39,17 @@ interface ProspectingPromptEditorProps {
   defaultPrompts: ProspectingPrompts;
   onChange: (prompts: ProspectingPrompts) => void;
   disabled?: boolean;
+  showForkWarning?: boolean;
+  prospectCount?: number;
 }
 
 export function ProspectingPromptEditor({
   prompts,
   defaultPrompts,
   onChange,
-  disabled
+  disabled,
+  showForkWarning = false,
+  prospectCount = 0
 }: ProspectingPromptEditorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeModule, setActiveModule] = useState<string | null>(null);
@@ -103,8 +108,7 @@ export function ProspectingPromptEditor({
 
     return (
       current.systemPrompt !== defaultConfig.systemPrompt ||
-      current.userPromptTemplate !== defaultConfig.userPromptTemplate ||
-      current.temperature !== defaultConfig.temperature
+      current.userPromptTemplate !== defaultConfig.userPromptTemplate
     );
   };
 
@@ -145,11 +149,20 @@ export function ProspectingPromptEditor({
               </AlertDescription>
             </Alert>
 
+            {/* Fork Warning */}
+            <ForkWarningBadge
+              show={showForkWarning}
+              prospectCount={prospectCount}
+              modificationType="prompts"
+              inline={true}
+            />
+
             {/* Module tabs */}
             <div className="flex space-x-2 border-b">
               {modules.map((module) => (
                 <button
                   key={module.key}
+                  type="button"
                   onClick={() => setActiveModule(activeModule === module.key ? null : module.key)}
                   className={`px-3 py-2 text-sm font-medium border-b-2 transition-colors ${
                     activeModule === module.key
@@ -182,6 +195,7 @@ export function ProspectingPromptEditor({
                     </div>
                     {isModified(module.key) && (
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={() => handleResetModule(module.key)}
@@ -191,27 +205,6 @@ export function ProspectingPromptEditor({
                         Reset
                       </Button>
                     )}
-                  </div>
-
-                  {/* Temperature */}
-                  <div className="space-y-2">
-                    <Label htmlFor={`temp-${module.key}`}>
-                      Temperature
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (0 = deterministic, 1 = creative)
-                      </span>
-                    </Label>
-                    <Input
-                      id={`temp-${module.key}`}
-                      type="number"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={promptConfig.temperature}
-                      onChange={(e) => handlePromptChange(module.key, 'temperature', parseFloat(e.target.value))}
-                      disabled={disabled}
-                      className="w-32"
-                    />
                   </div>
 
                   {/* System Prompt */}
@@ -275,6 +268,7 @@ export function ProspectingPromptEditor({
             {/* Reset all button */}
             {hasAnyModifications && (
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleResetAll}

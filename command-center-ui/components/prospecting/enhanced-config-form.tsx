@@ -94,6 +94,8 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
           selectedModels={selectedModels}
           onChange={setSelectedModels}
           disabled={props.disabled || props.isLoading}
+          showForkWarning={props.showForkWarning}
+          prospectCount={props.prospectCount}
         />
       )}
 
@@ -104,6 +106,8 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
           defaultPrompts={defaultPrompts}
           onChange={setCustomPrompts}
           disabled={props.disabled || props.isLoading}
+          showForkWarning={props.showForkWarning}
+          prospectCount={props.prospectCount}
         />
       )}
     </ProspectConfigForm>

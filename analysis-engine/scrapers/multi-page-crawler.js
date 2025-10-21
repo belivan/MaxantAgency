@@ -243,7 +243,7 @@ function extractLinks(html, baseUrl) {
   const links = new Set();
   const baseDomain = getDomain(baseUrl);
 
-  $('a[href]').each((i, el) => {
+  $('a[href]').each((_, el) => {
     const href = $(el).attr('href');
     if (!href) return;
 
@@ -570,5 +570,179 @@ export async function estimateCrawl(url) {
       }
     }
     throw error;
+  }
+}
+
+/**
+ * Crawl selected pages with both desktop and mobile screenshots
+ * Used by intelligent analysis system for targeted page analysis
+ *
+ * @param {string} baseUrl - Website base URL
+ * @param {array} pageUrls - Array of page URLs to crawl (from AI selection)
+ * @param {object} options - Crawl options
+ * @returns {Promise<array>} Array of page data with screenshots
+ */
+export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, options = {}) {
+  const {
+    timeout = 30000,
+    concurrency = 3,
+    onProgress = null
+  } = options;
+
+  console.log(`[Targeted Crawler] Crawling ${pageUrls.length} selected pages for ${baseUrl}...`);
+
+  const startTime = Date.now();
+  const results = [];
+  let browser = null;
+
+  try {
+    // Launch browser
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    // Crawl pages in batches (concurrency control)
+    for (let i = 0; i < pageUrls.length; i += concurrency) {
+      const batch = pageUrls.slice(i, i + concurrency);
+
+      if (onProgress) {
+        onProgress({
+          crawled: i,
+          total: pageUrls.length,
+          message: `Crawling pages ${i + 1}-${Math.min(i + concurrency, pageUrls.length)} of ${pageUrls.length}`
+        });
+      }
+
+      // Crawl batch in parallel
+      const batchResults = await Promise.allSettled(
+        batch.map(pageUrl => crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout))
+      );
+
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        const pageUrl = batch[j];
+
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+          console.log(`[Targeted Crawler] ✓ ${result.value.url} (Desktop: ${result.value.screenshots.desktop ? 'captured' : 'failed'}, Mobile: ${result.value.screenshots.mobile ? 'captured' : 'failed'})`);
+        } else {
+          console.log(`[Targeted Crawler] ✗ Failed ${pageUrl}: ${result.reason.message}`);
+          results.push({
+            url: pageUrl,
+            success: false,
+            error: result.reason.message,
+            screenshots: { desktop: null, mobile: null }
+          });
+        }
+      }
+    }
+
+  } catch (error) {
+    console.error('[Targeted Crawler] Crawl failed:', error.message);
+    throw error;
+
+  } finally {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (e) {
+        // Ignore close errors
+      }
+    }
+  }
+
+  const crawlTime = Date.now() - startTime;
+  console.log(`[Targeted Crawler] Complete: ${results.length} pages in ${crawlTime}ms`);
+
+  return results;
+}
+
+/**
+ * Crawl a single page with both desktop and mobile screenshots
+ */
+async function crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout) {
+  const fullUrl = new URL(pageUrl, baseUrl).href;
+  const startTime = Date.now();
+
+  try {
+    // Create desktop context
+    const desktopContext = await browser.newContext({
+      viewport: { width: 1920, height: 1080 },
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    });
+    const desktopPage = await desktopContext.newPage();
+    desktopPage.setDefaultTimeout(timeout);
+
+    // Navigate and screenshot desktop
+    await desktopPage.goto(fullUrl, {
+      waitUntil: 'networkidle',
+      timeout
+    });
+
+    const desktopScreenshot = await desktopPage.screenshot({
+      fullPage: true,
+      type: 'png'
+    });
+
+    // Get HTML and metadata
+    const html = await desktopPage.content();
+    const title = await desktopPage.title();
+    const metaDescription = await desktopPage.$eval('meta[name="description"]', el => el.content).catch(() => null);
+
+    await desktopContext.close();
+
+    // Create mobile context
+    const mobileContext = await browser.newContext({
+      viewport: { width: 375, height: 812 },
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+      isMobile: true,
+      hasTouch: true
+    });
+    const mobilePage = await mobileContext.newPage();
+    mobilePage.setDefaultTimeout(timeout);
+
+    // Navigate and screenshot mobile
+    await mobilePage.goto(fullUrl, {
+      waitUntil: 'networkidle',
+      timeout
+    });
+
+    const mobileScreenshot = await mobilePage.screenshot({
+      fullPage: true,
+      type: 'png'
+    });
+
+    await mobileContext.close();
+
+    const loadTime = Date.now() - startTime;
+
+    return {
+      url: pageUrl,
+      fullUrl,
+      success: true,
+      html,
+      metadata: {
+        title,
+        description: metaDescription,
+        loadTime
+      },
+      screenshots: {
+        desktop: desktopScreenshot,  // Buffer - will be analyzed then discarded
+        mobile: mobileScreenshot     // Buffer - will be analyzed then discarded
+      }
+    };
+
+  } catch (error) {
+    console.error(`[Targeted Crawler] Failed to crawl ${fullUrl}:`, error.message);
+    return {
+      url: pageUrl,
+      fullUrl,
+      success: false,
+      error: error.message,
+      html: null,
+      metadata: null,
+      screenshots: { desktop: null, mobile: null }
+    };
   }
 }

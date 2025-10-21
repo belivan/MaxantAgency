@@ -86,6 +86,7 @@ export function ModelSelector({
       <div className="rounded-lg border bg-card">
         <CollapsibleTrigger asChild>
           <Button
+            type="button"
             variant="ghost"
             className="w-full justify-between p-4 hover:bg-muted/50"
             disabled={disabled}
@@ -243,6 +244,7 @@ export function ModelSelector({
 
             {/* Reset to defaults button */}
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={() => {

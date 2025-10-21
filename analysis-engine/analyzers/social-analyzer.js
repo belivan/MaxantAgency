@@ -11,28 +11,37 @@ import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../shared/ai-client.js';
 
 /**
- * Analyze social media presence using Grok-4-fast
+ * Analyze social media presence using Grok-4-fast (Multi-page version)
  *
- * @param {string} url - Website URL
- * @param {object} socialProfiles - Social profile URLs
+ * @param {array} pages - Array of page objects (optional, for finding more social links)
+ * @param {string} pages[].url - Page URL
+ * @param {string} pages[].html - HTML content
+ * @param {object} socialProfiles - Social profile URLs (aggregated from all pages)
  * @param {object} socialMetadata - Metadata about profiles (followers, posts, etc.)
  * @param {object} context - Additional context
  * @param {string} context.company_name - Company name
  * @param {string} context.industry - Industry type
+ * @param {string} context.baseUrl - Base website URL
  * @param {object} context.website_branding - Website branding info
  * @param {object} customPrompt - Custom prompt configuration (optional)
  * @returns {Promise<object>} Social media analysis results
  */
-export async function analyzeSocial(url, socialProfiles, socialMetadata, context = {}, customPrompt = null) {
+export async function analyzeSocial(pages, socialProfiles, socialMetadata, context = {}, customPrompt = null) {
   try {
+    console.log(`[Social Analyzer] Analyzing social media presence across ${pages?.length || 0} pages...`);
+
     // Check if we have social profiles to analyze
     if (!socialProfiles || Object.keys(socialProfiles).length === 0) {
       return createNoSocialProfilesResponse();
     }
 
+    // Analyze social integration across pages
+    const integrationData = pages ? analyzeSocialIntegration(pages) : null;
+
     // Format social profiles for prompt
     const profilesSummary = formatSocialProfiles(socialProfiles);
     const metadataSummary = formatSocialMetadata(socialMetadata);
+    const integrationSummary = integrationData ? formatIntegrationData(integrationData) : 'No integration data available';
 
     // Format website branding
     const brandingSummary = formatWebsiteBranding(context.website_branding);
@@ -41,9 +50,11 @@ export async function analyzeSocial(url, socialProfiles, socialMetadata, context
     const variables = {
       company_name: context.company_name || 'this business',
       industry: context.industry || 'unknown industry',
-      url: url,
+      baseUrl: context.baseUrl || pages?.[0]?.fullUrl || 'unknown',
+      pageCount: pages ? String(pages.length) : '1',
       social_profiles: profilesSummary,
       social_metadata: metadataSummary,
+      social_integration: integrationSummary,
       website_branding: brandingSummary
     };
 
@@ -79,6 +90,11 @@ export async function analyzeSocial(url, socialProfiles, socialMetadata, context
     // Validate response
     validateSocialResponse(result);
 
+    // Add integration issues if found
+    if (integrationData && integrationData.issues.length > 0) {
+      result.issues = [...integrationData.issues, ...(result.issues || [])];
+    }
+
     // Add metadata
     return {
       ...result,
@@ -87,7 +103,9 @@ export async function analyzeSocial(url, socialProfiles, socialMetadata, context
         model: prompt.model,
         cost: response.cost,
         timestamp: new Date().toISOString(),
-        profilesAnalyzed: Object.keys(socialProfiles)
+        profilesAnalyzed: Object.keys(socialProfiles),
+        pagesAnalyzed: pages ? pages.length : 1,
+        integrationData
       }
     };
 
@@ -117,6 +135,15 @@ export async function analyzeSocial(url, socialProfiles, socialMetadata, context
       }
     };
   }
+}
+
+/**
+ * LEGACY: Analyze single page social (backward compatibility)
+ * Use analyzeSocial() with array for new implementations
+ */
+export async function analyzeSocialSinglePage(url, socialProfiles, socialMetadata, context = {}, customPrompt = null) {
+  // No pages array for legacy single-page analysis
+  return analyzeSocial(null, socialProfiles, socialMetadata, { ...context, baseUrl: url }, customPrompt);
 }
 
 /**
@@ -182,6 +209,72 @@ function formatWebsiteBranding(branding) {
   }
 
   return JSON.stringify(branding, null, 2);
+}
+
+/**
+ * Analyze social media integration across multiple pages
+ */
+function analyzeSocialIntegration(pages) {
+  const issues = [];
+  const pagesWithSocialLinks = [];
+  const pagesWithoutSocialLinks = [];
+
+  // Check each page for social media links/buttons
+  pages.forEach(page => {
+    // This is a simplified check - in reality, you'd parse HTML
+    // For now, we just check if 'html' exists
+    if (page.html) {
+      const hasSocialLinks =
+        page.html.includes('facebook.com') ||
+        page.html.includes('instagram.com') ||
+        page.html.includes('linkedin.com') ||
+        page.html.includes('twitter.com') ||
+        page.html.includes('x.com');
+
+      if (hasSocialLinks) {
+        pagesWithSocialLinks.push(page.url);
+      } else {
+        pagesWithoutSocialLinks.push(page.url);
+      }
+    }
+  });
+
+  // If most pages are missing social links
+  if (pagesWithoutSocialLinks.length > pagesWithSocialLinks.length) {
+    issues.push({
+      category: 'integration',
+      platform: 'general',
+      title: `Social links missing on ${pagesWithoutSocialLinks.length} of ${pages.length} pages`,
+      description: 'Social media links should be consistently present across all pages, typically in header or footer.',
+      impact: 'Missed opportunities for visitors to connect on social media',
+      recommendation: 'Add social media icons to site-wide footer or header',
+      priority: 'medium',
+      affectedPages: pagesWithoutSocialLinks
+    });
+  }
+
+  return {
+    issues,
+    pagesWithSocialLinks: pagesWithSocialLinks.length,
+    pagesWithoutSocialLinks: pagesWithoutSocialLinks.length,
+    totalPages: pages.length
+  };
+}
+
+/**
+ * Format integration data for prompt
+ */
+function formatIntegrationData(integrationData) {
+  if (!integrationData) {
+    return 'No integration data available';
+  }
+
+  return JSON.stringify({
+    pagesWithSocialLinks: integrationData.pagesWithSocialLinks,
+    pagesWithoutSocialLinks: integrationData.pagesWithoutSocialLinks,
+    totalPages: integrationData.totalPages,
+    consistencyScore: Math.round((integrationData.pagesWithSocialLinks / integrationData.totalPages) * 100)
+  }, null, 2);
 }
 
 /**

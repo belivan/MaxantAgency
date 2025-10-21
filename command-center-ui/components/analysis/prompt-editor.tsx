@@ -17,6 +17,7 @@ import {
   FileText
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export interface PromptConfig {
   version: string;
@@ -64,6 +65,7 @@ export function PromptEditor({
   locked = false,
   leadsCount = 0
 }: PromptEditorProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
 
@@ -120,26 +122,38 @@ export function PromptEditor({
   const hasModifications = modifiedCount > 0;
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <FileText className="w-5 h-5" />
-            Analysis Prompts
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Configure AI prompts for website analysis
-          </p>
-        </div>
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <div className="rounded-lg border bg-card">
+        <CollapsibleTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-between p-4 hover:bg-muted/50"
+          >
+            <div className="flex items-center space-x-2">
+              <FileText className="w-4 h-4" />
+              <span className="font-semibold">Prompt Editor</span>
+              <Badge variant="secondary" className="text-xs">Expert</Badge>
+              {hasModifications && (
+                <Badge variant="outline" className="text-xs text-orange-600">Modified</Badge>
+              )}
+              {locked && (
+                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Lock className="w-3 h-3" />
+                  Locked ({leadsCount})
+                </Badge>
+              )}
+            </div>
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+        </CollapsibleTrigger>
 
-        {locked && (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Lock className="w-3 h-3" />
-            Locked ({leadsCount} leads)
-          </Badge>
-        )}
-      </div>
+        <CollapsibleContent>
+          <div className="p-4 space-y-4 border-t">
 
       {/* Lock Warning */}
       {locked && (
@@ -210,6 +224,7 @@ export function PromptEditor({
                   </div>
 
                   <Button
+                    type="button"
                     variant="ghost"
                     size="sm"
                     onClick={() => toggleExpand(key)}
@@ -272,6 +287,7 @@ export function PromptEditor({
                     {!locked && (
                       <>
                         <Button
+                          type="button"
                           variant={isEditing ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => toggleEdit(key)}
@@ -282,6 +298,7 @@ export function PromptEditor({
 
                         {modified && (
                           <Button
+                            type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => resetPrompt(key)}
@@ -299,6 +316,10 @@ export function PromptEditor({
           );
         })}
       </div>
-    </div>
+
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 }

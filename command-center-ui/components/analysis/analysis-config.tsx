@@ -12,7 +12,7 @@
  * - Per-module AI model selection
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Settings, Loader2, Sparkles, Zap, TrendingUp, Bot } from 'lucide-react';
@@ -27,12 +27,19 @@ import { calculateAnalysisCost } from '@/lib/utils/cost-calculator';
 import { formatCurrency } from '@/lib/utils/format';
 import { Badge } from '@/components/ui/badge';
 import { ModelSelector, type ModuleModelSelection } from './model-selector';
+import { PromptEditor, type AnalysisPrompts } from './prompt-editor';
 
 interface AnalysisConfigProps {
   prospectCount: number;
   onSubmit: (data: AnalysisOptionsFormData) => void;
   isLoading?: boolean;
   disabled?: boolean;
+  // Prompt editor props
+  customPrompts?: AnalysisPrompts;
+  defaultPrompts?: AnalysisPrompts;
+  onPromptsChange?: (prompts: AnalysisPrompts) => void;
+  promptsLocked?: boolean;
+  leadsCount?: number;
 }
 
 // Available AI models
@@ -75,7 +82,12 @@ export function AnalysisConfig({
   prospectCount,
   onSubmit,
   isLoading,
-  disabled
+  disabled,
+  customPrompts: customPromptsFromPage,
+  defaultPrompts: defaultPromptsFromPage,
+  onPromptsChange,
+  promptsLocked = false,
+  leadsCount = 0
 }: AnalysisConfigProps) {
   // Initialize default model selections
   const [modelSelections, setModelSelections] = useState<ModuleModelSelection>(() => {
@@ -88,6 +100,43 @@ export function AnalysisConfig({
     });
     return defaults;
   });
+
+  // Internal prompt state (used if page doesn't provide prompts)
+  const [internalCustomPrompts, setInternalCustomPrompts] = useState<AnalysisPrompts>({});
+  const [internalDefaultPrompts, setInternalDefaultPrompts] = useState<AnalysisPrompts>({});
+  const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
+
+  // Load default prompts internally if not provided by page
+  useEffect(() => {
+    if (defaultPromptsFromPage) {
+      setIsLoadingPrompts(false);
+      return;
+    }
+
+    async function loadDefaultPrompts() {
+      try {
+        const response = await fetch('/api/analysis/prompts/default');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setInternalDefaultPrompts(data.data);
+            setInternalCustomPrompts(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load default prompts:', error);
+      } finally {
+        setIsLoadingPrompts(false);
+      }
+    }
+
+    loadDefaultPrompts();
+  }, [defaultPromptsFromPage]);
+
+  // Use page prompts if provided, otherwise use internal prompts
+  const customPrompts = customPromptsFromPage || internalCustomPrompts;
+  const defaultPrompts = defaultPromptsFromPage || internalDefaultPrompts;
+  const handlePromptsChange = onPromptsChange || setInternalCustomPrompts;
 
   const {
     control,
@@ -124,11 +173,12 @@ export function AnalysisConfig({
   const costPerLead = baseCost + accessibilityCost;
   const estimatedCost = costPerLead * prospectCount;
 
-  // Handle form submission with model selections
+  // Handle form submission with model selections and custom prompts
   const handleFormSubmit = (data: AnalysisOptionsFormData) => {
     onSubmit({
       ...data,
-      model_selections: modelSelections
+      model_selections: modelSelections,
+      custom_prompts: customPrompts || {}
     });
   };
 
@@ -237,6 +287,17 @@ export function AnalysisConfig({
             onChange={setModelSelections}
             disabled={disabled || isLoading}
           />
+
+          {/* Prompt Editor (Expert) */}
+          {!isLoadingPrompts && Object.keys(defaultPrompts).length > 0 && (
+            <PromptEditor
+              prompts={customPrompts}
+              defaultPrompts={defaultPrompts}
+              onChange={handlePromptsChange}
+              locked={promptsLocked}
+              leadsCount={leadsCount}
+            />
+          )}
 
           {/* Multi-Page Crawling Configuration */}
           <div className="space-y-4 rounded-lg border p-4 bg-muted/30">

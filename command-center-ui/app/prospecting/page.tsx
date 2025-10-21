@@ -46,8 +46,11 @@ export default function ProspectingPage() {
   const [defaultPrompts, setDefaultPrompts] = useState<ProspectingPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<ProspectingPrompts | null>(null);
 
-  // Compute fork warnings (will trigger auto-fork if true)
-  const shouldShowForkWarning = prospectCount > 0;
+  // Compute fork warnings for prompts/models (will trigger auto-fork if true)
+  const shouldShowPromptsForkWarning = prospectCount > 0 && hasModifiedPrompts();
+
+  // Fork warning for ICP brief changes (always show when prospects exist)
+  const shouldShowICPForkWarning = prospectCount > 0;
 
   // Read project_id from URL params on mount
   useEffect(() => {
@@ -397,7 +400,7 @@ export default function ProspectingPage() {
             value={icpBrief}
             onChange={setIcpBrief}
             onValidChange={setIcpValid}
-            showForkWarning={shouldShowForkWarning}
+            showForkWarning={shouldShowICPForkWarning}
             prospectCount={prospectCount}
           />
         </div>
@@ -409,7 +412,7 @@ export default function ProspectingPage() {
             onPromptsChange={handlePromptsChange}
             isLoading={isProspecting}
             disabled={!selectedProjectId || !icpValid || isProspectingEngineOffline || isProspecting}
-            showForkWarning={shouldShowForkWarning}
+            showForkWarning={shouldShowPromptsForkWarning}
             prospectCount={prospectCount}
             isLoadingProject={isLoadingProject}
           />
