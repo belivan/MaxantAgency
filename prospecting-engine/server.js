@@ -54,7 +54,7 @@ app.use((req, res, next) => {
 // ═══════════════════════════════════════════════════════════════════
 
 app.post('/api/prospect', async (req, res) => {
-  const { brief, options = {}, custom_prompts } = req.body;
+  const { brief, options = {}, custom_prompts, model_selections } = req.body;
 
   // Validate request
   if (!brief) {
@@ -89,10 +89,15 @@ app.post('/api/prospect', async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    // Log if custom prompts are provided
+    // Log if custom configuration is provided
     if (custom_prompts) {
       logInfo('Using custom prompts for prospecting', {
         promptKeys: Object.keys(custom_prompts)
+      });
+    }
+    if (model_selections) {
+      logInfo('Using custom model selections for prospecting', {
+        models: model_selections
       });
     }
 
@@ -101,6 +106,25 @@ app.post('/api/prospect', async (req, res) => {
       ...options,
       customPrompts: custom_prompts
     }, onProgress);
+
+    // Save prompts and model selections to project (first generation only)
+    // This preserves what AI configuration was used for historical tracking
+    if (options.projectId && (custom_prompts || model_selections)) {
+      try {
+        const { saveProspectingConfig } = await import('./database/supabase-client.js');
+        await saveProspectingConfig(options.projectId, custom_prompts, model_selections);
+        logInfo('Saved prospecting config to project', {
+          projectId: options.projectId,
+          hasPrompts: !!custom_prompts,
+          hasModels: !!model_selections
+        });
+      } catch (saveError) {
+        logError('Failed to save prospecting config', saveError, {
+          projectId: options.projectId
+        });
+        // Don't fail the request if config save fails
+      }
+    }
 
     // Send final results
     onProgress({

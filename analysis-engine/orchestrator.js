@@ -563,6 +563,14 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       social_score: scores.social,
       accessibility_score: Math.round(accessibilityResults?.accessibilityScore || 50),
 
+      // Model tracking (which AI models were used)
+      seo_analysis_model: seoResults?._meta?.model || null,
+      content_analysis_model: contentResults?._meta?.model || null,
+      desktop_visual_model: desktopVisualResults?._meta?.model || null,
+      mobile_visual_model: mobileVisualResults?._meta?.model || null,
+      social_analysis_model: socialResults?._meta?.model || null,
+      accessibility_analysis_model: accessibilityResults?._meta?.model || null,
+
       // Detailed analysis results
       design_issues_desktop: desktopVisualResults?.issues || [],
       design_issues_mobile: mobileVisualResults?.issues || [],

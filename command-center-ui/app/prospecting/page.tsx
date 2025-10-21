@@ -268,7 +268,8 @@ export default function ProspectingPage() {
         body: JSON.stringify({
           brief,
           options,
-          custom_prompts: config.custom_prompts || undefined
+          custom_prompts: config.custom_prompts || undefined,
+          model_selections: config.model_selections || undefined
         })
       });
 

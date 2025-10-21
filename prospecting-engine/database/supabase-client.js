@@ -621,6 +621,40 @@ export async function saveProjectProspectingPrompts(projectId, prompts) {
 }
 
 /**
+ * Save model selections to a project
+ * Called alongside prompts to preserve which AI models were used for historical tracking
+ *
+ * @param {string} projectId - Project ID
+ * @param {object} modelSelections - Model selections object
+ * @returns {Promise<object>} Updated project data
+ */
+export async function saveProjectModelSelections(projectId, modelSelections) {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ prospecting_model_selections: modelSelections })
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) {
+      logError('Failed to save model selections to project', error, { projectId });
+      throw error;
+    }
+
+    logInfo('Model selections saved to project', {
+      projectId,
+      modelCount: Object.keys(modelSelections).length
+    });
+
+    return data;
+  } catch (error) {
+    logError('Error saving model selections to project', error, { projectId });
+    throw error;
+  }
+}
+
+/**
  * Save both ICP brief and prospecting prompts in a single transaction
  *
  * @param {string} projectId - Project ID
@@ -630,7 +664,7 @@ export async function saveProjectProspectingPrompts(projectId, prompts) {
  */
 export async function saveProjectIcpAndPrompts(projectId, icpBrief, prompts) {
   try {
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('projects')
       .update({
         icp_brief: icpBrief,
@@ -654,6 +688,47 @@ export async function saveProjectIcpAndPrompts(projectId, icpBrief, prompts) {
     return data;
   } catch (error) {
     logError('Error saving ICP brief and prompts to project', error, { projectId });
+    throw error;
+  }
+}
+
+/**
+ * Save complete prospecting configuration (prompts + model selections)
+ * Used on first generation to preserve exactly what AI setup was used
+ *
+ * @param {string} projectId - Project ID
+ * @param {object} prompts - Prospecting prompts object
+ * @param {object} modelSelections - Model selections object
+ * @returns {Promise<object>} Updated project data
+ */
+export async function saveProspectingConfig(projectId, prompts, modelSelections) {
+  try {
+    const updateData = {};
+    if (prompts) updateData.prospecting_prompts = prompts;
+    if (modelSelections) updateData.prospecting_model_selections = modelSelections;
+
+    const { data, error } = await supabase
+      .from('projects')
+      .update(updateData)
+      .eq('id', projectId)
+      .select()
+      .single();
+
+    if (error) {
+      logError('Failed to save prospecting config to project', error, { projectId });
+      throw error;
+    }
+
+    logInfo('Prospecting config saved to project', {
+      projectId,
+      hasPrompts: !!prompts,
+      hasModels: !!modelSelections,
+      modelCount: modelSelections ? Object.keys(modelSelections).length : 0
+    });
+
+    return data;
+  } catch (error) {
+    logError('Error saving prospecting config to project', error, { projectId });
     throw error;
   }
 }
