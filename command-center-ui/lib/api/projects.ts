@@ -5,7 +5,7 @@
 
 import type { APIResponse } from '@/lib/types';
 
-// Simplified Project interface matching database schema
+// Simplified Project interface matching database schema + aggregate fields
 export interface Project {
   id: string;
   name: string;
@@ -21,6 +21,16 @@ export interface Project {
   icp_brief?: any;
   analysis_config?: any;
   outreach_config?: any;
+
+  // Aggregate fields (computed by API)
+  prospects_count: number;
+  analyzed_count: number;
+  grade_a_count: number;
+  grade_b_count: number;
+  emails_sent_count: number;
+  total_cost: number;
+  budget_limit: number;
+  email_open_rate?: number;
 }
 
 /**

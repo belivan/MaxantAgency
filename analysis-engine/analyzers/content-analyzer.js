@@ -70,10 +70,27 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
       new Map(allBlogPosts.map(post => [post.title, post])).values()
     );
 
+    // Create simple content summary for old prompt format
+    const contentSummary = pagesSummary.map(p =>
+      `${p.url}: ${p.wordCount} words, ${p.ctaCount} CTAs, ${p.paragraphs} paragraphs`
+    ).join('\n');
+
+    // Create key pages list (non-blog pages)
+    const keyPagesList = pagesSummary
+      .filter(p => !p.isBlogPost)
+      .map(p => `${p.url}: ${p.headingStructure}`)
+      .join('\n');
+
     // Variables for prompt substitution
     const variables = {
+      // Old prompt compatibility (single-page format)
       company_name: context.company_name || 'this business',
       industry: context.industry || 'unknown industry',
+      url: context.baseUrl || pages[0]?.fullUrl || 'unknown',
+      content_summary: contentSummary,
+      blog_posts: formatBlogPosts(uniqueBlogPosts),
+      key_pages: keyPagesList || 'No key pages found',
+      // New multi-page variables
       baseUrl: context.baseUrl || pages[0]?.fullUrl || 'unknown',
       pageCount: String(pages.length),
       pagesSummary: JSON.stringify(pagesSummary, null, 2),

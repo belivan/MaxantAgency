@@ -71,10 +71,15 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
 
     // Variables for prompt substitution
     const variables = {
-      baseUrl: context.baseUrl || pages[0]?.fullUrl || 'unknown',
+      // Old prompt compatibility (single-page format)
+      url: context.baseUrl || pages[0]?.fullUrl || 'unknown',
       industry: context.industry || 'unknown industry',
-      pageCount: String(pages.length),
+      load_time: 'multi-page-analysis',
       tech_stack: context.tech_stack || 'unknown',
+      html: detailedPages.length > 0 ? detailedPages[0].html : '',
+      // New multi-page variables
+      baseUrl: context.baseUrl || pages[0]?.fullUrl || 'unknown',
+      pageCount: String(pages.length),
       pagesSummary: JSON.stringify(pagesSummary, null, 2),
       detailedPages: JSON.stringify(detailedPages, null, 2),
       siteWideIssues: JSON.stringify(siteWideIssues, null, 2)
