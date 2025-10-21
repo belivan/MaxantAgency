@@ -198,11 +198,39 @@ app.post('/api/analyze', async (req, res) => {
 
     console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze`);
 
+    // Set up Server-Sent Events headers to prevent timeout
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders(); // Send headers immediately
+
+    // Helper function to send SSE events
+    function sendEvent(eventType, data) {
+      res.write(`event: ${eventType}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+
+    // Send start event
+    sendEvent('start', {
+      total: prospects.length,
+      message: `Starting analysis of ${prospects.length} prospects...`
+    });
+
     // Analyze each prospect with intelligent multi-page analysis
     const results = [];
+    let currentIndex = 0;
     for (const prospect of prospects) {
+      currentIndex++;
       try {
         console.log(`[Intelligent Analysis] Analyzing ${prospect.company_name || prospect.website}...`);
+
+        // Send progress event
+        sendEvent('analyzing', {
+          current: currentIndex,
+          total: prospects.length,
+          company_name: prospect.company_name,
+          url: prospect.website
+        });
 
         const result = await analyzeWebsiteIntelligent(prospect.website, {
           company_name: prospect.company_name || 'Unknown Company',
@@ -296,8 +324,25 @@ app.post('/api/analyze', async (req, res) => {
 
           if (saveError) {
             console.error(`[Intelligent Analysis] Failed to save lead ${prospect.website}:`, saveError);
+            // Send error event
+            sendEvent('error', {
+              current: currentIndex,
+              total: prospects.length,
+              company_name: prospect.company_name,
+              url: prospect.website,
+              error: `Database save failed: ${saveError.message}`
+            });
           } else {
             console.log(`[Intelligent Analysis] ✓ ${prospect.company_name}: Grade ${result.grade} (${result.overall_score}/100)`);
+            // Send success event
+            sendEvent('success', {
+              current: currentIndex,
+              total: prospects.length,
+              company_name: prospect.company_name,
+              url: prospect.website,
+              grade: result.grade,
+              score: result.overall_score
+            });
           }
 
           results.push({
@@ -310,6 +355,14 @@ app.post('/api/analyze', async (req, res) => {
           });
         } else {
           console.error(`[Intelligent Analysis] ✗ ${prospect.company_name}: ${result.error}`);
+          // Send error event
+          sendEvent('error', {
+            current: currentIndex,
+            total: prospects.length,
+            company_name: prospect.company_name,
+            url: prospect.website,
+            error: result.error
+          });
           results.push({
             success: false,
             prospect_id: prospect.id,
@@ -320,6 +373,14 @@ app.post('/api/analyze', async (req, res) => {
         }
       } catch (error) {
         console.error(`[Intelligent Analysis] ✗ ${prospect.company_name}: ${error.message}`);
+        // Send error event
+        sendEvent('error', {
+          current: currentIndex,
+          total: prospects.length,
+          company_name: prospect.company_name,
+          url: prospect.website,
+          error: error.message
+        });
         results.push({
           success: false,
           prospect_id: prospect.id,
@@ -333,23 +394,37 @@ app.post('/api/analyze', async (req, res) => {
     const successCount = results.filter(r => r.success).length;
     console.log(`[Intelligent Analysis] Completed: ${successCount}/${prospects.length} successful`);
 
-    res.json({
+    // Send complete event
+    sendEvent('complete', {
       success: true,
-      data: {
-        total: prospects.length,
-        successful: successCount,
-        failed: prospects.length - successCount,
-        results
-      }
+      total: prospects.length,
+      successful: successCount,
+      failed: prospects.length - successCount,
+      results
     });
+
+    // End the SSE stream
+    res.end();
 
   } catch (error) {
     console.error('[Intelligent Analysis] Error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Internal server error',
-      details: error.message
-    });
+
+    // If headers already sent (SSE started), send error event
+    if (res.headersSent) {
+      sendEvent('fatal', {
+        success: false,
+        error: 'Internal server error',
+        details: error.message
+      });
+      res.end();
+    } else {
+      // Otherwise send regular error response
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        details: error.message
+      });
+    }
   }
 });
 

@@ -2,7 +2,7 @@
 
 ## 🚀 Accessing Supabase
 
-**URL:** https://njejsagzeebvsupzffpd.supabase.co
+**URL:** https://yaqcfufvivxbapanlkxz.supabase.co
 
 **Login:** Use your Supabase credentials
 

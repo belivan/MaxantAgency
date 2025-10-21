@@ -2,143 +2,177 @@
 
 **Agent 3** - Multi-Channel Outreach System
 **Version**: 2.0.0
-**Status**: ✅ **PHASE 1 COMPLETE!** 🎉
+**Status**: ✅ Production Ready
+**Port**: 3002
 
 ---
 
-## 🎯 PHASE 1 COMPLETE - ALL TESTS PASSING! ✅
+## Overview
 
-**What We Just Built**:
-- Complete spec-compliant folder structure
-- 6 prompt configuration files (JSON)
-- 3 validation rule configs
-- Prompt loader & template system
-- Personalization context builder
-- Comprehensive test suite (ALL PASSING ✅)
+The Outreach Engine is a production-ready AI-powered system for generating personalized cold emails and social media DMs. It analyzes website quality data from the Analysis Engine and creates targeted outreach messages using configurable AI prompt strategies.
 
-**Phase 1 Completion**: 100% (7/7 milestones)
-**Test Results**: 100% passing
-**Ready For**: Phase 2 - Generator Development
+### Key Features
 
----
-
-## Migration Status
-
-### ✅ PHASE 1: FOUNDATION & CONFIG SYSTEM (COMPLETE!)
-
-#### ✅ 1.1: Folder Structure
-- ✅ Complete spec-compliant structure
-- ✅ All 15+ directories created
-- ✅ Package.json with dependencies
-- ✅ ES Module configuration
-
-#### ✅ 1.2: Prompt Configuration System
-**Email Strategies** (5 configs):
-- ✅ `compliment-sandwich.json` - Genuine compliment → issue → encouragement
-- ✅ `problem-first.json` - Direct problem identification approach
-- ✅ `achievement-focused.json` - Positive, encouraging framing
-- ✅ `question-based.json` - Curious, collaborative approach
-- ✅ `subject-line-generator.json` - 50-70 char optimal subjects
-
-**Social Strategies** (1 config):
-- ✅ `value-first.json` - Platform-specific DMs (Instagram/Facebook/LinkedIn)
-
-**Utilities**:
-- ✅ `shared/prompt-loader.js` - Load, validate, fill templates
-- ✅ Variable substitution with validation
-- ✅ Context validation against requirements
-
-#### ✅ 1.3-1.5: Validation Rule Configs
-**Email Quality** (`config/validation/email-quality.json`):
-- ✅ Subject/body length rules (50-70 chars optimal)
-- ✅ 175+ banned spam phrases
-- ✅ Scoring system (0-100)
-- ✅ Penalty calculations
-- ✅ Tone detection rules
-
-**Social Quality** (`config/validation/social-quality.json`):
-- ✅ Platform-specific rules
-  - Instagram: 1000 chars max, super-casual tone
-  - Facebook: 5000 chars max, friendly-conversational
-  - LinkedIn: 1900 chars max, professional-casual
-- ✅ Banned words per platform
-- ✅ Tone detection
-- ✅ Best practices per platform
-
-**Spam Detection** (`config/validation/spam-phrases.json`):
-- ✅ 10 spam categories
-- ✅ 100+ trigger phrases
-- ✅ Severity levels
-- ✅ Replacement suggestions
-
-#### ✅ 1.6: Personalization Builder
-**Built** (`shared/personalization-builder.js`):
-- ✅ Extract 32+ context fields from lead data
-- ✅ Infer business context (years in business, rating, reviews)
-- ✅ Generate impact statements
-- ✅ Extract top issues and quick wins
-- ✅ Social media context building
-- ✅ Platform-specific username extraction
-
-#### ✅ 1.7: Testing & Validation
-**Test Suites**:
-- ✅ `tests/test-prompt-loading.js` - Prompt system (5/5 passing)
-- ✅ `tests/test-phase1-integration.js` - Full integration (7/7 passing)
-
-**Test Coverage**:
-- ✅ Prompt loading & validation
-- ✅ Template filling
-- ✅ Personalization context building
-- ✅ Email strategies (4 tested)
-- ✅ Social strategies (1 tested)
-- ✅ Subject line generator
-- ✅ Validation rules (all 3 configs)
+- **Multi-Channel**: Email + Social DMs (Instagram, Facebook, LinkedIn)
+- **AI-Powered**: Claude Haiku 3.5 for cost-effective generation (~$0.0004/email)
+- **Externalized Config**: All prompts and validation rules in JSON files
+- **A/B Variant Testing**: Generate multiple subject/body combinations
+- **Quality Validation**: 175+ spam phrase detection, scoring system
+- **Notion Integration**: Bi-directional sync for review/approval workflow
+- **Gmail SMTP**: Send emails with rate limiting and retry logic
+- **Cost Tracking**: Per-email generation costs and performance metrics
 
 ---
 
-## What's Working Now
+## Quick Start
 
-### Prompt Loading & Template Filling
-```javascript
-import { loadPrompt, fillTemplate } from './shared/prompt-loader.js';
-import { buildPersonalizationContext } from './shared/personalization-builder.js';
-
-// Load strategy
-const prompt = loadPrompt('email-strategies', 'compliment-sandwich');
-
-// Build context from lead
-const context = buildPersonalizationContext(lead);
-
-// Fill template
-const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
-
-// Ready to send to AI!
-```
-
-### Social Media Context
-```javascript
-import { buildSocialContext } from './shared/personalization-builder.js';
-
-// Build Instagram-specific context
-const socialContext = buildSocialContext(lead, 'instagram');
-
-// Load social strategy
-const prompt = loadPrompt('social-strategies', 'value-first');
-
-// Fill template
-const filled = fillTemplate(prompt.userPromptTemplate, socialContext);
-```
-
-### Running Tests
+### 1. Install Dependencies
 ```bash
-# Test prompt loading
-node tests/test-prompt-loading.js
-
-# Test full Phase 1 integration
-node tests/test-phase1-integration.js
-
-# Both should show: ALL TESTS PASSED ✅
+cd outreach-engine
+npm install
 ```
+
+### 2. Configure Environment
+Create `.env` file:
+```bash
+# Supabase (shared database)
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-role-key
+
+# Anthropic AI
+ANTHROPIC_API_KEY=your-anthropic-key
+
+# Gmail SMTP (optional)
+GMAIL_USER=your-email@gmail.com
+GMAIL_APP_PASSWORD=your-app-password
+
+# Notion (optional)
+NOTION_API_KEY=secret_xxxxxxxxxxxxx
+NOTION_DATABASE_ID=your-database-id
+```
+
+### 3. Start the Server
+```bash
+node server.js
+# Server runs on http://localhost:3002
+```
+
+### 4. Test the API
+```bash
+# Health check
+curl http://localhost:3002/health
+
+# Generate an email
+curl -X POST http://localhost:3002/api/compose \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://example.com",
+    "strategy": "problem-first"
+  }'
+```
+
+---
+
+## Architecture
+
+### Email Generation Strategies
+
+**6 AI prompt strategies** (all in `config/prompts/email-strategies/`):
+- **compliment-sandwich** - Compliment → Issue → Encouragement
+- **problem-first** - Problem → Impact → Solution
+- **achievement-focused** - Success → Opportunity → Quick Win
+- **question-based** - Question → Observation → Offer
+- **industry-insight** - Industry context → Specific observation
+- **problem-agitation** - Problem → Consequences → Relief
+
+### Social DM Strategies
+
+**2 strategies** for social platforms (`config/prompts/social-strategies/`):
+- **value-first** - Value proposition with soft CTA
+- **compliment-question** - Genuine compliment + thought-provoking question
+
+### Validation System
+
+**3 validation configs** (`config/validation/`):
+- **email-quality.json** - Subject/body length, spam detection, scoring
+- **social-quality.json** - Platform-specific rules (char limits, tone)
+- **spam-phrases.json** - 175+ banned phrases across 10 categories
+
+---
+
+## API Endpoints
+
+### Composition
+```bash
+# Generate single email
+POST /api/compose
+{
+  "url": "https://example.com",
+  "strategy": "problem-first",
+  "generateVariants": false
+}
+
+# Generate social DM
+POST /api/compose-social
+{
+  "url": "https://example.com",
+  "platform": "instagram",
+  "strategy": "value-first"
+}
+
+# Batch process leads
+POST /api/compose-batch
+{
+  "limit": 20,
+  "grade": "C",
+  "strategy": "compliment-sandwich"
+}
+# Returns Server-Sent Events (SSE) with progress
+```
+
+### Sending
+```bash
+# Send single email
+POST /api/send-email
+{
+  "email_id": "uuid-here",
+  "actualSend": true
+}
+
+# Send batch of approved emails
+POST /api/send-batch
+{
+  "limit": 50,
+  "actualSend": true
+}
+```
+
+### Notion Integration
+```bash
+# Sync approved emails from Notion and send them
+POST /api/sync-from-notion
+{
+  "autoSend": true,
+  "dryRun": false
+}
+```
+
+### Query
+```bash
+# List available strategies
+GET /api/strategies
+
+# Get composed emails by status
+GET /api/emails?status=approved
+
+# Get ready leads
+GET /api/leads/ready?limit=10&grade=C
+
+# Get statistics
+GET /api/stats
+```
+
+See [API.md](API.md) for complete API documentation.
 
 ---
 
@@ -146,83 +180,284 @@ node tests/test-phase1-integration.js
 
 ```
 outreach-engine/
+├── server.js                      # Express API server (port 3002)
 ├── config/
 │   ├── prompts/
-│   │   ├── email-strategies/         ✅ 5 configs (COMPLETE)
-│   │   │   ├── compliment-sandwich.json
-│   │   │   ├── problem-first.json
-│   │   │   ├── achievement-focused.json
-│   │   │   ├── question-based.json
-│   │   │   └── subject-line-generator.json
-│   │   ├── social-strategies/        ✅ 1 config (COMPLETE)
-│   │   │   └── value-first.json
-│   │   └── reasoning/                ⏳ Phase 2
-│   ├── validation/                   ✅ 3 configs (COMPLETE)
-│   │   ├── email-quality.json
-│   │   ├── social-quality.json
-│   │   └── spam-phrases.json
-│   └── personalization/              ⏳ Phase 2
-├── generators/                       ⏳ Phase 2
-├── validators/                       ⏳ Phase 2
-├── senders/                          ⏳ Phase 3
-├── integrations/                     ⏳ Phase 3
-├── database/                         ⏳ Phase 3
+│   │   ├── email-strategies/      # 6 email prompt configs
+│   │   └── social-strategies/     # 2 social prompt configs
+│   └── validation/                # 3 validation rule configs
+├── generators/
+│   ├── email-generator.js         # AI email generation
+│   ├── variant-generator.js       # A/B variant testing
+│   └── social-generator.js        # Platform-specific DMs
+├── validators/
+│   ├── email-validator.js         # Email quality scoring
+│   └── social-validator.js        # Platform compliance
+├── integrations/
+│   ├── database.js                # Supabase CRUD operations
+│   ├── notion.js                  # Notion sync
+│   └── smtp-sender.js             # Gmail sending with rate limits
 ├── shared/
-│   ├── prompt-loader.js              ✅ COMPLETE
-│   └── personalization-builder.js    ✅ COMPLETE
-└── tests/
-    ├── test-prompt-loading.js        ✅ PASSING
-    └── test-phase1-integration.js    ✅ PASSING
+│   ├── prompt-loader.js           # Load & validate JSON prompts
+│   └── personalization-builder.js # Extract 32+ context fields
+├── database/
+│   ├── schemas/
+│   │   └── composed_emails.json   # Database schema
+│   └── migrations/                # SQL migration scripts
+├── tests/                         # 15 test files
+├── scripts/                       # Utility scripts
+└── docs/                          # Additional documentation
 ```
 
 ---
 
-## Phase 1 Achievements
+## Usage Examples
 
-| Component | Status | Files | Tests |
-|-----------|--------|-------|-------|
-| Folder Structure | ✅ | 15+ dirs | N/A |
-| Email Prompts | ✅ | 5 files | 5/5 ✅ |
-| Social Prompts | ✅ | 1 file | 1/1 ✅ |
-| Validation Rules | ✅ | 3 files | 3/3 ✅ |
-| Prompt Loader | ✅ | 1 module | 5/5 ✅ |
-| Personalization | ✅ | 1 module | 7/7 ✅ |
-| Integration Tests | ✅ | 2 files | 100% ✅ |
-| **TOTAL** | **✅ COMPLETE** | **26 files** | **100%** |
+### Generate Email with Variants
+```javascript
+import { generateCompleteEmail } from './generators/email-generator.js';
+
+const result = await generateCompleteEmail({
+  url: 'https://example.com',
+  strategy: 'compliment-sandwich',
+  generateVariants: true
+});
+
+console.log(result.email.subject);           // Main subject
+console.log(result.variants.subjects);        // 3 alternatives
+console.log(result.variants.aiRecommendation); // Best combo
+console.log(result.validation.score);         // 0-100 quality score
+console.log(result.cost);                     // ~$0.0010
+```
+
+### Generate Social DM
+```javascript
+import { generateSocialDM } from './generators/social-generator.js';
+
+const dm = await generateSocialDM({
+  url: 'https://example.com',
+  platform: 'instagram',
+  strategy: 'value-first'
+});
+
+console.log(dm.message);              // Platform-optimized message
+console.log(dm.validation.score);     // Quality score
+console.log(dm.characterCount);       // 283/1000 chars
+```
+
+### Validate Email Quality
+```javascript
+import { validateEmail } from './validators/email-validator.js';
+
+const validation = validateEmail({
+  subject: 'Quick question about your website',
+  body: 'Hi [Name], I noticed your site...'
+});
+
+console.log(validation.score);        // 85
+console.log(validation.rating);       // "good"
+console.log(validation.issues);       // ["Placeholder detected: [Name]"]
+```
 
 ---
 
-## Next Steps: Phase 2
+## Testing
 
-**Phase 2: Generators** (4 days estimated)
-
-We'll build:
-1. Email generator (using prompt configs)
-2. Social DM generator (platform-specific)
-3. Variant generator (A/B testing)
-4. Subject line generator
-
-All will use the config system we just built!
-
-**Start Phase 2?**
+### Run Test Suite
 ```bash
-# Ready when you are!
-# Just say "let's do Phase 2" 🚀
+# All integration tests
+node tests/test-phase1-integration.js   # Config system
+node tests/test-phase2-integration.js   # Generators & validators
+node tests/test-phase3-integration.js   # Database & integrations
+node tests/test-api-endpoints.js        # API server
+
+# Individual module tests
+node tests/test-prompt-loading.js       # Prompt loader
+node tests/test-batch-generation.js     # Batch processing
+node tests/test-notion-sync.js          # Notion integration
+```
+
+### Test Coverage
+- **72 total tests**
+- **66/72 passing (92%)**
+- Integration, unit, and end-to-end tests
+
+---
+
+## Configuration
+
+### Updating Prompts
+
+Edit JSON files in `config/prompts/email-strategies/`:
+
+```json
+{
+  "version": "1.0",
+  "name": "my-custom-strategy",
+  "description": "Custom approach",
+  "model": "claude-haiku-3-5",
+  "temperature": 0.7,
+  "systemPrompt": "You are an expert cold email writer...",
+  "userPromptTemplate": "Write an email to {{company_name}}...",
+  "variables": [
+    "company_name",
+    "top_issue",
+    "industry"
+  ]
+}
+```
+
+**No code changes needed** - prompts reload dynamically!
+
+### Adding Validation Rules
+
+Edit `config/validation/email-quality.json`:
+
+```json
+{
+  "spamPhrases": [
+    "amazing opportunity",
+    "limited time offer"
+  ],
+  "optimalSubjectLength": { "min": 50, "max": 70 },
+  "maxBodyWordCount": 200
+}
 ```
 
 ---
 
-## Old System Status
+## Notion Setup
 
-✅ **email-composer/** still running on port 3001
-✅ No changes made to production code
-✅ Zero downtime migration in progress
-✅ Phase 1 built alongside old system
+See [docs/NOTION-SETUP.md](docs/NOTION-SETUP.md) for complete setup guide.
+
+**Quick setup:**
+```bash
+# Auto-create all properties
+node integrations/notion-schema-setup.js --live
+
+# Test connection
+node tests/test-notion-sync.js
+```
 
 ---
 
-**Last Updated**: Just now
-**Phase 1 Progress**: ✅ 100% COMPLETE
-**Next Phase**: Phase 2 - Generators
+## Performance
 
-**🎉 WE'RE CRUSHING IT! 🎉**
+### Generation Costs
+- Basic email: **$0.0004** (10x cheaper than target)
+- With variants: **$0.0010**
+- Social DM: **$0.0002**
+
+### Rate Limits
+- **Gmail**: 500/day, 100/hour (auto-enforced)
+- **Claude API**: Unlimited (within budget)
+
+### Speed
+- Basic email: ~5 seconds
+- With variants: ~15 seconds
+- Social DM: ~3 seconds
+
+---
+
+## Integration with MaxantAgency
+
+The Outreach Engine integrates with:
+
+1. **Analysis Engine** (port 3001) - Provides lead data with website scores
+2. **Command Center UI** (port 3000) - Displays emails, triggers generation
+3. **Pipeline Orchestrator** (port 3020) - Schedules batch campaigns
+4. **Supabase** - Shared database for all engines
+
+### Data Flow
+```
+Analysis Engine → leads table → Outreach Engine → composed_emails → Notion → Review → Gmail
+```
+
+---
+
+## Troubleshooting
+
+### "No leads found"
+- Check Analysis Engine has analyzed websites
+- Verify leads have `website_grade` and `status='analyzed'`
+
+### "Validation failed: placeholder detected"
+- Lead is missing required fields (company_name, contact_email)
+- Check lead data in Supabase
+
+### "SMTP connection failed"
+- Verify `GMAIL_USER` and `GMAIL_APP_PASSWORD` in `.env`
+- Enable 2FA and create App Password in Google Account
+
+### "Notion sync failed"
+- Run `node scripts/check-notion-columns.js` to verify properties
+- Check integration has access to database
+
+### Utility Scripts
+
+Located in `scripts/` directory:
+- `check-leads.js` - View leads in database
+- `check-notion-columns.js` - Verify Notion properties
+- `check-status-constraint.js` - Check database constraints
+- `check-table-usage.js` - Show table statistics
+- `show-all-leads.js` - Display all leads with details
+
+---
+
+## Documentation
+
+- [API.md](API.md) - Complete API reference with examples
+- [docs/NOTION-SETUP.md](docs/NOTION-SETUP.md) - Notion integration guide
+- [docs/INTEGRATION-GUIDE.md](docs/INTEGRATION-GUIDE.md) - Command Center integration
+- [docs/SUPABASE-UI-GUIDE.md](docs/SUPABASE-UI-GUIDE.md) - Database UI access
+- [docs/AB-TESTING-GUIDE.md](docs/AB-TESTING-GUIDE.md) - A/B variant testing
+
+---
+
+## Development
+
+### Adding a New Email Strategy
+
+1. Create `config/prompts/email-strategies/my-strategy.json`
+2. Test with `POST /api/compose` using `"strategy": "my-strategy"`
+3. No code changes required!
+
+### Adding a New Validation Rule
+
+1. Edit `config/validation/email-quality.json`
+2. Add phrase to `spamPhrases` array
+3. Changes take effect immediately
+
+### Running in Development
+
+```bash
+# Start with auto-reload (if using nodemon)
+npm run dev
+
+# Or standard start
+node server.js
+```
+
+---
+
+## Production Deployment
+
+See root [DEPLOYMENT.md](../DEPLOYMENT.md) for VPS deployment with PM2.
+
+**Quick start:**
+```bash
+pm2 start server.js --name outreach-engine
+pm2 save
+```
+
+---
+
+## License
+
+Proprietary - MaxantAgency
+
+---
+
+**Server**: http://localhost:3002
+**Health**: http://localhost:3002/health
+**API Docs**: [API.md](./API.md)

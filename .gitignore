@@ -51,7 +51,23 @@ email-composer/emails/sent/
 
 # Credentials and OAuth tokens
 .credentials.json
-**/. credentials.json
+**/.credentials.json
+credentials.json
+**/credentials.json
+
+# API Keys and Secrets (extra protection)
+*.key
+*.pem
+*.p12
+*.pfx
+**/secrets/
+secrets.json
+**/secrets.json
+
+# Database credentials and SQL dumps
+*.sql
+*.sqlite
+*.db
 
 # Screenshots and images
 screenshots/
@@ -76,6 +92,10 @@ analysis-results/
 *-backup.ts
 *-test.json
 prospects-*.json
+
+# Local backup directories (prospect & lead data)
+local-backups/
+**/local-backups/
 
 # Empty/junk files
 nul

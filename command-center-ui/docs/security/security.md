@@ -29,7 +29,7 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 ```typescript
 // ❌ WRONG: Never hardcode secrets
 const apiKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
-const apiUrl = "https://njejsagzeebvsupzffpd.supabase.co";
+const apiUrl = "https://yaqcfufvivxbapanlkxz.supabase.co";
 ```
 
 ---

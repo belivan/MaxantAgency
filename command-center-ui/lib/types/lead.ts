@@ -104,8 +104,8 @@ export interface Lead {
   social_issues?: Issue[];
 
   // Screenshots
-  screenshot_url?: string;
-  mobile_screenshot_url?: string;
+  screenshot_desktop_url?: string;
+  screenshot_mobile_url?: string;
 
   // Business Intelligence (extracted from website)
   business_intelligence?: {

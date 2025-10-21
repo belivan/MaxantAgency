@@ -40,7 +40,7 @@ export async function generateEmail(lead, options = {}) {
 
   try {
     // Load prompt configuration
-    const prompt = loadPrompt('strategies', strategy);
+    const prompt = loadPrompt('email-strategies', strategy);
     if (!prompt) {
       throw new Error(`Strategy '${strategy}' not found`);
     }
@@ -245,7 +245,7 @@ async function generateSubjectLine(lead, options = {}) {
   console.log(`   Generating subject line...`);
 
   try {
-    const prompt = loadPrompt('strategies', 'subject-line-generator');
+    const prompt = loadPrompt('email-strategies', 'subject-line-generator');
     const context = buildPersonalizationContext(lead);
     context.variant_count = 1; // Single subject for now
 

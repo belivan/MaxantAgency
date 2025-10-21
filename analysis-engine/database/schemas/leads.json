@@ -148,11 +148,6 @@
       "description": "Count of high-priority desktop design issues"
     },
     {
-      "name": "visual_analysis_model",
-      "type": "text",
-      "description": "AI model used for desktop visual analysis (gpt-4o, gpt-5, grok-4, etc.) - legacy field"
-    },
-    {
       "name": "seo_analysis_model",
       "type": "text",
       "description": "AI model used for SEO analysis (e.g., grok-4-fast)"
@@ -240,6 +235,11 @@
       "type": "text",
       "description": "Suggested CTA for outreach email"
     },
+    {
+      "name": "outreach_angle",
+      "type": "text",
+      "description": "Sales/outreach angle based on grade (e.g., 'Site is actively hurting business - immediate action needed')"
+    },
 
     {
       "name": "tech_stack",
@@ -264,11 +264,6 @@
       "description": "Does the site use HTTPS?"
     },
 
-    {
-      "name": "screenshot_url",
-      "type": "text",
-      "description": "URL to stored screenshot (S3 or similar) - LEGACY"
-    },
     {
       "name": "screenshot_desktop_url",
       "type": "text",
