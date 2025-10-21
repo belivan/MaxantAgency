@@ -103,9 +103,15 @@ async function runTests() {
 
     testProjectId = newProject.id;
 
+    // Deep compare objects (key order doesn't matter)
+    const savedCorrectly =
+      newProject.prospecting_model_selections?.queryUnderstanding === testModelSelections.queryUnderstanding &&
+      newProject.prospecting_model_selections?.websiteExtraction === testModelSelections.websiteExtraction &&
+      newProject.prospecting_model_selections?.relevanceCheck === testModelSelections.relevanceCheck;
+
     logTest(
       'Model selections saved correctly',
-      JSON.stringify(newProject.prospecting_model_selections) === JSON.stringify(testModelSelections),
+      savedCorrectly,
       `Saved: ${JSON.stringify(newProject.prospecting_model_selections)}`
     );
 
