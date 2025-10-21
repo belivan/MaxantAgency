@@ -27,6 +27,9 @@ interface EnhancedProspectConfigFormProps {
   // Project selection
   selectedProjectId?: string | null;
   onProjectChange?: (projectId: string | null) => void;
+  // Saved/initial values from project
+  savedModelSelections?: Record<string, string>;
+  savedPrompts?: ProspectingPrompts;
 }
 
 export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProps) {
@@ -44,7 +47,8 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
           const data = await response.json();
           if (data.success) {
             setDefaultPrompts(data.data);
-            setCustomPrompts(data.data); // Initialize custom prompts with defaults
+            // Use saved prompts if available, otherwise use defaults
+            setCustomPrompts(props.savedPrompts || data.data);
           }
         }
       } catch (error) {
@@ -55,18 +59,19 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
     }
 
     loadDefaultPrompts();
-  }, []);
+  }, [props.savedPrompts]);
 
-  // Initialize selected models with defaults
+  // Initialize selected models with saved values or defaults
   useEffect(() => {
     if (Object.keys(selectedModels).length === 0 && !isLoadingPrompts) {
-      const defaults: ModuleModelSelection = {};
+      const initial: ModuleModelSelection = {};
       PROSPECTING_MODULES.forEach(module => {
-        defaults[module.value] = module.defaultModel;
+        // Use saved selection if available, otherwise use default
+        initial[module.value] = props.savedModelSelections?.[module.value] || module.defaultModel;
       });
-      setSelectedModels(defaults);
+      setSelectedModels(initial);
     }
-  }, [isLoadingPrompts, selectedModels]);
+  }, [isLoadingPrompts, selectedModels, props.savedModelSelections]);
 
   // Notify parent when prompts change (for auto-fork detection)
   useEffect(() => {

@@ -30,9 +30,16 @@ ALTER TABLE leads
 ADD COLUMN IF NOT EXISTS accessibility_issues JSONB DEFAULT '[]'::jsonb;
 
 -- Add check constraint for accessibility score
-ALTER TABLE leads
-ADD CONSTRAINT IF NOT EXISTS chk_accessibility_score_range
-CHECK (accessibility_score IS NULL OR (accessibility_score >= 0 AND accessibility_score <= 100));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'chk_accessibility_score_range'
+  ) THEN
+    ALTER TABLE leads
+    ADD CONSTRAINT chk_accessibility_score_range
+    CHECK (accessibility_score IS NULL OR (accessibility_score >= 0 AND accessibility_score <= 100));
+  END IF;
+END $$;
 
 -- Add comments for documentation
 COMMENT ON COLUMN leads.accessibility_score IS 'Accessibility/WCAG compliance score 0-100';

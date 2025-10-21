@@ -48,6 +48,10 @@ export default function ProspectingPage() {
   // Model selections for auto-fork detection
   const [currentModelSelections, setCurrentModelSelections] = useState<Record<string, string> | null>(null);
 
+  // Saved values from project (to pre-fill form)
+  const [savedModelSelections, setSavedModelSelections] = useState<Record<string, string> | undefined>(undefined);
+  const [savedPrompts, setSavedPrompts] = useState<ProspectingPrompts | undefined>(undefined);
+
   // Read project_id from URL params on mount
   useEffect(() => {
     const projectIdParam = searchParams.get('project_id');
@@ -73,6 +77,8 @@ export default function ProspectingPage() {
         setIsLoadingProject(false);
         setIcpBrief('');
         setIcpValid(false);
+        setSavedModelSelections(undefined);
+        setSavedPrompts(undefined);
         return;
       }
 
@@ -86,16 +92,24 @@ export default function ProspectingPage() {
           fetch(`/api/projects/${selectedProjectId}/prospects`)
         ]);
 
-        // Load project ICP brief if it exists
+        // Load project data if exists
         if (projectResponse.ok) {
           const projectData = await projectResponse.json();
-          const hasIcpBrief = !!(projectData.success && projectData.data?.icp_brief);
+          const project = projectData.data;
 
-          if (hasIcpBrief) {
-            // Pre-fill ICP brief editor with project's saved ICP
-            const formattedBrief = JSON.stringify(projectData.data.icp_brief, null, 2);
+          // Pre-fill ICP brief if it exists
+          if (project?.icp_brief) {
+            const formattedBrief = JSON.stringify(project.icp_brief, null, 2);
             setIcpBrief(formattedBrief);
             setIcpValid(true);
+          }
+
+          // Load saved model selections and prompts (to show what was previously used)
+          if (project?.prospecting_model_selections) {
+            setSavedModelSelections(project.prospecting_model_selections);
+          }
+          if (project?.prospecting_prompts) {
+            setSavedPrompts(project.prospecting_prompts);
           }
         }
 
@@ -415,6 +429,8 @@ export default function ProspectingPage() {
             isLoadingProject={isLoadingProject}
             selectedProjectId={selectedProjectId}
             onProjectChange={setSelectedProjectId}
+            savedModelSelections={savedModelSelections}
+            savedPrompts={savedPrompts}
           />
         </div>
       </div>
