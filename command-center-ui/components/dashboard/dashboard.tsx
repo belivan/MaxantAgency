@@ -1,9 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import ProspectForm, { ProspectFormValues } from '@/components/prospect-form';
-import AnalyzerPanel, { AnalyzerOptions } from '@/components/analyzer-panel';
-import ProspectTable, { ProspectRow } from '@/components/prospect-table';
+import ProspectForm, { ProspectFormValues } from '@/components/prospecting/prospect-form';
+import AnalyzerPanel, { AnalyzerOptions } from '@/components/analysis/analyzer-panel';
+import ProspectTable, { ProspectRow } from '@/components/prospecting/prospect-table';
 
 type ProspectResponse = {
   companies: ProspectRow[];
