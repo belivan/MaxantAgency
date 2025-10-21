@@ -66,6 +66,7 @@ export const prospectGenerationSchema = z.object({
     .min(1, 'Minimum count is 1')
     .max(50, 'Maximum count is 50'),
   model: z.enum(['grok-4-fast', 'gpt-4o', 'gpt-5', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
+  visionModel: z.enum(['gpt-4o', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
   verify: z.boolean().default(true),
   project_id: z.string().uuid().optional()
 });

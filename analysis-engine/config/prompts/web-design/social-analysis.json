@@ -154,13 +154,6 @@
     }
   ],
 
-  "costEstimate": {
-    "model": "gpt-5",
-    "inputTokens": "~1500 (profiles + metadata)",
-    "outputTokens": "~400 (analysis)",
-    "estimatedCost": "$0.009 per analysis"
-  },
-
   "notes": [
     "Social analysis is optional - only run if prospect has social profiles",
     "Many businesses have abandoned social - this is opportunity to offer social management",

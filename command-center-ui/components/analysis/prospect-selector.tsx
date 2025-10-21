@@ -253,6 +253,7 @@ export function ProspectSelector({
             prospects={prospects}
             selectedIds={selectedIds}
             onSelectionChange={onSelectionChange}
+            onDeleteComplete={refresh}
             loading={loading}
           />
 

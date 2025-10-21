@@ -126,6 +126,41 @@ export function loadAllProspectingPrompts() {
 }
 
 /**
+ * Substitute variables in a prompt template
+ * Used when applying custom prompts with variables
+ *
+ * @param {string} template - Template string with {{variable}} placeholders
+ * @param {object} variables - Variables to substitute
+ * @param {array} expectedVars - Optional list of expected variables for validation
+ * @returns {string} Template with variables substituted
+ */
+export function substituteVariables(template, variables = {}, expectedVars = []) {
+  let result = template;
+
+  // Replace all {{variable}} placeholders
+  Object.keys(variables).forEach(key => {
+    const regex = new RegExp(`{{${key}}}`, 'g');
+    result = result.replace(regex, variables[key]);
+  });
+
+  // Warn about missing required variables
+  if (expectedVars.length > 0) {
+    const missingVars = expectedVars.filter(v => !(v in variables));
+    if (missingVars.length > 0) {
+      console.warn(`Warning: Missing variables in substitution: ${missingVars.join(', ')}`);
+    }
+  }
+
+  // Warn about unreplaced variables
+  const unreplacedVars = result.match(/{{(\w+)}}/g);
+  if (unreplacedVars) {
+    console.warn(`Warning: Unreplaced variables in template: ${unreplacedVars.join(', ')}`);
+  }
+
+  return result;
+}
+
+/**
  * Validate a prompt configuration file
  *
  * @param {string} promptPath - Name of prompt file

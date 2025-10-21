@@ -81,7 +81,17 @@
       "name": "design_score",
       "type": "decimal",
       "required": true,
-      "description": "Design analysis score 0-100"
+      "description": "Design analysis score 0-100 (legacy - use design_score_desktop/mobile for new records)"
+    },
+    {
+      "name": "design_score_desktop",
+      "type": "integer",
+      "description": "Desktop design analysis score 0-100"
+    },
+    {
+      "name": "design_score_mobile",
+      "type": "integer",
+      "description": "Mobile design analysis score 0-100"
     },
     {
       "name": "seo_score",
@@ -106,7 +116,36 @@
       "name": "design_issues",
       "type": "jsonb",
       "default": "[]",
-      "description": "Array of design issues found"
+      "description": "Array of design issues found (legacy - use design_issues_desktop/mobile for new records)"
+    },
+    {
+      "name": "design_issues_desktop",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of desktop-specific design issues"
+    },
+    {
+      "name": "design_issues_mobile",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Array of mobile-specific design issues"
+    },
+    {
+      "name": "mobile_critical_issues",
+      "type": "integer",
+      "default": 0,
+      "description": "Count of high-priority mobile design issues"
+    },
+    {
+      "name": "desktop_critical_issues",
+      "type": "integer",
+      "default": 0,
+      "description": "Count of high-priority desktop design issues"
+    },
+    {
+      "name": "visual_analysis_model",
+      "type": "text",
+      "description": "AI model used for visual analysis (gpt-5, grok-4, etc.)"
     },
     {
       "name": "seo_issues",
@@ -388,6 +427,26 @@
       "type": "check",
       "name": "chk_design_score_range",
       "expression": "design_score >= 0 AND design_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_design_score_desktop_range",
+      "expression": "design_score_desktop IS NULL OR (design_score_desktop >= 0 AND design_score_desktop <= 100)"
+    },
+    {
+      "type": "check",
+      "name": "chk_design_score_mobile_range",
+      "expression": "design_score_mobile IS NULL OR (design_score_mobile >= 0 AND design_score_mobile <= 100)"
+    },
+    {
+      "type": "check",
+      "name": "chk_mobile_critical_issues_positive",
+      "expression": "mobile_critical_issues >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_desktop_critical_issues_positive",
+      "expression": "desktop_critical_issues >= 0"
     },
     {
       "type": "check",

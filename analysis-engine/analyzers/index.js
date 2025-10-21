@@ -11,8 +11,14 @@
  *   - Handles errors gracefully (returns default scores on failure)
  */
 
-// Design Analyzer (GPT-4o Vision) - ~$0.015 per call
+// DEPRECATED: Old single-viewport design analyzer (kept for backward compatibility)
 export { analyzeDesign, countQuickWins } from './design-analyzer.js';
+
+// NEW: Desktop Visual Analyzer (GPT-4o Vision) - ~$0.015 per call
+export { analyzeDesktopVisual, countCriticalDesktopIssues } from './desktop-visual-analyzer.js';
+
+// NEW: Mobile Visual Analyzer (GPT-4o Vision) - ~$0.015 per call
+export { analyzeMobileVisual, countCriticalMobileIssues } from './mobile-visual-analyzer.js';
 
 // SEO Analyzer (Grok-4-fast) - ~$0.006 per call
 export { analyzeSEO, countCriticalSEOIssues } from './seo-analyzer.js';
@@ -28,7 +34,9 @@ export { analyzeSocial, hasSocialPresence, countInactivePlatforms } from './soci
  *
  * @param {object} data - Analysis data
  * @param {string} data.url - Website URL
- * @param {Buffer|string} data.screenshot - Screenshot for design analysis
+ * @param {Buffer|string} data.screenshot - Screenshot for legacy design analysis (deprecated)
+ * @param {Buffer|string} data.desktopScreenshot - Desktop screenshot (1920x1080)
+ * @param {Buffer|string} data.mobileScreenshot - Mobile screenshot (375x812)
  * @param {string} data.html - HTML content
  * @param {object} data.context - Shared context (company_name, industry, etc.)
  * @param {object} data.customPrompts - Custom AI prompts (optional)
@@ -39,7 +47,9 @@ export { analyzeSocial, hasSocialPresence, countInactivePlatforms } from './soci
 export async function runAllAnalyses(data) {
   const {
     url,
-    screenshot,
+    screenshot, // Legacy - will be deprecated
+    desktopScreenshot,
+    mobileScreenshot,
     html,
     context = {},
     customPrompts = null,
@@ -47,15 +57,21 @@ export async function runAllAnalyses(data) {
     socialMetadata = null
   } = data;
 
-  // Import analyzers (already imported above, but being explicit)
-  const { analyzeDesign } = await import('./design-analyzer.js');
+  // Import analyzers
+  const { analyzeDesktopVisual } = await import('./desktop-visual-analyzer.js');
+  const { analyzeMobileVisual } = await import('./mobile-visual-analyzer.js');
   const { analyzeSEO } = await import('./seo-analyzer.js');
   const { analyzeContent } = await import('./content-analyzer.js');
   const { analyzeSocial } = await import('./social-analyzer.js');
 
-  // Run all analyses in parallel (pass custom prompts if provided)
-  const [designResults, seoResults, contentResults, socialResults] = await Promise.allSettled([
-    analyzeDesign(url, screenshot, context, customPrompts?.design),
+  // Run all analyses in parallel (NEW: separate desktop and mobile visual analysis)
+  const [desktopVisualResults, mobileVisualResults, seoResults, contentResults, socialResults] = await Promise.allSettled([
+    desktopScreenshot
+      ? analyzeDesktopVisual(url, desktopScreenshot, context, customPrompts?.desktopVisual)
+      : Promise.resolve(getDefaultDesktopVisualResults()),
+    mobileScreenshot
+      ? analyzeMobileVisual(url, mobileScreenshot, context, customPrompts?.mobileVisual)
+      : Promise.resolve(getDefaultMobileVisualResults()),
     analyzeSEO(url, html, context, customPrompts?.seo),
     analyzeContent(url, html, context, customPrompts?.content),
     analyzeSocial(url, socialProfiles, socialMetadata, context, customPrompts?.social)
@@ -63,7 +79,8 @@ export async function runAllAnalyses(data) {
 
   // Extract results (handle failures gracefully)
   return {
-    design: designResults.status === 'fulfilled' ? designResults.value : getDefaultDesignResults(),
+    desktopVisual: desktopVisualResults.status === 'fulfilled' ? desktopVisualResults.value : getDefaultDesktopVisualResults(),
+    mobileVisual: mobileVisualResults.status === 'fulfilled' ? mobileVisualResults.value : getDefaultMobileVisualResults(),
     seo: seoResults.status === 'fulfilled' ? seoResults.value : getDefaultSEOResults(),
     content: contentResults.status === 'fulfilled' ? contentResults.value : getDefaultContentResults(),
     social: socialResults.status === 'fulfilled' ? socialResults.value : getDefaultSocialResults()
@@ -80,6 +97,26 @@ function getDefaultDesignResults() {
     positives: [],
     quickWinCount: 0,
     _meta: { analyzer: 'design', error: 'Analysis failed' }
+  };
+}
+
+function getDefaultDesktopVisualResults() {
+  return {
+    visualScore: 50,
+    issues: [],
+    positives: [],
+    quickWinCount: 0,
+    _meta: { analyzer: 'desktop-visual', error: 'Analysis failed' }
+  };
+}
+
+function getDefaultMobileVisualResults() {
+  return {
+    visualScore: 50,
+    issues: [],
+    positives: [],
+    quickWinCount: 0,
+    _meta: { analyzer: 'mobile-visual', error: 'Analysis failed' }
   };
 }
 
@@ -120,7 +157,13 @@ function getDefaultSocialResults() {
 export function calculateTotalCost(results) {
   let total = 0;
 
+  // Legacy design analyzer
   if (results.design?._meta?.cost) total += results.design._meta.cost;
+
+  // NEW: Desktop and mobile visual analyzers
+  if (results.desktopVisual?._meta?.cost) total += results.desktopVisual._meta.cost;
+  if (results.mobileVisual?._meta?.cost) total += results.mobileVisual._meta.cost;
+
   if (results.seo?._meta?.cost) total += results.seo._meta.cost;
   if (results.content?._meta?.cost) total += results.content._meta.cost;
   if (results.social?._meta?.cost) total += results.social._meta.cost;

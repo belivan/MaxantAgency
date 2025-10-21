@@ -33,11 +33,14 @@ import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
  *
  * @param {object} brief - ICP brief
  * @param {object} options - Pipeline options
- * @param {string} options.model - AI model to use for all AI-powered steps (optional)
+ * @param {string} options.model - AI model to use for text-based AI steps (optional)
+ * @param {string} options.visionModel - AI model to use for vision-based extraction (optional)
+ * @param {object} options.customPrompts - Custom prompts for AI steps (optional)
  * @param {function} onProgress - Progress callback for SSE
  * @returns {Promise<object>} Results summary
  */
 export async function runProspectingPipeline(brief, options = {}, onProgress = null) {
+  const { customPrompts } = options;
   const startTime = Date.now();
   const runId = uuidv4();
 
@@ -119,7 +122,10 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
 
     logStepStart(1, 'Query Understanding');
     const step1Start = Date.now();
-    const query = await understandQuery(brief, options.model);
+    const query = await understandQuery(brief, {
+      modelOverride: options.model,
+      customPrompt: customPrompts?.queryUnderstanding
+    });
     logStepComplete(1, 'Query Understanding', Date.now() - step1Start, { query });
 
     if (onProgress) {
@@ -272,7 +278,11 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
                     const grokData = await extractWebsiteData(
                       company.website,
                       websiteData.screenshot,
-                      company.name
+                      company.name,
+                      {
+                        modelOverride: options.visionModel,
+                        customPrompt: customPrompts?.websiteExtraction
+                      }
                     );
 
                     if (grokData.extractionStatus === 'success') {
@@ -419,7 +429,10 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           try {
             logInfo('Checking ICP relevance', { company: company.name });
 
-            const relevanceResult = await checkRelevance(prospectData, brief, options.model);
+            const relevanceResult = await checkRelevance(prospectData, brief, {
+              modelOverride: options.model,
+              customPrompt: customPrompts?.relevanceCheck
+            });
 
             icpScore = relevanceResult.score;
             isRelevant = relevanceResult.isRelevant;

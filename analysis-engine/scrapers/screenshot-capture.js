@@ -268,6 +268,68 @@ function normalizeUrl(url) {
 }
 
 /**
+ * Capture website in both mobile and desktop viewports
+ *
+ * @param {string} url - Website URL to capture
+ * @param {object} options - Capture options
+ * @returns {Promise<object>} Desktop and mobile screenshot data
+ */
+export async function captureDualViewports(url, options = {}) {
+  const { timeout = 30000 } = options;
+
+  try {
+    console.log(`[Dual Capture] Capturing ${url} in both mobile and desktop viewports...`);
+
+    // Capture desktop (1920x1080)
+    const desktopResult = await captureWebsite(url, {
+      ...options,
+      viewport: { width: 1920, height: 1080 },
+      fullPage: true
+    });
+
+    // Capture mobile (375x812 - iPhone 13/14 size)
+    const mobileResult = await captureWebsite(url, {
+      ...options,
+      viewport: { width: 375, height: 812 },
+      fullPage: true
+    });
+
+    return {
+      success: desktopResult.success && mobileResult.success,
+      url,
+      desktop: {
+        screenshot: desktopResult.screenshot,
+        viewport: { width: 1920, height: 1080 },
+        pageLoadTime: desktopResult.pageLoadTime,
+        screenshotSize: desktopResult.screenshot?.length || 0
+      },
+      mobile: {
+        screenshot: mobileResult.screenshot,
+        viewport: { width: 375, height: 812 },
+        pageLoadTime: mobileResult.pageLoadTime,
+        screenshotSize: mobileResult.screenshot?.length || 0
+      },
+      // Shared data (same for both)
+      html: desktopResult.html,
+      metadata: desktopResult.metadata,
+      techStack: desktopResult.techStack,
+      isMobileFriendly: desktopResult.isMobileFriendly,
+      capturedAt: new Date().toISOString()
+    };
+
+  } catch (error) {
+    console.error('[Dual Capture] Failed:', error.message);
+    return {
+      success: false,
+      url,
+      error: error.message,
+      desktop: { screenshot: null },
+      mobile: { screenshot: null }
+    };
+  }
+}
+
+/**
  * Capture multiple URLs in parallel
  *
  * @param {array} urls - Array of URLs to capture

@@ -98,13 +98,6 @@
     }
   ],
 
-  "costEstimate": {
-    "model": "gpt-5",
-    "inputTokens": "~2000 (screenshot + context)",
-    "outputTokens": "~800 (detailed analysis)",
-    "estimatedCost": "$0.015 per analysis"
-  },
-
   "notes": [
     "This prompt is optimized for web design agency outreach",
     "Focus on issues that create clear value proposition for agency services",

@@ -122,13 +122,6 @@
     }
   ],
 
-  "costEstimate": {
-    "model": "gpt-5",
-    "inputTokens": "~2000 (content + context)",
-    "outputTokens": "~500 (analysis)",
-    "estimatedCost": "$0.012 per analysis"
-  },
-
   "notes": [
     "Content analysis helps find engagement hooks for personalized outreach",
     "Recent blog posts are great conversation starters",

@@ -16,6 +16,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { runProspectingPipeline } from './orchestrator.js';
 import { getProspects, getProspectById, getProspectStats, deleteProspect, deleteProspects } from './database/supabase-client.js';
+import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 import { logInfo, logError } from './shared/logger.js';
 
 dotenv.config();
@@ -43,7 +44,8 @@ app.use((req, res, next) => {
 // Request body:
 //   brief: { industry, city, target, count }
 //   options: {
-//     model: 'gpt-4o' | 'gpt-5' | 'grok-4-fast' | 'claude-3-5-sonnet-20241022' (optional)
+//     model: 'gpt-4o' | 'gpt-5' | 'grok-4-fast' | 'claude-sonnet-4-5' | 'claude-haiku-4-5' (optional) - for text-based AI
+//     visionModel: 'gpt-4o' | 'claude-sonnet-4-5' | 'claude-haiku-4-5' (optional) - for vision-based extraction
 //     projectId: string (optional)
 //     minRating: number (optional)
 //     checkRelevance: boolean (optional, default: true)
@@ -52,7 +54,7 @@ app.use((req, res, next) => {
 // ═══════════════════════════════════════════════════════════════════
 
 app.post('/api/prospect', async (req, res) => {
-  const { brief, options = {} } = req.body;
+  const { brief, options = {}, custom_prompts } = req.body;
 
   // Validate request
   if (!brief) {
@@ -87,8 +89,18 @@ app.post('/api/prospect', async (req, res) => {
       timestamp: new Date().toISOString()
     });
 
-    // Run pipeline
-    const results = await runProspectingPipeline(brief, options, onProgress);
+    // Log if custom prompts are provided
+    if (custom_prompts) {
+      logInfo('Using custom prompts for prospecting', {
+        promptKeys: Object.keys(custom_prompts)
+      });
+    }
+
+    // Run pipeline with custom prompts
+    const results = await runProspectingPipeline(brief, {
+      ...options,
+      customPrompts: custom_prompts
+    }, onProgress);
 
     // Send final results
     onProgress({
@@ -273,6 +285,27 @@ app.get('/api/stats', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// GET /api/prompts/default - Get default prospecting prompts
+// ═══════════════════════════════════════════════════════════════════
+
+app.get('/api/prompts/default', async (req, res) => {
+  try {
+    const prompts = loadAllProspectingPrompts();
+
+    res.json({
+      success: true,
+      data: prompts
+    });
+  } catch (error) {
+    logError('Failed to load default prompts', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to load default prompts'
     });
   }
 });

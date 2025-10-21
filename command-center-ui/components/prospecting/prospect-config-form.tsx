@@ -33,7 +33,7 @@ interface ProspectConfigFormProps {
   isLoadingProject?: boolean; // Whether project data is being loaded
 }
 
-const MODELS = [
+const TEXT_MODELS = [
   {
     value: 'grok-4-fast',
     label: 'Grok 4 Fast',
@@ -61,6 +61,24 @@ const MODELS = [
   }
 ] as const;
 
+const VISION_MODELS = [
+  {
+    value: 'gpt-4o',
+    label: 'GPT-4o Vision',
+    description: 'Best vision model - $5/$15 per 1M tokens'
+  },
+  {
+    value: 'claude-sonnet-4-5',
+    label: 'Claude Sonnet 4.5',
+    description: 'High quality vision - $3/$15 per 1M tokens'
+  },
+  {
+    value: 'claude-haiku-4-5',
+    label: 'Claude Haiku 4.5',
+    description: 'Fast vision - $0.80/$4 per 1M tokens'
+  }
+] as const;
+
 export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = false, prospectCount = 0, isLoadingProject = false }: ProspectConfigFormProps) {
   const {
     register,
@@ -73,12 +91,14 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
     defaultValues: {
       count: 20,
       model: 'grok-4-fast',
+      visionModel: 'gpt-4o',
       verify: true
     }
   });
 
   const count = watch('count');
   const model = watch('model');
+  const visionModel = watch('visionModel');
   const verify = watch('verify');
 
   // Calculate estimated cost
@@ -120,10 +140,10 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
             </p>
           </div>
 
-          {/* Model */}
+          {/* Text Model */}
           <div className="space-y-2">
             <Label htmlFor="model">
-              AI Model <span className="text-destructive">*</span>
+              Text AI Model <span className="text-destructive">*</span>
             </Label>
             <Select
               value={model}
@@ -131,10 +151,10 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
               disabled={disabled || isLoading}
             >
               <SelectTrigger id="model">
-                <SelectValue placeholder="Select model" />
+                <SelectValue placeholder="Select text model" />
               </SelectTrigger>
               <SelectContent>
-                {MODELS.map((m) => (
+                {TEXT_MODELS.map((m) => (
                   <SelectItem key={m.value} value={m.value}>
                     <div className="flex flex-col items-start">
                       <span className="font-medium">{m.label}</span>
@@ -149,6 +169,43 @@ export function ProspectConfigForm({ onSubmit, isLoading, disabled, locked = fal
             {errors.model && (
               <p className="text-sm text-destructive">{errors.model.message}</p>
             )}
+            <p className="text-xs text-muted-foreground">
+              For query understanding & relevance check
+            </p>
+          </div>
+
+          {/* Vision Model */}
+          <div className="space-y-2">
+            <Label htmlFor="visionModel">
+              Vision AI Model <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={visionModel}
+              onValueChange={(value) => setValue('visionModel', value as any)}
+              disabled={disabled || isLoading}
+            >
+              <SelectTrigger id="visionModel">
+                <SelectValue placeholder="Select vision model" />
+              </SelectTrigger>
+              <SelectContent>
+                {VISION_MODELS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">{m.label}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {m.description}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.visionModel && (
+              <p className="text-sm text-destructive">{errors.visionModel.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+              For website screenshot extraction
+            </p>
           </div>
 
           {/* Verify URLs */}

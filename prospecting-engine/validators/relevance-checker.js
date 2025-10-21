@@ -13,15 +13,21 @@ dotenv.config();
  *
  * @param {object} prospect - Prospect data
  * @param {object} brief - ICP brief
- * @param {string} modelOverride - Optional model to use instead of prompt default
+ * @param {object} options - Options object
+ * @param {string} options.modelOverride - Optional model to use instead of prompt default
+ * @param {object} options.customPrompt - Optional custom prompt configuration
  * @returns {Promise<object>} Relevance score and analysis
  */
-export async function checkRelevance(prospect, brief, modelOverride = null) {
+export async function checkRelevance(prospect, brief, options = {}) {
+  // Support legacy signature: checkRelevance(prospect, brief, modelOverride)
+  const opts = typeof options === 'string' ? { modelOverride: options } : options;
+  const { modelOverride, customPrompt } = opts;
+
   try {
     logDebug('Checking ICP relevance with AI', {
       company: prospect.company_name,
       industry: prospect.industry,
-      model: modelOverride || 'default'
+      model: modelOverride || (customPrompt?.model) || 'default'
     });
 
     // Prepare variables for prompt
@@ -42,10 +48,24 @@ export async function checkRelevance(prospect, brief, modelOverride = null) {
       social_count: countSocialProfiles(prospect.social_profiles)
     };
 
-    // Load prompt template
-    const prompt = loadPrompt('07-relevance-check', variables);
+    // Use custom prompt if provided, otherwise load default
+    let prompt;
+    if (customPrompt) {
+      logInfo('Using custom prompt for relevance check');
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      prompt = {
+        name: customPrompt.name,
+        model: customPrompt.model,
+        temperature: customPrompt.temperature,
+        systemPrompt: customPrompt.systemPrompt,
+        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables)
+      };
+    } else {
+      // Load default prompt from file
+      prompt = loadPrompt('07-relevance-check', variables);
+    }
 
-    // Use model override if provided, otherwise use prompt default
+    // Use model override if provided, otherwise use prompt model
     const model = modelOverride || prompt.model;
 
     // Call AI

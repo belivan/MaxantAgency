@@ -1,0 +1,13 @@
+{
+  "brief": {
+    "industry": "coffee shop",
+    "city": "Austin",
+    "count": 1
+  },
+  "options": {
+    "model": "claude-haiku-4-5",
+    "visionModel": "claude-haiku-4-5",
+    "checkRelevance": false,
+    "filterIrrelevant": false
+  }
+}

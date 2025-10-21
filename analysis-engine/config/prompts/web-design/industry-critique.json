@@ -151,13 +151,6 @@
     }
   ],
 
-  "costEstimate": {
-    "model": "gpt-5",
-    "inputTokens": "~1000 (summary of all analyses)",
-    "outputTokens": "~300 (concise critique)",
-    "estimatedCost": "$0.006 per synthesis"
-  },
-
   "notes": [
     "This is the final synthesis step - creates outreach-ready summary",
     "Summary should be directly usable in email intro paragraph",

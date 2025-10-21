@@ -1,0 +1,126 @@
+{
+  "version": "1.0",
+  "name": "desktop-visual-analysis",
+  "description": "Analyzes desktop viewport screenshots for layout, visual hierarchy, and desktop-specific UX issues",
+  "model": "gpt-4o",
+  "temperature": 0.4,
+
+  "systemPrompt": "You are an expert web designer specializing in desktop user experience and conversion optimization. Analyze desktop viewport screenshots (typically 1920x1080 or 1440x900) and identify SPECIFIC, ACTIONABLE issues affecting desktop users.\n\nFocus on DESKTOP-SPECIFIC issues:\n- Visual hierarchy and F-pattern/Z-pattern layout optimization\n- Above-the-fold content effectiveness (what appears before scroll)\n- Call-to-action button placement and visual prominence\n- Navigation menu clarity and structure (horizontal nav patterns)\n- White space utilization and content density\n- Multi-column layouts and grid effectiveness\n- Desktop-specific interactions (hover states, dropdown menus)\n- Wide-screen optimization (unused space, stretched content)\n- Hero section effectiveness and messaging clarity\n- Conversion funnel clarity (primary action path)\n\nBe SPECIFIC with desktop context:\n❌ Bad: 'Improve the navigation'\n✅ Good: 'Horizontal navigation menu lacks visual hierarchy - all 8 menu items have identical weight. Primary CTAs \"Get Quote\" and \"Contact\" blend into secondary links like \"About\" and \"Blog\". Use button styling for CTAs to create clear action path.'\n\n❌ Bad: 'Hero section needs work'\n✅ Good: 'Hero section only uses 40% of viewport width on desktop (1920px), leaving massive empty white space on both sides. Content appears cramped and unimpressive on large monitors. Extend hero to full-width or use background imagery to fill space.'\n\n❌ Bad: 'Add more content'\n✅ Good: 'Above-the-fold on desktop shows only a logo and vague tagline - visitor must scroll to understand what the company does. Critical value proposition and primary CTA are buried below fold, losing 65% of desktop visitors who don't scroll.'\n\nFor each issue, provide:\n1. Specific visual observation (what you see in the screenshot)\n2. Desktop user behavior impact (how this affects visitors on laptop/desktop)\n3. Business consequence (lost conversions, confused visitors, missed opportunities)\n4. Difficulty assessment (quick CSS fix vs major redesign)\n\nPrioritize issues that affect conversion rates and first impressions on desktop devices.",
+
+  "userPromptTemplate": "Analyze this DESKTOP viewport screenshot for {{company_name}} in the {{industry}} industry.\n\nWebsite URL: {{url}}\nViewport: Desktop (assumed 1920x1080 or 1440x900)\nTech Stack: {{tech_stack}}\n\nIdentify 5-8 specific desktop UX and visual hierarchy issues. Focus on:\n\n**CRITICAL DESKTOP ISSUES:**\n- Above-the-fold effectiveness (what shows before scroll on desktop)\n- Primary CTA visibility and prominence\n- Visual hierarchy and eye-flow patterns\n- Navigation clarity for desktop users\n- Wide-screen layout optimization\n- Desktop-specific hover states and interactions\n\n**WHAT TO LOOK FOR:**\n- Is the value proposition clear above-the-fold?\n- Can a visitor identify the primary action within 3 seconds?\n- Does the layout guide eyes to conversion points?\n- Is white space used effectively or wasted?\n- Are desktop users forced to scroll unnecessarily?\n- Do multi-column layouts work or create confusion?\n\nFor each issue, provide:\n- Category: layout|hierarchy|cta|navigation|conversion|whitespace\n- Title: Specific, desktop-focused issue name\n- Description: Detailed observation with desktop context\n- Impact: Business consequence for desktop visitors\n- Difficulty: quick-win|medium|major\n- Priority: high|medium|low\n\nAlso identify 2-3 desktop design strengths to acknowledge.\n\nIMPORTANT: Return valid JSON in this EXACT format:\n{\n  \"visualScore\": 75,\n  \"issues\": [\n    {\n      \"category\": \"layout|hierarchy|cta|navigation|conversion|whitespace\",\n      \"title\": \"string\",\n      \"description\": \"string\",\n      \"impact\": \"string\",\n      \"difficulty\": \"quick-win|medium|major\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"quickWins\": [\"string\", \"string\"],\n  \"strengths\": [\"string\", \"string\"]\n}\n\nDo NOT change field names. The 'quickWins' and 'strengths' fields must be arrays of strings.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "url",
+    "tech_stack"
+  ],
+
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "visualScore": "number (0-100)",
+      "issues": [
+        {
+          "category": "layout|hierarchy|cta|navigation|conversion|whitespace",
+          "title": "string (specific, desktop-focused)",
+          "description": "string (detailed visual observation)",
+          "impact": "string (business consequence for desktop users)",
+          "difficulty": "quick-win|medium|major",
+          "priority": "high|medium|low"
+        }
+      ],
+      "quickWins": ["array of strings - easy desktop fixes"],
+      "strengths": ["array of strings - positive desktop design elements"]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Summit Law Group",
+        "industry": "Legal Services",
+        "url": "summitlawgroup.com",
+        "tech_stack": "WordPress"
+      },
+      "output": {
+        "visualScore": 42,
+        "issues": [
+          {
+            "category": "hierarchy",
+            "title": "No clear visual hierarchy in hero section",
+            "description": "Desktop hero section displays 4 competing elements with equal visual weight: firm name, tagline, background image, and a small CTA button. Eye-tracking patterns show visitors don't know where to look first. The primary message 'Experienced Trial Lawyers' is in 18px font, smaller than the footer text.",
+            "impact": "Desktop visitors spend 8-12 seconds scanning hero without understanding firm's specialty or next action. Losing qualified leads who want quick answers about practice areas. Professional services lose 40% of conversions when value prop isn't clear above-fold.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "cta",
+            "title": "Primary CTA buried in navigation clutter",
+            "description": "\"Free Consultation\" button appears in top-right corner with same styling as secondary links. On desktop viewport, it competes with 7 other navigation items, social icons, phone number, and search bar - all in the same header area. Button has no color contrast or size differentiation.",
+            "impact": "Desktop users seeking consultation must hunt for action button. Industry standard is prominent CTA button 2-3x larger than nav items. Likely losing 30% of ready-to-convert visitors who don't see clear next step.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "whitespace",
+            "title": "Excessive empty space on wide desktop screens",
+            "description": "Content is constrained to 960px container on desktop, leaving 480px of unused white space on each side on 1920px monitors. Hero section, which should command attention, appears as a small rectangle in the center. Background is plain white, making the site look unfinished.",
+            "impact": "On modern desktop monitors (1920px+ is now standard), site appears outdated and unprofessional. Wastes premium above-the-fold space that could showcase expertise, client logos, or trust signals. First impression suggests small/outdated firm.",
+            "difficulty": "medium",
+            "priority": "medium"
+          },
+          {
+            "category": "navigation",
+            "title": "Mega menu dropdown lacks visual organization",
+            "description": "\"Practice Areas\" dropdown on desktop displays 15 legal services in a single unsorted column. No categorization, icons, or visual groupings. Items use inconsistent naming (some are questions, some are service names). Desktop users must read all 15 items to find relevant service.",
+            "impact": "Cognitive overload causes visitors to skip navigation entirely. Desktop users expect organized mega menus with categories (Personal Injury, Corporate Law, etc.). Visitors researching specific legal issues can't quickly find relevant practice area, leading to 25%+ bounce rate from navigation confusion.",
+            "difficulty": "medium",
+            "priority": "high"
+          },
+          {
+            "category": "conversion",
+            "title": "No trust signals above-the-fold on desktop",
+            "description": "Desktop viewport shows no attorney photos, credentials, case results, or client reviews above-the-fold. No visible bar association badges, years of experience, or awards. Desktop users see generic stock photo and vague copy with no credibility indicators.",
+            "impact": "Legal services require high trust before conversion. Desktop users (typically researching from work/home during business hours) need immediate credibility. Without trust signals, qualified leads exit to competitors who display attorney credentials prominently. Losing 35-50% of potential consultations.",
+            "difficulty": "medium",
+            "priority": "high"
+          },
+          {
+            "category": "layout",
+            "title": "Three-column layout creates scanning confusion",
+            "description": "Services section uses 3 equal-width columns with no visual hierarchy. Each column has identical icon, headline size, and text length. Desktop eye-tracking shows visitors scan left-to-right but get stuck because all columns compete equally - no clear starting point or priority.",
+            "impact": "Desktop users can't quickly identify which service is most relevant. Equal-weight layout suggests firm has no specialty or focus area. Visitors seeking specific legal help (divorce, injury, business) must read all content instead of being guided to relevant section. Increases time-to-conversion by 40%.",
+            "difficulty": "quick-win",
+            "priority": "medium"
+          }
+        ],
+        "quickWins": [
+          "Increase hero headline font to 48-56px to establish clear hierarchy",
+          "Make 'Free Consultation' button 2x larger with high-contrast color (blue/gold)",
+          "Add attorney headshots and credentials above-fold in hero or sidebar"
+        ],
+        "strengths": [
+          "Professional color scheme (navy and gold) builds trust and authority",
+          "Desktop navigation is persistent and doesn't collapse on scroll, maintaining access to all pages"
+        ]
+      }
+    }
+  ],
+
+  "costEstimate": {
+    "model": "gpt-4o",
+    "inputTokens": "~2500 (desktop screenshot + context)",
+    "outputTokens": "~900 (detailed desktop analysis)",
+    "estimatedCost": "$0.018 per analysis"
+  },
+
+  "notes": [
+    "This prompt is optimized for desktop viewport analysis (1920x1080, 1440x900, 1366x768)",
+    "Focus on above-the-fold effectiveness - critical for desktop conversion",
+    "Desktop users have different expectations: faster decisions, multi-column layouts, hover interactions",
+    "Wide-screen optimization is often overlooked but affects professional perception",
+    "Desktop CTAs need prominence - users expect clear action paths",
+    "Visual hierarchy issues are more apparent on desktop due to larger viewport"
+  ]
+}

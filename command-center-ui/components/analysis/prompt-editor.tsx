@@ -111,7 +111,6 @@ export function PromptEditor({
 
     return (
       current.model !== defaultVal.model ||
-      current.temperature !== defaultVal.temperature ||
       current.systemPrompt !== defaultVal.systemPrompt ||
       current.userPromptTemplate !== defaultVal.userPromptTemplate
     );
@@ -219,35 +218,10 @@ export function PromptEditor({
                   </Button>
                 </div>
 
-                {/* Quick Info */}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                  <span>Temperature: <strong>{prompt.temperature}</strong></span>
-                  {prompt.costEstimate && (
-                    <span>Cost: <strong>{prompt.costEstimate.estimatedCost}</strong></span>
-                  )}
-                </div>
               </CardHeader>
 
               {isExpanded && (
                 <CardContent className="space-y-4 pt-0">
-                  {/* Temperature */}
-                  <div className="space-y-2">
-                    <Label htmlFor={`${key}-temp`}>
-                      Temperature ({prompt.temperature})
-                    </Label>
-                    <input
-                      id={`${key}-temp`}
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.1"
-                      value={prompt.temperature}
-                      onChange={(e) => updatePrompt(key, 'temperature', parseFloat(e.target.value))}
-                      disabled={locked || !isEditing}
-                      className="w-full"
-                    />
-                  </div>
-
                   {/* System Prompt */}
                   <div className="space-y-2">
                     <Label htmlFor={`${key}-system`}>System Prompt</Label>

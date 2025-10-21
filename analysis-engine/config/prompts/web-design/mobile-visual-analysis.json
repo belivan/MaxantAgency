@@ -1,0 +1,136 @@
+{
+  "version": "1.0",
+  "name": "mobile-visual-analysis",
+  "description": "Analyzes mobile viewport screenshots for touch targets, mobile navigation, and mobile-specific UX issues",
+  "model": "gpt-4o",
+  "temperature": 0.4,
+
+  "systemPrompt": "You are an expert mobile UX designer specializing in mobile-first design and touch interface optimization. Analyze mobile viewport screenshots (typically 375x667 iPhone or 360x800 Android) and identify SPECIFIC, ACTIONABLE issues affecting mobile users.\n\nFocus on MOBILE-SPECIFIC issues:\n- Touch target sizes (minimum 44x44px per Apple, 48x48px per Google)\n- Mobile navigation patterns (hamburger menus, bottom nav, sticky headers)\n- Text readability on small screens (font sizes, line height, contrast)\n- Finger-friendly button placement and spacing\n- Mobile viewport optimization (no horizontal scroll, proper scaling)\n- Mobile-specific interactions (tap vs hover, swipe gestures)\n- Form field usability on mobile keyboards\n- Mobile page speed and above-the-fold content\n- Thumb zone optimization (easy-to-reach areas on phone)\n- Mobile conversion funnel clarity (one-column layouts, clear CTAs)\n\nBe SPECIFIC with mobile context:\n❌ Bad: 'Buttons are too small'\n✅ Good: 'Primary CTA button \"Get Started\" is 32x32px, below the 44x44px minimum for reliable thumb tapping. Users will mis-tap or need to zoom in. On mobile devices where 60%+ of traffic originates, this directly blocks conversions. Increase to 48x48px minimum.'\n\n❌ Bad: 'Text is hard to read'\n✅ Good: 'Body text is 12px on mobile viewport - users must pinch-to-zoom to read paragraphs. Apple recommends 16px minimum for mobile readability. Small text causes 45% of mobile visitors to abandon content-heavy pages. Increase base font to 16px for mobile.'\n\n❌ Bad: 'Navigation is broken'\n✅ Good: 'Hamburger menu icon is 28x28px in top-left corner - requires precise thumb tap. When tapped, menu drawer slides from right side (opposite of icon), creating spatial confusion. 18% of mobile users miss the menu entirely. Increase icon to 44x44px and align drawer direction with icon position.'\n\nFor each issue, provide:\n1. Specific mobile observation (exact measurements when relevant)\n2. Touch/mobile interaction consequence (tapping errors, readability issues)\n3. Mobile user behavior impact (abandonment, frustration, errors)\n4. Mobile-specific fix (touch target sizes, font adjustments, layout changes)\n\nPrioritize issues that affect mobile conversion rates, accessibility on small screens, and touch interactions.",
+
+  "userPromptTemplate": "Analyze this MOBILE viewport screenshot for {{company_name}} in the {{industry}} industry.\n\nWebsite URL: {{url}}\nViewport: Mobile (assumed 375x667 or 360x800)\nTech Stack: {{tech_stack}}\n\nIdentify 5-8 specific mobile UX and touch interaction issues. Focus on:\n\n**CRITICAL MOBILE ISSUES:**\n- Touch target sizes (buttons, links, icons < 44x44px)\n- Text readability (font sizes < 16px, low contrast on small screens)\n- Mobile navigation accessibility (hamburger menu, menu icon size)\n- Thumb zone optimization (important elements in hard-to-reach areas)\n- Mobile viewport fit (horizontal scrolling, content overflow)\n- Form fields and input usability on mobile keyboards\n- Mobile page speed and above-the-fold content\n\n**WHAT TO LOOK FOR:**\n- Can all interactive elements be tapped with a thumb reliably?\n- Is text readable without zooming?\n- Is the primary CTA visible and tappable above-the-fold?\n- Does mobile navigation work intuitively?\n- Are buttons spaced enough to prevent mis-taps?\n- Are forms optimized for mobile keyboards?\n- Does content fit mobile viewport without horizontal scroll?\n\nFor each issue, provide:\n- Category: touch|navigation|readability|forms|viewport|performance\n- Title: Specific, mobile-focused issue name\n- Description: Detailed observation with mobile context and measurements\n- Impact: Mobile user behavior consequence\n- Difficulty: quick-win|medium|major\n- Priority: high|medium|low\n\nAlso identify 2-3 mobile design strengths to acknowledge.\n\nIMPORTANT: Return valid JSON in this EXACT format:\n{\n  \"visualScore\": 75,\n  \"issues\": [\n    {\n      \"category\": \"touch|navigation|readability|forms|viewport|performance\",\n      \"title\": \"string\",\n      \"description\": \"string\",\n      \"impact\": \"string\",\n      \"difficulty\": \"quick-win|medium|major\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"quickWins\": [\"string\", \"string\"],\n  \"strengths\": [\"string\", \"string\"]\n}\n\nDo NOT change field names. The 'quickWins' and 'strengths' fields must be arrays of strings.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "url",
+    "tech_stack"
+  ],
+
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "visualScore": "number (0-100)",
+      "issues": [
+        {
+          "category": "touch|navigation|readability|forms|viewport|performance",
+          "title": "string (specific, mobile-focused)",
+          "description": "string (detailed mobile observation with measurements)",
+          "impact": "string (mobile user behavior consequence)",
+          "difficulty": "quick-win|medium|major",
+          "priority": "high|medium|low"
+        }
+      ],
+      "quickWins": ["array of strings - easy mobile fixes"],
+      "strengths": ["array of strings - positive mobile design elements"]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Bella's Boutique",
+        "industry": "Fashion Retail",
+        "url": "bellasboutique.com",
+        "tech_stack": "Shopify"
+      },
+      "output": {
+        "visualScore": 38,
+        "issues": [
+          {
+            "category": "touch",
+            "title": "Add to Cart button below minimum touch target size",
+            "description": "Primary \"Add to Cart\" button on mobile is 36x36px, below Apple's 44x44px and Google's 48x48px minimum touch target guidelines. Button sits directly above product description text with only 8px spacing. Users attempting to tap will frequently miss or accidentally tap the text below.",
+            "impact": "E-commerce sites lose 20-35% of mobile conversions due to small touch targets. Mobile users (70%+ of fashion retail traffic) will experience tap errors, leading to frustration and cart abandonment. Each mis-tap increases abandonment probability by 15%.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "navigation",
+            "title": "Hamburger menu icon invisible on mobile header",
+            "description": "Mobile navigation uses hamburger icon in top-left, but icon is white-on-white (white icon on white header background). Icon is only visible because of a faint 1px gray border. Measures approximately 30x30px, below minimum touch target size. Located in top-left corner, requiring uncomfortable thumb stretch on phones 5.5\"+ screens.",
+            "impact": "Mobile visitors cannot find navigation menu - critical for accessing product categories, search, and account. Fashion retail depends on category browsing; without accessible navigation, users cannot explore inventory. Estimated 40% of mobile visitors bounce immediately when they can't find the menu.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "readability",
+            "title": "Product description text too small for mobile reading",
+            "description": "Product description text is 11px on mobile viewport with 1.2 line-height. Text appears cramped and requires zooming to read comfortably. On 375px mobile screen, each line contains 60-70 characters, exceeding the 50-60 character optimal reading width. Color is #666 gray on white background, borderline contrast ratio.",
+            "impact": "Mobile users cannot read product details without pinching to zoom, breaking the shopping flow. 53% of mobile users abandon content requiring zoom (Google study). For fashion retail, product details (materials, sizing, care) are critical for purchase decisions. Losing sales due to readability friction.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "touch",
+            "title": "Size selector buttons too close together for thumb tapping",
+            "description": "Size selector buttons (XS, S, M, L, XL) are each 28x28px with only 4px spacing between them. Total interactive area is roughly 30x30px per button. Positioned horizontally in center of screen, requiring precise taps. No visual feedback on tap to confirm selection.",
+            "impact": "Mobile shoppers frequently tap wrong size (selecting L instead of M), leading to order errors and returns. 12-18% of mobile fashion orders result in size-related returns, often from tap errors during selection. Each mis-tap frustrates users and increases cart abandonment risk by 20%.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "forms",
+            "title": "Checkout form fields not optimized for mobile keyboards",
+            "description": "Email input field doesn't trigger email keyboard (with @ symbol). Phone number field triggers full alphabetic keyboard instead of numeric. Input fields are 40px tall, making them difficult to tap accurately. Field labels disappear when typing (placeholder-only pattern), causing users to forget what information goes in each field.",
+            "impact": "Mobile checkout friction is the #1 cause of cart abandonment (average 70% abandonment rate). Wrong keyboard types add 15-30 seconds per field. Disappearing labels cause 25% of users to re-type information after errors. Each friction point reduces completion rate by 10-15%.",
+            "difficulty": "medium",
+            "priority": "high"
+          },
+          {
+            "category": "viewport",
+            "title": "Product images cause horizontal scrolling on mobile",
+            "description": "Product gallery images are fixed-width 420px, exceeding the 375px mobile viewport. Users must scroll horizontally to see full images. Horizontal scrollbar appears at bottom of each image. Zoom controls (+ and - buttons) are positioned outside viewport, inaccessible without horizontal scroll.",
+            "impact": "Horizontal scrolling is universally frustrating on mobile - users expect vertical-only scrolling. Fashion retail depends on product imagery for sales; if users can't easily view images, conversion drops by 40%. Mobile users may assume site is broken and leave before attempting horizontal scroll.",
+            "difficulty": "quick-win",
+            "priority": "high"
+          },
+          {
+            "category": "touch",
+            "title": "Critical actions in hard-to-reach thumb zones",
+            "description": "\"Wishlist\" heart icon and \"Share\" button are positioned in top-right corner of mobile screen - outside easy thumb reach on phones 5\"+ (90% of devices). Bottom 30% of screen (easy thumb zone) contains only footer links. Primary CTA \"Add to Cart\" is centered vertically, requiring two-hand use or thumb stretch.",
+            "impact": "Mobile users operate phones one-handed 75% of the time (Josh Clark research). Actions in top corners require hand shifting or two-hand use, creating friction. 30% of mobile users won't bother reaching for hard-to-access buttons. Moving CTAs to thumb zone increases conversions 20-25%.",
+            "difficulty": "medium",
+            "priority": "medium"
+          }
+        ],
+        "quickWins": [
+          "Increase 'Add to Cart' button to 48x48px minimum with 12px spacing around it",
+          "Change hamburger icon to dark color for visibility and increase to 44x44px",
+          "Increase product description font to 16px with 1.5 line-height",
+          "Set input type='email' and type='tel' on form fields to trigger correct mobile keyboards"
+        ],
+        "strengths": [
+          "Product images are high-quality and showcase clothing details effectively",
+          "Mobile layout uses single-column design, avoiding multi-column confusion"
+        ]
+      }
+    }
+  ],
+
+  "costEstimate": {
+    "model": "gpt-4o",
+    "inputTokens": "~2200 (mobile screenshot + context)",
+    "outputTokens": "~950 (detailed mobile analysis)",
+    "estimatedCost": "$0.019 per analysis"
+  },
+
+  "notes": [
+    "This prompt is optimized for mobile viewport analysis (375x667, 360x800, 414x896)",
+    "Mobile users represent 60-80% of web traffic across most industries",
+    "Touch target sizes are critical - enforce 44x44px minimum (Apple) or 48x48px (Google Material)",
+    "Mobile readability requires 16px minimum font size, 1.5 line-height",
+    "Thumb zone optimization: bottom 1/3 of screen is easiest to reach one-handed",
+    "Mobile conversion optimization differs from desktop - focus on reduction of friction",
+    "Mobile forms are major abandonment points - keyboard optimization is critical"
+  ]
+}

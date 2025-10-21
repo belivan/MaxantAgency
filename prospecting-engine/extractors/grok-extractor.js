@@ -1,118 +1,86 @@
-import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { logInfo, logError, logApiRequest, logApiResponse } from '../shared/logger.js';
+import { callAI, parseJSONResponse } from '../shared/ai-client.js';
+import { logInfo, logError } from '../shared/logger.js';
 import { costTracker } from '../shared/cost-tracker.js';
 
 dotenv.config();
 
-const apiKey = process.env.XAI_API_KEY;
-const GROK_VISION_ENDPOINT = 'https://api.x.ai/v1/chat/completions';
-
 /**
- * Extract business data from website screenshot using Grok Vision AI
+ * Extract business data from website screenshot using Vision AI
  *
  * @param {string} url - Website URL
  * @param {Buffer|string} screenshot - PNG screenshot buffer or base64 string
  * @param {string} companyName - Company name for context
+ * @param {object} options - Options object
+ * @param {string} options.modelOverride - Optional model to use instead of prompt default
+ * @param {object} options.customPrompt - Optional custom prompt configuration
  * @returns {Promise<object>} Extracted data
  */
-export async function extractWebsiteData(url, screenshot, companyName) {
+export async function extractWebsiteData(url, screenshot, companyName, options = {}) {
+  // Support legacy signature: extractWebsiteData(url, screenshot, companyName, visionModel)
+  const opts = typeof options === 'string' ? { modelOverride: options } : options;
+  const { modelOverride, customPrompt } = opts;
+
   const startTime = Date.now();
 
-  if (!apiKey) {
-    throw new Error('XAI_API_KEY not set in environment variables');
-  }
-
-  logInfo('Extracting website data with Grok Vision', {
+  logInfo('Extracting website data with Vision AI', {
     url,
-    company: companyName
+    company: companyName,
+    model: modelOverride || (customPrompt?.model) || 'default'
   });
 
   try {
-    // Load prompt template
-    const prompt = loadPrompt('04-website-extraction', {
+    // Variables for prompt substitution
+    const variables = {
       company_name: companyName
-    });
+    };
 
-    // Convert screenshot to base64 if it's a buffer
-    const screenshotBase64 = Buffer.isBuffer(screenshot)
-      ? screenshot.toString('base64')
-      : screenshot;
+    // Use custom prompt if provided, otherwise load default
+    let prompt;
+    if (customPrompt) {
+      logInfo('Using custom prompt for website extraction');
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      prompt = {
+        name: customPrompt.name,
+        model: customPrompt.model,
+        temperature: customPrompt.temperature,
+        systemPrompt: customPrompt.systemPrompt,
+        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables)
+      };
+    } else {
+      // Load default prompt from file
+      prompt = loadPrompt('04-website-extraction', variables);
+    }
 
-    logApiRequest('Grok Vision API', GROK_VISION_ENDPOINT, {
-      company: companyName,
-      imageSize: screenshotBase64.length
-    });
+    // Use model override if provided, otherwise use prompt model
+    const modelToUse = modelOverride || prompt.model;
 
-    // Call Grok Vision API
-    const response = await fetch(GROK_VISION_ENDPOINT, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: prompt.model, // Use model from prompt config
-        messages: [
-          {
-            role: 'system',
-            content: prompt.systemPrompt
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: prompt.userPrompt
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/png;base64,${screenshotBase64}`
-                }
-              }
-            ]
-          }
-        ],
-        temperature: prompt.temperature,
-        max_tokens: 1000
-      })
+    // Call Vision AI using unified client
+    const result = await callAI({
+      model: modelToUse,
+      systemPrompt: prompt.systemPrompt,
+      userPrompt: prompt.userPrompt,
+      temperature: prompt.temperature,
+      image: screenshot,
+      maxTokens: 1000,
+      jsonMode: true
     });
 
     const duration = Date.now() - startTime;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Grok API error ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    logApiResponse('Grok Vision API', response.status, duration, {
-      company: companyName
-    });
-
     // Track cost
-    if (data.usage) {
-      costTracker.trackGrokAi(data.usage);
+    if (result.usage) {
+      costTracker.trackGrokAi(result.usage);
     }
 
-    // Extract and parse response
-    const content = data.choices?.[0]?.message?.content || '{}';
-
-    // Try to parse JSON from response
+    // Parse JSON response
     let extractedData;
     try {
-      // Grok might wrap JSON in markdown code blocks, so clean it
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) ||
-                       content.match(/```\n([\s\S]*?)\n```/) ||
-                       [null, content];
-
-      extractedData = JSON.parse(jsonMatch[1] || content);
+      extractedData = parseJSONResponse(result.content);
     } catch (e) {
-      logError('Failed to parse Grok response as JSON', e, {
-        content: content.slice(0, 200)
+      logError('Failed to parse Vision AI response as JSON', e, {
+        content: result.content.slice(0, 200)
       });
 
       // Return default structure
@@ -134,10 +102,12 @@ export async function extractWebsiteData(url, screenshot, companyName) {
     logInfo('Website data extracted successfully', {
       url,
       company: companyName,
+      model: modelToUse,
       hasEmail: !!extractedData.contact_email,
       hasPhone: !!extractedData.contact_phone,
       servicesCount: extractedData.services?.length || 0,
-      duration_ms: duration
+      duration_ms: duration,
+      cost: result.cost
     });
 
     return {
@@ -149,9 +119,10 @@ export async function extractWebsiteData(url, screenshot, companyName) {
     };
 
   } catch (error) {
-    logError('Grok vision extraction failed', error, {
+    logError('Vision extraction failed', error, {
       url,
-      company: companyName
+      company: companyName,
+      model: visionModel || 'default'
     });
 
     return {
@@ -179,10 +150,11 @@ export async function extractWebsiteData(url, screenshot, companyName) {
  *
  * @param {Array} items - Array of {url, screenshot, companyName}
  * @param {object} options - Options
+ * @param {string} options.visionModel - Vision model to use
  * @returns {Promise<Array>} Extracted data for each
  */
 export async function extractBatch(items, options = {}) {
-  const { maxConcurrent = 3 } = options;
+  const { maxConcurrent = 3, visionModel = null } = options;
 
   logInfo('Starting batch extraction', { count: items.length });
 
@@ -200,7 +172,7 @@ export async function extractBatch(items, options = {}) {
     });
 
     const batchResults = await Promise.all(
-      batch.map(item => extractWebsiteData(item.url, item.screenshot, item.companyName))
+      batch.map(item => extractWebsiteData(item.url, item.screenshot, item.companyName, visionModel))
     );
 
     results.push(...batchResults);
