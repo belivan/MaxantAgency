@@ -69,8 +69,16 @@ export async function getProject(id: string): Promise<Project> {
 export async function createProject(projectData: {
   name: string;
   description?: string;
+  client_name?: string;
+  status?: 'active' | 'paused' | 'completed' | 'archived';
+  budget?: number;
   budget_limit?: number;
   budget_alert_threshold?: number;
+  icp_brief?: Record<string, any>;
+  prospecting_prompts?: Record<string, any>;
+  analysis_prompts?: Record<string, any>;
+  analysis_config?: Record<string, any>;
+  outreach_config?: Record<string, any>;
 }): Promise<Project> {
   const response = await fetch('/api/projects', {
     method: 'POST',

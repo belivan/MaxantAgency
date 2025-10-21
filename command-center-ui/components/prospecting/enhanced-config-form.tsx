@@ -21,6 +21,7 @@ interface EnhancedProspectConfigFormProps {
   locked?: boolean;
   prospectCount?: number;
   isLoadingProject?: boolean;
+  onPromptsChange?: (defaultPrompts: ProspectingPrompts, currentPrompts: ProspectingPrompts) => void;
 }
 
 export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProps) {
@@ -61,6 +62,13 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
       setSelectedModels(defaults);
     }
   }, [isLoadingPrompts, selectedModels]);
+
+  // Notify parent when prompts change (for auto-fork detection)
+  useEffect(() => {
+    if (props.onPromptsChange && !isLoadingPrompts) {
+      props.onPromptsChange(defaultPrompts, customPrompts);
+    }
+  }, [defaultPrompts, customPrompts, isLoadingPrompts, props]);
 
   // Wrap onSubmit to include model selections and custom prompts
   const handleSubmit = (data: ProspectGenerationFormData) => {

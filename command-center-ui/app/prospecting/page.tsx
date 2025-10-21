@@ -17,8 +17,9 @@ import { ProjectSelector } from '@/components/shared';
 import { parseJSON } from '@/lib/utils/validation';
 import { useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
-import { updateProject } from '@/lib/api';
+import { updateProject, getProject, createProject } from '@/lib/api';
 import type { ProspectGenerationOptions } from '@/lib/types';
+import type { ProspectingPrompts } from '@/lib/types/prospect';
 
 export default function ProspectingPage() {
   const engineStatus = useEngineHealth();
@@ -41,6 +42,10 @@ export default function ProspectingPage() {
 
   // Generation state (minimal - just to track completion)
   const [generatedCount, setGeneratedCount] = useState<number>(0);
+
+  // Prompt state for auto-fork detection
+  const [defaultPrompts, setDefaultPrompts] = useState<ProspectingPrompts | null>(null);
+  const [currentPrompts, setCurrentPrompts] = useState<ProspectingPrompts | null>(null);
 
   // Read project_id from URL params on mount
   useEffect(() => {
@@ -145,6 +150,33 @@ export default function ProspectingPage() {
     loadProjectData();
   }, [selectedProjectId]);
 
+  // Helper: Check if prompts have been modified
+  const hasModifiedPrompts = () => {
+    if (!currentPrompts || !defaultPrompts) return false;
+
+    const keys: Array<keyof ProspectingPrompts> = ['queryUnderstanding', 'websiteExtraction', 'relevanceCheck'];
+
+    return keys.some((key) => {
+      const current = currentPrompts[key];
+      const defaultVal = defaultPrompts[key];
+
+      if (!current || !defaultVal) return false;
+
+      return (
+        current.model !== defaultVal.model ||
+        current.temperature !== defaultVal.temperature ||
+        current.systemPrompt !== defaultVal.systemPrompt ||
+        current.userPromptTemplate !== defaultVal.userPromptTemplate
+      );
+    });
+  };
+
+  // Callback to receive prompt changes from EnhancedProspectConfigForm
+  const handlePromptsChange = (defaults: ProspectingPrompts, current: ProspectingPrompts) => {
+    setDefaultPrompts(defaults);
+    setCurrentPrompts(current);
+  };
+
   const handleGenerate = async (config: ProspectGenerationOptions) => {
     // Validate ICP brief
     const briefResult = parseJSON(icpBrief);
@@ -160,14 +192,48 @@ export default function ProspectingPage() {
     const taskId = startTask('prospecting', `Generate ${config.count} prospects`, config.count);
     addTaskLog(taskId, 'Starting prospect generation...', 'info');
 
+    let effectiveProjectId = selectedProjectId;
+
     try {
+      // AUTO-FORK LOGIC: If prompts modified AND prospects exist, create new project
+      if (selectedProjectId && hasModifiedPrompts() && prospectCount > 0) {
+        try {
+          console.log('[Auto-Fork] Prompts modified + prospects exist → Creating new project');
+          addTaskLog(taskId, 'Prompts modified - creating forked project...', 'info');
+
+          // Fetch original project data
+          const originalProject = await getProject(selectedProjectId);
+
+          // Create new project with modified prompts
+          const newProject = await createProject({
+            name: `${originalProject.name} (v2)`,
+            description: `Forked from ${originalProject.name} with custom prospecting prompts`,
+            icp_brief: originalProject.icp_brief,
+            prospecting_prompts: currentPrompts // Save the modified prompts
+          });
+
+          console.log('[Auto-Fork] Created new project:', newProject.id);
+          addTaskLog(taskId, `Created new project: "${newProject.name}" with custom prompts`, 'success');
+
+          alert(`📋 Auto-Fork: Created new project "${newProject.name}" with custom prompts`);
+
+          // Use the new project for this generation
+          effectiveProjectId = newProject.id;
+          setSelectedProjectId(newProject.id);
+        } catch (error: any) {
+          console.error('[Auto-Fork] Failed to create new project:', error);
+          addTaskLog(taskId, `Warning: Failed to auto-fork project: ${error.message}`, 'warning');
+          // Continue with original project
+        }
+      }
+
       // STEP 1: Save ICP brief to project FIRST (locks it immediately)
-      if (selectedProjectId && !icpBriefLocked) {
+      if (effectiveProjectId && !icpBriefLocked) {
         try {
           addTaskLog(taskId, 'Saving ICP brief to project...', 'info');
           console.log('[ICP Lock] Saving ICP brief before generation starts');
 
-          await updateProject(selectedProjectId, {
+          await updateProject(effectiveProjectId, {
             icp_brief: briefResult.data
           });
 
@@ -445,6 +511,7 @@ export default function ProspectingPage() {
         <div>
           <EnhancedProspectConfigForm
             onSubmit={handleGenerate}
+            onPromptsChange={handlePromptsChange}
             isLoading={isProspecting}
             disabled={!selectedProjectId || !icpValid || isProspectingEngineOffline || isProspecting}
             locked={icpBriefLocked}
