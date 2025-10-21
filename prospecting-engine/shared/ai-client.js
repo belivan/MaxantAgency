@@ -278,6 +278,12 @@ async function callClaude({
  * Get provider from model ID
  */
 function getProvider(modelId) {
+  // Ensure modelId is a string
+  if (typeof modelId !== 'string') {
+    console.error('[AI Client] getProvider received non-string modelId:', typeof modelId, modelId);
+    throw new Error(`Model ID must be a string, got ${typeof modelId}: ${JSON.stringify(modelId)}`);
+  }
+
   if (modelId.includes('grok')) return 'grok';
   if (modelId.includes('gpt')) return 'openai';
   if (modelId.includes('claude')) return 'anthropic';

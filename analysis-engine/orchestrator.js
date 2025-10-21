@@ -13,7 +13,7 @@
  * 9. Return complete analysis with business intelligence
  */
 
-import { captureWebsite } from './scrapers/screenshot-capture.js';
+import { captureWebsite, captureDualViewports } from './scrapers/screenshot-capture.js';
 import { parseHTML, getContentSummary } from './scrapers/html-parser.js';
 import { runAllAnalyses, calculateTotalCost } from './analyzers/index.js';
 import { calculateGrade, extractQuickWins, getTopIssue } from './grading/grader.js';
@@ -61,7 +61,7 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       throw new Error('Failed to crawl website: No homepage data returned');
     }
 
-    // Extract data from homepage (for backward compatibility and design analysis)
+    // Extract data from homepage
     const {
       screenshot,
       html,
@@ -70,6 +70,10 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       isMobileFriendly,
       pageLoadTime
     } = crawlResult.homepage;
+
+    // NEW: Capture both desktop and mobile screenshots for visual analysis
+    progress('screenshots', 'Capturing desktop and mobile screenshots...');
+    const dualScreenshots = await captureDualViewports(crawlResult.homepage.url);
 
     // STEP 2: Extract business intelligence from all crawled pages
     progress('business-intelligence', 'Extracting business intelligence...');
@@ -89,11 +93,13 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
       has_blog: parsedData.content.hasBlog
     };
 
-    // STEP 4: Run all analyzers in parallel
-    progress('analyze', 'Running design, SEO, content, and social analysis...');
+    // STEP 4: Run all analyzers in parallel (NEW: separate desktop and mobile visual analysis)
+    progress('analyze', 'Running desktop, mobile, SEO, content, and social analysis...');
     const analysisResults = await runAllAnalyses({
       url,
-      screenshot,
+      screenshot, // Legacy - for backward compatibility
+      desktopScreenshot: dualScreenshots.desktop.screenshot,
+      mobileScreenshot: dualScreenshots.mobile.screenshot,
       html,
       context: enrichedContext,
       customPrompts, // Pass custom prompts to analyzers
@@ -113,7 +119,11 @@ export async function analyzeWebsite(url, context = {}, options = {}) {
     progress('grade', 'Calculating overall grade...');
 
     const scores = {
-      design: analysisResults.design?.overallDesignScore || 50,
+      // NEW: Average desktop and mobile visual scores for overall grade
+      design: Math.round(
+        ((analysisResults.desktopVisual?.visualScore || 50) +
+         (analysisResults.mobileVisual?.visualScore || 50)) / 2
+      ),
       seo: analysisResults.seo?.seoScore || 50,
       content: analysisResults.content?.contentScore || 50,
       social: analysisResults.social?.socialScore || 50
