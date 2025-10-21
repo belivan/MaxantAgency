@@ -49,6 +49,11 @@
       "description": "Total amount spent on this project"
     },
     {
+      "name": "budget_alert_threshold",
+      "type": "numeric(10,2)",
+      "description": "Budget threshold at which to send alerts (e.g., 80% of budget)"
+    },
+    {
       "name": "start_date",
       "type": "date",
       "description": "Project start date"
@@ -84,6 +89,26 @@
       "name": "outreach_config",
       "type": "jsonb",
       "description": "Configuration for outreach generation (email strategy, tone, etc.)"
+    },
+    {
+      "name": "analysis_prompts",
+      "type": "jsonb",
+      "description": "Custom AI prompts for analysis (design, SEO, content, social). Locked after first analysis to preserve historical accuracy."
+    },
+    {
+      "name": "prospecting_prompts",
+      "type": "jsonb",
+      "description": "AI prompts used for prospecting (query understanding, website extraction, relevance check). Saved on first prospect generation to preserve historical accuracy."
+    },
+    {
+      "name": "prospecting_model_selections",
+      "type": "jsonb",
+      "description": "AI model selections for prospecting modules (queryUnderstanding, websiteExtraction, relevanceCheck). Saved on first prospect generation to preserve historical accuracy."
+    },
+    {
+      "name": "analysis_model_selections",
+      "type": "jsonb",
+      "description": "AI model selections for analysis modules (design, SEO, content, social). Saved on first analysis to preserve historical accuracy."
     }
   ],
   "indexes": [

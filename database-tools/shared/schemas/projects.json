@@ -44,6 +44,11 @@
       "description": "Total amount spent on this project"
     },
     {
+      "name": "budget_alert_threshold",
+      "type": "numeric(10,2)",
+      "description": "Budget threshold at which to send alerts (e.g., 80% of budget)"
+    },
+    {
       "name": "start_date",
       "type": "date",
       "description": "Project start date"
