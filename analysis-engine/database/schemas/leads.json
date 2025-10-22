@@ -405,7 +405,9 @@
     {
       "name": "project_id",
       "type": "uuid",
-      "description": "Associated project ID (if lead converts)"
+      "required": true,
+      "index": true,
+      "description": "Associated project ID - every lead must belong to a project"
     },
 
     {

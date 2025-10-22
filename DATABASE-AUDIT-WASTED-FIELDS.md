@@ -3,20 +3,21 @@
 ## Executive Summary
 
 After auditing both `leads` (89 fields) and `reports` (21 fields) tables:
-- **Leads table**: 12 fields are completely wasted, 8 are redundant/legacy
-- **Reports table**: 3 fields are never used, 2 are questionable
-- **Potential savings**: ~20% reduction in database storage
+- **Leads table**: 6 fields never populated, 8 redundant/legacy, 7 model tracking fields unnecessary
+- **Reports table**: 3 fields never used, 2 are questionable
+- **Recent improvements**: Added Outreach Strategy and Analysis Scope sections to reports, now using previously hidden fields
+- **Actual waste**: ~15% of fields are truly wasted (never populated)
+- **Potential savings**: ~20% reduction in database storage after cleanup
 
 ---
 
 ## 🔴 LEADS TABLE - WASTED FIELDS
 
-### Category 1: NEVER POPULATED (7 fields)
+### Category 1: NEVER POPULATED (6 fields)
 These fields exist in schema but are NEVER set by any code:
 
 | Field | Type | Issue | Recommendation |
 |-------|------|-------|----------------|
-| `grade_label` | text | Set to null everywhere | **DELETE** - Not used |
 | `city` | text | Never extracted/populated | **DELETE** or implement extraction |
 | `state` | text | Never extracted/populated | **DELETE** or implement extraction |
 | `contact_email` | text | Never extracted | **DELETE** or implement extraction |
@@ -24,16 +25,19 @@ These fields exist in schema but are NEVER set by any code:
 | `contact_name` | text | Never extracted | **DELETE** or implement extraction |
 | `page_load_time` | integer | Never measured | **DELETE** or implement measurement |
 
-### Category 2: POPULATED BUT NEVER READ (5 fields)
-These fields are saved but NO code ever reads them:
+### Category 2: POPULATED BUT UNDERUTILIZED (8 fields)
+These fields are saved but rarely/never read:
 
-| Field | Type | Issue | Recommendation |
-|-------|------|-------|----------------|
-| `*_analysis_model` fields (6) | text | Saved but never queried | **DELETE** - Only shown in appendix, redundant |
-| `tech_stack` | text | Detected but only in SEO section | **KEEP** - Now used in reports |
-| `has_blog` | boolean | Set but never used | **DELETE** - Not actionable |
-| `meta_description` | text | Extracted but unused | **KEEP** - Now shown in SEO |
-| `page_title` | text | Extracted but unused | **KEEP** - Now shown in SEO |
+| Field | Type | Current Status | Recommendation |
+|-------|------|----------------|----------------|
+| `*_analysis_model` fields (6) | text | Only in appendix | **DELETE** - Redundant, move to logs |
+| `has_blog` | boolean | Set but never shown | **DELETE** - Not actionable |
+| `grade_label` | text | Generated but not shown | **KEEP** - Now shown in reports |
+| `call_to_action` | text | Generated but was hidden | **KEEP** - Now shown in Outreach Strategy |
+| `outreach_angle` | text | Generated but was hidden | **KEEP** - Now shown in Outreach Strategy |
+| `analysis_summary` | text | Generated but was hidden | **KEEP** - Now shown in reports |
+| `tech_stack` | text | Detected and shown | **KEEP** - Used in reports |
+| `meta_description` | text | Extracted and shown | **KEEP** - Shown in SEO |
 
 ### Category 3: REDUNDANT/LEGACY (8 fields)
 Duplicate or deprecated fields:
@@ -219,13 +223,28 @@ After implementing these changes:
 
 ## SUMMARY
 
-**20 wasted fields in leads table** (22% of total):
-- 7 never populated
-- 5 populated but never read
-- 8 redundant/legacy
+**Actually wasted fields in leads table** (truly unused):
+- **6 fields never populated** (contact info, location)
+- **7 model tracking fields** (redundant, could be logged elsewhere)
+- **8 legacy/duplicate fields** (design_score, website_grade vs grade, etc.)
+- **Total: 21 fields** (~24% of 89 fields)
 
-**5 wasted fields in reports table** (24% of total):
-- 3 never used
-- 2 questionable value
+**Previously hidden but now used** (fixed in report enhancements):
+- `call_to_action` - Now shown in Outreach Strategy section
+- `outreach_angle` - Now shown in Outreach Strategy section
+- `analysis_summary` - Now shown in reports
+- `status` - Now shown as badge in Executive Summary
+- `contact_*` fields - Would be valuable if populated
 
-**Recommended**: Immediate removal of never-used fields would clean up the schema significantly with zero impact on functionality.
+**Reports table waste** (minimal):
+- **3 fields never used** (error_message, last_downloaded_at, updated_at)
+- **2 questionable** (report_type always same, download_count not tracked)
+- **Total: 5 fields** (24% of 21 fields)
+
+**Recommended actions**:
+1. **Immediate**: Delete the 6 never-populated fields (contact/location)
+2. **Quick win**: Remove 7 model tracking fields (move to logs if needed)
+3. **Cleanup**: Consolidate duplicate fields (grade vs website_grade)
+4. **Consider**: Implement contact extraction to use those fields
+
+The recent report enhancements have recovered value from several "wasted" fields by actually displaying them. The real waste is primarily in never-populated fields and redundant tracking.

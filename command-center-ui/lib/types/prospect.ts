@@ -79,8 +79,8 @@ export interface ProspectingPrompts {
 export interface ProspectGenerationOptions {
   count: number;
   city?: string;
-  model: 'grok-4-fast' | 'gpt-4o' | 'gpt-5' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
-  visionModel: 'gpt-4o' | 'gpt-5' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
+  model: 'grok-4-fast' | 'grok-4' | 'gpt-5' | 'gpt-5-mini' | 'gpt-4o' | 'gpt-4o-mini' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
+  visionModel: 'gpt-5' | 'gpt-5-mini' | 'gpt-4o' | 'gpt-4o-mini' | 'claude-sonnet-4-5' | 'claude-haiku-4-5';
   verify: boolean;
   project_id?: string;
 

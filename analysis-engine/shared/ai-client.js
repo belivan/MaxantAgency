@@ -296,28 +296,26 @@ function getProvider(modelId) {
 function calculateCost(modelId, usage) {
   if (!usage) return 0;
 
-  // Pricing per 1M tokens (as of January 2025)
+  // Pricing per 1M tokens (as of October 2024)
   const pricing = {
-    // OpenAI (verified pricing Jan 2025)
+    // OpenAI (verified pricing Oct 2024)
     'gpt-4o': { input: 5, output: 15 },
     'gpt-4o-mini': { input: 0.15, output: 0.60 },
-    'gpt-5-mini': { input: 0.25, output: 2 },  // GPT-5 Mini (real model)
 
     // Grok (xAI)
+    'grok-beta': { input: 5, output: 15 },
     'grok-4': { input: 3, output: 15 },
     'grok-4-fast': { input: 0.20, output: 0.50 },
     'grok-vision-beta': { input: 1, output: 3 },
 
-    // Claude (Anthropic) - Current Claude 4.x models
-    'claude-sonnet-4-5': { input: 3, output: 15 },
-    'claude-sonnet-4-5-20250929': { input: 3, output: 15 },
-    'claude-haiku-4-5': { input: 0.80, output: 4 },
-    'claude-haiku-4-5-20251015': { input: 0.80, output: 4 },
-    'claude-opus-4-1': { input: 15, output: 75 },
-    'claude-opus-4-1-20250805': { input: 15, output: 75 },
-    // Claude 3.x (deprecated but still supported)
+    // Claude (Anthropic) - Current Claude 3.5 models
+    'claude-3-5-sonnet': { input: 3, output: 15 },
     'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
+    'claude-3.5-sonnet': { input: 3, output: 15 }, // Alternative naming
+    'claude-3-5-haiku': { input: 0.80, output: 4 },
     'claude-3-5-haiku-20241022': { input: 0.80, output: 4 },
+    'claude-3.5-haiku': { input: 0.80, output: 4 }, // Alternative naming
+    // Claude 3.x (older models)
     'claude-3-opus-20240229': { input: 15, output: 75 }
   };
 

@@ -99,6 +99,12 @@ export function ProspectSelector({
     // Notify parent if project filter changed
     if (key === 'project_id' && onProjectChange) {
       onProjectChange(normalizedValue || null);
+
+      // IMPORTANT: Clear selections when project changes
+      // This prevents mixing prospects from different projects
+      if (selectedIds.length > 0) {
+        onSelectionChange([]);
+      }
     }
   };
 
@@ -120,37 +126,57 @@ export function ProspectSelector({
 
   return (
     <div className="space-y-4">
-      {/* Filters Card */}
+      {/* Project Filter - PROMINENT at top */}
+      <Card className={!filters.project_id ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20" : "border-primary"}>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Filter className="w-5 h-5" />
+            <span>Select Project (Required)</span>
+          </CardTitle>
+          {!filters.project_id && (
+            <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+              ⚠️ Please select a project. All analyzed leads will belong to this project.
+            </p>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="project" className="text-base font-semibold">
+              Which project should these leads belong to?
+            </Label>
+            <Select
+              value={filters.project_id || ''}
+              onValueChange={(value) => handleFilterChange('project_id', value || undefined)}
+              disabled={loadingProjects}
+            >
+              <SelectTrigger id="project" className="h-12 text-base">
+                <SelectValue placeholder={loadingProjects ? 'Loading projects...' : 'Choose a project...'} />
+              </SelectTrigger>
+              <SelectContent>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id} className="text-base py-3">
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              Only prospects from this project will be shown below
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Additional Filters Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Filter className="w-5 h-5" />
-            <span>Filter Prospects</span>
+            <span>Additional Filters (Optional)</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-5">
-            {/* Project Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="project">Project</Label>
-              <Select
-                value={filters.project_id || 'all'}
-                onValueChange={(value) => handleFilterChange('project_id', value === 'all' ? undefined : value)}
-                disabled={loadingProjects}
-              >
-                <SelectTrigger id="project">
-                  <SelectValue placeholder={loadingProjects ? 'Loading...' : 'All projects'} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All projects</SelectItem>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid gap-4 md:grid-cols-4">
 
             {/* Status Filter */}
             <div className="space-y-2">

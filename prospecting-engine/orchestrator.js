@@ -473,12 +473,30 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           }
         }
 
+        // Track actual models used for this prospect
+        const modelsUsed = {
+          queryUnderstanding: options.modelSelections?.queryUnderstanding ||
+                             customPrompts?.queryUnderstanding?.model ||
+                             options.model ||
+                             'grok-4-fast',
+          websiteExtraction: options.modelSelections?.websiteExtraction ||
+                           customPrompts?.websiteExtraction?.model ||
+                           options.visionModel ||
+                           'gpt-4o',
+          relevanceCheck: options.modelSelections?.relevanceCheck ||
+                         customPrompts?.relevanceCheck?.model ||
+                         options.model ||
+                         'grok-4-fast'
+        };
+
         // Add relevance data to prospect
         const prospect = {
           ...prospectData,
           icp_match_score: icpScore,
           is_relevant: isRelevant,
           icp_brief_snapshot: projectIcpBrief, // Save ICP brief snapshot for historical tracking
+          models_used: modelsUsed, // Track which models were actually used
+          prompts_snapshot: customPrompts || null, // Save prompts used
           status: 'ready_for_analysis',
           run_id: runId,
           source: 'prospecting-engine',

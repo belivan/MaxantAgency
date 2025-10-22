@@ -32,15 +32,16 @@ const moduleOptions = [
 ];
 
 const textModels = [
-  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Fast & Cheap)' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast & Cheap)' },
+  { value: 'gpt-4o', label: 'GPT-4o' },
   { value: 'grok-4-fast', label: 'Grok 4 Fast' },
-  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' }
+  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
+  { value: 'claude-3.5-haiku', label: 'Claude 3.5 Haiku' }
 ];
 
 const visionModels = [
   { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
-  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 (Vision)' },
+  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet (Vision)' },
   { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Cheaper)' }
 ];
 
@@ -48,7 +49,7 @@ export default function AnalyzerPanel({ disabled, loading, selectionSummary, onR
   const [tier, setTier] = useState<'tier1' | 'tier2' | 'tier3'>('tier1');
   const [emailType, setEmailType] = useState<'local' | 'national'>('local');
   const [modules, setModules] = useState<string[]>(['seo']);
-  const [textModel, setTextModel] = useState('gpt-5-mini');
+  const [textModel, setTextModel] = useState('gpt-4o-mini');
   const [visionModel, setVisionModel] = useState('gpt-4o');
   const [campaignId, setCampaignId] = useState('');
   const [projectId, setProjectId] = useState('');

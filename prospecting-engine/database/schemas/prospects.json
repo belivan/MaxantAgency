@@ -163,6 +163,16 @@
       "description": "Time taken to discover and enrich (milliseconds)"
     },
     {
+      "name": "models_used",
+      "type": "jsonb",
+      "description": "AI models actually used for this prospect (queryUnderstanding, websiteExtraction, relevanceCheck)"
+    },
+    {
+      "name": "prompts_snapshot",
+      "type": "jsonb",
+      "description": "Snapshot of AI prompts used when this prospect was discovered"
+    },
+    {
       "name": "created_at",
       "type": "timestamptz",
       "default": "now()",

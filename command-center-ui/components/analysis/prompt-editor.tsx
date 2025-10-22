@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   ChevronDown,
@@ -40,11 +39,14 @@ export interface PromptConfig {
 
 export interface AnalysisPrompts {
   design?: PromptConfig;
+  desktopVisual?: PromptConfig;
+  mobileVisual?: PromptConfig;
   seo?: PromptConfig;
   content?: PromptConfig;
   social?: PromptConfig;
   accessibility?: PromptConfig;
   industry?: PromptConfig;
+  leadScorer?: PromptConfig;
   _meta?: {
     collectedAt: string;
     version: string;
@@ -70,7 +72,17 @@ export function PromptEditor({
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
 
-  const promptKeys: Array<keyof AnalysisPrompts> = ['design', 'seo', 'content', 'social', 'accessibility'];
+  const promptKeys: Array<keyof AnalysisPrompts> = [
+    'design',
+    'desktopVisual',
+    'mobileVisual',
+    'seo',
+    'content',
+    'social',
+    'accessibility',
+    'industry',
+    'leadScorer'
+  ];
 
   const toggleExpand = (key: string) => {
     setExpandedPrompt(expandedPrompt === key ? null : key);
@@ -198,7 +210,6 @@ export function PromptEditor({
       <div className="space-y-3">
         {promptKeys.map((key) => {
           const prompt = prompts[key] as PromptConfig;
-          const defaultPrompt = defaultPrompts[key] as PromptConfig;
 
           if (!prompt) return null;
 

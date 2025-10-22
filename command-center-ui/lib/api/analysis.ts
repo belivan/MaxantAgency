@@ -25,6 +25,7 @@ export async function analyzeProspects(
   // Build the SSE URL with query parameters
   const params = new URLSearchParams({
     prospect_ids: prospectIds.join(','),
+    project_id: options.project_id,  // REQUIRED
     tier: options.tier,
     modules: options.modules?.join(',') || '',
     capture_screenshots: (options.capture_screenshots ?? true).toString()

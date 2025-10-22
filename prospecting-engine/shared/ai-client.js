@@ -313,31 +313,31 @@ function getProvider(modelId) {
 function calculateCost(modelId, usage) {
   if (!usage) return 0;
 
-  // Pricing per 1M tokens (as of January 2025)
+  // Pricing per 1M tokens (as of October 2025)
   const pricing = {
-    // OpenAI
-    'gpt-4o': { input: 5, output: 15 },
-    'gpt-4o-mini': { input: 0.15, output: 0.60 },
+    // OpenAI - GPT-5 series (released August 2025)
     'gpt-5': { input: 1.25, output: 10 },
     'gpt-5-mini': { input: 0.25, output: 2 },
+    'gpt-5-nano': { input: 0.10, output: 0.80 },
+    // OpenAI - GPT-4o series (still available)
+    'gpt-4o': { input: 5, output: 15 },
+    'gpt-4o-mini': { input: 0.15, output: 0.60 },
 
     // Grok (xAI)
+    'grok-beta': { input: 5, output: 15 },
     'grok-4': { input: 3, output: 15 },
     'grok-4-fast': { input: 0.20, output: 0.50 },
     'grok-vision-beta': { input: 1, output: 3 },
 
-    // Claude (Anthropic) - Current Claude 4.x models
+    // Claude (Anthropic) - Claude 4.5 series (Sept-Oct 2025)
     'claude-sonnet-4-5': { input: 3, output: 15 },
     'claude-sonnet-4-5-20250929': { input: 3, output: 15 },
     'claude-haiku-4-5': { input: 0.80, output: 4 },
-    'claude-haiku-4-5-20251015': { input: 0.80, output: 4 },
-    'claude-opus-4-1': { input: 15, output: 75 },
-    'claude-opus-4-1-20250805': { input: 15, output: 75 },
-    // Claude 3.x (deprecated but still supported)
+    'claude-haiku-4-5-20251001': { input: 0.80, output: 4 },
+    // Claude 3.x (older models still available)
     'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
     'claude-3-5-haiku-20241022': { input: 0.80, output: 4 },
-    'claude-3-opus-20240229': { input: 15, output: 75 },
-    'claude-3-haiku-20240307': { input: 0.25, output: 1.25 }
+    'claude-3-opus-20240229': { input: 15, output: 75 }
   };
 
   const modelPricing = pricing[modelId] || { input: 0, output: 0 };

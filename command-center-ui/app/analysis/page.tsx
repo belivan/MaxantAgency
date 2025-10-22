@@ -1,7 +1,8 @@
 'use client';
 
 /**
- * Analysis Page
+ * Analysis Page - SIMPLIFIED VERSION
+ * Removed auto-forking system - just saves to current project
  * Analyze prospects and convert to leads
  */
 
@@ -13,8 +14,8 @@ import { ProspectSelector, AnalysisConfig } from '@/components/analysis';
 import { type AnalysisPrompts } from '@/components/analysis/prompt-editor';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
-import { updateProject, getProject, createProject } from '@/lib/api';
-import type { AnalysisOptionsFormData, SSEMessage, LeadGrade } from '@/lib/types';
+import { updateProject, getProject } from '@/lib/api';
+import type { AnalysisOptionsFormData, SSEMessage } from '@/lib/types';
 
 
 export default function AnalysisPage() {
@@ -38,10 +39,9 @@ export default function AnalysisPage() {
     total: number;
   } | undefined>();
 
-  // Prompt state
+  // Prompt state - SIMPLIFIED: No more tracking saved vs current
   const [defaultPrompts, setDefaultPrompts] = useState<AnalysisPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<AnalysisPrompts | null>(null);
-  const [savedPrompts, setSavedPrompts] = useState<AnalysisPrompts | undefined>(undefined); // Project-saved prompts for comparison
   const [leadsCount, setLeadsCount] = useState(0);
   const [promptsLoading, setPromptsLoading] = useState(true);
 
@@ -99,7 +99,6 @@ export default function AnalysisPage() {
     async function loadProjectData() {
       if (!selectedProjectId) {
         setCurrentPrompts(defaultPrompts);
-        setSavedPrompts(undefined);
         setLeadsCount(0);
         return;
       }
@@ -111,13 +110,11 @@ export default function AnalysisPage() {
         const projectPrompts = (project as any).analysis_prompts as AnalysisPrompts | undefined;
 
         if (projectPrompts) {
-          // Project has saved prompts - use them and save for comparison
+          // Project has saved prompts - use them
           setCurrentPrompts(projectPrompts);
-          setSavedPrompts(projectPrompts);
         } else {
           // No saved prompts - use defaults
           setCurrentPrompts(defaultPrompts);
-          setSavedPrompts(undefined);
         }
 
         const leadsResponse = await fetch(`/api/leads?project_id=${selectedProjectId}`);
@@ -136,95 +133,29 @@ export default function AnalysisPage() {
     }
   }, [selectedProjectId, defaultPrompts]);
 
-  // Helper: Check if prompts have been modified from saved state
-  const hasModifiedPrompts = () => {
-    if (!currentPrompts) return false;
-
-    // If no saved prompts, compare against defaults (first-time setup)
-    const comparisonBase = savedPrompts || defaultPrompts;
-    if (!comparisonBase) return false;
-
-    const keys: Array<keyof AnalysisPrompts> = ['design', 'seo', 'content', 'social', 'accessibility'];
-
-    return keys.some((key) => {
-      const current = currentPrompts[key] as any;
-      const base = comparisonBase[key] as any;
-
-      if (!current || !base) return false;
-
-      return (
-        current.model !== base.model ||
-        current.temperature !== base.temperature ||
-        current.systemPrompt !== base.systemPrompt ||
-        current.userPromptTemplate !== base.userPromptTemplate
-      );
-    });
-  };
-
-  // Fork detection: Check if prompts modified
-  const modifiedPrompts = hasModifiedPrompts();
-
-  console.log('[Fork Detection - Analysis]', {
-    leadsCount,
-    modifiedPrompts,
-    savedPrompts: !!savedPrompts,
-    currentPrompts: !!currentPrompts,
-    defaultPrompts: !!defaultPrompts,
-    shouldShowWarning: leadsCount > 0 && modifiedPrompts,
-    promptsLocked: leadsCount > 0 && !modifiedPrompts
-  });
-
   const handleAnalyze = async (config: AnalysisOptionsFormData) => {
     if (selectedIds.length === 0) {
       alert('Please select at least one prospect to analyze');
       return;
     }
 
+    // Auto-inherit project_id from the prospects being analyzed
+    // The ProspectSelector filters prospects by project, so we use that project
+    if (!selectedProjectId) {
+      alert('⚠️ Project Required\n\nPlease select a project from the "Select Project (Required)" card at the top of the page.\n\nAll analyzed leads will automatically belong to the project you select.');
+      return;
+    }
+
     setIsAnalyzing(true);
     setProgress(undefined);
 
-    let effectiveProjectId = selectedProjectId;
-
-    // AUTO-FORK LOGIC: If prompts modified AND leads exist, create new project
-    if (selectedProjectId && hasModifiedPrompts() && leadsCount > 0) {
+    // SIMPLIFIED: Just save to current project - NO FORKING!
+    if (selectedProjectId && currentPrompts) {
       try {
-        console.log('[Auto-Fork] Prompts modified + leads exist → Creating new project');
-
-        // Fetch original project data
-        const originalProject = await getProject(selectedProjectId);
-
-        // Create new project with modified prompts
-        const newProject = await createProject({
-          name: `${originalProject.name} (v2)`,
-          client_name: originalProject.client_name,
-          description: `Forked from ${originalProject.name} with custom analysis prompts`,
-          status: 'active',
-          budget: originalProject.budget,
-          icp_brief: originalProject.icp_brief,
-          analysis_prompts: currentPrompts || undefined // Save the modified prompts
+        await updateProject(selectedProjectId, {
+          analysis_prompts: currentPrompts
         } as any);
-
-        console.log('[Auto-Fork] Created new project:', newProject.id);
-        alert(`Created new project: "${newProject.name}" with custom prompts`);
-
-        // Use the new project for this analysis
-        effectiveProjectId = newProject.id;
-        setSelectedProjectId(newProject.id);
-      } catch (error: any) {
-        console.error('[Auto-Fork] Failed to create new project:', error);
-        alert(`Failed to create new project: ${error.message}`);
-        setIsAnalyzing(false);
-        return;
-      }
-    }
-
-    // Save analysis prompts to project if one is selected
-    if (effectiveProjectId) {
-      try {
-        await updateProject(effectiveProjectId, {
-          analysis_prompts: currentPrompts || undefined
-        } as any);
-        console.log('✅ Saved analysis prompts to project:', effectiveProjectId);
+        console.log('✅ Saved analysis prompts to project:', selectedProjectId);
       } catch (error: any) {
         console.error('Failed to save analysis prompts:', error);
         // Don't block analysis if save fails
@@ -247,7 +178,7 @@ export default function AnalysisPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prospect_ids: selectedIds,
-          project_id: effectiveProjectId || undefined,
+          project_id: selectedProjectId,  // Required - validated above
           custom_prompts: currentPrompts || undefined
         })
       });
@@ -355,7 +286,7 @@ export default function AnalysisPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Analysis</h1>
           <p className="text-muted-foreground">
-            Intelligent multi-page website analysis • AI discovers & analyzes key pages • Lead scoring & prioritization
+            Complete website analysis using all 6 AI modules • Automatic page discovery • Lead scoring & prioritization
           </p>
         </div>
 
@@ -365,7 +296,7 @@ export default function AnalysisPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Analysis Engine Offline</AlertTitle>
             <AlertDescription>
-              The analysis engine is not responding. Please start the analysis-engine service (port 3000) to analyze prospects.
+              The analysis engine is not responding. Please start the analysis-engine service (port 3001) to analyze prospects.
             </AlertDescription>
           </Alert>
         )}
@@ -393,7 +324,7 @@ export default function AnalysisPage() {
             customPrompts={currentPrompts || undefined}
             defaultPrompts={defaultPrompts || undefined}
             onPromptsChange={setCurrentPrompts}
-            promptsLocked={leadsCount > 0 && !hasModifiedPrompts()}
+            promptsLocked={false}  // SIMPLIFIED: Never lock prompts
             leadsCount={leadsCount}
           />
         </div>

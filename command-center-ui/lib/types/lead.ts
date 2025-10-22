@@ -168,6 +168,7 @@ export interface AnalysisOptions {
   capture_screenshots?: boolean;
   autoEmail?: boolean;
   autoAnalyze?: boolean;
+  project_id: string; // REQUIRED - every lead must belong to a project
 }
 
 export interface AnalysisResponse {

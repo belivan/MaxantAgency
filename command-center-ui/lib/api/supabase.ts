@@ -45,7 +45,7 @@ export async function getLeadsByGrade(grade: string): Promise<Lead[]> {
   const { data, error } = await supabase
     .from('leads')
     .select('*')
-    .eq('grade', grade)
+    .eq('website_grade', grade)
     .order('overall_score', { ascending: false });
 
   if (error) throw error;
@@ -67,7 +67,7 @@ export async function getTopLeads(limit: number = 10): Promise<Lead[]> {
   const { data, error } = await supabase
     .from('leads')
     .select('*')
-    .in('grade', ['A', 'B'])
+    .in('website_grade', ['A', 'B'])
     .not('contact_email', 'is', null)
     .order('overall_score', { ascending: false })
     .limit(limit);

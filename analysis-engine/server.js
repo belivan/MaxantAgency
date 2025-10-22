@@ -81,7 +81,7 @@ app.get('/api/prompts/default', async (req, res) => {
  *   "url": "https://example.com",
  *   "company_name": "Example Company",
  *   "industry": "restaurant",
- *   "project_id": "uuid" (optional)
+ *   "project_id": "uuid" (REQUIRED)
  * }
  */
 app.post('/api/analyze-url', async (req, res) => {
@@ -92,13 +92,17 @@ app.post('/api/analyze-url', async (req, res) => {
       return res.status(400).json({ error: 'URL is required' });
     }
 
+    if (!project_id) {
+      return res.status(400).json({ error: 'project_id is required - every lead must belong to a project' });
+    }
+
     console.log(`[Intelligent Analysis] Starting intelligent analysis for ${url}`);
 
     // Use intelligent multi-page analyzer
     const result = await analyzeWebsiteIntelligent(url, {
       company_name: company_name || 'Unknown Company',
       industry: industry || 'Unknown',
-      project_id: project_id || null
+      project_id: project_id  // Required, validation above ensures it exists
     }, {
       onProgress: (progress) => {
         console.log(`[Intelligent Analysis] ${progress.step}: ${progress.message}`);
@@ -118,7 +122,7 @@ app.post('/api/analyze-url', async (req, res) => {
       url: result.url,
       company_name: result.company_name,
       industry: result.industry,
-      project_id: project_id || null,
+      project_id: project_id,  // Required
       prospect_id: result.prospect_id || null,
 
       // Grading & Scores
@@ -284,13 +288,17 @@ app.post('/api/analyze-url', async (req, res) => {
  * Body:
  * {
  *   "prospect_ids": ["id1", "id2"],
- *   "project_id": "uuid" (optional),
+ *   "project_id": "uuid" (REQUIRED),
  *   "custom_prompts": {...} (optional)
  * }
  */
 app.post('/api/analyze', async (req, res) => {
   try {
     const { prospect_ids, prospects: providedProspects, project_id, custom_prompts } = req.body;
+
+    if (!project_id) {
+      return res.status(400).json({ error: 'project_id is required - every lead must belong to a project' });
+    }
 
     // Accept either prospect_ids OR prospects array directly
     let prospects;
@@ -303,9 +311,10 @@ app.post('/api/analyze', async (req, res) => {
       // Mode 2: Fetch by IDs from database
       console.log(`[Intelligent Analysis] Fetching ${prospect_ids.length} prospects from database...`);
 
+      // IMPORTANT: Fetch prospects and verify they belong to the specified project
       const { data: fetchedProspects, error: fetchError } = await supabase
         .from('prospects')
-        .select('id, company_name, website, industry')
+        .select('id, company_name, website, industry, project_id')
         .in('id', prospect_ids)
         .not('website', 'is', null);
 
@@ -324,8 +333,18 @@ app.post('/api/analyze', async (req, res) => {
         });
       }
 
+      // Validate that all prospects belong to the specified project
+      const invalidProspects = fetchedProspects.filter(p => p.project_id !== project_id);
+      if (invalidProspects.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Cannot analyze prospects from different projects. All prospects must belong to project: ${project_id}`,
+          details: `${invalidProspects.length} prospect(s) belong to different projects`
+        });
+      }
+
       prospects = fetchedProspects;
-      console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze`);
+      console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze (all verified to belong to project ${project_id})`);
     } else {
       return res.status(400).json({
         success: false,
@@ -372,7 +391,7 @@ app.post('/api/analyze', async (req, res) => {
         const result = await analyzeWebsiteIntelligent(prospect.website, {
           company_name: prospect.company_name || 'Unknown Company',
           industry: prospect.industry || 'unknown',
-          project_id: project_id || null
+          project_id: project_id  // Required, validation above ensures it exists
         });
 
         if (result.success) {
@@ -382,7 +401,7 @@ app.post('/api/analyze', async (req, res) => {
             url: result.url,
             company_name: result.company_name,
             industry: result.industry,
-            project_id: project_id || null,
+            project_id: project_id,  // Required
             prospect_id: prospect.id || null,
 
             // Grading & Scores

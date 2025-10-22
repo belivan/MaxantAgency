@@ -65,8 +65,8 @@ export const prospectGenerationSchema = z.object({
     .int('Count must be an integer')
     .min(1, 'Minimum count is 1')
     .max(50, 'Maximum count is 50'),
-  model: z.enum(['grok-4-fast', 'grok-4', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
-  visionModel: z.enum(['gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
+  model: z.enum(['grok-4-fast', 'grok-4', 'gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
+  visionModel: z.enum(['gpt-5', 'gpt-5-mini', 'gpt-4o', 'gpt-4o-mini', 'claude-sonnet-4-5', 'claude-haiku-4-5']),
   verify: z.boolean().default(true),
   project_id: z.string().uuid().optional(),
 
@@ -88,7 +88,18 @@ export const analysisOptionsSchema = z.object({
   modules: z.array(
     z.enum(['desktopVisual', 'mobileVisual', 'seo', 'content', 'social', 'accessibility'])
   ).min(1, 'Select at least one module'),
-  capture_screenshots: z.boolean().default(true),
+  capture_screenshots: z.boolean().optional(),
+
+  // Intelligent Analysis Features (NEW v2.0)
+  multi_page_analysis: z.boolean().optional(),
+  lead_scoring: z.boolean().optional(),
+  page_analysis: z.boolean().optional(),
+  discovery_log: z.boolean().optional(),
+
+  // Discovery Methods
+  use_sitemap: z.boolean().optional(),
+  use_robots: z.boolean().optional(),
+  use_navigation: z.boolean().optional(),
 
   // Multi-page crawling configuration (NEW v2.0)
   max_pages: z.number()
@@ -112,8 +123,8 @@ export const analysisOptionsSchema = z.object({
   // Custom AI prompts (NEW v2.0 - Prompt Editor)
   custom_prompts: z.record(z.any()).optional(),
 
-  autoEmail: z.boolean().default(false),
-  autoAnalyze: z.boolean().default(false)
+  autoEmail: z.boolean().optional(),
+  autoAnalyze: z.boolean().optional()
 });
 
 export type AnalysisOptionsFormData = z.infer<typeof analysisOptionsSchema>;

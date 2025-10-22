@@ -219,20 +219,38 @@ export async function getRawPromptConfig(promptPath) {
  */
 export async function collectAnalysisPrompts() {
   try {
-    const [designPrompt, seoPrompt, contentPrompt, socialPrompt, accessibilityPrompt] = await Promise.all([
+    const [
+      designPrompt,
+      desktopVisualPrompt,
+      mobileVisualPrompt,
+      seoPrompt,
+      contentPrompt,
+      socialPrompt,
+      accessibilityPrompt,
+      industryPrompt,
+      leadScorerPrompt
+    ] = await Promise.all([
       getRawPromptConfig('web-design/design-critique'),
+      getRawPromptConfig('web-design/desktop-visual-analysis'),
+      getRawPromptConfig('web-design/mobile-visual-analysis'),
       getRawPromptConfig('web-design/seo-analysis'),
       getRawPromptConfig('web-design/content-analysis'),
       getRawPromptConfig('web-design/social-analysis'),
-      getRawPromptConfig('web-design/accessibility-analysis')
+      getRawPromptConfig('web-design/accessibility-analysis'),
+      getRawPromptConfig('web-design/industry-critique'),
+      getRawPromptConfig('lead-qualification/lead-priority-scorer')
     ]);
 
     return {
       design: designPrompt,
+      desktopVisual: desktopVisualPrompt,
+      mobileVisual: mobileVisualPrompt,
       seo: seoPrompt,
       content: contentPrompt,
       social: socialPrompt,
       accessibility: accessibilityPrompt,
+      industry: industryPrompt,
+      leadScorer: leadScorerPrompt,
       _meta: {
         collectedAt: new Date().toISOString(),
         version: '1.0'

@@ -63,9 +63,17 @@ export async function understandQuery(brief, options = {}) {
       maxTokens: 100
     });
 
-    // Track cost
+    // Track cost based on actual model used
     if (result.usage) {
-      costTracker.trackGrokAi(result.usage);
+      // Determine provider from model name
+      if (model.includes('gpt')) {
+        costTracker.trackOpenAi(result.usage, model);
+      } else if (model.includes('claude')) {
+        costTracker.trackAnthropic(result.usage, model);
+      } else {
+        // Default to Grok for grok models
+        costTracker.trackGrokAi(result.usage, model);
+      }
     }
 
     // Extract query from response

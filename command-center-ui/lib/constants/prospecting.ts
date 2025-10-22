@@ -5,10 +5,10 @@
 import type { AIModel, ProspectingModule } from '@/components/prospecting/model-selector';
 
 /**
- * Available AI models for text-based prospecting tasks
- * (Query Understanding, Relevance Check)
+ * Available AI models for prospecting tasks
+ * ACTUAL MODELS AS OF JAN 2025
  */
-export const TEXT_MODELS: readonly AIModel[] = [
+export const PROSPECTING_MODELS: readonly AIModel[] = [
   // xAI Grok models
   {
     value: 'grok-4-fast',
@@ -29,18 +29,10 @@ export const TEXT_MODELS: readonly AIModel[] = [
 
   // OpenAI GPT models
   {
-    value: 'gpt-5-mini',
-    label: 'GPT-5 Mini',
-    provider: 'OpenAI',
-    description: 'Latest cheap - $0.25/$2 per 1M tokens',
-    cost: '$',
-    speed: 'Very Fast'
-  },
-  {
     value: 'gpt-4o-mini',
     label: 'GPT-4o Mini',
     provider: 'OpenAI',
-    description: 'Budget vision - $0.15/$0.60 per 1M tokens',
+    description: 'Budget model with vision - $0.15/$0.60 per 1M tokens',
     cost: '$',
     speed: 'Very Fast'
   },
@@ -48,103 +40,30 @@ export const TEXT_MODELS: readonly AIModel[] = [
     value: 'gpt-4o',
     label: 'GPT-4o',
     provider: 'OpenAI',
-    description: 'Balanced - $5/$15 per 1M tokens',
-    cost: '$$',
-    speed: 'Fast'
-  },
-  {
-    value: 'gpt-5',
-    label: 'GPT-5',
-    provider: 'OpenAI',
-    description: 'Latest OpenAI - $1.25/$10 per 1M tokens',
+    description: 'Latest OpenAI with vision - $5/$15 per 1M tokens',
     cost: '$$',
     speed: 'Fast'
   },
 
-  // Anthropic Claude 4.x models
+  // Anthropic Claude 3.5 models
   {
-    value: 'claude-haiku-4-5',
-    label: 'Claude Haiku 4.5',
+    value: 'claude-3.5-haiku',
+    label: 'Claude 3.5 Haiku',
     provider: 'Anthropic',
     description: 'Fast & cheap - $0.80/$4 per 1M tokens',
     cost: '$',
     speed: 'Very Fast'
   },
   {
-    value: 'claude-sonnet-4-5',
-    label: 'Claude Sonnet 4.5',
+    value: 'claude-3.5-sonnet',
+    label: 'Claude 3.5 Sonnet',
     provider: 'Anthropic',
-    description: 'Best coding model - $3/$15 per 1M tokens',
+    description: 'Best for coding - $3/$15 per 1M tokens',
     cost: '$$',
     speed: 'Fast'
   }
 ] as const;
 
-/**
- * Available AI models for vision-based prospecting tasks
- * (Website Extraction from screenshots)
- */
-export const VISION_MODELS: readonly AIModel[] = [
-  // OpenAI GPT models (best vision support)
-  {
-    value: 'gpt-4o-vision',
-    label: 'GPT-4o Vision',
-    provider: 'OpenAI',
-    description: 'Best vision model - $5/$15 per 1M tokens',
-    cost: '$$',
-    speed: 'Fast'
-  },
-  {
-    value: 'gpt-4o-mini-vision',
-    label: 'GPT-4o Mini Vision',
-    provider: 'OpenAI',
-    description: 'Budget vision - $0.15/$0.60 per 1M tokens',
-    cost: '$',
-    speed: 'Very Fast'
-  },
-  {
-    value: 'gpt-5-vision',
-    label: 'GPT-5 Vision',
-    provider: 'OpenAI',
-    description: 'Latest OpenAI multimodal - $1.25/$10 per 1M tokens',
-    cost: '$$',
-    speed: 'Fast'
-  },
-  {
-    value: 'gpt-5-mini-vision',
-    label: 'GPT-5 Mini Vision',
-    provider: 'OpenAI',
-    description: 'Cheap multimodal - $0.25/$2 per 1M tokens',
-    cost: '$',
-    speed: 'Very Fast'
-  },
-
-  // Anthropic Claude 4.x models (vision capable)
-  {
-    value: 'claude-haiku-4-5-vision',
-    label: 'Claude Haiku 4.5 Vision',
-    provider: 'Anthropic',
-    description: 'Fast vision - $0.80/$4 per 1M tokens',
-    cost: '$',
-    speed: 'Very Fast'
-  },
-  {
-    value: 'claude-sonnet-4-5-vision',
-    label: 'Claude Sonnet 4.5 Vision',
-    provider: 'Anthropic',
-    description: 'High quality vision - $3/$15 per 1M tokens',
-    cost: '$$',
-    speed: 'Fast'
-  }
-] as const;
-
-/**
- * Legacy: All models combined (for backward compatibility)
- */
-export const PROSPECTING_MODELS: readonly AIModel[] = [
-  ...TEXT_MODELS,
-  ...VISION_MODELS
-] as const;
 
 /**
  * Prospecting modules that use AI models
@@ -161,7 +80,7 @@ export const PROSPECTING_MODULES: readonly ProspectingModule[] = [
     value: 'websiteExtraction',
     label: 'Website Extraction',
     description: 'Extracts business data from website screenshots and HTML',
-    defaultModel: 'gpt-4o-vision'
+    defaultModel: 'gpt-4o'
   },
   {
     value: 'relevanceCheck',
@@ -187,7 +106,7 @@ export function getDefaultProspectingModels(): Record<string, string> {
  */
 export function getDefaultModels(): { model: string; visionModel: string } {
   return {
-    model: 'grok-4-fast',         // Default text model (cheapest)
-    visionModel: 'gpt-4o-vision'  // Default vision model (highest quality)
+    model: 'grok-4-fast',    // Default text model (cheapest)
+    visionModel: 'gpt-4o'    // Default vision model (highest quality)
   };
 }
