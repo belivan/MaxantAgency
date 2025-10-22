@@ -90,6 +90,11 @@ function formatDefaultValue(value, type) {
     return value;
   }
 
+  // PostgreSQL cast expressions (e.g., '{}'::jsonb) - use as-is
+  if (typeof value === 'string' && value.includes('::')) {
+    return value;
+  }
+
   // Booleans
   if (typeof value === 'boolean') {
     return value ? 'true' : 'false';

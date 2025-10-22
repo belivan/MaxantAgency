@@ -19,6 +19,8 @@ import { generateSocialSection } from './templates/sections/social-section.js';
 import { generateAccessibilitySection } from './templates/sections/accessibility-section.js';
 import { generateBusinessIntelSection } from './templates/sections/business-intel.js';
 import { generateLeadPrioritySection } from './templates/sections/lead-priority.js';
+import { generateOutreachStrategy } from './templates/sections/outreach-strategy.js';
+import { generateAnalysisScope } from './templates/sections/analysis-scope.js';
 import { generateActionPlan } from './templates/sections/action-plan.js';
 import { generateAppendix } from './templates/sections/appendix.js';
 import { generateHTMLReport } from './exporters/html-exporter.js';
@@ -107,8 +109,16 @@ export async function generateReport(analysisResult, options = {}) {
     reportContent += generateBusinessIntelSection(analysisResult);
   }
 
+  if (shouldInclude('outreach-strategy')) {
+    reportContent += generateOutreachStrategy(analysisResult);
+  }
+
   if (shouldInclude('lead-priority')) {
     reportContent += generateLeadPrioritySection(analysisResult);
+  }
+
+  if (shouldInclude('analysis-scope')) {
+    reportContent += generateAnalysisScope(analysisResult);
   }
 
   if (shouldInclude('action-plan')) {
@@ -197,7 +207,9 @@ export function getAvailableSections() {
     'social',
     'accessibility',
     'business-intel',
+    'outreach-strategy',
     'lead-priority',
+    'analysis-scope',
     'action-plan',
     'appendix'
   ];

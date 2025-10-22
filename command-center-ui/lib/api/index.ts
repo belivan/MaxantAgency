@@ -11,6 +11,7 @@ export * from './prospecting';
 export * from './analysis';
 export * from './outreach';
 export * from './supabase';
+export * from './campaigns';
 export * from './projects';
 
 // NOTE: orchestrator NOT exported - it's server-only

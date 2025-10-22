@@ -14,12 +14,24 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join, resolve } from 'path';
+import { existsSync } from 'fs';
 import { runProspectingPipeline } from './orchestrator.js';
 import { getProspects, getProspectById, getProspectStats, deleteProspect, deleteProspects } from './database/supabase-client.js';
 import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 import { logInfo, logError } from './shared/logger.js';
 
-dotenv.config();
+// Load env from root .env (centralized configuration)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const rootEnv = resolve(__dirname, '../.env');
+
+if (existsSync(rootEnv)) {
+  dotenv.config({ path: rootEnv });
+} else {
+  dotenv.config(); // Fallback to local .env if root doesn't exist
+}
 
 const app = express();
 const PORT = process.env.PORT || 3010;

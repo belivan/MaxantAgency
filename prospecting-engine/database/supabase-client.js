@@ -5,17 +5,18 @@ import path from 'path';
 import fs from 'fs';
 import { logError, logInfo } from '../shared/logger.js';
 
-// Load env from this package then fall back to website-audit-tool/.env to reuse credentials
-dotenv.config();
+// Load env from root .env (centralized credentials)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, '../..');
+const rootEnv = path.join(projectRoot, '.env');
 
-try {
-  const __filename = fileURLToPath(import.meta.url);
-  const __dirname = path.dirname(__filename);
-  const auditEnv = path.resolve(__dirname, '../../website-audit-tool/.env');
-  if (fs.existsSync(auditEnv)) {
-    dotenv.config({ path: auditEnv, override: false });
-  }
-} catch {}
+// Use root .env for Supabase credentials (override any existing env vars)
+if (fs.existsSync(rootEnv)) {
+  dotenv.config({ path: rootEnv, override: true });
+} else {
+  dotenv.config();
+}
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;

@@ -9,7 +9,9 @@ export function generateMobileAnalysis(analysisResult) {
   const {
     design_score_mobile,
     design_issues_mobile = [],
-    is_mobile_friendly
+    is_mobile_friendly,
+    screenshot_mobile_url,
+    mobile_critical_issues
   } = analysisResult;
 
   if (!design_score_mobile) {
@@ -17,12 +19,24 @@ export function generateMobileAnalysis(analysisResult) {
   }
 
   let output = `# 2. Mobile Experience Analysis\n`;
-  output += `**Score: ${formatScore(design_score_mobile)}**\n\n`;
+  output += `**Score: ${formatScore(design_score_mobile)}**`;
+
+  // Show critical issue count if available
+  if (mobile_critical_issues > 0) {
+    output += ` | **🚨 ${mobile_critical_issues} Critical Issue${mobile_critical_issues > 1 ? 's' : ''} Found**`;
+  }
+
+  output += `\n\n`;
 
   // Mobile-friendly indicator
   if (is_mobile_friendly !== undefined) {
     const friendlyStatus = is_mobile_friendly ? '✅ Mobile-Friendly' : '❌ Not Mobile-Friendly';
     output += `**Mobile-Friendly Test:** ${friendlyStatus}\n\n`;
+  }
+
+  // Include mobile screenshot if available
+  if (screenshot_mobile_url) {
+    output += `![Mobile Screenshot](${screenshot_mobile_url})\n\n`;
   }
 
   if (design_issues_mobile.length === 0) {

@@ -29,7 +29,7 @@
       "name": "status",
       "type": "text",
       "enum": ["active", "paused", "completed", "archived"],
-      "default": "'active'",
+      "default": "active",
       "description": "Current project status"
     },
     {

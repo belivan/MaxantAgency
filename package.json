@@ -5,6 +5,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "verify-env": "node verify-env-setup.js",
     "dev": "npm run dev:all",
     "dev:all": "concurrently --names \"PROSPECT,ANALYSIS,OUTREACH,PIPELINE,UI\" --prefix-colors \"green,blue,yellow,cyan,magenta\" \"npm run dev:prospecting\" \"npm run dev:analysis\" \"npm run dev:outreach\" \"npm run dev:pipeline\" \"npm run dev:ui\"",
     "dev:prospecting": "cd prospecting-engine && node server.js",

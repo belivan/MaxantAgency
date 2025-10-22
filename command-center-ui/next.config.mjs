@@ -1,3 +1,13 @@
+import { config } from 'dotenv';
+import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+// Load environment variables from root .env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+config({ path: resolve(__dirname, '../.env') });
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,

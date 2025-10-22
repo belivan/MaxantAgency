@@ -270,6 +270,336 @@ npm run db:setup -- --dry-run
 npm run db:setup
 ```
 
+## Backup Management System
+
+MaxantAgency uses a **local-first persistence** pattern to protect data from database failures. All engines save data locally before attempting cloud uploads, ensuring zero data loss.
+
+### Architecture
+
+```
+local-backups/
+├── prospecting-engine/
+│   ├── prospects/        # All prospects (uploaded and pending)
+│   └── failed-uploads/   # Prospects that failed to upload
+├── analysis-engine/
+│   ├── leads/           # All leads (uploaded and pending)
+│   └── failed-uploads/  # Leads that failed to upload
+└── outreach-engine/     # (future)
+    ├── composed_emails/
+    └── failed-uploads/
+```
+
+**Workflow:**
+1. 💾 **Save locally first** (before database upload)
+2. ☁️ Attempt database upload
+3. ✅ Mark as uploaded (if successful)
+4. ⚠️ Move to failed-uploads/ (if failed)
+5. 🔄 Retry later using centralized utilities
+
+### Centralized Management Tools
+
+#### 1. Backup Statistics Dashboard
+
+View backup health across all engines:
+
+```bash
+# View all engines
+npm run backup:stats
+
+# Live updates every 5 seconds
+npm run backup:stats:watch
+
+# JSON output for automation
+npm run backup:stats:json
+
+# Specific engine only
+node database-tools/scripts/backup-stats.js --engine prospecting-engine
+```
+
+**Example Output:**
+```
+╔════════════════════════════════════════════════════╗
+║  BACKUP SYSTEM HEALTH DASHBOARD                   ║
+╚════════════════════════════════════════════════════╝
+
+Prospecting Engine:
+  Total Backups:      18
+  ├─ Uploaded:         0
+  ├─ Pending:          0
+  └─ Failed:          18
+
+  Storage Used:       2.4 MB
+
+Analysis Engine:
+  Total Backups:       2
+  ├─ Uploaded:         1
+  ├─ Pending:          0
+  └─ Failed:           1
+
+  Storage Used:       145 KB
+
+══════════════════════════════════════════════════════
+SYSTEM TOTALS:
+  Total Backups:      20
+  Failed Uploads:     19 ⚠️
+  Storage Used:       2.5 MB
+  Success Rate:       5%
+══════════════════════════════════════════════════════
+```
+
+#### 2. Retry Failed Uploads
+
+Retry all failed uploads across engines:
+
+```bash
+# Retry all engines
+npm run backup:retry
+
+# Retry specific engine
+node database-tools/scripts/retry-failed-uploads.js --engine prospecting-engine
+
+# Preview mode (no changes)
+node database-tools/scripts/retry-failed-uploads.js --dry-run
+
+# Link to specific project (for prospects)
+node database-tools/scripts/retry-failed-uploads.js --project-id <uuid>
+```
+
+**What it does:**
+- Scans all `failed-uploads/` directories
+- Attempts to upload each backup to Supabase
+- Moves successful uploads to main directory
+- Keeps failures in failed-uploads/ with updated error
+
+#### 3. Cleanup Old Backups
+
+Archive uploaded backups older than N days to save disk space:
+
+```bash
+# Delete uploaded backups older than 30 days (default)
+npm run backup:cleanup
+
+# Custom retention (90 days)
+node database-tools/scripts/cleanup-old-backups.js --days 90
+
+# Specific engine only
+node database-tools/scripts/cleanup-old-backups.js --engine analysis-engine
+
+# Preview mode (see what would be deleted)
+node database-tools/scripts/cleanup-old-backups.js --dry-run
+
+# Detailed output
+node database-tools/scripts/cleanup-old-backups.js --verbose
+```
+
+**Safety:**
+- ✅ Only deletes backups marked as `uploaded_to_db: true`
+- ✅ **NEVER** deletes pending uploads
+- ✅ **NEVER** deletes failed uploads
+- ✅ Dry-run mode to preview changes
+
+#### 4. Validate Backups
+
+Check integrity of all backup files:
+
+```bash
+npm run backup:validate
+```
+
+**Validates:**
+- ✅ JSON is valid (can be parsed)
+- ✅ Required fields present (`saved_at`, `data`, `uploaded_to_db`, `upload_status`)
+- ✅ Timestamps are valid dates
+- ✅ Upload status is valid enum (`pending`/`uploaded`/`failed`)
+
+### Using BackupManager in Your Engine
+
+#### Step 1: Create Wrapper
+
+Create `{engine}/utils/local-backup.js`:
+
+```javascript
+import { BackupManager } from '../../database-tools/shared/backup-manager.js';
+
+// Initialize with engine-specific config
+const backup = new BackupManager('prospecting-engine', {
+  subdirectories: ['prospects', 'failed-uploads']
+});
+
+// Export wrapper functions for backward compatibility
+export async function saveLocalBackup(prospectData) {
+  return backup.saveBackup(prospectData, {
+    company_name: prospectData.company_name,
+    industry: prospectData.industry,
+    city: prospectData.city,
+    website: prospectData.website
+  });
+}
+
+export async function markAsUploaded(backupPath, dbId) {
+  return backup.markAsUploaded(backupPath, dbId);
+}
+
+export async function markAsFailed(backupPath, errorMessage) {
+  return backup.markAsFailed(backupPath, errorMessage);
+}
+
+export async function getBackupStats() {
+  return backup.getBackupStats();
+}
+
+export async function getPendingUploads() {
+  return backup.getPendingUploads();
+}
+
+export async function getFailedUploads() {
+  return backup.getFailedUploads();
+}
+
+export async function retryFailedUpload(backupPath, uploadFn) {
+  return backup.retryFailedUpload(backupPath, uploadFn);
+}
+```
+
+#### Step 2: Integrate into Orchestrator
+
+Use the local-first pattern in your orchestrator:
+
+```javascript
+import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
+
+// ALWAYS save locally FIRST
+const backupPath = await saveLocalBackup(prospectData);
+
+try {
+  // Attempt database upload
+  const { data, error } = await supabase
+    .from('prospects')
+    .insert(prospectData)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Mark as successfully uploaded
+  await markAsUploaded(backupPath, data.id);
+
+} catch (dbError) {
+  // Database failed, but we have local backup!
+  await markAsFailed(backupPath, dbError.message);
+
+  // Still count as "saved" because local backup exists
+  console.log('Saved locally (database failed):', backupPath);
+}
+```
+
+### Backup File Format
+
+Each backup is a JSON file with this structure:
+
+```json
+{
+  "saved_at": "2025-10-21T19:26:23.014Z",
+  "company_name": "Example Company",
+  "industry": "Restaurant",
+  "city": "Philadelphia",
+  "website": "https://example.com",
+  "data": {
+    /* Full prospect/lead data object */
+  },
+  "uploaded_to_db": false,
+  "upload_status": "pending",
+  "database_id": null,
+  "uploaded_at": null
+}
+```
+
+**Upload statuses:**
+- `pending` - Not yet uploaded to database
+- `uploaded` - Successfully uploaded (includes `database_id`, `uploaded_at`)
+- `failed` - Upload failed (includes `upload_error`, `failed_at`)
+
+### BackupManager API Reference
+
+**Core Methods:**
+
+```javascript
+// Save backup locally (returns filepath)
+await backup.saveBackup(data, metadata)
+
+// Mark as uploaded (updates file with DB ID)
+await backup.markAsUploaded(backupPath, dbId)
+
+// Mark as failed (moves to failed-uploads/)
+await backup.markAsFailed(backupPath, errorMessage)
+
+// Get statistics
+await backup.getBackupStats()
+// Returns: { total_backups, uploaded, pending_upload, failed_uploads, success_rate }
+
+// Get pending uploads
+await backup.getPendingUploads()
+// Returns: [{ filepath, filename, backup: {...} }]
+
+// Get failed uploads
+await backup.getFailedUploads()
+// Returns: [{ filepath, filename, backup: {...} }]
+
+// Retry failed upload with custom function
+await backup.retryFailedUpload(backupPath, async (data) => {
+  // Your upload logic here
+  const result = await supabase.from('table').insert(data);
+  return result.data;
+})
+
+// Archive old backups (uploaded only)
+await backup.archiveOldBackups(30) // Days
+// Returns: count of deleted backups
+
+// Validate backup integrity
+await backup.validateBackup(backupPath)
+// Returns: { valid: true/false, backup: {...}, error: "..." }
+```
+
+### Configuration Options
+
+```javascript
+new BackupManager(engineName, {
+  subdirectories: ['data', 'failed-uploads'],  // Custom subdirectories
+  projectRoot: '/custom/path',                  // Override project root (for testing)
+  nameField: 'company_name'                     // Field to use for filename generation
+})
+```
+
+### Best Practices
+
+1. **Always save locally first**: Never attempt database upload without local backup
+2. **Handle failures gracefully**: Failed database uploads should not crash the process
+3. **Monitor failed uploads**: Use `npm run backup:stats` regularly
+4. **Retry periodically**: Set up cron job to run `npm run backup:retry` daily
+5. **Archive old data**: Run `npm run backup:cleanup` monthly to save disk space
+6. **Validate after changes**: Run `npm run backup:validate` after manual file edits
+
+### Monitoring & Alerting
+
+**Set up monitoring:**
+```bash
+# Cron job: Daily retry at 2 AM
+0 2 * * * cd /path/to/MaxantAgency && npm run backup:retry >> logs/backup-retry.log 2>&1
+
+# Cron job: Monthly cleanup (keep 90 days)
+0 3 1 * * cd /path/to/MaxantAgency && node database-tools/scripts/cleanup-old-backups.js --days 90 >> logs/backup-cleanup.log 2>&1
+
+# Cron job: Daily stats report
+0 8 * * * cd /path/to/MaxantAgency && npm run backup:stats:json > /tmp/backup-stats.json
+```
+
+**Alert on high failure rates:**
+```bash
+# Check if failure rate > 20%
+npm run backup:stats:json | jq '.system_totals.failed_uploads > 20' && echo "ALERT: High backup failure rate!"
+```
+
 ## Troubleshooting
 
 ### "No schema files found"

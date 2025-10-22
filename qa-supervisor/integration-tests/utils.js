@@ -19,10 +19,10 @@ dotenv.config({ path: path.join(projectRoot, '.env') });
 // Initialize Supabase client (with fallback for when not configured)
 let supabase = null;
 
-if (process.env.SUPABASE_URL && (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)) {
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
   supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+    process.env.SUPABASE_SERVICE_KEY
   );
 }
 

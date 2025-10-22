@@ -22,7 +22,12 @@ export function generateExecutiveSummary(analysisResult) {
     seo_score,
     content_score,
     social_score,
-    accessibility_score
+    accessibility_score,
+    status,
+    contact_name,
+    contact_email,
+    contact_phone,
+    analysis_cost
   } = analysisResult;
 
   const analysisDate = new Date(analyzed_at).toLocaleDateString('en-US', {
@@ -36,9 +41,34 @@ export function generateExecutiveSummary(analysisResult) {
   let output = `# Website Audit Report: ${company_name}\n\n`;
 
   // Header badges
-  output += `**${formatGradeBadge(grade)}** | **Overall Score: ${formatScore(overall_score)}** | **Analyzed:** ${analysisDate}\n\n`;
-  output += `**Industry:** ${industry}${location}  \n`;
-  output += `**Website:** [${website_url}](${website_url})\n\n`;
+  output += `**${formatGradeBadge(grade)}** | **Overall Score: ${formatScore(overall_score)}** | **Analyzed:** ${analysisDate}\n`;
+
+  // Add status badge if available
+  if (status) {
+    const statusEmoji = {
+      'ready_for_outreach': '📬',
+      'email_composed': '✉️',
+      'contacted': '📤',
+      'replied': '💬',
+      'not_interested': '❌'
+    };
+    const statusLabel = status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    output += `**Status:** ${statusEmoji[status] || '📊'} ${statusLabel}\n`;
+  }
+
+  output += `\n**Industry:** ${industry}${location}  \n`;
+  output += `**Website:** [${website_url}](${website_url})\n`;
+
+  // Add contact information if available
+  if (contact_name || contact_email || contact_phone) {
+    output += `**Contact:** `;
+    if (contact_name) output += `${contact_name}`;
+    if (contact_email) output += ` | ${contact_email}`;
+    if (contact_phone) output += ` | ${contact_phone}`;
+    output += '\n';
+  }
+
+  output += '\n';
 
   output += `---\n\n`;
 

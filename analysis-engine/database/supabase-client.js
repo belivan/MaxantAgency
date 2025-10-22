@@ -6,8 +6,13 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 
-dotenv.config();
+// Load environment variables from root .env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: resolve(__dirname, '../../.env') });
 
 // Initialize Supabase client
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -23,9 +28,21 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
  * Save an analyzed lead to the database
  *
  * @param {object} lead - Lead data from analysis
- * @returns {Promise<object>} Saved lead with ID
+ * @param {object} options - Options for saving
+ * @param {boolean} options.generateReport - Whether to auto-generate report (default: from config)
+ * @param {string} options.reportFormat - Report format: 'markdown' or 'html' (default: from config)
+ * @returns {Promise<object>} Saved lead with ID and optional report info
  */
-export async function saveLead(lead) {
+export async function saveLead(lead, options = {}) {
+  // Load report configuration
+  const { getReportConfig } = await import('../config/report-config.js');
+  const reportConfig = getReportConfig();
+
+  const {
+    generateReport = reportConfig.autoGenerateReports,
+    reportFormat = reportConfig.defaultFormat
+  } = options;
+
   try {
     const { data, error} = await supabase
       .from('leads')
@@ -39,6 +56,36 @@ export async function saveLead(lead) {
     }
 
     console.log(`✅ Lead saved: ${data.company_name} (${data.website_grade})`);
+
+    // Auto-generate report if enabled
+    if (generateReport) {
+      try {
+        const { autoGenerateReport, ensureReportsBucket } = await import('../reports/auto-report-generator.js');
+
+        // Ensure reports bucket exists
+        await ensureReportsBucket();
+
+        // Generate and upload report
+        const reportResult = await autoGenerateReport(data, {
+          format: reportFormat,
+          sections: ['all'],
+          saveToDatabase: true,
+          project_id: lead.project_id
+        });
+
+        if (reportResult.success) {
+          console.log(`📄 Report generated: ${reportResult.storage_path}`);
+          data.report_id = reportResult.report_id;
+          data.report_path = reportResult.storage_path;
+        } else {
+          console.warn(`⚠️ Report generation failed: ${reportResult.error}`);
+        }
+      } catch (reportError) {
+        // Don't fail the lead save if report generation fails
+        console.error('❌ Report generation error:', reportError.message);
+      }
+    }
+
     return data;
   } catch (error) {
     throw error;

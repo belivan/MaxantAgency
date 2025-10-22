@@ -27,6 +27,7 @@ import { saveOrLinkProspect, prospectExistsInProject, getProjectIcpBrief, savePr
 import { logInfo, logError, logWarn, logStepStart, logStepComplete } from './shared/logger.js';
 import { costTracker } from './shared/cost-tracker.js';
 import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
+import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
 
 /**
  * Run the full prospecting pipeline
@@ -485,31 +486,70 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           discovery_time_ms: Date.now() - startTime
         };
 
-        // Save to database (or link to project if exists globally)
-        // Include AI metadata so it's saved in project_prospects table
-        const savedProspect = await saveOrLinkProspect(
-          prospect,
-          options.projectId, // Link to project if specified
-          {
-            run_id: runId,
-            discovery_query: aiMetadata.discoveryQuery,
-            query_generation_model: aiMetadata.queryGenerationModel,
-            icp_brief_snapshot: aiMetadata.icpBriefSnapshot,
-            prompts_snapshot: aiMetadata.promptsSnapshot,
-            model_selections_snapshot: aiMetadata.modelSelectionsSnapshot,
-            relevance_reasoning: relevanceReasoning,
-            discovery_cost_usd: 0, // Will calculate per-prospect cost later
-            discovery_time_ms: Date.now() - startTime
-          }
-        );
-        results.saved++;
-        results.prospects.push(savedProspect);
+        // BACKUP WORKFLOW: Save locally FIRST, then upload to database
+        let backupPath = null;
+        try {
+          // Step 1: Save local backup BEFORE attempting database upload
+          logInfo('Saving local backup', { company: prospect.company_name });
+          backupPath = await saveLocalBackup(prospect);
 
-        logInfo('Prospect saved/linked', {
-          id: savedProspect.id,
-          company: savedProspect.company_name,
-          projectId: options.projectId || 'none'
-        });
+          if (backupPath) {
+            logInfo('Local backup saved', {
+              company: prospect.company_name,
+              backupPath: backupPath.split(/[\\/]/).pop()
+            });
+          }
+
+          // Step 2: Upload to database (or link to project if exists globally)
+          // Include AI metadata so it's saved in project_prospects table
+          const savedProspect = await saveOrLinkProspect(
+            prospect,
+            options.projectId, // Link to project if specified
+            {
+              run_id: runId,
+              discovery_query: aiMetadata.discoveryQuery,
+              query_generation_model: aiMetadata.queryGenerationModel,
+              icp_brief_snapshot: aiMetadata.icpBriefSnapshot,
+              prompts_snapshot: aiMetadata.promptsSnapshot,
+              model_selections_snapshot: aiMetadata.modelSelectionsSnapshot,
+              relevance_reasoning: relevanceReasoning,
+              discovery_cost_usd: 0, // Will calculate per-prospect cost later
+              discovery_time_ms: Date.now() - startTime
+            }
+          );
+
+          results.saved++;
+          results.prospects.push(savedProspect);
+
+          // Step 3: Mark backup as successfully uploaded
+          if (backupPath) {
+            await markAsUploaded(backupPath, savedProspect.id);
+          }
+
+          logInfo('Prospect saved/linked', {
+            id: savedProspect.id,
+            company: savedProspect.company_name,
+            projectId: options.projectId || 'none',
+            hasBackup: !!backupPath
+          });
+
+        } catch (dbError) {
+          // Step 4: If database save fails, mark backup as failed
+          if (backupPath) {
+            await markAsFailed(backupPath, dbError);
+            logError('Prospect saved to backup but failed to upload to database', dbError, {
+              company: prospect.company_name,
+              backupPath: backupPath.split(/[\\/]/).pop()
+            });
+          } else {
+            logError('Failed to save prospect (no backup created)', dbError, {
+              company: prospect.company_name
+            });
+          }
+
+          // Re-throw to count as failed
+          throw dbError;
+        }
 
       } catch (error) {
         logError('Failed to process company', error, { company: company.name });

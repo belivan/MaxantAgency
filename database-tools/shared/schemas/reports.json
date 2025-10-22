@@ -22,14 +22,14 @@
     {
       "name": "report_type",
       "type": "text",
-      "default": "'website_audit'",
+      "default": "website_audit",
       "required": true,
       "description": "Type of report (website_audit, competitive_analysis, etc.)"
     },
     {
       "name": "format",
       "type": "text",
-      "default": "'markdown'",
+      "default": "markdown",
       "required": true,
       "enum": ["markdown", "pdf", "html", "json"],
       "description": "Report format"
@@ -43,7 +43,7 @@
     {
       "name": "storage_bucket",
       "type": "text",
-      "default": "'reports'",
+      "default": "reports",
       "required": true,
       "description": "Supabase Storage bucket name"
     },
@@ -84,7 +84,7 @@
     {
       "name": "status",
       "type": "text",
-      "default": "'completed'",
+      "default": "completed",
       "required": true,
       "enum": ["generating", "completed", "failed"],
       "description": "Report generation status"

@@ -27,7 +27,7 @@
     },
     "B": {
       "min": 70,
-      "max": 84,
+      "max": 84.99,
       "label": "Good",
       "description": "Good foundation with clear improvement opportunities",
       "outreachAngle": "Solid site but specific improvements could significantly boost results",
@@ -35,7 +35,7 @@
     },
     "C": {
       "min": 55,
-      "max": 69,
+      "max": 69.99,
       "label": "Needs Work",
       "description": "Functional but needs significant improvements",
       "outreachAngle": "Working site but missing key elements that drive conversions and traffic",
@@ -43,7 +43,7 @@
     },
     "D": {
       "min": 40,
-      "max": 54,
+      "max": 54.99,
       "label": "Poor",
       "description": "Major issues requiring substantial redesign or rebuild",
       "outreachAngle": "Significant problems costing leads - redesign would provide clear ROI",
@@ -51,7 +51,7 @@
     },
     "F": {
       "min": 0,
-      "max": 39,
+      "max": 39.99,
       "label": "Failing",
       "description": "Broken, severely outdated, or non-functional",
       "outreachAngle": "Site is actively hurting business - immediate action needed",

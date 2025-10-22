@@ -12,7 +12,13 @@
     "db:migrate": "node cli.js migrate",
     "db:seed": "node cli.js seed",
     "db:validate": "node cli.js validate",
-    "db:generate": "node cli.js generate"
+    "db:generate": "node cli.js generate",
+    "backup:stats": "node scripts/backup-stats.js",
+    "backup:stats:watch": "node scripts/backup-stats.js --watch",
+    "backup:stats:json": "node scripts/backup-stats.js --json",
+    "backup:retry": "node scripts/retry-failed-uploads.js",
+    "backup:cleanup": "node scripts/cleanup-old-backups.js",
+    "backup:validate": "node scripts/validate-existing-backups.js"
   },
   "keywords": [
     "database",

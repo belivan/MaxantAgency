@@ -14,11 +14,17 @@
 import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Settings, Loader2, Sparkles, Zap } from 'lucide-react';
+import { Settings, Loader2, Sparkles, Zap, ChevronDown, Globe, Search, Brain } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from '@/components/ui/collapsible';
+import { Slider } from '@/components/ui/slider';
 import { analysisOptionsSchema, type AnalysisOptionsFormData } from '@/lib/utils/validation';
 import { calculateAnalysisCost } from '@/lib/utils/cost-calculator';
 import { formatCurrency } from '@/lib/utils/format';
@@ -85,6 +91,10 @@ export function AnalysisConfig({
     });
     return defaults;
   });
+
+  // UI state
+  const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [maxPages, setMaxPages] = useState([10]);
 
   // Internal prompt state (used if page doesn't provide prompts)
   const [internalCustomPrompts, setInternalCustomPrompts] = useState<AnalysisPrompts>({});
@@ -178,7 +188,7 @@ export function AnalysisConfig({
               <span>Analysis Configuration</span>
             </CardTitle>
             <CardDescription className="mt-1">
-              6 core analysis modules + custom AI model selection
+              Intelligent multi-page analysis • 6 AI modules • Lead scoring • Discovery audit
             </CardDescription>
           </div>
           <Badge variant="outline" className="flex items-center space-x-1">
@@ -241,29 +251,249 @@ export function AnalysisConfig({
             />
           )}
 
-          {/* Screenshots Toggle */}
-          <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-            <div className="space-y-0.5">
-              <Label htmlFor="capture_screenshots" className="cursor-pointer">
-                Capture Screenshots
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                For GPT-4o Vision design analysis (desktop + mobile)
-              </p>
+          {/* Advanced Analysis Settings */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Label className="text-base font-semibold">Advanced Settings</Label>
+              <Badge variant="outline" className="text-xs">NEW</Badge>
             </div>
-            <Controller
-              name="capture_screenshots"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  id="capture_screenshots"
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
+
+            {/* Intelligent Multi-Page Analysis */}
+            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
+              <div className="space-y-0.5">
+                <div className="flex items-center space-x-2">
+                  <Label htmlFor="multi_page_analysis" className="cursor-pointer font-medium">
+                    Intelligent Multi-Page Analysis
+                  </Label>
+                  <Badge className="text-xs">AI-Powered</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Discover & analyze multiple pages (homepage, about, pricing, contact, etc.)
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  • Sitemap discovery • AI page selection • Deep business intelligence
+                </p>
+              </div>
+              <Controller
+                name="multi_page_analysis"
+                control={control}
+                defaultValue={true}
+                render={({ field }) => (
+                  <Checkbox
+                    id="multi_page_analysis"
+                    checked={field.value ?? true}
+                    onCheckedChange={field.onChange}
+                    disabled={disabled || isLoading}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Lead Scoring */}
+            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="lead_scoring" className="cursor-pointer">
+                  AI Lead Scoring & Prioritization
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Score leads as Hot (75-100), Warm (50-74), or Cold (0-49)
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Based on: Quality gap, budget signals, urgency, industry fit
+                </p>
+              </div>
+              <Controller
+                name="lead_scoring"
+                control={control}
+                defaultValue={true}
+                render={({ field }) => (
+                  <Checkbox
+                    id="lead_scoring"
+                    checked={field.value ?? true}
+                    onCheckedChange={field.onChange}
+                    disabled={disabled || isLoading}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Screenshots Toggle */}
+            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="capture_screenshots" className="cursor-pointer">
+                  Capture Screenshots
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Full-page screenshots for GPT-4o Vision analysis (desktop + mobile)
+                </p>
+              </div>
+              <Controller
+                name="capture_screenshots"
+                control={control}
+                render={({ field }) => (
+                  <Checkbox
+                    id="capture_screenshots"
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={disabled || isLoading}
+                  />
+                )}
+              />
+            </div>
+
+            {/* Discovery Log */}
+            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <Label htmlFor="discovery_log" className="cursor-pointer">
+                  Discovery Audit Trail
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Track all pages found, AI decisions, and analysis reasoning
+                </p>
+              </div>
+              <Controller
+                name="discovery_log"
+                control={control}
+                defaultValue={true}
+                render={({ field }) => (
+                  <Checkbox
+                    id="discovery_log"
+                    checked={field.value ?? true}
+                    onCheckedChange={field.onChange}
+                    disabled={disabled || isLoading}
+                  />
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Discovery Settings (Collapsible) */}
+          <Collapsible open={discoveryOpen} onOpenChange={setDiscoveryOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between p-4 h-auto font-normal hover:bg-muted/50"
+                type="button"
+              >
+                <div className="flex items-center space-x-2">
+                  <Globe className="w-4 h-4" />
+                  <span className="font-medium">Discovery Settings</span>
+                  <Badge variant="secondary" className="text-xs">Optional</Badge>
+                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform ${discoveryOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 px-4 pb-4">
+              {/* Discovery Methods */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Discovery Methods</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex items-center space-x-2">
+                      <Search className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="use_sitemap" className="text-sm cursor-pointer">Sitemap Discovery</Label>
+                        <p className="text-xs text-muted-foreground">Find pages via sitemap.xml</p>
+                      </div>
+                    </div>
+                    <Controller
+                      name="use_sitemap"
+                      control={control}
+                      defaultValue={true}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="use_sitemap"
+                          checked={field.value ?? true}
+                          onCheckedChange={field.onChange}
+                          disabled={disabled || isLoading}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex items-center space-x-2">
+                      <Globe className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="use_robots" className="text-sm cursor-pointer">Robots.txt</Label>
+                        <p className="text-xs text-muted-foreground">Check robots.txt for pages</p>
+                      </div>
+                    </div>
+                    <Controller
+                      name="use_robots"
+                      control={control}
+                      defaultValue={true}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="use_robots"
+                          checked={field.value ?? true}
+                          onCheckedChange={field.onChange}
+                          disabled={disabled || isLoading}
+                        />
+                      )}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="flex items-center space-x-2">
+                      <Brain className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <Label htmlFor="use_navigation" className="text-sm cursor-pointer">Navigation Crawl</Label>
+                        <p className="text-xs text-muted-foreground">Follow navigation links</p>
+                      </div>
+                    </div>
+                    <Controller
+                      name="use_navigation"
+                      control={control}
+                      defaultValue={true}
+                      render={({ field }) => (
+                        <Checkbox
+                          id="use_navigation"
+                          checked={field.value ?? true}
+                          onCheckedChange={field.onChange}
+                          disabled={disabled || isLoading}
+                        />
+                      )}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Max Pages Slider */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Max Pages to Analyze</Label>
+                  <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{maxPages[0]}</span>
+                </div>
+                <Slider
+                  value={maxPages}
+                  onValueChange={setMaxPages}
+                  min={5}
+                  max={25}
+                  step={5}
+                  className="w-full"
                   disabled={disabled || isLoading}
                 />
-              )}
-            />
-          </div>
+                <p className="text-xs text-muted-foreground">
+                  AI will intelligently select the most important pages to analyze
+                </p>
+              </div>
+
+              {/* Page Priority */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Page Priority</Label>
+                <div className="rounded-lg border p-3 bg-muted/30">
+                  <p className="text-xs text-muted-foreground mb-2">AI automatically prioritizes:</p>
+                  <div className="space-y-1 text-xs">
+                    <div>1. Homepage (always)</div>
+                    <div>2. About/Company pages</div>
+                    <div>3. Services/Products</div>
+                    <div>4. Contact information</div>
+                    <div>5. Pricing (if available)</div>
+                    <div>6. Blog/Resources</div>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Cost Estimate */}
           <div className="rounded-lg bg-muted p-4 space-y-2">
@@ -275,8 +505,11 @@ export function AnalysisConfig({
               <span>{prospectCount} prospect{prospectCount === 1 ? '' : 's'}</span>
               <span>{formatCurrency(costPerLead)} per lead</span>
             </div>
-            <div className="text-xs text-muted-foreground border-t pt-2 mt-2">
-              Includes: 6 core analysis modules (desktop design, mobile design, SEO, content, social, accessibility)
+            <div className="text-xs text-muted-foreground border-t pt-2 mt-2 space-y-1">
+              <div>✓ Intelligent multi-page discovery & analysis (homepage, about, pricing, contact, etc.)</div>
+              <div>✓ 6 AI modules: Desktop/Mobile Design, SEO, Content, Social, Accessibility</div>
+              <div>✓ Lead scoring & prioritization (Hot/Warm/Cold)</div>
+              <div>✓ Business intelligence extraction</div>
             </div>
           </div>
 

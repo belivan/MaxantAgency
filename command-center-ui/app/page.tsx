@@ -9,6 +9,7 @@ import { Users, ScanSearch, Mail, DollarSign } from 'lucide-react';
 import { StatsCards, StatCardData } from '@/components/dashboard/stats-cards';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { PipelineHealth, EngineHealth as EngineHealthType } from '@/components/dashboard/pipeline-health';
+import { GradeDistribution } from '@/components/dashboard/grade-distribution';
 import { useDashboardStats, useEngineHealth, useActivityFeed } from '@/lib/hooks';
 import { LoadingOverlay } from '@/components/shared/loading-overlay';
 
@@ -100,17 +101,27 @@ export default function DashboardPage() {
         {/* Stats Cards */}
         <StatsCards stats={statsCards} />
 
-        {/* Activity Feed & Pipeline Health */}
+        {/* Grade Distribution & Pipeline Health */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <ActivityFeed
-            activities={activities}
-            loading={activitiesLoading}
-            pagination={pagination}
-            onNextPage={nextPage}
-            onPreviousPage={previousPage}
+          <GradeDistribution
+            gradeA={stats?.grade_a_count || 0}
+            gradeB={stats?.grade_b_count || 0}
+            gradeC={stats?.grade_c_count || 0}
+            gradeD={stats?.grade_d_count || 0}
+            gradeF={stats?.grade_f_count || 0}
+            loading={loading}
           />
           <PipelineHealth engines={engines} loading={loading} />
         </div>
+
+        {/* Activity Feed */}
+        <ActivityFeed
+          activities={activities}
+          loading={activitiesLoading}
+          pagination={pagination}
+          onNextPage={nextPage}
+          onPreviousPage={previousPage}
+        />
 
         {/* Quick Actions */}
         <div className="grid gap-4 md:grid-cols-3">

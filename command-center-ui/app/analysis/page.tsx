@@ -238,7 +238,7 @@ export default function AnalysisPage() {
 
     const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
 
-    // Call intelligent multi-page analysis API
+    // Use SSE with fetch for batch analysis (supports POST)
     try {
       addLog(taskId, 'Starting intelligent multi-page analysis...', 'info');
 
@@ -256,24 +256,85 @@ export default function AnalysisPage() {
         throw new Error(`Analysis failed: ${response.statusText}`);
       }
 
-      const result = await response.json();
+      // Check if response is SSE
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('text/event-stream')) {
+        // Handle SSE response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
 
-      if (result.success) {
-        // Log each result
-        result.data.results.forEach((r: any, i: number) => {
-          updateTask(taskId, i + 1, `Completed ${i + 1}/${result.data.total}`);
+        if (!reader) {
+          throw new Error('No response stream available');
+        }
 
-          if (r.success) {
-            addLog(taskId, `✓ ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
-          } else {
-            addLog(taskId, `✗ ${r.company_name}: ${r.error}`, 'error');
+        let analyzed = 0;
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              const eventType = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              try {
+                const data = JSON.parse(line.slice(5));
+
+                // Handle different event types based on data
+                if (data.message && data.total) {
+                  // Start event
+                  addLog(taskId, data.message, 'info');
+                } else if (data.current && data.company) {
+                  // Analyzing event
+                  addLog(taskId, `Analyzing ${data.company} (${data.current}/${data.total})...`, 'info');
+                } else if (data.success === false && data.company) {
+                  // Error event
+                  analyzed++;
+                  updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
+                  addLog(taskId, `✗ ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
+                } else if (data.grade && data.company) {
+                  // Success event
+                  analyzed++;
+                  updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
+                  addLog(taskId, `✓ ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
+                } else if (data.successful !== undefined && data.failed !== undefined) {
+                  // Complete event
+                  addLog(taskId, `Analysis complete: ${data.successful}/${data.total} successful`, 'success');
+                  completeTask(taskId);
+                }
+              } catch (e) {
+                // Not JSON, ignore
+                console.log('Non-JSON SSE data:', line);
+              }
+            }
           }
-        });
-
-        addLog(taskId, `Analysis complete: ${result.data.successful}/${result.data.total} successful`, 'success');
-        completeTask(taskId);
+        }
       } else {
-        throw new Error(result.error || 'Analysis failed');
+        // Fallback: Handle as regular JSON response (for backwards compatibility)
+        const result = await response.json();
+
+        if (result.success) {
+          // Log each result
+          result.data.results.forEach((r: any, i: number) => {
+            updateTask(taskId, i + 1, `Completed ${i + 1}/${result.data.total}`);
+
+            if (r.success) {
+              addLog(taskId, `✓ ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
+            } else {
+              addLog(taskId, `✗ ${r.company_name}: ${r.error}`, 'error');
+            }
+          });
+
+          addLog(taskId, `Analysis complete: ${result.data.successful}/${result.data.total} successful`, 'success');
+          completeTask(taskId);
+        } else {
+          throw new Error(result.error || 'Analysis failed');
+        }
       }
 
       setIsAnalyzing(false);
@@ -294,7 +355,7 @@ export default function AnalysisPage() {
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Analysis</h1>
           <p className="text-muted-foreground">
-            Analyze prospects with AI-powered website audits • 6 core modules • Custom model selection
+            Intelligent multi-page website analysis • AI discovers & analyzes key pages • Lead scoring & prioritization
           </p>
         </div>
 

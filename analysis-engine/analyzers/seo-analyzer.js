@@ -44,8 +44,8 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
       };
     });
 
-    // Detect site-wide issues
-    const siteWideIssues = detectSiteWideIssues(pagesData);
+    // Detect site-wide issues (including discovery issues)
+    const siteWideIssues = detectSiteWideIssues(pagesData, context);
 
     // Build multi-page summary for AI
     const pagesSummary = pagesData.map(p => ({
@@ -291,8 +291,36 @@ function analyzeURLStructure(url) {
 /**
  * Detect site-wide SEO issues across multiple pages
  */
-function detectSiteWideIssues(pagesData) {
+function detectSiteWideIssues(pagesData, context = {}) {
   const issues = [];
+
+  // Check for missing sitemap.xml (CRITICAL SEO ISSUE)
+  if (context.discovery_status && !context.discovery_status.has_sitemap) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'critical',
+      title: 'No sitemap.xml found',
+      description: 'The website is missing a sitemap.xml file, which is essential for search engine crawling and indexing',
+      impact: 'Search engines may not discover all pages, leading to poor indexing and lost organic traffic',
+      recommendation: 'Create and submit a sitemap.xml file listing all important pages. Submit it to Google Search Console and Bing Webmaster Tools',
+      priority: 'critical',
+      technical_details: context.discovery_status.sitemap_error || 'File not found at standard locations (/sitemap.xml, /sitemap_index.xml)'
+    });
+  }
+
+  // Check for missing robots.txt (HIGH SEO ISSUE)
+  if (context.discovery_status && !context.discovery_status.has_robots) {
+    issues.push({
+      category: 'site-wide',
+      severity: 'high',
+      title: 'No robots.txt file found',
+      description: 'The website is missing a robots.txt file, which helps control search engine crawling behavior',
+      impact: 'Cannot provide crawl directives to search engines, may result in crawling of unintended pages or missed important pages',
+      recommendation: 'Create a robots.txt file with appropriate crawl directives and sitemap location',
+      priority: 'high',
+      technical_details: context.discovery_status.robots_error || 'File not found at /robots.txt'
+    });
+  }
 
   // Check for duplicate titles
   const titles = {};

@@ -17,7 +17,12 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  Clock
+  Clock,
+  Globe,
+  Search,
+  Camera,
+  Brain,
+  TrendingUp
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -32,6 +37,45 @@ const MaxantLogo = ({ className }: { className?: string }) => (
     <path d="M3 20V4h3.5L12 13.5 17.5 4H21v16h-3V9.5L12 19 6 9.5V20H3z" />
   </svg>
 );
+
+// Helper function to get phase icon
+const getPhaseIcon = (phase: string) => {
+  const phaseLower = phase.toLowerCase();
+  if (phaseLower.includes('discover') || phaseLower.includes('sitemap')) {
+    return '🌐';
+  }
+  if (phaseLower.includes('crawl') || phaseLower.includes('screenshot')) {
+    return '📸';
+  }
+  if (phaseLower.includes('analyz') || phaseLower.includes('seo')) {
+    return '🔍';
+  }
+  if (phaseLower.includes('scor') || phaseLower.includes('grad')) {
+    return '📊';
+  }
+  if (phaseLower.includes('ai') || phaseLower.includes('select')) {
+    return '🤖';
+  }
+  return '⚡';
+};
+
+// Helper function to get grade color
+const getGradeColor = (grade: string) => {
+  switch (grade) {
+    case 'A':
+      return 'text-green-600 dark:text-green-400 font-bold';
+    case 'B':
+      return 'text-blue-600 dark:text-blue-400 font-bold';
+    case 'C':
+      return 'text-yellow-600 dark:text-yellow-400 font-bold';
+    case 'D':
+      return 'text-orange-600 dark:text-orange-400 font-bold';
+    case 'F':
+      return 'text-red-600 dark:text-red-400 font-bold';
+    default:
+      return 'font-bold';
+  }
+};
 
 export function FloatingTaskIndicator() {
   const { tasks, activeTasks, removeTask, cancelTask } = useTaskProgress();
@@ -142,7 +186,49 @@ export function FloatingTaskIndicator() {
                           {/* Progress Bar */}
                           <Progress value={percentage} className="h-1.5 mb-2" />
 
-                          {/* Details */}
+                          {/* Enhanced Details for Analysis Tasks */}
+                          {task.metadata?.type === 'analysis' && task.metadata?.details && (
+                            <div className="space-y-1 mb-2">
+                              {/* Website URL */}
+                              {task.metadata.details.website && (
+                                <div className="text-xs text-muted-foreground truncate">
+                                  📍 {task.metadata.details.website}
+                                </div>
+                              )}
+
+                              {/* Current Phase */}
+                              {task.metadata.details.phase && (
+                                <div className="text-xs font-medium">
+                                  {getPhaseIcon(task.metadata.details.phase)} {task.metadata.details.phase}
+                                </div>
+                              )}
+
+                              {/* Pages Info */}
+                              {task.metadata.details.pagesDiscovered !== undefined && (
+                                <div className="text-xs text-muted-foreground">
+                                  📄 {task.metadata.details.pagesAnalyzed || 0}/{task.metadata.details.pagesDiscovered} pages
+                                </div>
+                              )}
+
+                              {/* Active Analyzers */}
+                              {task.metadata.details.activeAnalyzers && task.metadata.details.activeAnalyzers.length > 0 && (
+                                <div className="text-xs text-muted-foreground">
+                                  🔍 {task.metadata.details.activeAnalyzers.join(', ')}
+                                </div>
+                              )}
+
+                              {/* Grade (if calculated) */}
+                              {task.metadata.details.grade && (
+                                <div className="text-xs font-medium">
+                                  Grade: <span className={getGradeColor(task.metadata.details.grade)}>
+                                    {task.metadata.details.grade}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Standard Details */}
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span className="tabular-nums">
                               {task.current} / {task.total}

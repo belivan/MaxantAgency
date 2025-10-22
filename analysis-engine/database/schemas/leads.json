@@ -207,6 +207,12 @@
       "default": "{}",
       "description": "WCAG 2.1 compliance details from accessibility analyzer (violations by level, compliance percentage, etc.)"
     },
+    {
+      "name": "accessibility_wcag_level",
+      "type": "text",
+      "default": "AA",
+      "description": "WCAG 2.1 compliance level (A, AA, or AAA)"
+    },
 
     {
       "name": "quick_wins",
@@ -438,6 +444,12 @@
       "name": "analysis_time",
       "type": "integer",
       "description": "Analysis time in milliseconds"
+    },
+
+    {
+      "name": "discovery_log",
+      "type": "jsonb",
+      "description": "Complete discovery and analysis log with all pages found, AI reasoning, errors, and critical findings"
     },
 
     {

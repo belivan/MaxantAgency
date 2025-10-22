@@ -14,12 +14,17 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import { createClient } from '@supabase/supabase-js';
-import { analyzeWebsite, analyzeMultiple, getBatchSummary, analyzeWebsiteIntelligent } from './orchestrator.js';
+import { analyzeWebsiteIntelligent } from './orchestrator.js';
 import { collectAnalysisPrompts } from './shared/prompt-loader.js';
+import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root .env
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -69,31 +74,34 @@ app.get('/api/prompts/default', async (req, res) => {
 
 /**
  * POST /api/analyze-url
- * Analyze a single URL (for testing/demo)
+ * Analyze a single URL with intelligent multi-page analysis (for testing/demo)
  *
  * Body:
  * {
  *   "url": "https://example.com",
  *   "company_name": "Example Company",
- *   "industry": "restaurant"
+ *   "industry": "restaurant",
+ *   "project_id": "uuid" (optional)
  * }
  */
 app.post('/api/analyze-url', async (req, res) => {
   try {
-    const { url, company_name, industry } = req.body;
+    const { url, company_name, industry, project_id } = req.body;
 
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    console.log(`[Analysis] Starting analysis for ${url}`);
+    console.log(`[Intelligent Analysis] Starting intelligent analysis for ${url}`);
 
-    const result = await analyzeWebsite(url, {
+    // Use intelligent multi-page analyzer
+    const result = await analyzeWebsiteIntelligent(url, {
       company_name: company_name || 'Unknown Company',
-      industry: industry || 'Unknown'
+      industry: industry || 'Unknown',
+      project_id: project_id || null
     }, {
       onProgress: (progress) => {
-        console.log(`[Analysis] ${progress.step}: ${progress.message}`);
+        console.log(`[Intelligent Analysis] ${progress.step}: ${progress.message}`);
       }
     });
 
@@ -104,32 +112,164 @@ app.post('/api/analyze-url', async (req, res) => {
       });
     }
 
-    console.log(`[Analysis] Completed for ${url} - Grade: ${result.grade}`);
+    // Save to database - COMPLETE FIELD SET
+    const leadData = {
+      // Core information
+      url: result.url,
+      company_name: result.company_name,
+      industry: result.industry,
+      project_id: project_id || null,
+      prospect_id: result.prospect_id || null,
+
+      // Grading & Scores
+      overall_score: Math.round(result.overall_score),
+      website_grade: result.grade,
+      grade_label: result.grade_label || null,
+      design_score: Math.round(result.design_score),
+      design_score_desktop: Math.round(result.design_score_desktop || result.design_score),
+      design_score_mobile: Math.round(result.design_score_mobile || result.design_score),
+      seo_score: Math.round(result.seo_score),
+      content_score: Math.round(result.content_score),
+      social_score: Math.round(result.social_score),
+      accessibility_score: Math.round(result.accessibility_score || 50),
+
+      // Lead Scoring (AI-driven qualification)
+      lead_priority: result.lead_priority || null,
+      lead_priority_reasoning: result.lead_priority_reasoning || null,
+      priority_tier: result.priority_tier || null,
+      budget_likelihood: result.budget_likelihood || null,
+      fit_score: result.fit_score || null,
+      quality_gap_score: result.quality_gap_score || null,
+      budget_score: result.budget_score || null,
+      urgency_score: result.urgency_score || null,
+      industry_fit_score: result.industry_fit_score || null,
+      company_size_score: result.company_size_score || null,
+      engagement_score: result.engagement_score || null,
+
+      // Issues & Analysis Results
+      design_issues: result.design_issues || [],
+      design_issues_desktop: result.design_issues_desktop || [],
+      design_issues_mobile: result.design_issues_mobile || [],
+      desktop_critical_issues: result.desktop_critical_issues || 0,
+      mobile_critical_issues: result.mobile_critical_issues || 0,
+      seo_issues: result.seo_issues || [],
+      content_issues: result.content_issues || [],
+      social_issues: result.social_issues || [],
+      accessibility_issues: result.accessibility_issues || [],
+      accessibility_compliance: result.accessibility_compliance || {},
+      accessibility_wcag_level: result.accessibility_wcag_level || 'AA',
+      quick_wins: result.quick_wins || [],
+
+      // Insights & Recommendations
+      top_issue: result.top_issue || null,
+      one_liner: result.one_liner || null,
+      analysis_summary: result.analysis_summary || null,
+      call_to_action: result.call_to_action || null,
+      outreach_angle: result.outreach_angle || null,
+
+      // AI Models Used
+      seo_analysis_model: result.seo_analysis_model || null,
+      content_analysis_model: result.content_analysis_model || null,
+      desktop_visual_model: result.desktop_visual_model || null,
+      mobile_visual_model: result.mobile_visual_model || null,
+      social_analysis_model: result.social_analysis_model || null,
+      accessibility_analysis_model: result.accessibility_analysis_model || null,
+
+      // Contact Information
+      contact_email: result.contact_email || null,
+      contact_phone: result.contact_phone || null,
+      contact_name: result.contact_name || null,
+
+      // Technical Metadata
+      tech_stack: result.tech_stack || null,
+      has_blog: result.has_blog || false,
+      has_https: result.has_https || false,
+      is_mobile_friendly: result.is_mobile_friendly || false,
+      page_load_time: result.page_load_time || null,
+      page_title: result.page_title || null,
+      meta_description: result.meta_description || null,
+
+      // Screenshots
+      screenshot_desktop_url: result.screenshot_desktop_url || null,
+      screenshot_mobile_url: result.screenshot_mobile_url || null,
+
+      // Social Media
+      social_profiles: result.social_profiles || {},
+      social_platforms_present: result.social_platforms_present || [],
+      social_metadata: result.social_metadata || {},
+
+      // Content Insights
+      content_insights: result.content_insights || {},
+
+      // Business Intelligence
+      business_intelligence: result.business_intelligence || {},
+
+      // Crawl & Analysis Metadata
+      crawl_metadata: result.crawl_metadata || {},
+      pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
+      pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
+      pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
+      ai_page_selection: result.intelligent_analysis?.ai_page_selection || null,
+
+      // Performance
+      analysis_cost: result.analysis_cost || 0,
+      analysis_time: result.analysis_time || 0,
+
+      // Comprehensive Discovery Log
+      discovery_log: result.discovery_log || {},
+
+      // Timestamps
+      analyzed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Save local backup
+    let backupPath;
+    try {
+      backupPath = await saveLocalBackup(result, leadData);
+      console.log(`[Intelligent Analysis] Backup saved: ${backupPath}`);
+    } catch (backupError) {
+      console.error(`[Intelligent Analysis] Failed to save backup:`, backupError);
+    }
 
     // Save to database
-    try {
-      const leadData = extractLeadData(result);
-      const { error: saveError } = await supabase
-        .from('leads')
-        .upsert(leadData, { onConflict: 'url' });
+    const { data: savedLead, error: saveError } = await supabase
+      .from('leads')
+      .upsert(leadData, { onConflict: 'url' })
+      .select()
+      .single();
 
-      if (saveError) {
-        console.error(`[Analysis] Failed to save lead to database:`, saveError);
-      } else {
-        console.log(`[Analysis] Lead saved to database`);
+    if (saveError) {
+      console.error(`[Intelligent Analysis] Database save failed:`, saveError);
+
+      if (backupPath) {
+        await markAsFailed(backupPath, saveError.message || saveError);
       }
-    } catch (dbError) {
-      // Don't fail the whole request if database save fails
-      console.error(`[Analysis] Database error:`, dbError);
+
+      return res.status(500).json({
+        error: 'Database save failed',
+        details: saveError.message,
+        analysis: result
+      });
+    }
+
+    console.log(`[Intelligent Analysis] Complete - Grade: ${result.grade}, ID: ${savedLead.id}`);
+
+    if (backupPath) {
+      await markAsUploaded(backupPath, savedLead.id);
     }
 
     res.json({
       success: true,
-      result
+      result: {
+        ...result,
+        database_saved: true,
+        database_id: savedLead.id
+      }
     });
 
   } catch (error) {
-    console.error('[Analysis] Error:', error);
+    console.error('[Intelligent Analysis] Error:', error);
     res.status(500).json({
       error: 'Internal server error',
       details: error.message
@@ -137,18 +277,6 @@ app.post('/api/analyze-url', async (req, res) => {
   }
 });
 
-/**
- * POST /api/analyze-url-intelligent
- * Analyze a single URL with intelligent multi-page analysis
- *
- * Body:
- * {
- *   "url": "https://example.com",
- *   "company_name": "Example Company",
- *   "industry": "restaurant",
- *   "project_id": "uuid" (optional)
- * }
- */
 /**
  * POST /api/analyze
  * Analyze prospects with intelligent multi-page analysis
@@ -160,43 +288,52 @@ app.post('/api/analyze-url', async (req, res) => {
  *   "custom_prompts": {...} (optional)
  * }
  */
-
 app.post('/api/analyze', async (req, res) => {
   try {
-    const { prospect_ids, project_id, custom_prompts } = req.body;
+    const { prospect_ids, prospects: providedProspects, project_id, custom_prompts } = req.body;
 
-    if (!prospect_ids || prospect_ids.length === 0) {
+    // Accept either prospect_ids OR prospects array directly
+    let prospects;
+
+    if (providedProspects && providedProspects.length > 0) {
+      // Mode 1: Direct prospect data (no database needed)
+      console.log(`[Intelligent Analysis] Using ${providedProspects.length} provided prospects (no database fetch)`);
+      prospects = providedProspects;
+    } else if (prospect_ids && prospect_ids.length > 0) {
+      // Mode 2: Fetch by IDs from database
+      console.log(`[Intelligent Analysis] Fetching ${prospect_ids.length} prospects from database...`);
+
+      const { data: fetchedProspects, error: fetchError } = await supabase
+        .from('prospects')
+        .select('id, company_name, website, industry')
+        .in('id', prospect_ids)
+        .not('website', 'is', null);
+
+      if (fetchError) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to fetch prospects',
+          details: fetchError.message
+        });
+      }
+
+      if (!fetchedProspects || fetchedProspects.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'No prospects found'
+        });
+      }
+
+      prospects = fetchedProspects;
+      console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze`);
+    } else {
       return res.status(400).json({
         success: false,
-        error: 'prospect_ids is required'
+        error: 'Either prospect_ids or prospects array is required'
       });
     }
 
-    console.log(`[Intelligent Analysis] Starting batch analysis for ${prospect_ids.length} prospects`);
-
-    // Fetch prospects
-    const { data: prospects, error: fetchError } = await supabase
-      .from('prospects')
-      .select('id, company_name, website, industry')
-      .in('id', prospect_ids)
-      .not('website', 'is', null);
-
-    if (fetchError) {
-      return res.status(500).json({
-        success: false,
-        error: 'Failed to fetch prospects',
-        details: fetchError.message
-      });
-    }
-
-    if (!prospects || prospects.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'No prospects found'
-      });
-    }
-
-    console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze`);
+    console.log(`[Intelligent Analysis] Starting batch analysis for ${prospects.length} prospects`);
 
     // Set up Server-Sent Events headers to prevent timeout
     res.setHeader('Content-Type', 'text/event-stream');
@@ -239,40 +376,62 @@ app.post('/api/analyze', async (req, res) => {
         });
 
         if (result.success) {
-          // Save to database
+          // Prepare lead data for database - COMPLETE FIELD SET
           const leadData = {
+            // Core information
             url: result.url,
             company_name: result.company_name,
             industry: result.industry,
             project_id: project_id || null,
+            prospect_id: prospect.id || null,
 
-            // Scores
+            // Grading & Scores
             overall_score: Math.round(result.overall_score),
             website_grade: result.grade,
+            grade_label: result.grade_label || null,
             design_score: Math.round(result.design_score),
-            design_score_desktop: result.design_score_desktop || Math.round(result.design_score), // FIX #2: Desktop score
-            design_score_mobile: result.design_score_mobile || Math.round(result.design_score),   // FIX #2: Mobile score
+            design_score_desktop: Math.round(result.design_score_desktop || result.design_score),
+            design_score_mobile: Math.round(result.design_score_mobile || result.design_score),
             seo_score: Math.round(result.seo_score),
             content_score: Math.round(result.content_score),
             social_score: Math.round(result.social_score),
             accessibility_score: Math.round(result.accessibility_score || 50),
 
-            // Issues and wins
+            // Lead Scoring (AI-driven qualification)
+            lead_priority: result.lead_priority || null,
+            lead_priority_reasoning: result.lead_priority_reasoning || null,
+            priority_tier: result.priority_tier || null,
+            budget_likelihood: result.budget_likelihood || null,
+            fit_score: result.fit_score || null,
+            quality_gap_score: result.quality_gap_score || null,
+            budget_score: result.budget_score || null,
+            urgency_score: result.urgency_score || null,
+            industry_fit_score: result.industry_fit_score || null,
+            company_size_score: result.company_size_score || null,
+            engagement_score: result.engagement_score || null,
+
+            // Issues & Analysis Results
             design_issues: result.design_issues || [],
-            design_issues_desktop: result.design_issues_desktop || [],      // FIX #2: Desktop issues
-            design_issues_mobile: result.design_issues_mobile || [],        // FIX #2: Mobile issues
+            design_issues_desktop: result.design_issues_desktop || [],
+            design_issues_mobile: result.design_issues_mobile || [],
+            desktop_critical_issues: result.desktop_critical_issues || 0,
+            mobile_critical_issues: result.mobile_critical_issues || 0,
             seo_issues: result.seo_issues || [],
             content_issues: result.content_issues || [],
             social_issues: result.social_issues || [],
             accessibility_issues: result.accessibility_issues || [],
-            accessibility_compliance: result.accessibility_compliance || {}, // FIX #6: WCAG compliance
+            accessibility_compliance: result.accessibility_compliance || {},
+            accessibility_wcag_level: result.accessibility_wcag_level || 'AA',
             quick_wins: result.quick_wins || [],
 
-            // Top issue and one-liner
+            // Insights & Recommendations
             top_issue: result.top_issue || null,
             one_liner: result.one_liner || null,
+            analysis_summary: result.analysis_summary || null,
+            call_to_action: result.call_to_action || null,
+            outreach_angle: result.outreach_angle || null,
 
-            // Model tracking
+            // AI Models Used
             seo_analysis_model: result.seo_analysis_model || null,
             content_analysis_model: result.content_analysis_model || null,
             desktop_visual_model: result.desktop_visual_model || null,
@@ -280,50 +439,80 @@ app.post('/api/analyze', async (req, res) => {
             social_analysis_model: result.social_analysis_model || null,
             accessibility_analysis_model: result.accessibility_analysis_model || null,
 
-            // Screenshots (FIX #1: Homepage screenshots for reports)
-            screenshot_desktop_url: result.screenshot_desktop_url || null,
-            screenshot_mobile_url: result.screenshot_mobile_url || null,
+            // Contact Information
+            contact_email: result.contact_email || null,
+            contact_phone: result.contact_phone || null,
+            contact_name: result.contact_name || null,
 
-            // Social profiles (FIX #3: Required for DM generation)
-            social_profiles: result.social_profiles || {},
-            social_platforms_present: result.social_platforms_present || [],
-
-            // SEO/Tech metadata (FIX #7: Technical credibility)
+            // Technical Metadata
             tech_stack: result.tech_stack || null,
             has_blog: result.has_blog || false,
             has_https: result.has_https || false,
+            is_mobile_friendly: result.is_mobile_friendly || false,
+            page_load_time: result.page_load_time || null,
             page_title: result.page_title || null,
             meta_description: result.meta_description || null,
 
-            // Outreach support (FIX #4: Required by UI and outreach)
-            analysis_summary: result.analysis_summary || null,
-            call_to_action: result.call_to_action || null,
-            outreach_angle: result.outreach_angle || null,
+            // Screenshots
+            screenshot_desktop_url: result.screenshot_desktop_url || null,
+            screenshot_mobile_url: result.screenshot_mobile_url || null,
 
-            // Crawl metadata (FIX #5: Enhanced error logging + ALL screenshots)
+            // Social Media
+            social_profiles: result.social_profiles || {},
+            social_platforms_present: result.social_platforms_present || [],
+            social_metadata: result.social_metadata || {},
+
+            // Content Insights
+            content_insights: result.content_insights || {},
+
+            // Business Intelligence
+            business_intelligence: result.business_intelligence || {},
+
+            // Crawl & Analysis Metadata
             crawl_metadata: result.crawl_metadata || {},
-
-            // Intelligent analysis metadata
             pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
             pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
             pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
             ai_page_selection: result.intelligent_analysis?.ai_page_selection || null,
 
-            // Performance (FIX #3: Field name correction)
+            // Performance
             analysis_cost: result.analysis_cost || 0,
-            analysis_time: result.analysis_time || 0,  // FIXED: was analysis_time_seconds
+            analysis_time: result.analysis_time || 0,
+
+            // Comprehensive Discovery Log
+            discovery_log: result.discovery_log || {},
 
             // Timestamps
             analyzed_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           };
 
-          const { error: saveError } = await supabase
+          // STEP 1: Save local backup BEFORE attempting database upload
+          let backupPath;
+          try {
+            backupPath = await saveLocalBackup(result, leadData);
+            console.log(`[Intelligent Analysis] Local backup saved for ${prospect.company_name}`);
+          } catch (backupError) {
+            console.error(`[Intelligent Analysis] Failed to save local backup for ${prospect.company_name}:`, backupError);
+            // Continue anyway - we'll try to save to database
+          }
+
+          // STEP 2: Upload to database
+          const { data: savedLead, error: saveError } = await supabase
             .from('leads')
-            .upsert(leadData, { onConflict: 'url' });
+            .upsert(leadData, { onConflict: 'url' })
+            .select()
+            .single();
 
           if (saveError) {
             console.error(`[Intelligent Analysis] Failed to save lead ${prospect.website}:`, saveError);
+
+            // STEP 3a: Mark backup as failed
+            if (backupPath) {
+              await markAsFailed(backupPath, saveError.message || saveError);
+              console.log(`[Intelligent Analysis] Backup marked as failed for ${prospect.company_name}`);
+            }
+
             // Send error event
             sendEvent('error', {
               current: currentIndex,
@@ -334,6 +523,13 @@ app.post('/api/analyze', async (req, res) => {
             });
           } else {
             console.log(`[Intelligent Analysis] ✓ ${prospect.company_name}: Grade ${result.grade} (${result.overall_score}/100)`);
+
+            // STEP 3b: Mark backup as successfully uploaded
+            if (backupPath) {
+              await markAsUploaded(backupPath, savedLead.id);
+              console.log(`[Intelligent Analysis] Backup marked as uploaded for ${prospect.company_name}`);
+            }
+
             // Send success event
             sendEvent('success', {
               current: currentIndex,
@@ -880,129 +1076,6 @@ app.delete('/api/reports/:id', async (req, res) => {
     });
   }
 });
-
-/**
- * Extract lead data from analysis result for database insertion
- * Adapted to match existing leads table schema from website-audit-tool
- */
-function extractLeadData(result) {
-  // Convert design issues to critiques_visual
-  const critiques_visual = result.design_issues
-    ?.filter(i => i.category !== 'error')
-    ?.map(i => i.description || i.title)
-    ?.slice(0, 5) || [];
-
-  // Convert SEO issues to critiques_seo
-  const critiques_seo = result.seo_issues
-    ?.filter(i => i.category !== 'error')
-    ?.map(i => i.description || i.title)
-    ?.slice(0, 5) || [];
-
-  // Convert content issues to critiques_basic
-  const critiques_basic = result.content_issues
-    ?.filter(i => i.category !== 'error')
-    ?.map(i => i.description || i.title)
-    ?.slice(0, 3) || [];
-
-  // Add social issues to basic critiques
-  if (result.social_issues && result.social_issues.length > 0) {
-    result.social_issues
-      .filter(i => i.category !== 'error')
-      .slice(0, 2)
-      .forEach(i => critiques_basic.push(i.description || i.title));
-  }
-
-  return {
-    // Basic info
-    url: result.url,
-    company_name: result.company_name,
-    industry: result.industry,
-    city: result.city || null,
-    // state: result.state || null,  // TEMPORARILY DISABLED - Supabase schema cache issue
-
-    // Contact info
-    contact_email: result.contact_email || null,
-    contact_phone: result.contact_phone || null,
-
-    // Scores (round to integers for database)
-    overall_score: Math.round(result.overall_score),
-    website_grade: result.grade,
-    design_score: Math.round(result.design_score),
-    seo_score: Math.round(result.seo_score),
-    content_score: Math.round(result.content_score),
-    social_score: Math.round(result.social_score),
-
-    // Analysis summary
-    analysis_summary: result.analysis_summary,
-
-    // Detailed issues (jsonb arrays)
-    design_issues: result.design_issues || [],
-    seo_issues: result.seo_issues || [],
-    content_issues: result.content_issues || [],
-    social_issues: result.social_issues || [],
-
-    // Quick wins and outreach
-    quick_wins: result.quick_wins || [],
-    top_issue: result.top_issue || null,
-    one_liner: result.one_liner || null,
-    call_to_action: result.call_to_action || null,
-
-    // Tech and performance
-    tech_stack: result.tech_stack || null,
-    page_load_time: result.page_load_time || null,
-    is_mobile_friendly: result.is_mobile_friendly || false,
-    has_https: result.has_https || false,
-
-    // Social profiles and metadata
-    social_profiles: result.social_profiles || {},
-    social_metadata: result.social_metadata || null,
-    social_platforms_present: result.social_platforms_present || [],
-
-    // Content insights
-    has_blog: result.has_blog || false,
-    content_insights: result.content_insights || null,
-
-    // Website metadata
-    page_title: result.page_title || null,
-    meta_description: result.meta_description || null,
-
-    // Screenshot
-    screenshot_url: result.screenshot_url || null,
-
-    // Prospect and project references
-    prospect_id: result.prospect_id || null,
-    project_id: result.project_id || null,
-
-    // AI Lead Scoring (NEW v2.0)
-    lead_priority: result.lead_priority || null,
-    lead_priority_reasoning: result.lead_priority_reasoning || null,
-    priority_tier: result.priority_tier || null,
-    budget_likelihood: result.budget_likelihood || null,
-    fit_score: result.fit_score || null,
-
-    // Lead Priority Dimension Scores (NEW v2.0)
-    quality_gap_score: result.quality_gap_score || null,
-    budget_score: result.budget_score || null,
-    urgency_score: result.urgency_score || null,
-    industry_fit_score: result.industry_fit_score || null,
-    company_size_score: result.company_size_score || null,
-    engagement_score: result.engagement_score || null,
-
-    // Business Intelligence (NEW v2.0)
-    business_intelligence: result.business_intelligence || null,
-
-    // Crawl Metadata (NEW v2.0)
-    crawl_metadata: result.crawl_metadata || null,
-
-    // Status
-    status: 'ready_for_outreach',
-
-    // Timestamps and costs
-    analyzed_at: result.analyzed_at || new Date().toISOString(),
-    analysis_cost: result.analysis_cost || null,
-    analysis_time: result.analysis_time || null
-  };
-}
 
 // Start server
 app.listen(PORT, () => {

@@ -42,9 +42,10 @@ export { analyzeSocial, hasSocialPresence, countInactivePlatforms } from './soci
  * @param {object} data.customPrompts - Custom AI prompts (optional)
  * @param {object} data.socialProfiles - Social profile URLs (optional)
  * @param {object} data.socialMetadata - Social metadata (optional)
+ * @param {array} pages - Array of page objects for multi-page analysis (optional)
  * @returns {Promise<object>} All analysis results
  */
-export async function runAllAnalyses(data) {
+export async function runAllAnalyses(data, pages = []) {
   const {
     url,
     screenshot, // Legacy - will be deprecated
@@ -64,17 +65,53 @@ export async function runAllAnalyses(data) {
   const { analyzeContent } = await import('./content-analyzer.js');
   const { analyzeSocial } = await import('./social-analyzer.js');
 
+  // Build pages array for multi-page analyzers
+  let pagesForAnalysis = pages;
+
+  // If no pages provided, create single-page array from legacy params
+  if (!pages || pages.length === 0) {
+    pagesForAnalysis = [{
+      url: '/',
+      fullUrl: url,
+      html: html,
+      metadata: {
+        title: null,
+        loadTime: null
+      }
+    }];
+  }
+
+  // Build pages array for visual analyzers (need screenshots attached)
+  let visualPages = [];
+
+  // Use pages from parameter if they have screenshots
+  if (pages.length > 0 && pages[0]?.screenshots?.desktop && pages[0]?.screenshots?.mobile) {
+    // Pages already have screenshots attached (from intelligent analyzer or multi-page crawler)
+    visualPages = pages.filter(p => p.screenshots?.desktop && p.screenshots?.mobile);
+  }
+  // Fallback: create from legacy screenshot parameters (basic analyzer)
+  else if (desktopScreenshot && mobileScreenshot) {
+    visualPages = [{
+      url: '/',
+      fullUrl: url,
+      screenshots: {
+        desktop: desktopScreenshot,
+        mobile: mobileScreenshot
+      }
+    }];
+  }
+
   // Run all analyses in parallel (NEW: separate desktop and mobile visual analysis)
   const [desktopVisualResults, mobileVisualResults, seoResults, contentResults, socialResults] = await Promise.allSettled([
-    desktopScreenshot
-      ? analyzeDesktopVisual(url, desktopScreenshot, context, customPrompts?.desktopVisual)
+    visualPages.length > 0
+      ? analyzeDesktopVisual(visualPages, context, customPrompts?.desktopVisual)
       : Promise.resolve(getDefaultDesktopVisualResults()),
-    mobileScreenshot
-      ? analyzeMobileVisual(url, mobileScreenshot, context, customPrompts?.mobileVisual)
+    visualPages.length > 0
+      ? analyzeMobileVisual(visualPages, context, customPrompts?.mobileVisual)
       : Promise.resolve(getDefaultMobileVisualResults()),
-    analyzeSEO(url, html, context, customPrompts?.seo),
-    analyzeContent(url, html, context, customPrompts?.content),
-    analyzeSocial(url, socialProfiles, socialMetadata, context, customPrompts?.social)
+    analyzeSEO(pagesForAnalysis, context, customPrompts?.seo),
+    analyzeContent(pagesForAnalysis, context, customPrompts?.content),
+    analyzeSocial(pagesForAnalysis, context, customPrompts?.social)
   ]);
 
   // Extract results (handle failures gracefully)
