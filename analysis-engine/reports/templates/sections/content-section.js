@@ -23,7 +23,7 @@ export function generateContentSection(analysisResult) {
   output += `| Metric | Value |\n`;
   output += `|--------|-------|\n`;
 
-  if (content_insights.wordCount) {
+  if (content_insights && content_insights.wordCount) {
     output += `| **Word Count** | ${content_insights.wordCount} |\n`;
   }
 
@@ -31,16 +31,16 @@ export function generateContentSection(analysisResult) {
     const blogStatus = has_blog ? '✅ Present' : '❌ Missing';
     output += `| **Blog** | ${blogStatus} |\n`;
 
-    if (has_blog && content_insights.blogPostCount) {
+    if (has_blog && content_insights && content_insights.blogPostCount) {
       output += `| **Blog Posts** | ${content_insights.blogPostCount} |\n`;
     }
   }
 
-  if (content_insights.ctaCount !== undefined) {
+  if (content_insights && content_insights.ctaCount !== undefined) {
     output += `| **CTAs** | ${content_insights.ctaCount} |\n`;
   }
 
-  if (content_insights.completeness) {
+  if (content_insights && content_insights.completeness) {
     output += `| **Content Completeness** | ${content_insights.completeness} |\n`;
   }
 

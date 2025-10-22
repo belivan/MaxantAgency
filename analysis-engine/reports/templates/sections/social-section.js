@@ -19,7 +19,7 @@ export function generateSocialSection(analysisResult) {
   // Platform Presence
   output += `## 📱 Platform Presence\n\n`;
 
-  if (social_platforms_present.length === 0) {
+  if (!social_platforms_present || social_platforms_present.length === 0) {
     output += `❌ **No social media profiles detected on website.**\n\n`;
     output += `Recommendation: Add social media links to your website footer and contact page.\n\n`;
   } else {
@@ -34,7 +34,7 @@ export function generateSocialSection(analysisResult) {
   }
 
   // Social Issues
-  if (social_issues.length > 0) {
+  if (social_issues && social_issues.length > 0) {
     output += `## Social Media Issues\n\n`;
     output += formatIssuesByPriority(social_issues);
   }

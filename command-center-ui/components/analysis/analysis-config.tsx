@@ -40,19 +40,23 @@ interface AnalysisConfigProps {
   leadsCount?: number;
 }
 
-// Available AI models (VERIFIED REAL - Jan 2025)
+// Available AI models - OCTOBER 2025
 const AI_MODELS = [
+  // OpenAI GPT-5 series (Released August 2025)
+  { value: 'gpt-5', label: 'GPT-5', provider: 'OpenAI', description: 'Latest flagship with vision - $1.25/$10 per 1M tokens', cost: '$$', speed: 'Fast' },
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini', provider: 'OpenAI', description: 'Budget GPT-5 with vision - $0.25/$2 per 1M tokens', cost: '$', speed: 'Very Fast' },
+
+  // OpenAI GPT-4o (Previous gen)
+  { value: 'gpt-4o', label: 'GPT-4o', provider: 'OpenAI', description: 'Previous gen with vision - $5/$15 per 1M tokens', cost: '$$', speed: 'Fast' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'OpenAI', description: 'Budget GPT-4o - $0.15/$0.60 per 1M tokens', cost: '$', speed: 'Very Fast' },
+
+  // Anthropic Claude 4.5 series (Sept-Oct 2025)
+  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5', provider: 'Anthropic', description: 'Latest Claude - $3/$15 per 1M tokens', cost: '$$', speed: 'Fast' },
+  { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', provider: 'Anthropic', description: 'Fast Claude 4.5 - $0.80/$4 per 1M tokens', cost: '$', speed: 'Very Fast' },
+
   // xAI Grok models
   { value: 'grok-4-fast', label: 'Grok 4 Fast', provider: 'xAI', description: 'Fast & cheap - $0.20/$0.50 per 1M tokens', cost: '$', speed: 'Very Fast' },
-  { value: 'grok-4', label: 'Grok 4', provider: 'xAI', description: 'Full Grok - $3/$15 per 1M tokens', cost: '$$', speed: 'Fast' },
-
-  // OpenAI GPT models
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'OpenAI', description: 'Budget model - $0.15/$0.60 per 1M tokens', cost: '$', speed: 'Very Fast' },
-  { value: 'gpt-4o', label: 'GPT-4o', provider: 'OpenAI', description: 'Latest OpenAI with vision - $5/$15 per 1M tokens', cost: '$$', speed: 'Fast' },
-
-  // Anthropic Claude 3.5 models
-  { value: 'claude-3.5-haiku', label: 'Claude 3.5 Haiku', provider: 'Anthropic', description: 'Fast & cheap - $0.80/$4 per 1M tokens', cost: '$', speed: 'Very Fast' },
-  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet', provider: 'Anthropic', description: 'Best coding model - $3/$15 per 1M tokens', cost: '$$', speed: 'Fast' }
+  { value: 'grok-4', label: 'Grok 4', provider: 'xAI', description: 'Full Grok - $3/$15 per 1M tokens', cost: '$$', speed: 'Fast' }
 ] as const;
 
 // Core modules (6 analyzers - matching backend exactly)

@@ -80,14 +80,14 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
     if (props.onPromptsChange && !isLoadingPrompts) {
       props.onPromptsChange(defaultPrompts, customPrompts);
     }
-  }, [defaultPrompts, customPrompts, isLoadingPrompts, props]);
+  }, [defaultPrompts, customPrompts, isLoadingPrompts, props.onPromptsChange]);
 
   // Notify parent when models change (for auto-fork detection)
   useEffect(() => {
     if (props.onModelsChange && !isLoadingPrompts && Object.keys(selectedModels).length > 0) {
       props.onModelsChange(selectedModels);
     }
-  }, [selectedModels, isLoadingPrompts, props]);
+  }, [selectedModels, isLoadingPrompts, props.onModelsChange]);
 
   // Wrap onSubmit to include model selections and custom prompts
   const handleSubmit = (data: ProspectGenerationFormData) => {

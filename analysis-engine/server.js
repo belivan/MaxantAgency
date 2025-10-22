@@ -128,7 +128,6 @@ app.post('/api/analyze-url', async (req, res) => {
       // Grading & Scores
       overall_score: Math.round(result.overall_score),
       website_grade: result.grade,
-      grade_label: result.grade_label || null,
       design_score: Math.round(result.design_score),
       design_score_desktop: Math.round(result.design_score_desktop || result.design_score),
       design_score_mobile: Math.round(result.design_score_mobile || result.design_score),
@@ -193,9 +192,9 @@ app.post('/api/analyze-url', async (req, res) => {
       page_title: result.page_title || null,
       meta_description: result.meta_description || null,
 
-      // Screenshots
-      screenshot_desktop_url: result.screenshot_desktop_url || null,
-      screenshot_mobile_url: result.screenshot_mobile_url || null,
+      // Screenshots (ensure we don't save buffers - only URLs/paths)
+      screenshot_desktop_url: typeof result.screenshot_desktop_url === 'string' ? result.screenshot_desktop_url : null,
+      screenshot_mobile_url: typeof result.screenshot_mobile_url === 'string' ? result.screenshot_mobile_url : null,
 
       // Social Media
       social_profiles: result.social_profiles || {},
@@ -208,19 +207,28 @@ app.post('/api/analyze-url', async (req, res) => {
       // Business Intelligence
       business_intelligence: result.business_intelligence || {},
 
-      // Crawl & Analysis Metadata
-      crawl_metadata: result.crawl_metadata || {},
+      // Crawl & Analysis Metadata (simplified to avoid timeout)
+      crawl_metadata: result.crawl_metadata ? {
+        pages_crawled: result.crawl_metadata.pages_crawled || 0,
+        crawl_time: result.crawl_metadata.crawl_time || 0,
+        failed_pages: (result.crawl_metadata.failed_pages || []).length
+      } : {},
       pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
       pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
       pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
-      ai_page_selection: result.intelligent_analysis?.ai_page_selection || null,
+      ai_page_selection: result.intelligent_analysis?.ai_page_selection ? {
+        strategy: result.intelligent_analysis.ai_page_selection.strategy || null
+      } : null,
 
       // Performance
       analysis_cost: result.analysis_cost || 0,
       analysis_time: result.analysis_time || 0,
 
-      // Comprehensive Discovery Log
-      discovery_log: result.discovery_log || {},
+      // Discovery Log (simplified - full data is in backup)
+      discovery_log: result.discovery_log ? {
+        totalPages: result.discovery_log.totalPages || 0,
+        sources: result.discovery_log.sources || []
+      } : {},
 
       // Timestamps
       analyzed_at: new Date().toISOString(),
@@ -263,12 +271,51 @@ app.post('/api/analyze-url', async (req, res) => {
       await markAsUploaded(backupPath, savedLead.id);
     }
 
+    // Auto-generate report (if enabled in .env)
+    let reportInfo = null;
+    const { getReportConfig } = await import('./config/report-config.js');
+    const reportConfig = getReportConfig();
+
+    if (reportConfig.autoGenerateReports) {
+      try {
+        const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
+
+        // Ensure reports bucket exists
+        await ensureReportsBucket();
+
+        // Generate and upload report
+        const reportResult = await autoGenerateReport(savedLead, {
+          format: reportConfig.defaultFormat,
+          sections: reportConfig.defaultSections,
+          saveToDatabase: true,
+          project_id: project_id
+        });
+
+        if (reportResult.success) {
+          reportInfo = {
+            id: reportResult.report_id,
+            path: reportResult.storage_path,
+            format: reportResult.format
+          };
+          console.log(`[Report Generation] ✓ Report generated: ${reportResult.storage_path}`);
+        } else {
+          console.warn(`[Report Generation] Failed: ${reportResult.error}`);
+        }
+      } catch (reportError) {
+        console.error(`[Report Generation] Error:`, reportError.message);
+        // Don't fail the whole request if report generation fails
+      }
+    } else {
+      console.log(`[Report Generation] Skipped (AUTO_GENERATE_REPORTS=false)`);
+    }
+
     res.json({
       success: true,
       result: {
         ...result,
         database_saved: true,
-        database_id: savedLead.id
+        database_id: savedLead.id,
+        report: reportInfo
       }
     });
 
@@ -314,7 +361,7 @@ app.post('/api/analyze', async (req, res) => {
       // IMPORTANT: Fetch prospects and verify they belong to the specified project
       const { data: fetchedProspects, error: fetchError } = await supabase
         .from('prospects')
-        .select('id, company_name, website, industry, project_id')
+        .select('id, company_name, website, industry')
         .in('id', prospect_ids)
         .not('website', 'is', null);
 
@@ -333,17 +380,38 @@ app.post('/api/analyze', async (req, res) => {
         });
       }
 
-      // Validate that all prospects belong to the specified project
-      const invalidProspects = fetchedProspects.filter(p => p.project_id !== project_id);
-      if (invalidProspects.length > 0) {
-        return res.status(400).json({
+      // Look up project assignments via project_prospects join table
+      const { data: assignments, error: assignmentError } = await supabase
+        .from('project_prospects')
+        .select('prospect_id, project_id')
+        .in('prospect_id', prospect_ids)
+        .eq('project_id', project_id);
+
+      if (assignmentError) {
+        return res.status(500).json({
           success: false,
-          error: `Cannot analyze prospects from different projects. All prospects must belong to project: ${project_id}`,
-          details: `${invalidProspects.length} prospect(s) belong to different projects`
+          error: 'Failed to verify prospect project assignments',
+          details: assignmentError.message
         });
       }
 
-      prospects = fetchedProspects;
+      const assignedProspects = new Set((assignments || []).map(row => row.prospect_id));
+
+      // Ensure every fetched prospect is assigned to the requested project
+      const unassignedProspects = fetchedProspects.filter(p => !assignedProspects.has(p.id));
+      if (unassignedProspects.length > 0) {
+        return res.status(400).json({
+          success: false,
+          error: `Cannot analyze prospects from different projects. All prospects must belong to project: ${project_id}`,
+          details: `${unassignedProspects.length} prospect(s) missing project assignment for this project`
+        });
+      }
+
+      // Attach verified project assignment before analysis runs
+      prospects = fetchedProspects.map(p => ({
+        ...p,
+        project_id
+      }));
       console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze (all verified to belong to project ${project_id})`);
     } else {
       return res.status(400).json({
@@ -385,6 +453,7 @@ app.post('/api/analyze', async (req, res) => {
           current: currentIndex,
           total: prospects.length,
           company_name: prospect.company_name,
+          company: prospect.company_name || prospect.website,
           url: prospect.website
         });
 
@@ -407,7 +476,6 @@ app.post('/api/analyze', async (req, res) => {
             // Grading & Scores
             overall_score: Math.round(result.overall_score),
             website_grade: result.grade,
-            grade_label: result.grade_label || null,
             design_score: Math.round(result.design_score),
             design_score_desktop: Math.round(result.design_score_desktop || result.design_score),
             design_score_mobile: Math.round(result.design_score_mobile || result.design_score),
@@ -472,9 +540,9 @@ app.post('/api/analyze', async (req, res) => {
             page_title: result.page_title || null,
             meta_description: result.meta_description || null,
 
-            // Screenshots
-            screenshot_desktop_url: result.screenshot_desktop_url || null,
-            screenshot_mobile_url: result.screenshot_mobile_url || null,
+            // Screenshots (ensure we don't save buffers - only URLs/paths)
+            screenshot_desktop_url: typeof result.screenshot_desktop_url === 'string' ? result.screenshot_desktop_url : null,
+            screenshot_mobile_url: typeof result.screenshot_mobile_url === 'string' ? result.screenshot_mobile_url : null,
 
             // Social Media
             social_profiles: result.social_profiles || {},
@@ -487,19 +555,28 @@ app.post('/api/analyze', async (req, res) => {
             // Business Intelligence
             business_intelligence: result.business_intelligence || {},
 
-            // Crawl & Analysis Metadata
-            crawl_metadata: result.crawl_metadata || {},
+            // Crawl & Analysis Metadata (simplified to avoid timeout)
+            crawl_metadata: result.crawl_metadata ? {
+              pages_crawled: result.crawl_metadata.pages_crawled || 0,
+              crawl_time: result.crawl_metadata.crawl_time || 0,
+              failed_pages: (result.crawl_metadata.failed_pages || []).length
+            } : {},
             pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
             pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
             pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
-            ai_page_selection: result.intelligent_analysis?.ai_page_selection || null,
+            ai_page_selection: result.intelligent_analysis?.ai_page_selection ? {
+              strategy: result.intelligent_analysis.ai_page_selection.strategy || null
+            } : null,
 
             // Performance
             analysis_cost: result.analysis_cost || 0,
             analysis_time: result.analysis_time || 0,
 
-            // Comprehensive Discovery Log
-            discovery_log: result.discovery_log || {},
+            // Discovery Log (simplified - full data is in backup)
+            discovery_log: result.discovery_log ? {
+              totalPages: result.discovery_log.totalPages || 0,
+              sources: result.discovery_log.sources || []
+            } : {},
 
             // Timestamps
             analyzed_at: new Date().toISOString(),
@@ -537,6 +614,7 @@ app.post('/api/analyze', async (req, res) => {
               current: currentIndex,
               total: prospects.length,
               company_name: prospect.company_name,
+              company: prospect.company_name || prospect.website,
               url: prospect.website,
               error: `Database save failed: ${saveError.message}`
             });
@@ -549,11 +627,42 @@ app.post('/api/analyze', async (req, res) => {
               console.log(`[Intelligent Analysis] Backup marked as uploaded for ${prospect.company_name}`);
             }
 
+            // STEP 3c: Auto-generate report (if enabled in .env)
+            const { getReportConfig } = await import('./config/report-config.js');
+            const reportConfig = getReportConfig();
+
+            if (reportConfig.autoGenerateReports) {
+              try {
+                const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
+
+                // Ensure reports bucket exists
+                await ensureReportsBucket();
+
+                // Generate and upload report
+                const reportResult = await autoGenerateReport(savedLead, {
+                  format: reportConfig.defaultFormat,
+                  sections: reportConfig.defaultSections,
+                  saveToDatabase: true,
+                  project_id: project_id
+                });
+
+                if (reportResult.success) {
+                  console.log(`[Report Generation] ✓ Report generated: ${reportResult.storage_path}`);
+                } else {
+                  console.warn(`[Report Generation] Failed: ${reportResult.error}`);
+                }
+              } catch (reportError) {
+                console.error(`[Report Generation] Error for ${prospect.company_name}:`, reportError.message);
+                // Don't fail the whole analysis if report generation fails
+              }
+            }
+
             // Send success event
             sendEvent('success', {
               current: currentIndex,
               total: prospects.length,
               company_name: prospect.company_name,
+              company: prospect.company_name || prospect.website,
               url: prospect.website,
               grade: result.grade,
               score: result.overall_score
@@ -565,6 +674,7 @@ app.post('/api/analyze', async (req, res) => {
             prospect_id: prospect.id,
             url: prospect.website,
             company_name: prospect.company_name,
+            company: prospect.company_name || prospect.website,
             grade: result.grade,
             score: result.overall_score
           });
@@ -575,6 +685,7 @@ app.post('/api/analyze', async (req, res) => {
             current: currentIndex,
             total: prospects.length,
             company_name: prospect.company_name,
+            company: prospect.company_name || prospect.website,
             url: prospect.website,
             error: result.error
           });
@@ -583,6 +694,7 @@ app.post('/api/analyze', async (req, res) => {
             prospect_id: prospect.id,
             url: prospect.website,
             company_name: prospect.company_name,
+            company: prospect.company_name || prospect.website,
             error: result.error
           });
         }
@@ -593,6 +705,7 @@ app.post('/api/analyze', async (req, res) => {
           current: currentIndex,
           total: prospects.length,
           company_name: prospect.company_name,
+          company: prospect.company_name || prospect.website,
           url: prospect.website,
           error: error.message
         });
@@ -601,6 +714,7 @@ app.post('/api/analyze', async (req, res) => {
           prospect_id: prospect.id,
           url: prospect.website,
           company_name: prospect.company_name,
+          company: prospect.company_name || prospect.website,
           error: error.message
         });
       }

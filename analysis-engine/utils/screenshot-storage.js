@@ -29,10 +29,11 @@ async function ensureScreenshotsDir() {
  * Generate filename for screenshot
  * Format: company-name-desktop-2025-10-21-abc123.png
  */
-function generateScreenshotFilename(companyName, type = 'desktop') {
+function generateScreenshotFilename(companyName = 'website', type = 'desktop') {
+  const safeName = (companyName || 'website').toString();
   const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   const randomId = Math.random().toString(36).substring(2, 8);
-  const sanitizedName = companyName
+  const sanitizedName = safeName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
@@ -51,6 +52,11 @@ function generateScreenshotFilename(companyName, type = 'desktop') {
  */
 export async function saveScreenshotLocally(screenshotBuffer, companyName, type = 'desktop') {
   try {
+    if (!Buffer.isBuffer(screenshotBuffer)) {
+      console.warn(`[Screenshot Storage] Skipping ${type} screenshot for ${companyName || 'unknown company'} - no buffer provided.`);
+      return null;
+    }
+
     await ensureScreenshotsDir();
 
     const filename = generateScreenshotFilename(companyName, type);
@@ -75,15 +81,25 @@ export async function saveScreenshotLocally(screenshotBuffer, companyName, type 
  * @returns {Promise<object>} Object with desktop and mobile file paths
  */
 export async function saveDualScreenshots(screenshots, companyName) {
-  const [desktopPath, mobilePath] = await Promise.all([
-    saveScreenshotLocally(screenshots.desktop, companyName, 'desktop'),
-    saveScreenshotLocally(screenshots.mobile, companyName, 'mobile')
-  ]);
+  const result = { desktop: null, mobile: null };
 
-  return {
-    desktop: desktopPath,
-    mobile: mobilePath
-  };
+  if (!screenshots) {
+    return result;
+  }
+
+  if (Buffer.isBuffer(screenshots.desktop)) {
+    result.desktop = await saveScreenshotLocally(screenshots.desktop, companyName, 'desktop');
+  } else if (screenshots.desktop) {
+    console.warn(`[Screenshot Storage] Desktop screenshot provided for ${companyName || 'unknown company'} is not a buffer. Skipping save.`);
+  }
+
+  if (Buffer.isBuffer(screenshots.mobile)) {
+    result.mobile = await saveScreenshotLocally(screenshots.mobile, companyName, 'mobile');
+  } else if (screenshots.mobile) {
+    console.warn(`[Screenshot Storage] Mobile screenshot provided for ${companyName || 'unknown company'} is not a buffer. Skipping save.`);
+  }
+
+  return result;
 }
 
 /**
