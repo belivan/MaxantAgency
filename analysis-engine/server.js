@@ -15,7 +15,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import { dirname, resolve, join } from 'path';
+import { writeFile, mkdir } from 'fs/promises';
 import { createClient } from '@supabase/supabase-js';
 import { analyzeWebsiteIntelligent } from './orchestrator.js';
 import { collectAnalysisPrompts } from './shared/prompt-loader.js';
@@ -86,7 +87,7 @@ app.get('/api/prompts/default', async (req, res) => {
  */
 app.post('/api/analyze-url', async (req, res) => {
   try {
-    const { url, company_name, industry, project_id } = req.body;
+    const { url, company_name, industry, project_id, custom_prompts } = req.body;
 
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
@@ -104,6 +105,7 @@ app.post('/api/analyze-url', async (req, res) => {
       industry: industry || 'Unknown',
       project_id: project_id  // Required, validation above ensures it exists
     }, {
+      customPrompts: custom_prompts || undefined,
       onProgress: (progress) => {
         console.log(`[Intelligent Analysis] ${progress.step}: ${progress.message}`);
       }
@@ -283,8 +285,18 @@ app.post('/api/analyze-url', async (req, res) => {
         // Ensure reports bucket exists
         await ensureReportsBucket();
 
-        // Generate and upload report
-        const reportResult = await autoGenerateReport(savedLead, {
+        // Generate and upload report with full analysis payload (includes crawl_metadata.pages_analyzed)
+        const reportPayload = {
+          ...result,
+          id: savedLead.id,
+          project_id: project_id ?? result.project_id ?? savedLead.project_id,
+          grade: result.grade || savedLead.website_grade,
+          overall_score: result.overall_score || savedLead.overall_score,
+          website_grade: savedLead.website_grade || result.grade,
+          website_score: savedLead.overall_score || result.overall_score
+        };
+
+        const reportResult = await autoGenerateReport(reportPayload, {
           format: reportConfig.defaultFormat,
           sections: reportConfig.defaultSections,
           saveToDatabase: true,
@@ -361,7 +373,7 @@ app.post('/api/analyze', async (req, res) => {
       // IMPORTANT: Fetch prospects and verify they belong to the specified project
       const { data: fetchedProspects, error: fetchError } = await supabase
         .from('prospects')
-        .select('id, company_name, website, industry')
+        .select('id, company_name, website, industry, city, state, address, contact_email, contact_phone, contact_name, description, services, social_profiles, social_metadata, icp_match_score, google_rating, google_review_count')
         .in('id', prospect_ids)
         .not('website', 'is', null);
 
@@ -383,7 +395,7 @@ app.post('/api/analyze', async (req, res) => {
       // Look up project assignments via project_prospects join table
       const { data: assignments, error: assignmentError } = await supabase
         .from('project_prospects')
-        .select('prospect_id, project_id')
+        .select('prospect_id, project_id, status, notes, custom_score, discovery_query, discovery_time_ms, discovery_cost_usd, run_id')
         .in('prospect_id', prospect_ids)
         .eq('project_id', project_id);
 
@@ -395,7 +407,8 @@ app.post('/api/analyze', async (req, res) => {
         });
       }
 
-      const assignedProspects = new Set((assignments || []).map(row => row.prospect_id));
+      const assignmentByProspect = new Map((assignments || []).map(row => [row.prospect_id, row]));
+      const assignedProspects = new Set(assignmentByProspect.keys());
 
       // Ensure every fetched prospect is assigned to the requested project
       const unassignedProspects = fetchedProspects.filter(p => !assignedProspects.has(p.id));
@@ -410,7 +423,8 @@ app.post('/api/analyze', async (req, res) => {
       // Attach verified project assignment before analysis runs
       prospects = fetchedProspects.map(p => ({
         ...p,
-        project_id
+        project_id,
+        project_assignment: assignmentByProspect.get(p.id) || null
       }));
       console.log(`[Intelligent Analysis] Found ${prospects.length} prospects to analyze (all verified to belong to project ${project_id})`);
     } else {
@@ -457,10 +471,24 @@ app.post('/api/analyze', async (req, res) => {
           url: prospect.website
         });
 
+        const assignment = prospect.project_assignment || {};
         const result = await analyzeWebsiteIntelligent(prospect.website, {
           company_name: prospect.company_name || 'Unknown Company',
           industry: prospect.industry || 'unknown',
-          project_id: project_id  // Required, validation above ensures it exists
+          project_id: project_id,  // Required, validation above ensures it exists
+          prospect_id: prospect.id || null,
+          city: prospect.city || null,
+          state: prospect.state || null,
+          address: prospect.address || null,
+          contact_email: prospect.contact_email || null,
+          contact_phone: prospect.contact_phone || null,
+          contact_name: prospect.contact_name || null,
+          project_notes: assignment.notes || null,
+          project_status: assignment.status || null,
+          custom_score: assignment.custom_score || null,
+          discovery_query: assignment.discovery_query || null
+        }, {
+          customPrompts: custom_prompts || undefined
         });
 
         if (result.success) {
@@ -472,6 +500,8 @@ app.post('/api/analyze', async (req, res) => {
             industry: result.industry,
             project_id: project_id,  // Required
             prospect_id: prospect.id || null,
+            city: result.city || prospect.city || null,
+            state: result.state || prospect.state || null,
 
             // Grading & Scores
             overall_score: Math.round(result.overall_score),
@@ -527,9 +557,9 @@ app.post('/api/analyze', async (req, res) => {
             accessibility_analysis_model: result.accessibility_analysis_model || null,
 
             // Contact Information
-            contact_email: result.contact_email || null,
-            contact_phone: result.contact_phone || null,
-            contact_name: result.contact_name || null,
+            contact_email: result.contact_email || prospect.contact_email || null,
+            contact_phone: result.contact_phone || prospect.contact_phone || null,
+            contact_name: result.contact_name || prospect.contact_name || null,
 
             // Technical Metadata
             tech_stack: result.tech_stack || null,
@@ -575,7 +605,16 @@ app.post('/api/analyze', async (req, res) => {
             // Discovery Log (simplified - full data is in backup)
             discovery_log: result.discovery_log ? {
               totalPages: result.discovery_log.totalPages || 0,
-              sources: result.discovery_log.sources || []
+              sources: result.discovery_log.sources || [],
+              project_assignment: assignment ? {
+                status: assignment.status || null,
+                notes: assignment.notes || null,
+                custom_score: assignment.custom_score || null,
+                discovery_query: assignment.discovery_query || null,
+                discovery_time_ms: assignment.discovery_time_ms || null,
+                discovery_cost_usd: assignment.discovery_cost_usd || null,
+                run_id: assignment.run_id || null
+              } : null
             } : {},
 
             // Timestamps
@@ -638,8 +677,18 @@ app.post('/api/analyze', async (req, res) => {
                 // Ensure reports bucket exists
                 await ensureReportsBucket();
 
-                // Generate and upload report
-                const reportResult = await autoGenerateReport(savedLead, {
+                // Generate and upload report with full analysis payload
+                const reportPayload = {
+                  ...result,
+                  id: savedLead.id,
+                  project_id: project_id ?? result.project_id ?? savedLead.project_id,
+                  grade: result.grade || savedLead.website_grade,
+                  overall_score: result.overall_score || savedLead.overall_score,
+                  website_grade: savedLead.website_grade || result.grade,
+                  website_score: savedLead.overall_score || result.overall_score
+                };
+
+                const reportResult = await autoGenerateReport(reportPayload, {
                   format: reportConfig.defaultFormat,
                   sections: reportConfig.defaultSections,
                   saveToDatabase: true,
@@ -1038,10 +1087,18 @@ app.post('/api/reports/generate', async (req, res) => {
     }
 
     // Generate report
-    const { generateReport, generateStoragePath } = await import('./reports/report-generator.js');
+    const { generateReport, generateStoragePath, generateReportFilename } = await import('./reports/report-generator.js');
     const { uploadReport, saveReportMetadata } = await import('./reports/storage/supabase-storage.js');
 
     const report = await generateReport(lead, { format, sections });
+
+    // Save a local backup of the report before uploading
+    const reportsDir = join(__dirname, '..', 'local-backups', 'analysis-engine', 'reports');
+    await mkdir(reportsDir, { recursive: true });
+    const localFilename = generateReportFilename(lead, format);
+    const localReportPath = join(reportsDir, localFilename);
+    await writeFile(localReportPath, report.content, 'utf8');
+    console.log(`[Report Generation] Local backup saved: ${localReportPath}`);
 
     // Upload to Supabase Storage
     const storagePath = generateStoragePath(lead, format);
@@ -1070,7 +1127,7 @@ app.post('/api/reports/generate', async (req, res) => {
       website_url: lead.url,
       overall_score: lead.overall_score,
       website_grade: lead.website_grade,
-      config: { sections },
+      config: { sections, local_path: localReportPath },
       status: 'completed'
     });
 
@@ -1079,6 +1136,7 @@ app.post('/api/reports/generate', async (req, res) => {
       report: {
         id: reportRecord.id,
         storage_path: uploadResult.path,
+        local_path: localReportPath,
         metadata: report.metadata
       }
     });

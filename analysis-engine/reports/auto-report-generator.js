@@ -3,8 +3,15 @@
  * Automatically generates and uploads reports after analysis
  */
 
-import { generateReport, generateStoragePath, validateAnalysisResult } from './report-generator.js';
+import { generateReport, generateStoragePath, generateReportFilename, validateAnalysisResult } from './report-generator.js';
 import { uploadReport, saveReportMetadata } from './storage/supabase-storage.js';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Automatically generate and upload a report after analysis
@@ -37,6 +44,35 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     // Generate the report
     const report = await generateReport(reportData, { format, sections });
 
+    // Handle local backup based on format
+    const reportsDir = join(__dirname, '..', '..', 'local-backups', 'analysis-engine', 'reports');
+    await mkdir(reportsDir, { recursive: true });
+    const localFilename = generateReportFilename(reportData, format);
+    const localReportPath = join(reportsDir, localFilename);
+
+    let localPath = localReportPath;
+    let contentForUpload = report.content;
+
+    // For PDF format, the file is already saved, just need to copy or reference it
+    if (format === 'pdf' && report.path) {
+      // PDF was already generated to a file
+      const { readFile: fsReadFile, copyFile } = await import('fs/promises');
+      
+      // Copy the PDF to local backup location
+      await copyFile(report.path, localReportPath);
+      console.log(`📄 Local PDF backup saved: ${localReportPath}`);
+      
+      // Read the PDF for Supabase upload
+      contentForUpload = await fsReadFile(report.path);
+      localPath = localReportPath;
+    } else if (report.content) {
+      // For text-based formats (markdown, html), save content to file
+      await writeFile(localReportPath, report.content, 'utf8');
+      console.log(`📄 Local report backup saved: ${localReportPath}`);
+    } else {
+      throw new Error(`Report generation failed: No content or path returned for format ${format}`);
+    }
+
     // Generate storage path
     const storagePath = generateStoragePath(reportData, format);
 
@@ -49,12 +85,24 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     };
     const contentType = contentTypeMap[format] || 'text/plain';
 
-    // Upload to Supabase Storage
-    const uploadResult = await uploadReport(report.content, storagePath, contentType);
+    // Try to upload to Supabase Storage (gracefully handle if not configured)
+    let uploadResult = { path: null, fullPath: null };
+    try {
+      uploadResult = await uploadReport(contentForUpload, storagePath, contentType);
+    } catch (uploadError) {
+      console.log(`⚠️  Supabase upload skipped: ${uploadError.message}`);
+      console.log(`📁 Report available locally at: ${localPath}`);
+      // Continue without upload - local backup is enough
+    }
 
-    // Save metadata to database if requested
+    // Save metadata to database if requested (only if upload succeeded)
     let reportRecord = null;
-    if (saveToDatabase) {
+    if (saveToDatabase && uploadResult.path) {
+      // Calculate file size based on what we're uploading
+      const fileSize = Buffer.isBuffer(contentForUpload) 
+        ? contentForUpload.length 
+        : Buffer.byteLength(contentForUpload, 'utf8');
+
       const metadata = {
         lead_id: analysisResult.id, // The lead ID from the analysis
         project_id: project_id || analysisResult.project_id,
@@ -62,15 +110,15 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         format,
         storage_path: uploadResult.path,
         storage_bucket: 'reports',
-        file_size_bytes: Buffer.byteLength(report.content, 'utf8'),
+        file_size_bytes: fileSize,
         company_name: reportData.company_name,
         website_url: reportData.url,
         overall_score: Math.round(reportData.overall_score),
         website_grade: reportData.grade,
         config: {
-          sections: sections === ['all'] ? 'all' : sections,
+          sections: sections.includes('all') ? 'all' : sections.join(','),
           generation_time_ms: report.metadata.generation_time_ms,
-          word_count: report.metadata.word_count
+          word_count: report.metadata.word_count || 0
         },
         status: 'completed',
         generated_at: new Date().toISOString()
@@ -80,13 +128,19 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       console.log(`✅ Report saved: ${reportRecord.id}`);
     }
 
+    // Calculate file size for return value
+    const fileSize = Buffer.isBuffer(contentForUpload) 
+      ? contentForUpload.length 
+      : Buffer.byteLength(contentForUpload, 'utf8');
+
     return {
       success: true,
       report_id: reportRecord?.id,
       storage_path: uploadResult.path,
       full_path: uploadResult.fullPath,
+      local_path: localPath,
       format,
-      file_size: Buffer.byteLength(report.content, 'utf8'),
+      file_size: fileSize,
       metadata: report.metadata
     };
 

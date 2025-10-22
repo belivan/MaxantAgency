@@ -8,16 +8,24 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 const BUCKET_NAME = 'reports';
+
+// Lazy-load Supabase client to avoid import-time errors
+let supabase = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables');
+    }
+
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabase;
+}
 
 /**
  * Upload report to Supabase Storage
@@ -29,6 +37,8 @@ const BUCKET_NAME = 'reports';
  */
 export async function uploadReport(content, storagePath, contentType = 'text/markdown') {
   try {
+    const supabase = getSupabaseClient();
+    
     // Convert string content to buffer if needed
     const fileBuffer = typeof content === 'string'
       ? Buffer.from(content, 'utf-8')
@@ -69,6 +79,8 @@ export async function uploadReport(content, storagePath, contentType = 'text/mar
  */
 export async function getSignedUrl(storagePath, expiresIn = 3600) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .createSignedUrl(storagePath, expiresIn);
@@ -93,6 +105,8 @@ export async function getSignedUrl(storagePath, expiresIn = 3600) {
  */
 export async function downloadReport(storagePath) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .download(storagePath);
@@ -118,6 +132,8 @@ export async function downloadReport(storagePath) {
  */
 export async function deleteReport(storagePath) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
       .remove([storagePath]);
@@ -143,6 +159,8 @@ export async function deleteReport(storagePath) {
  */
 export async function listReports(folderPath = 'reports') {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .list(folderPath);
@@ -167,6 +185,8 @@ export async function listReports(folderPath = 'reports') {
  */
 export async function saveReportMetadata(reportMetadata) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase
       .from('reports')
       .insert(reportMetadata)
@@ -194,6 +214,8 @@ export async function saveReportMetadata(reportMetadata) {
  */
 export async function incrementDownloadCount(reportId) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { error } = await supabase.rpc('increment_report_downloads', {
       report_id: reportId
     });
@@ -230,6 +252,8 @@ export async function incrementDownloadCount(reportId) {
  */
 export async function getReportById(reportId) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase
       .from('reports')
       .select('*')
@@ -256,6 +280,8 @@ export async function getReportById(reportId) {
  */
 export async function getReportsByLeadId(leadId) {
   try {
+    const supabase = getSupabaseClient();
+    
     const { data, error } = await supabase
       .from('reports')
       .select('*')

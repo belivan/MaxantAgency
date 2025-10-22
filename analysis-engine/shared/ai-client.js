@@ -173,8 +173,15 @@ async function callOpenAICompatible({
     // Calculate cost
     const cost = calculateCost(model, response.usage);
 
+    // Validate response has content
+    const responseContent = response.choices[0]?.message?.content;
+    if (!responseContent) {
+      console.error('Empty response from OpenAI:', JSON.stringify(response, null, 2));
+      throw new Error('OpenAI returned empty content');
+    }
+
     return {
-      content: response.choices[0].message.content,
+      content: responseContent,
       usage: response.usage,
       cost,
       model,
@@ -264,8 +271,15 @@ async function callClaude({
 
     const cost = calculateCost(model, usage);
 
+    // Validate response has content
+    const responseContent = response.content[0]?.text;
+    if (!responseContent) {
+      console.error('Empty response from Claude:', JSON.stringify(response, null, 2));
+      throw new Error('Claude returned empty content');
+    }
+
     return {
-      content: response.content[0].text,
+      content: responseContent,
       usage,
       cost,
       model,
@@ -332,6 +346,11 @@ function calculateCost(modelId, usage) {
  */
 export function parseJSONResponse(content) {
   try {
+    // Handle null or undefined content
+    if (!content) {
+      throw new Error('AI response content is null or empty');
+    }
+
     // Try to extract JSON from markdown code blocks
     const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) ||
                      content.match(/```\n([\s\S]*?)\n```/) ||
@@ -339,7 +358,8 @@ export function parseJSONResponse(content) {
 
     return JSON.parse(jsonMatch[1] || content);
   } catch (error) {
-    console.error('Failed to parse JSON response:', content.substring(0, 200));
+    const preview = content ? content.substring(0, 200) : '[null or empty response]';
+    console.error('Failed to parse JSON response:', preview);
     throw new Error(`Invalid JSON response: ${error.message}`);
   }
 }

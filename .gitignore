@@ -85,6 +85,23 @@ analysis-results/
 *.avi
 *.mov
 
+# Generated reports (HTML, PDF, Markdown)
+*.html
+!**/templates/**/*.html
+!**/examples/**/*.html
+*.pdf
+*.md
+!README.md
+!**/README.md
+!CONTRIBUTING.md
+!LICENSE.md
+!CHANGELOG.md
+!*-PLAN.md
+!*-STRATEGY.md
+!*-GUIDE.md
+!*-COMPLETE.md
+!*-EXPLAINED.md
+
 # Backup and test files
 *.backup
 *.pre-refactor

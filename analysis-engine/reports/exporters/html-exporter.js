@@ -2,11 +2,14 @@
  * HTML Report Exporter
  *
  * Converts analysis results into styled HTML reports using the dark theme template
+ * Images are embedded as base64 data URIs for portability
  */
 
 import { readFile } from 'fs/promises';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { dirname, join, isAbsolute } from 'path';
+import { existsSync } from 'fs';
+import { generateAllScreenshotsSection } from './enhanced-screenshots.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,41 +29,69 @@ export async function generateHTMLReport(analysisResult) {
     screenshot_mobile_url
   } = analysisResult;
 
-  // Load HTML template
   const templatePath = join(__dirname, '../templates/html-template.html');
   const template = await readFile(templatePath, 'utf-8');
 
-  // Load and encode screenshots as base64
-  let desktopScreenshotBase64 = null;
-  let mobileScreenshotBase64 = null;
+  // Convert screenshot paths to base64 data URIs for portability
+  const toBase64DataURI = async (value) => {
+    if (!value || typeof value !== 'string') return null;
+    const trimmed = value.trim();
 
-  if (screenshot_desktop_url) {
-    try {
-      const buffer = await readFile(screenshot_desktop_url);
-      desktopScreenshotBase64 = `data:image/png;base64,${buffer.toString('base64')}`;
-      console.log(`✅ Loaded desktop screenshot: ${screenshot_desktop_url}`);
-    } catch (err) {
-      console.warn(`⚠️ Could not load desktop screenshot: ${err.message}`);
+    // If already a data URI, return as-is
+    if (trimmed.startsWith('data:')) {
+      return trimmed;
     }
-  }
 
-  if (screenshot_mobile_url) {
-    try {
-      const buffer = await readFile(screenshot_mobile_url);
-      mobileScreenshotBase64 = `data:image/png;base64,${buffer.toString('base64')}`;
-      console.log(`✅ Loaded mobile screenshot: ${screenshot_mobile_url}`);
-    } catch (err) {
-      console.warn(`⚠️ Could not load mobile screenshot: ${err.message}`);
+    // If it's a URL, we can't embed it (would need to fetch)
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      console.warn(`[HTML Exporter] Cannot embed remote URL: ${trimmed}`);
+      return trimmed; // Return URL as-is, won't be portable but won't break
     }
-  }
 
-  // Generate HTML content for all sections
-  const htmlContent = generateHTMLContent(analysisResult, {
-    desktopScreenshot: desktopScreenshotBase64,
-    mobileScreenshot: mobileScreenshotBase64
+    // Handle file:// URLs
+    let filePath = trimmed;
+    if (trimmed.startsWith('file://')) {
+      filePath = fileURLToPath(trimmed);
+    }
+
+    // Check if file exists
+    if (!existsSync(filePath)) {
+      console.warn(`[HTML Exporter] Screenshot file not found: ${filePath}`);
+      return null;
+    }
+
+    try {
+      // Read the image file as base64
+      const imageBuffer = await readFile(filePath);
+      const base64Image = imageBuffer.toString('base64');
+      
+      // Determine MIME type from file extension
+      const ext = filePath.toLowerCase().split('.').pop();
+      const mimeTypes = {
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'svg': 'image/svg+xml'
+      };
+      const mimeType = mimeTypes[ext] || 'image/png';
+      
+      return `data:${mimeType};base64,${base64Image}`;
+    } catch (err) {
+      console.error(`[HTML Exporter] Failed to embed screenshot (${filePath}): ${err.message}`);
+      return null;
+    }
+  };
+
+  const desktopScreenshotSrc = await toBase64DataURI(screenshot_desktop_url);
+  const mobileScreenshotSrc = await toBase64DataURI(screenshot_mobile_url);
+
+  const htmlContent = await generateHTMLContent(analysisResult, {
+    desktopScreenshot: desktopScreenshotSrc,
+    mobileScreenshot: mobileScreenshotSrc
   });
 
-  // Format date
   const date = new Date(analyzed_at || Date.now());
   const formattedDate = date.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -68,7 +99,6 @@ export async function generateHTMLReport(analysisResult) {
     day: 'numeric'
   });
 
-  // Replace template placeholders
   let html = template
     .replace(/{{COMPANY_NAME}}/g, escapeHtml(company_name))
     .replace(/{{GRADE}}/g, grade)
@@ -82,10 +112,11 @@ export async function generateHTMLReport(analysisResult) {
   return html;
 }
 
+
 /**
  * Generate HTML content for all report sections
  */
-function generateHTMLContent(analysisResult, screenshots = {}) {
+async function generateHTMLContent(analysisResult, screenshots = {}) {
   let content = '';
 
   // Score cards grid
@@ -124,6 +155,12 @@ function generateHTMLContent(analysisResult, screenshots = {}) {
   // Accessibility section
   if (analysisResult.accessibility_score) {
     content += generateAccessibilityHTML(analysisResult);
+  }
+
+  // ALL SCREENSHOTS SECTION - New! Shows all crawled pages with desktop + mobile screenshots
+  if (analysisResult.crawl_metadata && (analysisResult.crawl_metadata.successful_pages || analysisResult.crawl_metadata.pages_analyzed)) {
+    const allScreenshotsSection = await generateAllScreenshotsSection(analysisResult.crawl_metadata);
+    content += allScreenshotsSection;
   }
 
   // Business intelligence
@@ -210,7 +247,7 @@ function generateQuickWinsHTML(quickWins) {
 /**
  * Generate desktop analysis section
  */
-function generateDesktopHTML(analysisResult, screenshotBase64) {
+function generateDesktopHTML(analysisResult, screenshotSrc) {
   const { design_score_desktop, design_issues_desktop = [] } = analysisResult;
 
   let html = '<div class="section">\n';
@@ -218,9 +255,9 @@ function generateDesktopHTML(analysisResult, screenshotBase64) {
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(design_score_desktop)}</p>\n\n`;
 
   // Embed screenshot if available
-  if (screenshotBase64) {
+  if (screenshotSrc) {
     html += '  <div style="margin: 2rem 0; border: 1px solid #333; border-radius: 8px; overflow: hidden;">\n';
-    html += `    <img src="${screenshotBase64}" alt="Desktop screenshot" style="width: 100%; display: block;" />\n`;
+    html += `    <img src="${screenshotSrc}" alt="Desktop screenshot" style="width: 100%; display: block;" />\n`;
     html += '  </div>\n\n';
   }
 
@@ -237,7 +274,7 @@ function generateDesktopHTML(analysisResult, screenshotBase64) {
 /**
  * Generate mobile analysis section
  */
-function generateMobileHTML(analysisResult, screenshotBase64) {
+function generateMobileHTML(analysisResult, screenshotSrc) {
   const { design_score_mobile, design_issues_mobile = [], is_mobile_friendly } = analysisResult;
 
   let html = '<div class="section">\n';
@@ -250,9 +287,9 @@ function generateMobileHTML(analysisResult, screenshotBase64) {
   }
 
   // Embed screenshot if available (smaller width for mobile)
-  if (screenshotBase64) {
+  if (screenshotSrc) {
     html += '  <div style="margin: 2rem auto; max-width: 375px; border: 1px solid #333; border-radius: 8px; overflow: hidden;">\n';
-    html += `    <img src="${screenshotBase64}" alt="Mobile screenshot" style="width: 100%; display: block;" />\n`;
+    html += `    <img src="${screenshotSrc}" alt="Mobile screenshot" style="width: 100%; display: block;" />\n`;
     html += '  </div>\n\n';
   }
 

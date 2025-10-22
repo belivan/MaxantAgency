@@ -24,29 +24,83 @@ import { generateAnalysisScope } from './templates/sections/analysis-scope.js';
 import { generateActionPlan } from './templates/sections/action-plan.js';
 import { generateAppendix } from './templates/sections/appendix.js';
 import { generateHTMLReport } from './exporters/html-exporter.js';
+import { generatePDF, generatePDFFromContent } from './exporters/pdf-generator.js';
 
 /**
  * Generate a complete website audit report
  *
  * @param {object} analysisResult - Full analysis result from Analysis Engine
  * @param {object} options - Report generation options
- * @param {string} options.format - Report format ('markdown' or 'html')
+ * @param {string} options.format - Report format ('markdown', 'html', or 'pdf')
  * @param {array} options.sections - Sections to include (['all'] or specific sections)
  * @param {object} options.theme - Theme options (reserved for future use)
+ * @param {string} options.pdfOutputPath - Where to save PDF (only for format='pdf')
  * @returns {object} Report content and metadata
  */
 export async function generateReport(analysisResult, options = {}) {
   const {
     format = 'markdown',
     sections = ['all'],
-    theme = 'professional'
+    theme = 'professional',
+    pdfOutputPath = null
   } = options;
 
-  if (!['markdown', 'html'].includes(format)) {
-    throw new Error(`Unsupported format: ${format}. Supported formats: 'markdown', 'html'`);
+  if (!['markdown', 'html', 'pdf'].includes(format)) {
+    throw new Error(`Unsupported format: ${format}. Supported formats: 'markdown', 'html', 'pdf'`);
   }
 
   const startTime = Date.now();
+
+  // For PDF format, generate HTML first then convert
+  if (format === 'pdf') {
+    console.log('📄 Generating PDF report (HTML → PDF conversion)...');
+    
+    const htmlContent = await generateHTMLReport(analysisResult);
+    const outputPath = pdfOutputPath || `report-${Date.now()}.pdf`;
+    
+    const pdfResult = await generatePDFFromContent(htmlContent, outputPath);
+    const generationTime = Date.now() - startTime;
+
+    if (pdfResult.success) {
+      return {
+        content: null, // PDF is binary, stored in file
+        format: 'pdf',
+        path: pdfResult.path,
+        metadata: {
+          company_name: analysisResult.company_name,
+          website_url: analysisResult.url,
+          overall_score: analysisResult.overall_score,
+          website_grade: analysisResult.grade,
+          sections_included: 'all',
+          generation_time_ms: generationTime,
+          generation_method: pdfResult.method,
+          message: pdfResult.message,
+          generated_at: new Date().toISOString(),
+          images_embedded: true // Base64 images in HTML → embedded in PDF
+        }
+      };
+    } else {
+      // Return HTML fallback with instructions
+      return {
+        content: htmlContent,
+        format: 'html',
+        path: null,
+        metadata: {
+          company_name: analysisResult.company_name,
+          website_url: analysisResult.url,
+          overall_score: analysisResult.overall_score,
+          website_grade: analysisResult.grade,
+          sections_included: 'all',
+          generation_time_ms: generationTime,
+          generation_method: pdfResult.method,
+          message: pdfResult.message,
+          instructions_path: pdfResult.instructions_path,
+          generated_at: new Date().toISOString(),
+          note: 'PDF generation failed. HTML report provided. See instructions for manual conversion.'
+        }
+      };
+    }
+  }
 
   // For HTML format, use dedicated HTML exporter
   if (format === 'html') {

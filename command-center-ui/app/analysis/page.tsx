@@ -179,7 +179,7 @@ export default function AnalysisPage() {
         body: JSON.stringify({
           prospect_ids: selectedIds,
           project_id: selectedProjectId,  // Required - validated above
-          custom_prompts: currentPrompts || undefined
+          custom_prompts: (config as any).custom_prompts || undefined
         })
       });
 

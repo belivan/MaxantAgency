@@ -65,8 +65,20 @@ export async function saveLead(lead, options = {}) {
         // Ensure reports bucket exists
         await ensureReportsBucket();
 
-        // Generate and upload report
-        const reportResult = await autoGenerateReport(data, {
+        // Generate and upload report with full analysis payload when available
+        const reportPayload = {
+          ...lead,
+          id: data.id,
+          company_name: data.company_name || lead.company_name,
+          url: data.url || lead.url,
+          grade: lead.grade || data.website_grade,
+          overall_score: lead.overall_score || data.overall_score,
+          website_grade: data.website_grade || lead.website_grade || lead.grade,
+          website_score: data.overall_score || lead.overall_score,
+          project_id: lead.project_id || data.project_id
+        };
+
+        const reportResult = await autoGenerateReport(reportPayload, {
           format: reportFormat,
           sections: ['all'],
           saveToDatabase: true,

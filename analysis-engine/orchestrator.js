@@ -21,6 +21,7 @@ import { scoreLeadPriority } from './analyzers/lead-scorer.js';
 import { extractBusinessIntelligence } from './scrapers/business-intelligence-extractor.js';
 import { countCriticalDesktopIssues } from './analyzers/desktop-visual-analyzer.js';
 import { countCriticalMobileIssues } from './analyzers/mobile-visual-analyzer.js';
+import { saveDualScreenshots } from './utils/screenshot-storage.js';
 
 /**
  * Run INTELLIGENT multi-page analysis pipeline (NEW!)
@@ -248,7 +249,7 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
         quickWins.length
       ),
       social_platforms_present: parsedData.social.platformsPresent,
-      contact_email: parsedData.content?.contactInfo?.emails?.[0] || null,
+      contact_email: parsedData.content?.contactInfo?.emails?.[0] || context.contact_email || null,
 
       // Business intelligence data
       years_in_business: businessIntel.yearsInBusiness?.estimatedYears,
@@ -272,6 +273,61 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       tier: leadScoringData.priority_tier,
       budget: leadScoringData.budget_likelihood
     });
+
+    // Persist screenshots to local storage now that analysis is complete
+    const baseScreenshotLabel = (() => {
+      if (context.company_name) return context.company_name;
+      try {
+        return new URL(url).hostname || 'website';
+      } catch {
+        return 'website';
+      }
+    })();
+
+    const slugify = (value) => {
+      if (!value) return 'page';
+      return value
+        .toString()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'page';
+    };
+
+    for (const page of successfulPages) {
+      if (!page.screenshots) {
+        page.screenshot_paths = { desktop: null, mobile: null };
+        continue;
+      }
+
+      const hasDesktopBuffer = Buffer.isBuffer(page.screenshots.desktop);
+      const hasMobileBuffer = Buffer.isBuffer(page.screenshots.mobile);
+      const existingDesktop = typeof page.screenshots.desktop === 'string' ? page.screenshots.desktop : null;
+      const existingMobile = typeof page.screenshots.mobile === 'string' ? page.screenshots.mobile : null;
+
+      let savedPaths = { desktop: existingDesktop, mobile: existingMobile };
+
+      if (hasDesktopBuffer || hasMobileBuffer) {
+        const pageLabel = page.url && page.url !== '/' ? slugify(page.url) : 'homepage';
+        const screenshotLabel = `${baseScreenshotLabel}-${pageLabel}`;
+
+        try {
+          savedPaths = await saveDualScreenshots(page.screenshots, screenshotLabel);
+        } catch (screenshotError) {
+          console.warn(`[Intelligent Analysis] Failed to persist screenshots for ${page.fullUrl || page.url}:`, screenshotError.message);
+          savedPaths = { desktop: null, mobile: null };
+        }
+      }
+
+      page.screenshot_paths = savedPaths;
+
+      // Remove heavy buffers now that they are persisted
+      if (hasDesktopBuffer) {
+        page.screenshots.desktop = null;
+      }
+      if (hasMobileBuffer) {
+        page.screenshots.mobile = null;
+      }
+    }
 
     // Calculate costs
     const analysisCost = calculateTotalCost(analysisResults);
@@ -365,11 +421,14 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       has_https: homepage.fullUrl?.startsWith('https://') || false,
       is_mobile_friendly: !mobileVisualResults?.issues?.some(i => i.severity === 'critical'),
       page_load_time: homepage.metadata?.loadTime || null,
+      city: context.city || null,
+      state: context.state || null,
+      address: context.address || null,
 
       // Contact Information
-      contact_email: parsedData.content?.contactInfo?.emails?.[0] || null,
-      contact_phone: parsedData.content?.contactInfo?.phones?.[0] || null,
-      contact_name: businessIntel.decisionMakerAccessibility?.ownerName || null,
+      contact_email: parsedData.content?.contactInfo?.emails?.[0] || context.contact_email || null,
+      contact_phone: parsedData.content?.contactInfo?.phones?.[0] || context.contact_phone || null,
+      contact_name: businessIntel.decisionMakerAccessibility?.ownerName || context.contact_name || null,
 
       // Content Insights - NEW
       content_insights: {
@@ -403,8 +462,14 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       meta_description: parsedData.seo.description,
 
       // Screenshots (homepage only - local file paths)
-      screenshot_desktop_url: homepage.screenshots?.desktop || null,
-      screenshot_mobile_url: homepage.screenshots?.mobile || null,
+      screenshot_desktop_url: homepage.screenshot_paths?.desktop || homepage.screenshots?.desktop || null,
+      screenshot_mobile_url: homepage.screenshot_paths?.mobile || homepage.screenshots?.mobile || null,
+
+      // Project-specific metadata
+      project_status: context.project_status || null,
+      project_notes: context.project_notes || null,
+      project_custom_score: context.custom_score || null,
+      project_discovery_query: context.discovery_query || null,
 
       // Performance metadata
       analysis_cost: analysisCost,
@@ -441,6 +506,10 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
           pages_analyzed: successfulPages.map(p => ({
             url: p.url,
             fullUrl: p.fullUrl,
+            screenshots: {
+              desktop: p.screenshot_paths?.desktop || null,
+              mobile: p.screenshot_paths?.mobile || null
+            },
             analyzed_for: {
               seo: seoPages.some(sp => sp.url === p.url),
               content: contentPages.some(cp => cp.url === p.url),
@@ -570,12 +639,16 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
             url: p.url,
             error: p.error,
             fullUrl: p.fullUrl
-          })),
+        })),
         // Pages analyzed (metadata only - screenshots are NOT stored to avoid database bloat)
         pages_analyzed: successfulPages.map(p => ({
           url: p.url,
           fullUrl: p.fullUrl,
-          has_screenshots: !!(p.screenshots?.desktop && p.screenshots?.mobile),
+          has_screenshots: Boolean(p.screenshots?.desktop || p.screenshots?.mobile),
+          screenshot_paths: {
+            desktop: p.screenshot_paths?.desktop || null,
+            mobile: p.screenshot_paths?.mobile || null
+          },
           analyzed_for: {
             seo: seoPages.some(sp => sp.url === p.url),
             content: contentPages.some(cp => cp.url === p.url),
