@@ -1,7 +1,12 @@
 import winston from 'winston';
 import dotenv from 'dotenv';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
+// Load environment variables from the root .env file
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 const { combine, timestamp, printf, colorize, errors } = winston.format;
 

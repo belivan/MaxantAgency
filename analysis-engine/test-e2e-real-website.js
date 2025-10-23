@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 const projectRoot = join(__dirname, '../');
 dotenv.config({ path: join(projectRoot, '.env') });
 
-import { analyzeWebsiteIntelligent } from './orchestrator.js';
+import { analyzeWebsiteIntelligent } from './orchestrator-refactored.js';
 
 console.log('');
 console.log('═'.repeat(80));

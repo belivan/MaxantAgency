@@ -334,11 +334,18 @@ export class ResultsAggregator {
 
     return {
       // Core analysis data
+      success: true,
+      analysis_mode: 'intelligent-multi-page',
       company_name: context.company_name,
       industry: context.industry,
       url: homepage.fullUrl,
+      prospect_id: context.prospect_id,
+      project_id: context.project_id,
+      grade: gradeResults.grade,
       website_grade: gradeResults.grade,
       overall_score: gradeResults.overallScore,
+      grade_label: gradeResults.gradeLabel,
+      grade_description: gradeResults.gradeDescription,
 
       // Scores
       design_score: scores.design_score,

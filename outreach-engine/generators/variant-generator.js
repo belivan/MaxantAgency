@@ -10,8 +10,12 @@ import { buildPersonalizationContext } from '../shared/personalization-builder.j
 import { generateEmail } from './email-generator.js';
 import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 

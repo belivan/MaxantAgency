@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'url';
 import { dirname, join, isAbsolute } from 'path';
 import { existsSync } from 'fs';
 import { generateAllScreenshotsSection } from './enhanced-screenshots.js';
+import { ScreenshotRegistry } from '../utils/screenshot-registry.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,7 +18,7 @@ const __dirname = dirname(__filename);
 /**
  * Generate HTML report from analysis result
  */
-export async function generateHTMLReport(analysisResult) {
+export async function generateHTMLReport(analysisResult, synthesisData = null) {
   const {
     company_name,
     grade,
@@ -31,6 +32,9 @@ export async function generateHTMLReport(analysisResult) {
 
   const templatePath = join(__dirname, '../templates/html-template.html');
   const template = await readFile(templatePath, 'utf-8');
+
+  // Create screenshot registry
+  const registry = new ScreenshotRegistry();
 
   // Convert screenshot paths to base64 data URIs for portability
   const toBase64DataURI = async (value) => {
@@ -87,9 +91,74 @@ export async function generateHTMLReport(analysisResult) {
   const desktopScreenshotSrc = await toBase64DataURI(screenshot_desktop_url);
   const mobileScreenshotSrc = await toBase64DataURI(screenshot_mobile_url);
 
+  // Register main screenshots in registry
+  let desktopScreenshotId = null;
+  let mobileScreenshotId = null;
+
+  if (desktopScreenshotSrc) {
+    desktopScreenshotId = registry.register({
+      title: `${company_name} - Homepage Desktop View`,
+      viewport: 'desktop',
+      page: analysisResult.url || 'Homepage',
+      src: desktopScreenshotSrc,
+      description: 'Desktop homepage screenshot captured during analysis'
+    });
+  }
+
+  if (mobileScreenshotSrc) {
+    mobileScreenshotId = registry.register({
+      title: `${company_name} - Homepage Mobile View`,
+      viewport: 'mobile',
+      page: analysisResult.url || 'Homepage',
+      src: mobileScreenshotSrc,
+      description: 'Mobile homepage screenshot captured during analysis'
+    });
+  }
+
+  // Register all screenshots from crawl metadata
+  if (analysisResult.crawl_metadata && analysisResult.crawl_metadata.pages_analyzed) {
+    analysisResult.crawl_metadata.pages_analyzed.forEach(page => {
+      if (page.screenshot_paths) {
+        // Register desktop screenshot
+        if (page.screenshot_paths.desktop) {
+          toBase64DataURI(page.screenshot_paths.desktop).then(src => {
+            if (src) {
+              registry.register({
+                title: `${page.title || page.url} - Desktop`,
+                viewport: 'desktop',
+                page: page.fullUrl || page.url,
+                src: src,
+                description: `Desktop screenshot of ${page.title || page.url}`
+              });
+            }
+          });
+        }
+
+        // Register mobile screenshot
+        if (page.screenshot_paths.mobile) {
+          toBase64DataURI(page.screenshot_paths.mobile).then(src => {
+            if (src) {
+              registry.register({
+                title: `${page.title || page.url} - Mobile`,
+                viewport: 'mobile',
+                page: page.fullUrl || page.url,
+                src: src,
+                description: `Mobile screenshot of ${page.title || page.url}`
+              });
+            }
+          });
+        }
+      }
+    });
+  }
+
   const htmlContent = await generateHTMLContent(analysisResult, {
     desktopScreenshot: desktopScreenshotSrc,
-    mobileScreenshot: mobileScreenshotSrc
+    mobileScreenshot: mobileScreenshotSrc,
+    desktopScreenshotId,
+    mobileScreenshotId,
+    registry,
+    synthesisData
   });
 
   const date = new Date(analyzed_at || Date.now());
@@ -116,8 +185,25 @@ export async function generateHTMLReport(analysisResult) {
 /**
  * Generate HTML content for all report sections
  */
-async function generateHTMLContent(analysisResult, screenshots = {}) {
+async function generateHTMLContent(analysisResult, options = {}) {
+  const {
+    desktopScreenshot,
+    mobileScreenshot,
+    desktopScreenshotId,
+    mobileScreenshotId,
+    registry,
+    synthesisData
+  } = options;
+
   let content = '';
+  
+  // Extract consolidated issues from synthesis data for use in sections
+  const consolidatedIssues = synthesisData?.consolidatedIssues || null;
+
+  // Executive Summary (AI-generated if synthesis available)
+  if (synthesisData && synthesisData.executiveSummary) {
+    content += generateExecutiveSummaryHTML(synthesisData.executiveSummary, analysisResult, registry);
+  }
 
   // Score cards grid
   content += generateScoreCardsHTML(analysisResult);
@@ -129,39 +215,39 @@ async function generateHTMLContent(analysisResult, screenshots = {}) {
 
   // Desktop analysis
   if (analysisResult.design_score_desktop) {
-    content += generateDesktopHTML(analysisResult, screenshots.desktopScreenshot);
+    content += generateDesktopHTML(analysisResult, desktopScreenshotId, registry, consolidatedIssues);
   }
 
   // Mobile analysis
   if (analysisResult.design_score_mobile) {
-    content += generateMobileHTML(analysisResult, screenshots.mobileScreenshot);
+    content += generateMobileHTML(analysisResult, mobileScreenshotId, registry, consolidatedIssues);
   }
 
   // SEO section
   if (analysisResult.seo_score) {
-    content += generateSEOHTML(analysisResult);
+    content += generateSEOHTML(analysisResult, consolidatedIssues, registry);
   }
 
   // Content section
   if (analysisResult.content_score) {
-    content += generateContentHTML(analysisResult);
+    content += generateContentHTML(analysisResult, consolidatedIssues, registry);
   }
 
   // Social section
   if (analysisResult.social_score) {
-    content += generateSocialHTML(analysisResult);
+    content += generateSocialHTML(analysisResult, consolidatedIssues, registry);
   }
 
   // Accessibility section
   if (analysisResult.accessibility_score) {
-    content += generateAccessibilityHTML(analysisResult);
+    content += generateAccessibilityHTML(analysisResult, consolidatedIssues, registry);
   }
 
-  // ALL SCREENSHOTS SECTION - New! Shows all crawled pages with desktop + mobile screenshots
-  if (analysisResult.crawl_metadata && (analysisResult.crawl_metadata.successful_pages || analysisResult.crawl_metadata.pages_analyzed)) {
-    const allScreenshotsSection = await generateAllScreenshotsSection(analysisResult.crawl_metadata, analysisResult);
-    content += allScreenshotsSection;
-  }
+  // ALL SCREENSHOTS SECTION - REMOVED: Screenshots now in appendix with references
+  // if (analysisResult.crawl_metadata && (analysisResult.crawl_metadata.successful_pages || analysisResult.crawl_metadata.pages_analyzed)) {
+  //   const allScreenshotsSection = await generateAllScreenshotsSection(analysisResult.crawl_metadata, analysisResult);
+  //   content += allScreenshotsSection;
+  // }
 
   // Business intelligence
   if (analysisResult.business_intelligence) {
@@ -174,12 +260,221 @@ async function generateHTMLContent(analysisResult, screenshots = {}) {
   }
 
   // Action plan
-  content += generateActionPlanHTML(analysisResult);
+  content += generateActionPlanHTML(analysisResult, consolidatedIssues, registry);
 
-  // Appendix
+  // Screenshots Appendix (NEW - all screenshots with references)
+  if (registry && registry.getCount() > 0) {
+    content += registry.generateAppendixHTML();
+  }
+
+  // Appendix (Technical details)
   content += generateAppendixHTML(analysisResult);
 
   return content;
+}
+
+/**
+ * Generate executive summary section (AI-generated)
+ */
+function generateExecutiveSummaryHTML(executiveSummary, analysisResult, registry) {
+  const { headline, criticalFindings = [], strategicRoadmap } = executiveSummary;
+
+  let html = '<div class="section executive-summary">\n';
+  html += '  <h2>📋 Executive Summary</h2>\n';
+
+  // Headline
+  if (headline) {
+    html += `  <p class="executive-headline"><strong>${escapeHtml(headline)}</strong></p>\n\n`;
+  }
+
+  // Critical Findings
+  if (criticalFindings.length > 0) {
+    html += '  <h3>🔴 Critical Findings</h3>\n';
+    html += '  <div class="critical-findings">\n';
+
+    criticalFindings.forEach((finding, index) => {
+      html += '    <div class="finding-item">\n';
+      html += `      <div class="finding-rank">${finding.rank || index + 1}</div>\n`;
+      html += '      <div class="finding-content">\n';
+      html += `        <h4>${escapeHtml(finding.issue)}</h4>\n`;
+      html += `        <p><strong>Impact:</strong> ${escapeHtml(finding.impact)}</p>\n`;
+
+      // Screenshot references
+      if (finding.evidence && finding.evidence.length > 0 && registry) {
+        const references = finding.evidence.map(ref => registry.getReference(ref)).join(' ');
+        html += `        <p><strong>Evidence:</strong> ${references}</p>\n`;
+      }
+
+      html += `        <p><strong>Recommendation:</strong> ${escapeHtml(finding.recommendation)}</p>\n`;
+
+      if (finding.estimatedValue) {
+        html += `        <p class="finding-value"><strong>Expected Value:</strong> ${escapeHtml(finding.estimatedValue)}</p>\n`;
+      }
+
+      html += '      </div>\n';
+      html += '    </div>\n';
+    });
+
+    html += '  </div>\n\n';
+  }
+
+  // Strategic Roadmap (30/60/90)
+  if (strategicRoadmap) {
+    html += '  <h3>🗓️ Strategic Roadmap</h3>\n';
+    html += '  <div class="strategic-roadmap">\n';
+
+    // Month 1
+    if (strategicRoadmap.month1) {
+      html += '    <div class="roadmap-phase">\n';
+      html += `      <h4><span class="phase-badge">Month 1</span> ${escapeHtml(strategicRoadmap.month1.title || strategicRoadmap.month1.focus || 'Quick Wins')}</h4>\n`;
+      if (strategicRoadmap.month1.description) {
+        html += `      <p class="text-secondary">${escapeHtml(strategicRoadmap.month1.description)}</p>\n`;
+      }
+      
+      // Priorities or initiatives
+      const items = strategicRoadmap.month1.priorities || strategicRoadmap.month1.initiatives || [];
+      if (items.length > 0) {
+        html += '      <ul class="roadmap-priorities">\n';
+        items.forEach(item => {
+          html += `        <li>${escapeHtml(item)}</li>\n`;
+        });
+        html += '      </ul>\n';
+      }
+      
+      // Metrics
+      if (strategicRoadmap.month1.keyMetrics || strategicRoadmap.month1.estimatedCost || strategicRoadmap.month1.expectedROI) {
+        html += '      <div class="roadmap-metrics">\n';
+        if (strategicRoadmap.month1.estimatedCost) {
+          html += '        <div class="roadmap-metric">\n';
+          html += '          <strong>Estimated Cost</strong>\n';
+          html += `          <span>${escapeHtml(strategicRoadmap.month1.estimatedCost)}</span>\n`;
+          html += '        </div>\n';
+        }
+        if (strategicRoadmap.month1.expectedROI) {
+          html += '        <div class="roadmap-metric">\n';
+          html += '          <strong>Expected ROI</strong>\n';
+          html += `          <span>${escapeHtml(strategicRoadmap.month1.expectedROI)}</span>\n`;
+          html += '        </div>\n';
+        }
+        if (strategicRoadmap.month1.keyMetrics && Array.isArray(strategicRoadmap.month1.keyMetrics)) {
+          strategicRoadmap.month1.keyMetrics.forEach(metric => {
+            html += '        <div class="roadmap-metric">\n';
+            html += `          <span>${escapeHtml(metric)}</span>\n`;
+            html += '        </div>\n';
+          });
+        }
+        html += '      </div>\n';
+      }
+      
+      if (strategicRoadmap.month1.expectedOutcome) {
+        html += `      <p class="mt-2"><strong>Expected Outcome:</strong> ${escapeHtml(strategicRoadmap.month1.expectedOutcome)}</p>\n`;
+      }
+      html += '    </div>\n';
+    }
+
+    // Month 2
+    if (strategicRoadmap.month2) {
+      html += '    <div class="roadmap-phase">\n';
+      html += `      <h4><span class="phase-badge">Month 2</span> ${escapeHtml(strategicRoadmap.month2.title || strategicRoadmap.month2.focus || 'Core Improvements')}</h4>\n`;
+      if (strategicRoadmap.month2.description) {
+        html += `      <p class="text-secondary">${escapeHtml(strategicRoadmap.month2.description)}</p>\n`;
+      }
+      
+      // Priorities or initiatives
+      const items = strategicRoadmap.month2.priorities || strategicRoadmap.month2.initiatives || [];
+      if (items.length > 0) {
+        html += '      <ul class="roadmap-priorities">\n';
+        items.forEach(item => {
+          html += `        <li>${escapeHtml(item)}</li>\n`;
+        });
+        html += '      </ul>\n';
+      }
+      
+      // Metrics
+      if (strategicRoadmap.month2.keyMetrics || strategicRoadmap.month2.estimatedCost || strategicRoadmap.month2.expectedROI) {
+        html += '      <div class="roadmap-metrics">\n';
+        if (strategicRoadmap.month2.estimatedCost) {
+          html += '        <div class="roadmap-metric">\n';
+          html += '          <strong>Estimated Cost</strong>\n';
+          html += `          <span>${escapeHtml(strategicRoadmap.month2.estimatedCost)}</span>\n`;
+          html += '        </div>\n';
+        }
+        if (strategicRoadmap.month2.expectedROI) {
+          html += '        <div class="roadmap-metric">\n';
+          html += '          <strong>Expected ROI</strong>\n';
+          html += `          <span>${escapeHtml(strategicRoadmap.month2.expectedROI)}</span>\n`;
+          html += '        </div>\n';
+        }
+        if (strategicRoadmap.month2.keyMetrics && Array.isArray(strategicRoadmap.month2.keyMetrics)) {
+          strategicRoadmap.month2.keyMetrics.forEach(metric => {
+            html += '        <div class="roadmap-metric">\n';
+            html += `          <span>${escapeHtml(metric)}</span>\n`;
+            html += '        </div>\n';
+          });
+        }
+        html += '      </div>\n';
+      }
+      
+      if (strategicRoadmap.month2.expectedOutcome) {
+        html += `      <p class="mt-2"><strong>Expected Outcome:</strong> ${escapeHtml(strategicRoadmap.month2.expectedOutcome)}</p>\n`;
+      }
+      html += '    </div>\n';
+    }
+
+    // Month 3
+    if (strategicRoadmap.month3) {
+      html += '    <div class="roadmap-phase">\n';
+      html += `      <h4><span class="phase-badge">Month 3</span> ${escapeHtml(strategicRoadmap.month3.title || strategicRoadmap.month3.focus || 'Advanced Optimization')}</h4>\n`;
+      if (strategicRoadmap.month3.description) {
+        html += `      <p class="text-secondary">${escapeHtml(strategicRoadmap.month3.description)}</p>\n`;
+      }
+      
+      // Priorities or initiatives
+      const items = strategicRoadmap.month3.priorities || strategicRoadmap.month3.initiatives || [];
+      if (items.length > 0) {
+        html += '      <ul class="roadmap-priorities">\n';
+        items.forEach(item => {
+          html += `        <li>${escapeHtml(item)}</li>\n`;
+        });
+        html += '      </ul>\n';
+      }
+      
+      // Metrics
+      if (strategicRoadmap.month3.keyMetrics || strategicRoadmap.month3.estimatedCost || strategicRoadmap.month3.expectedROI) {
+        html += '      <div class="roadmap-metrics">\n';
+        if (strategicRoadmap.month3.estimatedCost) {
+          html += '        <div class="roadmap-metric">\n';
+          html += '          <strong>Estimated Cost</strong>\n';
+          html += `          <span>${escapeHtml(strategicRoadmap.month3.estimatedCost)}</span>\n`;
+          html += '        </div>\n';
+        }
+        if (strategicRoadmap.month3.expectedROI) {
+          html += '        <div class="roadmap-metric">\n';
+          html += '          <strong>Expected ROI</strong>\n';
+          html += `          <span>${escapeHtml(strategicRoadmap.month3.expectedROI)}</span>\n`;
+          html += '        </div>\n';
+        }
+        if (strategicRoadmap.month3.keyMetrics && Array.isArray(strategicRoadmap.month3.keyMetrics)) {
+          strategicRoadmap.month3.keyMetrics.forEach(metric => {
+            html += '        <div class="roadmap-metric">\n';
+            html += `          <span>${escapeHtml(metric)}</span>\n`;
+            html += '        </div>\n';
+          });
+        }
+        html += '      </div>\n';
+      }
+      
+      if (strategicRoadmap.month3.expectedOutcome) {
+        html += `      <p class="mt-2"><strong>Expected Outcome:</strong> ${escapeHtml(strategicRoadmap.month3.expectedOutcome)}</p>\n`;
+      }
+      html += '    </div>\n';
+    }
+
+    html += '  </div>\n';
+  }
+
+  html += '</div>\n\n';
+  return html;
 }
 
 /**
@@ -247,24 +542,30 @@ function generateQuickWinsHTML(quickWins) {
 /**
  * Generate desktop analysis section
  */
-function generateDesktopHTML(analysisResult, screenshotSrc) {
-  const { design_score_desktop, design_issues_desktop = [] } = analysisResult;
+function generateDesktopHTML(analysisResult, screenshotId, registry, synthesisData) {
+  const { design_score_desktop } = analysisResult;
+
+  // Use consolidated issues if available, otherwise use original issues
+  const desktopIssues = synthesisData?.consolidatedIssues?.filter(i =>
+    i.sources?.includes('desktop')
+  ) || analysisResult.design_issues_desktop || [];
 
   let html = '<div class="section">\n';
-  html += '  <h2>Desktop Experience Analysis</h2>\n';
-  html += `  <p><strong>Score:</strong> ${formatScoreBadge(design_score_desktop)}</p>\n\n`;
+  html += '  <h2>🖥️ Desktop Experience Analysis</h2>\n';
+  html += `  <p><strong>Score:</strong> ${formatScoreBadge(design_score_desktop)}</p>\n`;
 
-  // Embed screenshot if available
-  if (screenshotSrc) {
-    html += '  <div style="margin: 2rem 0; border: 1px solid #333; border-radius: 8px; overflow: hidden;">\n';
-    html += `    <img src="${screenshotSrc}" alt="Desktop screenshot" style="width: 100%; display: block;" />\n`;
-    html += '  </div>\n\n';
+  // Screenshot reference (links to appendix)
+  if (screenshotId && registry) {
+    html += `  <p><strong>Screenshot:</strong> ${registry.getReference(screenshotId)}</p>\n`;
+    registry.addReference(screenshotId, 'Desktop Experience Analysis');
   }
 
-  if (design_issues_desktop.length === 0) {
-    html += '  <p class="text-secondary"> No significant desktop UX issues detected. Your desktop experience is well-optimized.</p>\n';
+  html += '\n';
+
+  if (desktopIssues.length === 0) {
+    html += '  <p class="text-secondary">✓ No significant desktop UX issues detected. Your desktop experience is well-optimized.</p>\n';
   } else {
-    html += generateIssuesHTML(design_issues_desktop);
+    html += generateIssuesHTML(desktopIssues);
   }
 
   html += '</div>\n\n';
@@ -274,29 +575,35 @@ function generateDesktopHTML(analysisResult, screenshotSrc) {
 /**
  * Generate mobile analysis section
  */
-function generateMobileHTML(analysisResult, screenshotSrc) {
-  const { design_score_mobile, design_issues_mobile = [], is_mobile_friendly } = analysisResult;
+function generateMobileHTML(analysisResult, screenshotId, registry, synthesisData) {
+  const { design_score_mobile, is_mobile_friendly } = analysisResult;
+
+  // Use consolidated issues if available, otherwise use original issues
+  const mobileIssues = synthesisData?.consolidatedIssues?.filter(i =>
+    i.sources?.includes('mobile')
+  ) || analysisResult.design_issues_mobile || [];
 
   let html = '<div class="section">\n';
-  html += '  <h2>Mobile Experience Analysis</h2>\n';
+  html += '  <h2>📱 Mobile Experience Analysis</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(design_score_mobile)}</p>\n`;
 
   if (is_mobile_friendly !== undefined) {
-    const status = is_mobile_friendly ? ' Mobile-Friendly' : ' Not Mobile-Friendly';
-    html += `  <p><strong>Mobile-Friendly Test:</strong> ${status}</p>\n\n`;
+    const status = is_mobile_friendly ? '✓ Mobile-Friendly' : '✗ Not Mobile-Friendly';
+    html += `  <p><strong>Mobile-Friendly Test:</strong> ${status}</p>\n`;
   }
 
-  // Embed screenshot if available (smaller width for mobile)
-  if (screenshotSrc) {
-    html += '  <div style="margin: 2rem auto; max-width: 375px; border: 1px solid #333; border-radius: 8px; overflow: hidden;">\n';
-    html += `    <img src="${screenshotSrc}" alt="Mobile screenshot" style="width: 100%; display: block;" />\n`;
-    html += '  </div>\n\n';
+  // Screenshot reference (links to appendix)
+  if (screenshotId && registry) {
+    html += `  <p><strong>Screenshot:</strong> ${registry.getReference(screenshotId)}</p>\n`;
+    registry.addReference(screenshotId, 'Mobile Experience Analysis');
   }
 
-  if (design_issues_mobile.length === 0) {
-    html += '  <p class="text-secondary"> No significant mobile UX issues detected. Your mobile experience is well-optimized.</p>\n';
+  html += '\n';
+
+  if (mobileIssues.length === 0) {
+    html += '  <p class="text-secondary">✓ No significant mobile UX issues detected. Your mobile experience is well-optimized.</p>\n';
   } else {
-    html += generateIssuesHTML(design_issues_mobile);
+    html += generateIssuesHTML(mobileIssues);
   }
 
   html += '</div>\n\n';
@@ -306,11 +613,16 @@ function generateMobileHTML(analysisResult, screenshotSrc) {
 /**
  * Generate SEO section
  */
-function generateSEOHTML(analysisResult) {
-  const { seo_score, seo_issues = [], page_title, meta_description, page_load_time, has_https } = analysisResult;
+function generateSEOHTML(analysisResult, synthesisData) {
+  const { seo_score, page_title, meta_description, page_load_time, has_https } = analysisResult;
+
+  // Use consolidated issues if available, otherwise use original issues
+  const seoIssues = synthesisData?.consolidatedIssues?.filter(i =>
+    i.sources?.includes('seo')
+  ) || analysisResult.seo_issues || [];
 
   let html = '<div class="section">\n';
-  html += '  <h2>SEO & Technical Analysis</h2>\n';
+  html += '  <h2>🔍 SEO & Technical Analysis</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(seo_score)}</p>\n\n`;
 
   // Technical snapshot table
@@ -319,15 +631,15 @@ function generateSEOHTML(analysisResult) {
   html += '    <tr><th>Metric</th><th>Value</th></tr>\n';
   if (page_title) html += `    <tr><td>Page Title</td><td>${escapeHtml(page_title)}</td></tr>\n`;
   if (meta_description !== undefined) {
-    html += `    <tr><td>Meta Description</td><td>${meta_description ? escapeHtml(meta_description) : ' Missing'}</td></tr>\n`;
+    html += `    <tr><td>Meta Description</td><td>${meta_description ? escapeHtml(meta_description) : '✗ Missing'}</td></tr>\n`;
   }
   if (page_load_time) html += `    <tr><td>Page Load Time</td><td>${page_load_time}ms</td></tr>\n`;
-  if (has_https !== undefined) html += `    <tr><td>HTTPS</td><td>${has_https ? ' Yes' : ' No'}</td></tr>\n`;
+  if (has_https !== undefined) html += `    <tr><td>HTTPS</td><td>${has_https ? '✓ Yes' : '✗ No'}</td></tr>\n`;
   html += '  </table>\n\n';
 
-  if (seo_issues.length > 0) {
+  if (seoIssues.length > 0) {
     html += '  <h3>SEO Issues</h3>\n';
-    html += generateIssuesHTML(seo_issues);
+    html += generateIssuesHTML(seoIssues);
   }
 
   html += '</div>\n\n';
@@ -368,8 +680,13 @@ function generateContentHTML(analysisResult) {
 /**
  * Generate social section
  */
-function generateSocialHTML(analysisResult) {
-  const { social_score, social_issues = [], social_platforms_present = [], social_profiles = {} } = analysisResult;
+function generateSocialHTML(analysisResult, consolidatedIssues = null, registry = null) {
+  // Use consolidated issues if available, otherwise use original issues
+  const socialIssues = consolidatedIssues?.filter(i =>
+    i.sources?.includes('social')
+  ) || analysisResult.social_issues || [];
+  
+  const { social_score, social_platforms_present = [], social_profiles = {} } = analysisResult;
 
   let html = '<div class="section">\n';
   html += '  <h2>Social Media Presence</h2>\n';
@@ -385,9 +702,9 @@ function generateSocialHTML(analysisResult) {
     html += '</p>\n\n';
   }
 
-  if (social_issues.length > 0) {
+  if (socialIssues.length > 0) {
     html += '  <h3>Social Media Issues</h3>\n';
-    html += generateIssuesHTML(social_issues);
+    html += generateIssuesHTML(socialIssues, registry);
   }
 
   html += '</div>\n\n';
@@ -397,17 +714,22 @@ function generateSocialHTML(analysisResult) {
 /**
  * Generate accessibility section
  */
-function generateAccessibilityHTML(analysisResult) {
-  const { accessibility_score, accessibility_issues = [] } = analysisResult;
+function generateAccessibilityHTML(analysisResult, consolidatedIssues = null, registry = null) {
+  // Use consolidated issues if available, otherwise use original issues
+  const accessibilityIssues = consolidatedIssues?.filter(i =>
+    i.sources?.includes('accessibility')
+  ) || analysisResult.accessibility_issues || [];
+  
+  const { accessibility_score } = analysisResult;
 
   let html = '<div class="section">\n';
   html += '  <h2>Accessibility (WCAG 2.1 AA)</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(accessibility_score)}</p>\n\n`;
 
-  if (accessibility_issues.length === 0) {
+  if (accessibilityIssues.length === 0) {
     html += '  <p class="text-secondary"> No significant accessibility issues detected. Your site meets WCAG 2.1 AA standards.</p>\n';
   } else {
-    html += generateIssuesHTML(accessibility_issues);
+    html += generateIssuesHTML(accessibilityIssues, registry);
   }
 
   html += '</div>\n\n';
@@ -504,8 +826,18 @@ function generateLeadPriorityHTML(analysisResult) {
 /**
  * Generate action plan section
  */
-function generateActionPlanHTML(analysisResult) {
-  const { quick_wins = [], design_issues_desktop = [], design_issues_mobile = [], seo_issues = [] } = analysisResult;
+function generateActionPlanHTML(analysisResult, consolidatedIssues = null, registry = null) {
+  // Use consolidated issues if available, otherwise combine all original issues
+  const allIssues = consolidatedIssues || [
+    ...(analysisResult.design_issues_desktop || []),
+    ...(analysisResult.design_issues_mobile || []),
+    ...(analysisResult.seo_issues || []),
+    ...(analysisResult.content_issues || []),
+    ...(analysisResult.social_issues || []),
+    ...(analysisResult.accessibility_issues || [])
+  ];
+  
+  const { quick_wins = [] } = analysisResult;
 
   let html = '<div class="section">\n';
   html += '  <h2>Recommended Action Plan</h2>\n\n';
@@ -528,11 +860,9 @@ function generateActionPlanHTML(analysisResult) {
   }
 
   // Phase 2: High-Impact Fixes
-  const highPriorityIssues = [
-    ...design_issues_desktop.filter(i => i.priority === 'high'),
-    ...design_issues_mobile.filter(i => i.priority === 'high'),
-    ...seo_issues.filter(i => i.priority === 'high')
-  ].slice(0, 5);
+  const highPriorityIssues = allIssues
+    .filter(i => i.priority === 'high' || i.severity === 'critical')
+    .slice(0, 5);
 
   if (highPriorityIssues.length > 0) {
     html += '  <div class="action-phase">\n';
@@ -615,14 +945,14 @@ function generateAppendixHTML(analysisResult) {
 /**
  * Generate issues HTML
  */
-function generateIssuesHTML(issues) {
+function generateIssuesHTML(issues, registry = null) {
   if (!issues || issues.length === 0) return '';
 
-  // Group by priority
-  const critical = issues.filter(i => i.priority === 'critical');
-  const high = issues.filter(i => i.priority === 'high');
-  const medium = issues.filter(i => i.priority === 'medium');
-  const low = issues.filter(i => i.priority === 'low');
+  // Group by priority (support both priority and severity fields)
+  const critical = issues.filter(i => i.priority === 'critical' || i.severity === 'critical');
+  const high = issues.filter(i => i.priority === 'high' || i.severity === 'high');
+  const medium = issues.filter(i => i.priority === 'medium' || i.severity === 'medium');
+  const low = issues.filter(i => i.priority === 'low' || i.severity === 'low');
 
   let html = '';
 
@@ -643,6 +973,23 @@ function generateIssuesHTML(issues) {
         if (issue.description) {
           html += `    <div class="issue-content">${escapeHtml(issue.description)}</div>\n`;
         }
+        
+        // Show consolidated sources if available
+        if (issue.sources && issue.sources.length > 0) {
+          html += '    <div class="issue-sources">\n';
+          html += `      <span class="text-muted">Found in: ${issue.sources.map(s => escapeHtml(s)).join(', ')}</span>\n`;
+          html += '    </div>\n';
+        }
+        
+        // Show screenshot references if available
+        if (issue.screenshotRefs && issue.screenshotRefs.length > 0 && registry) {
+          html += '    <div class="issue-screenshots">\n';
+          html += '      <span class="text-muted">Screenshots: ';
+          html += issue.screenshotRefs.map(ref => registry.getReference(ref)).join(' ');
+          html += '</span>\n';
+          html += '    </div>\n';
+        }
+        
         if (issue.impact || issue.fix) {
           html += '    <div class="issue-meta">\n';
           if (issue.impact) html += `      <div><strong>Impact:</strong> ${escapeHtml(issue.impact)}</div>\n`;

@@ -212,22 +212,13 @@ export async function runReportSynthesis({
     accessibility_issues_json: safeStringify(issuesByModule?.accessibility)
   };
 
-  console.log('[Report Synthesis] Stage 1/2: Running issue deduplication...');
-  let dedupResult = null;
-
-  try {
-    const dedup = await runSynthesisStage(STAGES.DEDUP, consolidatedContext);
-    dedupResult = dedup.data;
-    stageMetadata.issueDeduplication = dedup.meta;
-    console.log(`[Report Synthesis] ✓ Deduplication complete: ${dedupResult?.consolidatedIssues?.length || 0} consolidated issues`);
-  } catch (error) {
-    console.error('[Report Synthesis] ✗ Issue deduplication failed:', error);
-    errors.push({ stage: STAGES.DEDUP, message: error.message });
-  }
-
+  // Build screenshot references upfront (needed by both stages)
   const screenshotReferences = buildScreenshotReferences(crawlPages);
   console.log(`[Report Synthesis] Built ${screenshotReferences.length} screenshot references`);
 
+  // ⚡ PARALLEL SYNTHESIS: Run both stages simultaneously
+  console.log('[Report Synthesis] Running stages 1 & 2 in parallel...');
+  
   const execSummaryContext = {
     company_name: companyName || 'Unknown Company',
     industry: industry || 'Unknown',
@@ -239,22 +230,37 @@ export async function runReportSynthesis({
     budget_likelihood: leadScoring?.budget_likelihood || 'unknown',
     tech_stack: techStack || 'Unknown',
     pages_crawled: String(Array.isArray(crawlPages) ? crawlPages.length : 0),
-    consolidated_issues_json: safeStringify(dedupResult?.consolidatedIssues, formatConsolidatedFallback(issuesByModule)),
+    consolidated_issues_json: safeStringify(formatConsolidatedFallback(issuesByModule)), // Use fallback for parallel execution
     balanced_quick_wins_json: safeStringify(formatQuickWinFallback(quickWins)),
     screenshot_references_json: safeStringify(screenshotReferences)
   };
 
-  console.log('[Report Synthesis] Stage 2/2: Generating executive summary...');
-  let executiveSummary = null;
+  // Run both stages in parallel
+  const [dedupResponse, execSummaryResponse] = await Promise.allSettled([
+    runSynthesisStage(STAGES.DEDUP, consolidatedContext),
+    runSynthesisStage(STAGES.EXEC_SUMMARY, execSummaryContext)
+  ]);
 
-  try {
-    const execSummary = await runSynthesisStage(STAGES.EXEC_SUMMARY, execSummaryContext);
-    executiveSummary = execSummary.data;
-    stageMetadata.executiveSummary = execSummary.meta;
+  // Process deduplication results
+  let dedupResult = null;
+  if (dedupResponse.status === 'fulfilled') {
+    dedupResult = dedupResponse.value.data;
+    stageMetadata.issueDeduplication = dedupResponse.value.meta;
+    console.log(`[Report Synthesis] ✓ Deduplication complete: ${dedupResult?.consolidatedIssues?.length || 0} consolidated issues`);
+  } else {
+    console.error('[Report Synthesis] ✗ Issue deduplication failed:', dedupResponse.reason);
+    errors.push({ stage: STAGES.DEDUP, message: dedupResponse.reason?.message || 'Unknown error' });
+  }
+
+  // Process executive summary results
+  let executiveSummary = null;
+  if (execSummaryResponse.status === 'fulfilled') {
+    executiveSummary = execSummaryResponse.value.data;
+    stageMetadata.executiveSummary = execSummaryResponse.value.meta;
     console.log('[Report Synthesis] ✓ Executive summary generated successfully');
-  } catch (error) {
-    console.error('[Report Synthesis] ✗ Executive summary generation failed:', error);
-    errors.push({ stage: STAGES.EXEC_SUMMARY, message: error.message });
+  } else {
+    console.error('[Report Synthesis] ✗ Executive summary generation failed:', execSummaryResponse.reason);
+    errors.push({ stage: STAGES.EXEC_SUMMARY, message: execSummaryResponse.reason?.message || 'Unknown error' });
   }
 
   console.log('[Report Synthesis] Pipeline complete');

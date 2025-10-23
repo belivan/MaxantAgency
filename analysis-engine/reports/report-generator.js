@@ -56,7 +56,7 @@ export async function generateReport(analysisResult, options = {}) {
   if (format === 'pdf') {
     console.log('Generating PDF report (HTML -> PDF conversion)...');
     
-    const htmlContent = await generateHTMLReport(analysisResult);
+    const htmlContent = await generateHTMLReport(analysisResult, synthesisData);
     const outputPath = pdfOutputPath || `report-${Date.now()}.pdf`;
     
     const pdfResult = await generatePDFFromContent(htmlContent, outputPath);
@@ -105,7 +105,7 @@ export async function generateReport(analysisResult, options = {}) {
 
   // For HTML format, use dedicated HTML exporter
   if (format === 'html') {
-    const htmlContent = await generateHTMLReport(analysisResult);
+    const htmlContent = await generateHTMLReport(analysisResult, synthesisData);
     const generationTime = Date.now() - startTime;
 
     return {

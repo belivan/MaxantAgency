@@ -1,11 +1,15 @@
 import { Client } from '@googlemaps/google-maps-services-js';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { logInfo, logError, logApiRequest, logApiResponse } from '../shared/logger.js';
 import { costTracker } from '../shared/cost-tracker.js';
 import { prospectExists, prospectExistsInProject } from '../database/supabase-client.js';
 import { validateWebsiteUrl } from '../shared/url-validator.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 const client = new Client({});
 const apiKey = process.env.GOOGLE_MAPS_API_KEY;

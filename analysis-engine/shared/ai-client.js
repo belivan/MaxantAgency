@@ -7,8 +7,14 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+import { getCachedResponse, cacheResponse } from './ai-cache.js';
 
-dotenv.config();
+// Load environment variables from the root .env file
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 // Initialize clients lazily to avoid errors during import when API keys not set
 let openai = null;
@@ -76,20 +82,29 @@ export async function callAI({
   maxTokens = 16384,  // Increased default to 16k tokens
   autoFallback = false
 }) {
+  // ⚡ Check cache first (only for non-image requests)
+  if (!image) {
+    const cached = getCachedResponse(model, systemPrompt, userPrompt, temperature, jsonMode);
+    if (cached) {
+      return cached;
+    }
+  }
+
   // Determine provider from model ID
   const provider = getProvider(model);
 
+  let response;
   if (provider === 'anthropic') {
-    return callClaude({ model, systemPrompt, userPrompt, temperature, image, maxTokens });
+    response = await callClaude({ model, systemPrompt, userPrompt, temperature, image, maxTokens });
   } else {
     try {
-      return await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, image, jsonMode, maxTokens, provider });
+      response = await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, image, jsonMode, maxTokens, provider });
     } catch (error) {
       const message = (error?.message || '').toLowerCase();
       // Auto-fallback to GPT-4o if GPT-5 hits token limits (only when explicitly enabled)
       if (autoFallback && model.startsWith('gpt-5') && message.includes('token limit')) {
         console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-4o.');
-        return await callOpenAICompatible({ 
+        response = await callOpenAICompatible({ 
           model: 'gpt-4o', 
           systemPrompt, 
           userPrompt, 
@@ -99,10 +114,18 @@ export async function callAI({
           maxTokens, 
           provider: 'openai' 
         });
+      } else {
+        throw error;
       }
-      throw error;
     }
   }
+
+  // ⚡ Cache successful response (only for non-image requests)
+  if (!image) {
+    cacheResponse(model, systemPrompt, userPrompt, temperature, jsonMode, response);
+  }
+
+  return response;
 }
 
 /**

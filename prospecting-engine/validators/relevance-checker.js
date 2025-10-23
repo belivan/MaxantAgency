@@ -1,10 +1,14 @@
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../shared/ai-client.js';
 import { logInfo, logError, logDebug } from '../shared/logger.js';
 import { costTracker } from '../shared/cost-tracker.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+dotenv.config({ path: join(__dirname, '../../.env') });
 
 /**
  * Check how well a prospect matches the ICP (Ideal Customer Profile)

@@ -22,6 +22,7 @@ import { extractBusinessIntelligence } from './scrapers/business-intelligence-ex
 import { countCriticalDesktopIssues } from './analyzers/desktop-visual-analyzer.js';
 import { countCriticalMobileIssues } from './analyzers/mobile-visual-analyzer.js';
 import { saveDualScreenshots } from './utils/screenshot-storage.js';
+import { autoGenerateReport } from './reports/auto-report-generator.js';
 
 /**
  * Run INTELLIGENT multi-page analysis pipeline (NEW!)
@@ -36,10 +37,20 @@ import { saveDualScreenshots } from './utils/screenshot-storage.js';
  * @param {object} options.customPrompts - Custom AI prompts (optional)
  * @param {function} options.onProgress - Progress callback (optional)
  * @param {number} options.maxPagesPerModule - Max pages to analyze per module (default: 5)
+ * @param {boolean} options.generate_report - Generate HTML/PDF report (default: false)
+ * @param {string} options.report_format - Report format: 'html', 'pdf', 'markdown' (default: 'html')
+ * @param {boolean} options.save_to_database - Save report to database (default: false)
  * @returns {Promise<object>} Complete analysis results
  */
 export async function analyzeWebsiteIntelligent(url, context = {}, options = {}) {
-  const { customPrompts, onProgress, maxPagesPerModule = 5 } = options;
+  const { 
+    customPrompts, 
+    onProgress, 
+    maxPagesPerModule = 5,
+    generate_report = false,
+    report_format = 'html',
+    save_to_database = false
+  } = options;
 
   const startTime = Date.now();
   const progress = (step, message) => {
@@ -670,6 +681,62 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
         }
       }
     };
+
+    // PHASE 6: REPORT GENERATION (if requested)
+    if (generate_report) {
+      console.log(`\n[Report Generation] Starting ${report_format.toUpperCase()} report generation...`);
+      progress('report', `Generating ${report_format} report...`);
+      
+      try {
+        const reportResult = await autoGenerateReport(finalResult, {
+          format: report_format,
+          sections: ['all'],
+          saveToDatabase: save_to_database,
+          project_id: context.project_id
+        });
+
+        if (reportResult.success) {
+          console.log(`[Report Generation] ✅ Report generated successfully`);
+          console.log(`[Report Generation] 📄 Local path: ${reportResult.local_path}`);
+          
+          // Add report paths to the result
+          finalResult.report_html_path = reportResult.local_path;
+          finalResult.report_markdown_path = null; // Only HTML in this case
+          finalResult.report_storage_path = reportResult.storage_path;
+          finalResult.report_format = report_format;
+          
+          // Add synthesis metadata if available
+          if (reportResult.synthesis?.used) {
+            finalResult.synthesis_metadata = {
+              success: true,
+              original_issue_count: Object.values(finalResult).filter(k => k.includes('_issues')).reduce((sum, key) => {
+                return sum + (Array.isArray(finalResult[key]) ? finalResult[key].length : 0);
+              }, 0),
+              consolidated_issue_count: reportResult.synthesis.consolidatedIssuesCount,
+              reduction_percentage: Math.round((1 - reportResult.synthesis.consolidatedIssuesCount / 
+                Object.values(finalResult).filter(k => k.includes('_issues')).reduce((sum, key) => {
+                  return sum + (Array.isArray(finalResult[key]) ? finalResult[key].length : 0);
+                }, 0)) * 100),
+              total_duration_seconds: reportResult.metadata?.generation_time_ms ? 
+                (reportResult.metadata.generation_time_ms / 1000).toFixed(1) : 'N/A',
+              total_tokens_used: reportResult.metadata?.total_tokens || 0,
+              total_cost: reportResult.metadata?.total_cost || 0,
+              errors: reportResult.synthesis.errors
+            };
+          }
+          
+          progress('report', `Report saved to ${reportResult.local_path}`);
+        } else {
+          console.warn(`[Report Generation] ⚠️  Report generation failed: ${reportResult.error}`);
+          finalResult.report_error = reportResult.error;
+        }
+      } catch (reportError) {
+        console.error(`[Report Generation] ❌ Report generation failed:`, reportError);
+        finalResult.report_error = reportError.message;
+      }
+    }
+
+    return finalResult;
 
   } catch (error) {
     console.error('Intelligent analysis failed:', error);

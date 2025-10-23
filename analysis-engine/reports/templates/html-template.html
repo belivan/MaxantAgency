@@ -371,10 +371,338 @@
       .header-meta { gap: 15px; }
     }
 
+    /* Screenshot References */
+    .screenshot-ref {
+      display: inline-block;
+      padding: 2px 8px;
+      background: var(--accent-blue);
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin: 0 4px;
+      transition: all 0.2s ease;
+    }
+
+    .screenshot-ref:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+    }
+
+    .issue-sources {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    .issue-screenshots {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
+
+    /* Screenshot Appendix */
+    .screenshot-appendix {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      padding: 40px;
+      margin: 60px 0 40px;
+      border: 2px solid var(--border-color);
+    }
+
+    .screenshot-appendix h2 {
+      font-size: 2rem;
+      margin-bottom: 32px;
+      color: var(--text-primary);
+      text-align: center;
+      border-bottom: 2px solid var(--accent-blue);
+      padding-bottom: 16px;
+    }
+
+    .screenshot-group {
+      margin: 40px 0;
+    }
+
+    .screenshot-group h3 {
+      font-size: 1.5rem;
+      color: var(--accent-blue);
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .screenshot-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+      transition: all 0.3s ease;
+    }
+
+    .screenshot-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .screenshot-item h4 {
+      font-size: 1.2rem;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .screenshot-id {
+      display: inline-block;
+      padding: 4px 12px;
+      background: var(--accent-blue);
+      color: white;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .screenshot-item img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 16px 0;
+      border: 1px solid var(--border-color);
+    }
+
+    .screenshot-meta {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 12px 0;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .screenshot-references {
+      margin-top: 12px;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* Executive Summary (Synthesis) */
+    .synthesis-section {
+      background: linear-gradient(135deg, #1a1f2e 0%, #1e1a2e 100%);
+      border: 2px solid #3b82f6;
+      border-radius: 16px;
+      padding: 40px;
+      margin: 40px 0;
+    }
+
+    .synthesis-section h2 {
+      color: var(--accent-blue);
+      font-size: 2rem;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--accent-blue);
+      padding-bottom: 16px;
+    }
+
+    .synthesis-headline {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 24px 0;
+      line-height: 1.4;
+    }
+
+    .critical-findings {
+      margin: 32px 0;
+    }
+
+    .critical-finding {
+      background: rgba(239, 68, 68, 0.1);
+      border-left: 4px solid var(--accent-red);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      transition: all 0.3s ease;
+    }
+
+    .critical-finding:hover {
+      background: rgba(239, 68, 68, 0.15);
+      transform: translateX(4px);
+    }
+
+    .finding-rank {
+      display: inline-block;
+      width: 36px;
+      height: 36px;
+      line-height: 36px;
+      text-align: center;
+      background: var(--accent-red);
+      color: white;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-right: 12px;
+    }
+
+    .finding-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+    }
+
+    .finding-section {
+      margin: 12px 0;
+      padding: 12px;
+      background: var(--bg-card);
+      border-radius: 8px;
+    }
+
+    .finding-section strong {
+      color: var(--accent-blue);
+      display: block;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+    }
+
+    .finding-value {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      display: inline-block;
+      margin-top: 8px;
+    }
+
+    /* Strategic Roadmap */
+    .strategic-roadmap {
+      margin: 40px 0;
+      padding: 32px;
+      background: var(--bg-card);
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+    }
+
+    .strategic-roadmap h3 {
+      font-size: 1.8rem;
+      color: var(--accent-blue);
+      margin-bottom: 32px;
+      text-align: center;
+    }
+
+    .roadmap-phase {
+      margin: 32px 0;
+      padding: 24px;
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      border-left: 4px solid var(--accent-blue);
+      transition: all 0.3s ease;
+    }
+
+    .roadmap-phase:hover {
+      background: var(--bg-card-hover);
+      transform: translateX(4px);
+    }
+
+    .roadmap-phase h4 {
+      font-size: 1.4rem;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .phase-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: var(--gradient-primary);
+      color: white;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .roadmap-priorities {
+      list-style: none;
+      margin: 16px 0;
+    }
+
+    .roadmap-priorities li {
+      padding: 12px;
+      margin: 8px 0;
+      background: var(--bg-card);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent-green);
+      transition: all 0.2s ease;
+    }
+
+    .roadmap-priorities li:hover {
+      background: var(--bg-card-hover);
+      transform: translateX(4px);
+    }
+
+    .roadmap-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .roadmap-metric {
+      padding: 16px;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .roadmap-metric strong {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .roadmap-metric span {
+      font-size: 1.3rem;
+      color: var(--accent-blue);
+      font-weight: 700;
+    }
+
+    /* Synthesis Errors */
+    .synthesis-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--accent-red);
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      color: var(--text-secondary);
+    }
+
     /* Print Styles */
     @media print {
       body { background: white; color: black; }
       .section { page-break-inside: avoid; }
+      .screenshot-item { page-break-inside: avoid; }
+      .critical-finding { page-break-inside: avoid; }
+      .roadmap-phase { page-break-inside: avoid; }
     }
   </style>
 </head>

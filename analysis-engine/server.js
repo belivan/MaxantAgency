@@ -18,7 +18,7 @@ import { fileURLToPath } from 'url';
 import { dirname, resolve, join } from 'path';
 import { writeFile, mkdir } from 'fs/promises';
 import { createClient } from '@supabase/supabase-js';
-import { analyzeWebsiteIntelligent } from './orchestrator.js';
+import { analyzeWebsiteIntelligent } from './orchestrator-refactored.js';
 import { collectAnalysisPrompts } from './shared/prompt-loader.js';
 import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
 
