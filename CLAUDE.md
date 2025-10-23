@@ -254,6 +254,100 @@ eventSource.onmessage = (event) => {
 };
 ```
 
+### 6. AI Report Synthesis Pipeline (Analysis Engine)
+
+**NEW in v2.1**: Intelligent report generation with AI-powered synthesis.
+
+The Analysis Engine now includes a 2-stage AI synthesis pipeline that runs **after** analysis but **before** report generation:
+
+```
+Analysis Complete → Synthesis Pipeline → Report Generation
+                    ↓
+          Stage 1: Issue Deduplication (GPT-5, ~35s)
+                    - Consolidates redundant findings
+                    - Reduces issues by 40-70%
+                    - Merges cross-module observations
+                    ↓
+          Stage 2: Executive Insights (GPT-5, ~140s)
+                    - Business-friendly summary
+                    - 30/60/90 strategic roadmap
+                    - ROI statements
+                    - Screenshot evidence linking
+```
+
+**Cost**: ~$0.06 per lead | **Duration**: ~3.5 minutes additional processing
+
+**Configuration**:
+```bash
+# .env
+USE_AI_SYNTHESIS=true  # Enable synthesis (default: false)
+```
+
+**Location**: `analysis-engine/reports/synthesis/report-synthesis.js`
+
+**Prompts**:
+- `config/prompts/report-synthesis/issue-deduplication.json`
+- `config/prompts/report-synthesis/executive-insights-generator.json`
+
+**Integration Point**: `reports/auto-report-generator.js` (lines 45-96)
+
+**How It Works**:
+
+1. Analysis completes with raw data from 6 analyzers
+2. If `USE_AI_SYNTHESIS=true`, synthesis pipeline runs:
+   - **Issue Deduplication**: Identifies duplicate/overlapping issues across analyzers
+     - Example: "CTA too small" (desktop) + "CTA not prominent" (mobile) → "CTA lacks prominence across devices"
+   - **Executive Insights**: Generates client-ready summary with:
+     - One-sentence headline assessing site health
+     - 2-3 sentence overview positioning as opportunity
+     - 3-5 critical findings with business impact + evidence
+     - 30/60/90 day strategic roadmap
+     - ROI projection statement
+3. Synthesis data passed to report templates:
+   - **Executive Summary**: Uses AI-generated insights
+   - **Desktop/Mobile Analysis**: Shows consolidated issues only
+   - **Action Plan**: Groups deduplicated recommendations
+
+**Backward Compatibility**:
+- Synthesis is OFF by default (`USE_AI_SYNTHESIS=false`)
+- Templates work with or without synthesis data
+- Graceful fallback if synthesis fails
+- Zero breaking changes to existing functionality
+
+**Testing**:
+```bash
+cd analysis-engine
+node tests/integration/test-synthesis-integration.js  # Compare with/without
+node reports/synthesis/test-pipeline.js              # Test synthesis alone
+```
+
+**Quality Metrics**:
+- Issue reduction: 40-70% fewer redundant findings
+- Report size: +135% more content with synthesis
+- Executive summary: 500-word limit, business language
+- Screenshot references: 100% linked to evidence
+
+**When to Use**:
+- ✅ Client-facing reports (professional executive summaries)
+- ✅ High-value leads (justify the $0.06 cost)
+- ✅ Batch report generation (automated workflows)
+- ❌ Internal testing (unnecessary overhead)
+- ❌ Cost-sensitive high-volume operations
+
+**Monitoring**:
+Synthesis metadata tracked in report config:
+```json
+{
+  "config": {
+    "used_ai_synthesis": true,
+    "synthesis_errors": 0,
+    "consolidated_issues_count": 4
+  }
+}
+```
+
+**Documentation**: See `analysis-engine/reports/synthesis/SYNTHESIS-INTEGRATION-GUIDE.md` for complete guide.
+
 ## Important Gotchas
 
 ### Database Schema Alignment

@@ -5,10 +5,15 @@
 import { formatScore } from '../../formatters/score-formatter.js';
 import { formatIssuesByPriority, formatStrengths } from '../../formatters/issue-formatter.js';
 
-export function generateMobileAnalysis(analysisResult) {
+export function generateMobileAnalysis(analysisResult, synthesisData = null) {
+  // Use consolidated issues if available, otherwise use original issues
+  const mobileIssues = synthesisData?.consolidatedIssues?.filter(i =>
+    i.sources?.includes('mobile')
+  ) || analysisResult.design_issues_mobile || [];
+
   const {
     design_score_mobile,
-    design_issues_mobile = [],
+    design_issues_mobile = mobileIssues,
     is_mobile_friendly,
     screenshot_mobile_url,
     mobile_critical_issues

@@ -17,14 +17,14 @@ export default function AboutPage() {
             Maksant Agency
           </h1>
           <p className="text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Where <span className="text-blue-400 font-semibold">12+ AI Agents</span> work in harmony to transform 
+            Where <span className="text-blue-400 font-semibold">15+ AI Agents</span> work in harmony to transform 
             how you discover, analyze, and engage with potential clients.
           </p>
           
           {/* Stats */}
           <div className="grid grid-cols-3 gap-8 max-w-3xl mx-auto mt-12">
             <div className="text-center">
-              <div className="text-4xl font-bold text-blue-400 mb-2">12+</div>
+              <div className="text-4xl font-bold text-blue-400 mb-2">15+</div>
               <div className="text-sm text-gray-400">AI Agents</div>
             </div>
             <div className="text-center">
@@ -141,8 +141,8 @@ export default function AboutPage() {
               </div>
               
               <p className="text-gray-300 mb-6">
-                The brain of the operation. <span className="text-blue-400 font-semibold">8+ specialized agents</span> dissect 
-                every aspect of a prospect's digital presence.
+                The brain of the operation. <span className="text-blue-400 font-semibold">9 specialized agents</span> dissect 
+                every aspect of a prospect's digital presence with multi-model AI power.
               </p>
 
               <div className="space-y-4">
@@ -150,9 +150,9 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">Page Discovery Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">Desktop Visual Analyzer</div>
                       <div className="text-sm text-gray-400">
-                        Maps entire website architecture using Playwright browser automation
+                        <span className="text-blue-300">GPT-4o Vision</span> • Analyzes desktop screenshots for layout, visual hierarchy, CTA placement, and branding
                       </div>
                     </div>
                   </div>
@@ -162,9 +162,9 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">Desktop Analysis Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">Mobile Visual Analyzer</div>
                       <div className="text-sm text-gray-400">
-                        Evaluates desktop experience, screenshots, and visual design quality using vision AI
+                        <span className="text-blue-300">GPT-4o Vision</span> • Mobile-specific design critique including touch targets and responsive layout
                       </div>
                     </div>
                   </div>
@@ -174,9 +174,9 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">Mobile Analysis Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">SEO Analyzer</div>
                       <div className="text-sm text-gray-400">
-                        Tests mobile responsiveness and user experience across devices
+                        <span className="text-blue-300">Grok-4-fast</span> • Technical SEO audit covering meta tags, sitemap, robots.txt, and page structure
                       </div>
                     </div>
                   </div>
@@ -186,9 +186,9 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">SEO Analysis Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">Content Analyzer</div>
                       <div className="text-sm text-gray-400">
-                        Comprehensive on-page SEO audit: meta tags, structure, keywords, technical SEO
+                        <span className="text-blue-300">Grok-4-fast</span> • Content quality, messaging effectiveness, CTAs, and readability analysis
                       </div>
                     </div>
                   </div>
@@ -198,9 +198,9 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">Content Analysis Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">Social Media Analyzer</div>
                       <div className="text-sm text-gray-400">
-                        Evaluates messaging, value propositions, and content strategy
+                        <span className="text-blue-300">Grok-4-fast</span> • Social media presence, integration quality, and Open Graph optimization
                       </div>
                     </div>
                   </div>
@@ -210,9 +210,9 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">Social Analysis Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">Accessibility Analyzer</div>
                       <div className="text-sm text-gray-400">
-                        Discovers and validates social media profiles across all major platforms
+                        <span className="text-blue-300">Claude 3.5 Sonnet</span> • WCAG compliance, screen reader compatibility, and keyboard navigation
                       </div>
                     </div>
                   </div>
@@ -222,9 +222,9 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">Accessibility Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">Lead Priority Scorer</div>
                       <div className="text-sm text-gray-400">
-                        Checks WCAG compliance and identifies accessibility improvements
+                        <span className="text-blue-300">GPT-5</span> • AI-driven qualification using 6-dimension framework (Quality Gap, Budget, Urgency, Industry Fit, Company Size, Engagement)
                       </div>
                     </div>
                   </div>
@@ -234,9 +234,21 @@ export default function AboutPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-semibold text-blue-300 mb-1">Lead Scoring Agent</div>
+                      <div className="font-semibold text-blue-300 mb-1">Issue Deduplication Agent</div>
                       <div className="text-sm text-gray-400">
-                        Synthesizes all analyses into actionable lead grades (A-F) with opportunity assessment
+                        <span className="text-blue-300">GPT-5</span> • Consolidates redundant findings from all analyzers, reducing report redundancy by 50-70%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/50 rounded-lg p-4 border border-blue-500/20">
+                  <div className="flex items-start gap-3">
+                    <Bot className="w-5 h-5 text-blue-400 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-semibold text-blue-300 mb-1">Executive Insights Generator</div>
+                      <div className="text-sm text-gray-400">
+                        <span className="text-blue-300">GPT-5</span> • Creates 500-word executive summaries with 3-5 critical findings and 30/60/90 roadmaps for decision-makers
                       </div>
                     </div>
                   </div>
@@ -244,8 +256,10 @@ export default function AboutPage() {
               </div>
 
               <div className="mt-6 pt-6 border-t border-blue-500/20">
-                <div className="text-sm text-gray-400">
-                  <span className="font-semibold text-blue-400">Output:</span> Comprehensive intelligence reports with actionable insights
+                <div className="text-sm text-gray-400 space-y-1">
+                  <div><span className="font-semibold text-blue-400">Core Analyzers:</span> 7 agents (Desktop, Mobile, SEO, Content, Social, Accessibility, Lead Scoring)</div>
+                  <div><span className="font-semibold text-blue-400">Report Synthesis:</span> 2 agents (Issue Deduplication, Executive Insights)</div>
+                  <div><span className="font-semibold text-blue-400">Output:</span> Comprehensive intelligence reports with actionable insights and executive summaries</div>
                 </div>
               </div>
             </div>
@@ -402,8 +416,8 @@ export default function AboutPage() {
               <div className="text-3xl mb-4">🧠</div>
               <h3 className="text-xl font-bold mb-3">Multi-Agent Intelligence</h3>
               <p className="text-gray-300">
-                Not just one AI doing everything. <span className="text-blue-400 font-semibold">12+ specialized agents</span> collaborate, 
-                each trained for specific tasks, ensuring expert-level analysis at every step.
+                Not just one AI doing everything. <span className="text-blue-400 font-semibold">15+ specialized agents</span> collaborate, 
+                each trained for specific tasks with different AI models (GPT-4o/5, Claude 3.5, Grok-4), ensuring expert-level analysis at every step.
               </p>
             </div>
 
@@ -494,10 +508,10 @@ export default function AboutPage() {
         {/* Footer */}
         <div className="text-center text-gray-500 pt-16 mt-16 border-t border-slate-800">
           <p className="text-sm">
-            Built with <span className="text-red-400">♥</span> using OpenAI GPT-4o/5, Claude Sonnet 4.5, and Grok-4
+            Built with <span className="text-red-400">♥</span> using GPT-4o/5, Claude 3.5 Sonnet, and Grok-4-fast
           </p>
           <p className="text-xs mt-2 text-gray-600">
-            Powered by Next.js, Supabase, and Playwright • Multi-Agent AI Architecture
+            Powered by Next.js, Supabase, and Playwright • 15+ Multi-Agent AI Architecture
           </p>
         </div>
       </div>

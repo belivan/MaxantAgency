@@ -8,12 +8,21 @@
 import { formatGradeBadge, formatScore, createScoreRow } from '../../formatters/score-formatter.js';
 import { formatQuickWins } from '../../formatters/issue-formatter.js';
 
-export function generateExecutiveSummary(analysisResult) {
+export function generateExecutiveSummary(analysisResult, synthesisData = null) {
+  // Merge synthesis data into analysisResult for backward compatibility
+  const mergedData = {
+    ...analysisResult,
+    // Override with synthesis data if available
+    executive_summary: synthesisData?.executiveSummary || analysisResult.executive_summary,
+    consolidated_issues: synthesisData?.consolidatedIssues || analysisResult.consolidated_issues || [],
+    synthesis_errors: synthesisData?.errors || analysisResult.synthesis_errors || []
+  };
+
   const {
     company_name,
     industry,
     city,
-    website_url = analysisResult.url,
+    website_url = mergedData.url,
     grade,
     overall_score,
     analyzed_at,
@@ -30,13 +39,13 @@ export function generateExecutiveSummary(analysisResult) {
     contact_name,
     contact_email,
     contact_phone,
-    
-    // AI Synthesis outputs
+
+    // AI Synthesis outputs (now from merged data)
     executive_summary,
     consolidated_issues = [],
     quick_win_strategy,
     synthesis_errors = []
-  } = analysisResult;
+  } = mergedData;
 
   const analysisDate = new Date(analyzed_at).toLocaleDateString('en-US', {
     year: 'numeric',

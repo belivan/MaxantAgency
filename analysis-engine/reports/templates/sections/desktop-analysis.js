@@ -5,10 +5,15 @@
 import { formatScore } from '../../formatters/score-formatter.js';
 import { formatIssuesByPriority, formatStrengths } from '../../formatters/issue-formatter.js';
 
-export function generateDesktopAnalysis(analysisResult) {
+export function generateDesktopAnalysis(analysisResult, synthesisData = null) {
+  // Use consolidated issues if available, otherwise use original issues
+  const desktopIssues = synthesisData?.consolidatedIssues?.filter(i =>
+    i.sources?.includes('desktop')
+  ) || analysisResult.design_issues_desktop || [];
+
   const {
     design_score_desktop,
-    design_issues_desktop = [],
+    design_issues_desktop = desktopIssues,
     screenshot_desktop_url,
     desktop_critical_issues
   } = analysisResult;

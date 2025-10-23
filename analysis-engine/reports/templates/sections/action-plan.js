@@ -6,7 +6,17 @@ import { estimatePhaseTime, estimatePhaseCost, estimateScoreImprovement } from '
 import { groupIntoPhases } from '../../utils/priority-sorter.js';
 import { formatQuickWins, formatRecommendation } from '../../formatters/issue-formatter.js';
 
-export function generateActionPlan(analysisResult) {
+export function generateActionPlan(analysisResult, synthesisData = null) {
+  // Use consolidated issues if available, otherwise use original issues
+  const allIssues = synthesisData?.consolidatedIssues || [
+    ...(analysisResult.design_issues_desktop || []),
+    ...(analysisResult.design_issues_mobile || []),
+    ...(analysisResult.seo_issues || []),
+    ...(analysisResult.content_issues || []),
+    ...(analysisResult.social_issues || []),
+    ...(analysisResult.accessibility_issues || [])
+  ];
+
   const {
     quick_wins = [],
     design_issues_desktop = [],
@@ -18,15 +28,7 @@ export function generateActionPlan(analysisResult) {
     overall_score
   } = analysisResult;
 
-  // Combine all issues
-  const allIssues = [
-    ...design_issues_desktop,
-    ...design_issues_mobile,
-    ...seo_issues,
-    ...content_issues,
-    ...social_issues,
-    ...accessibility_issues
-  ];
+  // Note: allIssues already defined above using consolidated issues if available
 
   if (allIssues.length === 0 && quick_wins.length === 0) {
     return `# 9. Recommended Action Plan\n\n✅ **No significant issues detected.** Your website is well-optimized!\n\n`;

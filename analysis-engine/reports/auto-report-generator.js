@@ -5,6 +5,7 @@
 
 import { generateReport, generateStoragePath, generateReportFilename, validateAnalysisResult } from './report-generator.js';
 import { uploadReport, saveReportMetadata } from './storage/supabase-storage.js';
+import { runReportSynthesis } from './synthesis/report-synthesis.js';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
@@ -41,8 +42,65 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     // Validate analysis result has required fields
     validateAnalysisResult(reportData);
 
-    // Generate the report
-    const report = await generateReport(reportData, { format, sections });
+    // PHASE 2: AI SYNTHESIS (if enabled)
+    let synthesisData = null;
+    const useSynthesis = process.env.USE_AI_SYNTHESIS === 'true';
+
+    if (useSynthesis) {
+      try {
+        console.log(`🤖 Running AI synthesis for ${reportData.company_name}...`);
+        const synthesisStartTime = Date.now();
+
+        synthesisData = await runReportSynthesis({
+          companyName: reportData.company_name,
+          industry: reportData.industry,
+          grade: reportData.grade,
+          overallScore: reportData.overall_score,
+          url: reportData.url,
+          issuesByModule: {
+            desktop: reportData.design_issues_desktop || [],
+            mobile: reportData.design_issues_mobile || [],
+            seo: reportData.seo_issues || [],
+            content: reportData.content_issues || [],
+            social: reportData.social_issues || [],
+            accessibility: reportData.accessibility_issues || []
+          },
+          quickWins: reportData.quick_wins || [],
+          leadScoring: {
+            lead_priority: reportData.lead_priority,
+            priority_tier: reportData.priority_tier,
+            budget_likelihood: reportData.budget_likelihood
+          },
+          topIssue: reportData.top_issue,
+          techStack: reportData.tech_stack,
+          hasBlog: reportData.has_blog,
+          socialPlatforms: reportData.social_platforms_present || [],
+          isMobileFriendly: reportData.is_mobile_friendly,
+          hasHttps: reportData.has_https,
+          crawlPages: reportData.crawl_metadata?.pages_analyzed || []
+        });
+
+        const synthesisDuration = ((Date.now() - synthesisStartTime) / 1000).toFixed(1);
+        console.log(`✅ AI synthesis complete (${synthesisDuration}s)`);
+        console.log(`   - Consolidated Issues: ${synthesisData.consolidatedIssues?.length || 0}`);
+        console.log(`   - Executive Summary: ${synthesisData.executiveSummary ? 'Generated' : 'Missing'}`);
+        console.log(`   - Synthesis Errors: ${synthesisData.errors?.length || 0}`);
+
+      } catch (synthesisError) {
+        console.warn(`⚠️  AI synthesis failed, using fallback: ${synthesisError.message}`);
+        // Continue with regular report generation - synthesis is optional
+        synthesisData = null;
+      }
+    } else {
+      console.log('ℹ️  AI synthesis disabled (USE_AI_SYNTHESIS=false)');
+    }
+
+    // Generate the report (with or without synthesis data)
+    const report = await generateReport(reportData, {
+      format,
+      sections,
+      synthesisData  // Pass synthesis results to report generator
+    });
 
     // Handle local backup based on format
     const reportsDir = join(__dirname, '..', '..', 'local-backups', 'analysis-engine', 'reports');
@@ -121,7 +179,10 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         config: {
           sections: sections.includes('all') ? 'all' : sections.join(','),
           generation_time_ms: report.metadata.generation_time_ms,
-          word_count: report.metadata.word_count || 0
+          word_count: report.metadata.word_count || 0,
+          used_ai_synthesis: useSynthesis && synthesisData !== null,
+          synthesis_errors: synthesisData?.errors?.length || 0,
+          consolidated_issues_count: synthesisData?.consolidatedIssues?.length || 0
         },
         status: 'completed',
         generated_at: new Date().toISOString()
@@ -144,7 +205,12 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       local_path: localPath,
       format,
       file_size: fileSize,
-      metadata: report.metadata
+      metadata: report.metadata,
+      synthesis: {
+        used: useSynthesis && synthesisData !== null,
+        errors: synthesisData?.errors || [],
+        consolidatedIssuesCount: synthesisData?.consolidatedIssues?.length || 0
+      }
     };
 
   } catch (error) {

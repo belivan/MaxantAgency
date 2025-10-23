@@ -42,7 +42,8 @@ export async function generateReport(analysisResult, options = {}) {
     format = 'markdown',
     sections = ['all'],
     theme = 'professional',
-    pdfOutputPath = null
+    pdfOutputPath = null,
+    synthesisData = null  // NEW: AI synthesis results
   } = options;
 
   if (!['markdown', 'html', 'pdf'].includes(format)) {
@@ -130,17 +131,17 @@ export async function generateReport(analysisResult, options = {}) {
 
   let reportContent = '';
 
-  // Generate sections
+  // Generate sections (pass synthesisData to all sections)
   if (shouldInclude('executive')) {
-    reportContent += generateExecutiveSummary(analysisResult);
+    reportContent += generateExecutiveSummary(analysisResult, synthesisData);
   }
 
   if (shouldInclude('desktop')) {
-    reportContent += generateDesktopAnalysis(analysisResult);
+    reportContent += generateDesktopAnalysis(analysisResult, synthesisData);
   }
 
   if (shouldInclude('mobile')) {
-    reportContent += generateMobileAnalysis(analysisResult);
+    reportContent += generateMobileAnalysis(analysisResult, synthesisData);
   }
 
   if (shouldInclude('seo')) {
@@ -176,7 +177,7 @@ export async function generateReport(analysisResult, options = {}) {
   }
 
   if (shouldInclude('action-plan')) {
-    reportContent += generateActionPlan(analysisResult);
+    reportContent += generateActionPlan(analysisResult, synthesisData);
   }
 
   if (shouldInclude('appendix')) {
