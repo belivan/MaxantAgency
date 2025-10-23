@@ -62,7 +62,8 @@ function getAnthropicClient() {
  * @param {number} options.temperature - Temperature (0-1)
  * @param {string|Buffer} options.image - Optional image (base64 string or Buffer)
  * @param {boolean} options.jsonMode - Enable JSON output mode
- * @param {number} options.maxTokens - Maximum tokens to generate
+ * @param {number} options.maxTokens - Maximum tokens to generate (default: 16384 for generous limits)
+ * @param {boolean} options.autoFallback - Auto-fallback to GPT-4o if GPT-5 fails with length error (default: true)
  * @returns {Promise<object>} {content, usage, cost}
  */
 export async function callAI({
@@ -72,7 +73,8 @@ export async function callAI({
   temperature = 0.3,
   image = null,
   jsonMode = false,
-  maxTokens = 4096
+  maxTokens = 16384,  // Increased default to 16k tokens
+  autoFallback = true
 }) {
   // Determine provider from model ID
   const provider = getProvider(model);
@@ -80,7 +82,25 @@ export async function callAI({
   if (provider === 'anthropic') {
     return callClaude({ model, systemPrompt, userPrompt, temperature, image, maxTokens });
   } else {
-    return callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, image, jsonMode, maxTokens, provider });
+    try {
+      return await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, image, jsonMode, maxTokens, provider });
+    } catch (error) {
+      // Auto-fallback to GPT-4o if GPT-5 hits token limits
+      if (autoFallback && model.startsWith('gpt-5') && error.message.includes('token limit')) {
+        console.warn(`⚠️  GPT-5 failed due to token limits. Falling back to GPT-4o...`);
+        return await callOpenAICompatible({ 
+          model: 'gpt-4o', 
+          systemPrompt, 
+          userPrompt, 
+          temperature, 
+          image, 
+          jsonMode, 
+          maxTokens, 
+          provider: 'openai' 
+        });
+      }
+      throw error;
+    }
   }
 }
 
@@ -134,7 +154,27 @@ async function callOpenAICompatible({
       });
     }
 
-    const adjustedMaxTokens = model.startsWith('gpt-5') ? Math.min(maxTokens, 2048) : maxTokens;
+    // MAXIMUM token limits for all models - let them generate complete responses!
+    // Each model gets its documented maximum output token limit
+    let adjustedMaxTokens = maxTokens;
+    
+    if (model.startsWith('gpt-5')) {
+      // GPT-5 & GPT-5 Mini: 128,000 MAX OUTPUT TOKENS! 🚀
+      // Context window: 400,000 tokens total
+      // Max input: 272,000 tokens
+      // Max output: 128,000 tokens (includes reasoning tokens)
+      // Both gpt-5 and gpt-5-mini have the same limits
+      adjustedMaxTokens = 128000;
+    } else if (model.startsWith('gpt-4o')) {
+      // GPT-4o and GPT-4o-mini: 16,384 max output tokens
+      adjustedMaxTokens = 16384;
+    } else if (model.includes('grok')) {
+      // Grok models: 32,768 max output tokens
+      adjustedMaxTokens = 32768;
+    } else {
+      // Default: Use provided maxTokens or set to reasonable high limit
+      adjustedMaxTokens = Math.max(maxTokens, 16384);
+    }
 
 
     const requestBody = {
@@ -177,7 +217,17 @@ async function callOpenAICompatible({
 
     // Validate response has content
     const responseContent = response.choices[0]?.message?.content;
+    const finishReason = response.choices[0]?.finish_reason;
+    
     if (!responseContent) {
+      // If GPT-5 hit the length limit even with increased tokens, provide helpful error
+      if (model.startsWith('gpt-5') && finishReason === 'length') {
+        const reasoningTokens = response.usage?.completion_tokens_details?.reasoning_tokens || 0;
+        console.error(`GPT-5 exhausted token limit with ${reasoningTokens} reasoning tokens and empty output.`);
+        console.error('Consider: 1) Increasing max_completion_tokens further, 2) Simplifying the prompt, 3) Using GPT-4o instead');
+        throw new Error(`GPT-5 returned empty content (used ${reasoningTokens} reasoning tokens, hit ${adjustedMaxTokens} token limit). Try increasing maxTokens or using a different model.`);
+      }
+      
       console.error('Empty response from OpenAI:', JSON.stringify(response, null, 2));
       throw new Error('OpenAI returned empty content');
     }
@@ -210,6 +260,11 @@ async function callClaude({
   const client = getAnthropicClient();
 
   try {
+    // Set maximum tokens for Claude models
+    // Claude 3.5 Sonnet/Haiku: 8,192 max output tokens
+    // Claude 3 Opus: 4,096 max output tokens
+    const adjustedMaxTokens = Math.max(maxTokens, 8192);
+    
     // Build user message content
     const content = [];
 
@@ -253,7 +308,7 @@ async function callClaude({
     // Make API call
     const response = await client.messages.create({
       model,
-      max_tokens: maxTokens,
+      max_tokens: adjustedMaxTokens,
       temperature,
       system: systemPrompt,
       messages: [
@@ -312,9 +367,16 @@ function getProvider(modelId) {
 function calculateCost(modelId, usage) {
   if (!usage) return 0;
 
-  // Pricing per 1M tokens (as of October 2024)
+  // Pricing per 1M tokens (as of October 2025)
   const pricing = {
-    // OpenAI (verified pricing Oct 2024)
+    // OpenAI GPT-5 (verified pricing Oct 2025)
+    'gpt-5': { input: 1.25, output: 10 },
+    'gpt-5-2025-08-07': { input: 1.25, output: 10 },
+    'gpt-5-mini': { input: 0.25, output: 2 },
+    'gpt-5-nano': { input: 0.05, output: 0.40 },
+    'gpt-5-pro': { input: 15, output: 120 },
+    
+    // OpenAI GPT-4 (verified pricing Oct 2024)
     'gpt-4o': { input: 5, output: 15 },
     'gpt-4o-mini': { input: 0.15, output: 0.60 },
 

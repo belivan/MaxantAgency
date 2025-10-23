@@ -16,6 +16,11 @@ interface FormattedAIReasoningProps {
   priorityTier?: string;
   budgetLikelihood?: string;
   fitScore?: number;
+  dimensionScores?: Array<{
+    name: string;
+    score: number;
+    max: number;
+  }>;
   className?: string;
 }
 
@@ -25,8 +30,10 @@ export function FormattedAIReasoning({
   priorityTier,
   budgetLikelihood,
   fitScore,
+  dimensionScores,
   className
 }: FormattedAIReasoningProps) {
+  const dimensionData = dimensionScores ?? [];
   // Parse the reasoning text into structured sections
   const parseReasoning = () => {
     const sections: {
@@ -148,24 +155,47 @@ export function FormattedAIReasoning({
         )}
 
         {/* Dimension Scores */}
-        {sections.dimensions && sections.dimensions.length > 0 && (
+        {dimensionData.length > 0 ? (
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-foreground">Dimension Breakdown</h4>
             <div className="space-y-1.5">
-              {sections.dimensions.map((dim, idx) => {
-                const Icon = getDimensionIcon(dim);
+              {dimensionData.map((dim, idx) => {
+                const Icon = getDimensionIcon(dim.name);
                 return (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 text-sm p-2 bg-muted/30 rounded"
+                    className="flex items-center justify-between text-sm p-2 bg-muted/30 rounded"
                   >
-                    {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
-                    <span className="text-muted-foreground">{dim}</span>
+                    <div className="flex items-center gap-2">
+                      {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+                      <span className="text-muted-foreground">{dim.name}</span>
+                    </div>
+                    <span className="font-mono text-muted-foreground">{dim.score}/{dim.max}</span>
                   </div>
                 );
               })}
             </div>
           </div>
+        ) : (
+          sections.dimensions && sections.dimensions.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground">Dimension Breakdown</h4>
+              <div className="space-y-1.5">
+                {sections.dimensions.map((dim, idx) => {
+                  const Icon = getDimensionIcon(dim);
+                  return (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 text-sm p-2 bg-muted/30 rounded"
+                    >
+                      {Icon && <Icon className="w-4 h-4 text-muted-foreground" />}
+                      <span className="text-muted-foreground">{dim}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )
         )}
 
         {/* AI Assessment */}

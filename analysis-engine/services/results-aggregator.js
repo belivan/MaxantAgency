@@ -247,12 +247,12 @@ export class ResultsAggregator {
       overall_score: gradeResults.overallScore,
 
       // Scores
-      design_score: scores.design,
+      design_score: scores.design_score,
       design_score_desktop: analysisResults.desktopVisual?.visualScore,
       design_score_mobile: analysisResults.mobileVisual?.visualScore,
-      seo_score: scores.seo,
-      content_score: scores.content,
-      social_score: scores.social,
+      seo_score: scores.seo_score,
+      content_score: scores.content_score,
+      social_score: scores.social_score,
       accessibility_score: analysisResults.accessibility?.accessibilityScore,
 
       // Issues
@@ -370,7 +370,21 @@ export class ResultsAggregator {
   }
 
   extractQuickWins(analysisResults) {
-    return extractQuickWinsFromModules(analysisResults);
+    const combined = [];
+
+    if (analysisResults && typeof analysisResults === 'object') {
+      Object.values(analysisResults).forEach((module) => {
+        if (module && Array.isArray(module.quickWins)) {
+          combined.push(...module.quickWins);
+        }
+      });
+    }
+
+    if (combined.length > 0) {
+      return combined;
+    }
+
+    return extractQuickWinsFromModules(analysisResults) || [];
   }
 
   calculateGrade(score) {

@@ -43,6 +43,8 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     const individualResults = [];
     let totalCost = 0;
 
+    let lastPromptModel = null;
+
     for (const page of pagesToAnalyze) {
       console.log(`[Desktop Visual Analyzer] Analyzing page: ${page.url}`);
 
@@ -72,6 +74,8 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
       }
 
       // Call GPT-4o Vision API with screenshot
+      lastPromptModel = prompt.model;
+
       const response = await callAI({
         model: prompt.model,
         systemPrompt: prompt.systemPrompt,
@@ -132,15 +136,17 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     const quickWinCount = allIssues.filter(issue => issue.difficulty === 'quick-win').length;
 
     // Add metadata
+    const resolvedModel = customPrompt?.model || lastPromptModel || 'gpt-5';
+
     return {
-      model: prompt.model,
+      model: resolvedModel,
       visualScore: avgScore,
       issues: allIssues,
       positives: allPositives,
       quickWinCount,
       _meta: {
         analyzer: 'desktop-visual',
-        model: prompt.model,
+        model: resolvedModel,
         cost: totalCost,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pagesToAnalyze.length,

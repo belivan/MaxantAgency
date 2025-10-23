@@ -64,7 +64,7 @@ async function imageToBase64(filePath) {
 /**
  * Generate section showing all crawled pages with their screenshots
  */
-export async function generateAllScreenshotsSection(crawlMetadata) {
+export async function generateAllScreenshotsSection(crawlMetadata, analysisResult = {}) {
   if (!crawlMetadata) {
     return '';
   }
@@ -76,19 +76,19 @@ export async function generateAllScreenshotsSection(crawlMetadata) {
     return '';
   }
   
-  const pages = allPages.filter(p => 
+  const pagesWithScreenshots = allPages.filter(p => 
     p.screenshot_paths && (p.screenshot_paths.desktop || p.screenshot_paths.mobile)
   );
   
-  if (pages.length === 0) {
+  if (pagesWithScreenshots.length === 0) {
     return '';
   }
   
   let html = '<div class="section">\n';
   html += '  <h2>All Page Screenshots</h2>\n';
-  html += `  <p class="text-secondary">Screenshots captured from ${pages.length} page(s) during analysis</p>\n\n`;
+  html += `  <p class="text-secondary">Screenshots captured from ${pagesWithScreenshots.length} page(s) during analysis</p>\n\n`;
   
-  for (const page of pages) {
+  for (const page of pagesWithScreenshots) {
     const pageTitle = page.title || page.url || 'Untitled Page';
     const pageUrl = page.url;
     

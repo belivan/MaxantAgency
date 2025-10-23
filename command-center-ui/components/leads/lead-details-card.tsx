@@ -121,6 +121,7 @@ export function LeadDetailsCard({ lead, className }: LeadDetailsCardProps) {
           priorityTier={lead.priority_tier}
           budgetLikelihood={lead.budget_likelihood}
           fitScore={lead.fit_score}
+          dimensionScores={dimensions}
         />
       )}
 

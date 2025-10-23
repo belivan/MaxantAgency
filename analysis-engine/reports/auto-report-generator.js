@@ -73,26 +73,29 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       throw new Error(`Report generation failed: No content or path returned for format ${format}`);
     }
 
-    // Generate storage path
-    const storagePath = generateStoragePath(reportData, format);
-
-    // Determine content type
-    const contentTypeMap = {
-      'markdown': 'text/markdown',
-      'html': 'text/html',
-      'pdf': 'application/pdf',
-      'json': 'application/json'
-    };
-    const contentType = contentTypeMap[format] || 'text/plain';
-
-    // Try to upload to Supabase Storage (gracefully handle if not configured)
+    const shouldUpload = format !== 'html';
     let uploadResult = { path: null, fullPath: null };
-    try {
-      uploadResult = await uploadReport(contentForUpload, storagePath, contentType);
-    } catch (uploadError) {
-      console.log(`⚠️  Supabase upload skipped: ${uploadError.message}`);
-      console.log(`📁 Report available locally at: ${localPath}`);
-      // Continue without upload - local backup is enough
+
+    if (shouldUpload) {
+      const storagePath = generateStoragePath(reportData, format);
+
+      const contentTypeMap = {
+        'markdown': 'text/markdown',
+        'html': 'text/html',
+        'pdf': 'application/pdf',
+        'json': 'application/json'
+      };
+      const contentType = contentTypeMap[format] || 'text/plain';
+
+      try {
+        uploadResult = await uploadReport(contentForUpload, storagePath, contentType);
+      } catch (uploadError) {
+        console.log('Supabase upload skipped: '+ uploadError.message);
+        console.log('Report available locally at: '+ localPath);
+        // Continue without upload - local backup is enough
+      }
+    } else {
+      console.log('Skipping Supabase upload for HTML report. Report available locally at: '+ localPath);
     }
 
     // Save metadata to database if requested (only if upload succeeded)

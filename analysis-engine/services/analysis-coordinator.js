@@ -142,6 +142,15 @@ export class AnalysisCoordinator {
 
     return {
       ...context,
+      discovery_status: {
+        has_sitemap: !errors?.sitemap,
+        has_robots: !errors?.robots,
+        sitemap_error: errors?.sitemap || null,
+        robots_error: errors?.robots || null,
+        pages_discovered: totalPages,
+        sources,
+        used_fallback: usedFallback
+      },
       discoveryStatus: {
         totalPages,
         sources,
