@@ -40,6 +40,7 @@ interface ModelSelectorProps {
   selectedModels: ModuleModelSelection;
   onChange: (selection: ModuleModelSelection) => void;
   disabled?: boolean;
+  defaultSelections?: ModuleModelSelection;
 }
 
 export function ModelSelector({
@@ -47,7 +48,8 @@ export function ModelSelector({
   models,
   selectedModels,
   onChange,
-  disabled
+  disabled,
+  defaultSelections
 }: ModelSelectorProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -58,26 +60,44 @@ export function ModelSelector({
     });
   };
 
-  const getModelDetails = (modelValue: string): AIModel | undefined => {
-    return models.find(m => m.value === modelValue);
+  const handleReset = () => {
+    const defaults = defaultSelections
+      ? { ...defaultSelections }
+      : modules.reduce((acc, module) => {
+          acc[module.value] = module.defaultModel;
+          return acc;
+        }, {} as ModuleModelSelection);
+    onChange(defaults);
   };
+
+  const getModelDetails = (modelValue: string): AIModel | undefined =>
+    models.find(m => m.value === modelValue);
 
   const getCostColor = (cost: string) => {
     switch (cost) {
-      case '$': return 'text-green-600';
-      case '$$': return 'text-yellow-600';
-      case '$$$': return 'text-orange-600';
-      default: return 'text-muted-foreground';
+      case '$':
+        return 'text-green-600';
+      case '$$':
+        return 'text-yellow-600';
+      case '$$$':
+        return 'text-orange-600';
+      default:
+        return 'text-muted-foreground';
     }
   };
 
   const getSpeedColor = (speed: string) => {
     switch (speed) {
-      case 'Very Fast': return 'text-green-600';
-      case 'Fast': return 'text-blue-600';
-      case 'Medium': return 'text-yellow-600';
-      case 'Slow': return 'text-orange-600';
-      default: return 'text-muted-foreground';
+      case 'Very Fast':
+        return 'text-green-600';
+      case 'Fast':
+        return 'text-blue-600';
+      case 'Medium':
+        return 'text-yellow-600';
+      case 'Slow':
+        return 'text-orange-600';
+      default:
+        return 'text-muted-foreground';
     }
   };
 
@@ -94,13 +114,11 @@ export function ModelSelector({
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4" />
               <span className="font-semibold">AI Model Selection</span>
-              <Badge variant="secondary" className="text-xs">Advanced</Badge>
+              <Badge variant="secondary" className="text-xs">
+                Advanced
+              </Badge>
             </div>
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </Button>
         </CollapsibleTrigger>
 
@@ -145,86 +163,84 @@ export function ModelSelector({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {/* Group by provider */}
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                        Anthropic Claude
-                      </div>
-                      {models.filter(m => m.provider === 'Anthropic').map((model) => (
-                        <SelectItem key={model.value} value={model.value}>
-                          <div className="flex items-start justify-between w-full min-w-[300px]">
-                            <div className="flex-1">
-                              <div className="font-medium">{model.label}</div>
-                              <div className="text-xs text-muted-foreground">{model.description}</div>
-                            </div>
-                            <div className="flex items-center space-x-2 ml-4">
-                              <div className={`flex items-center space-x-1 ${getCostColor(model.cost)}`}>
-                                <DollarSign className="w-3 h-3" />
-                                <span className="text-xs">{model.cost}</span>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Anthropic Claude</div>
+                      {models
+                        .filter(m => m.provider === 'Anthropic')
+                        .map(model => (
+                          <SelectItem key={model.value} value={model.value}>
+                            <div className="flex items-start justify-between w-full min-w-[300px]">
+                              <div className="flex-1">
+                                <div className="font-medium">{model.label}</div>
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
                               </div>
-                              <div className={`flex items-center space-x-1 ${getSpeedColor(model.speed)}`}>
-                                <Zap className="w-3 h-3" />
-                                <span className="text-xs">{model.speed}</span>
+                              <div className="flex items-center space-x-2 ml-4">
+                                <div className={`flex items-center space-x-1 ${getCostColor(model.cost)}`}>
+                                  <DollarSign className="w-3 h-3" />
+                                  <span className="text-xs">{model.cost}</span>
+                                </div>
+                                <div className={`flex items-center space-x-1 ${getSpeedColor(model.speed)}`}>
+                                  <Zap className="w-3 h-3" />
+                                  <span className="text-xs">{model.speed}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </SelectItem>
-                      ))}
+                          </SelectItem>
+                        ))}
 
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1">
-                        xAI Grok
-                      </div>
-                      {models.filter(m => m.provider === 'xAI').map((model) => (
-                        <SelectItem key={model.value} value={model.value}>
-                          <div className="flex items-start justify-between w-full min-w-[300px]">
-                            <div className="flex-1">
-                              <div className="font-medium">{model.label}</div>
-                              <div className="text-xs text-muted-foreground">{model.description}</div>
-                            </div>
-                            <div className="flex items-center space-x-2 ml-4">
-                              <div className={`flex items-center space-x-1 ${getCostColor(model.cost)}`}>
-                                <DollarSign className="w-3 h-3" />
-                                <span className="text-xs">{model.cost}</span>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1">xAI Grok</div>
+                      {models
+                        .filter(m => m.provider === 'xAI')
+                        .map(model => (
+                          <SelectItem key={model.value} value={model.value}>
+                            <div className="flex items-start justify-between w-full min-w-[300px]">
+                              <div className="flex-1">
+                                <div className="font-medium">{model.label}</div>
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
                               </div>
-                              <div className={`flex items-center space-x-1 ${getSpeedColor(model.speed)}`}>
-                                <Zap className="w-3 h-3" />
-                                <span className="text-xs">{model.speed}</span>
+                              <div className="flex items-center space-x-2 ml-4">
+                                <div className={`flex items-center space-x-1 ${getCostColor(model.cost)}`}>
+                                  <DollarSign className="w-3 h-3" />
+                                  <span className="text-xs">{model.cost}</span>
+                                </div>
+                                <div className={`flex items-center space-x-1 ${getSpeedColor(model.speed)}`}>
+                                  <Zap className="w-3 h-3" />
+                                  <span className="text-xs">{model.speed}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </SelectItem>
-                      ))}
+                          </SelectItem>
+                        ))}
 
-                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1">
-                        OpenAI GPT
-                      </div>
-                      {models.filter(m => m.provider === 'OpenAI').map((model) => (
-                        <SelectItem key={model.value} value={model.value}>
-                          <div className="flex items-start justify-between w-full min-w-[300px]">
-                            <div className="flex-1">
-                              <div className="font-medium">{model.label}</div>
-                              <div className="text-xs text-muted-foreground">{model.description}</div>
-                            </div>
-                            <div className="flex items-center space-x-2 ml-4">
-                              <div className={`flex items-center space-x-1 ${getCostColor(model.cost)}`}>
-                                <DollarSign className="w-3 h-3" />
-                                <span className="text-xs">{model.cost}</span>
+                      <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground border-t mt-1">OpenAI GPT</div>
+                      {models
+                        .filter(m => m.provider === 'OpenAI')
+                        .map(model => (
+                          <SelectItem key={model.value} value={model.value}>
+                            <div className="flex items-start justify-between w-full min-w-[300px]">
+                              <div className="flex-1">
+                                <div className="font-medium">{model.label}</div>
+                                <div className="text-xs text-muted-foreground">{model.description}</div>
                               </div>
-                              <div className={`flex items-center space-x-1 ${getSpeedColor(model.speed)}`}>
-                                <Zap className="w-3 h-3" />
-                                <span className="text-xs">{model.speed}</span>
+                              <div className="flex items-center space-x-2 ml-4">
+                                <div className={`flex items-center space-x-1 ${getCostColor(model.cost)}`}>
+                                  <DollarSign className="w-3 h-3" />
+                                  <span className="text-xs">{model.cost}</span>
+                                </div>
+                                <div className={`flex items-center space-x-1 ${getSpeedColor(model.speed)}`}>
+                                  <Zap className="w-3 h-3" />
+                                  <span className="text-xs">{model.speed}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </SelectItem>
-                      ))}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
 
-                  {/* Show current selection details */}
                   {modelDetails && (
                     <div className="flex items-center justify-between text-xs bg-muted/30 rounded p-2">
                       <span className="text-muted-foreground">
-                        {modelDetails.provider} • {modelDetails.description}
+                        {modelDetails.provider} - {modelDetails.description}
                       </span>
                       <div className="flex items-center space-x-3">
                         <div className={`flex items-center space-x-1 ${getCostColor(modelDetails.cost)}`}>
@@ -242,18 +258,11 @@ export function ModelSelector({
               );
             })}
 
-            {/* Reset to defaults button */}
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => {
-                const defaults: ModuleModelSelection = {};
-                modules.forEach(m => {
-                  defaults[m.value] = m.defaultModel;
-                });
-                onChange(defaults);
-              }}
+              onClick={handleReset}
               disabled={disabled}
               className="w-full"
             >

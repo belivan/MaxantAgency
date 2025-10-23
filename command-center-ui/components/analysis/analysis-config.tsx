@@ -1,17 +1,11 @@
-'use client';
+﻿'use client';
 
 /**
  * Analysis Configuration Component
  * Configure analysis modules and AI model selection
- *
- * ARCHITECTURE:
- * - All 6 core modules always enabled: desktopVisual, mobileVisual, SEO, content, social, accessibility
- * - Per-module AI model selection (GPT, Claude, Grok)
- * - Expert prompt editing with project-level persistence
- * - Dual screenshot capture for vision-based design analysis
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Settings, Loader2, Sparkles, Zap, Globe, Search, Brain } from 'lucide-react';
@@ -21,53 +15,118 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { analysisOptionsSchema, type AnalysisOptionsFormData } from '@/lib/utils/validation';
-import { calculateAnalysisCost } from '@/lib/utils/cost-calculator';
 import { formatCurrency } from '@/lib/utils/format';
 import { Badge } from '@/components/ui/badge';
-import { ModelSelector, type ModuleModelSelection } from './model-selector';
-import { PromptEditor, type AnalysisPrompts } from './prompt-editor';
+import { ModelSelector, type ModuleModelSelection, type AIModel } from './model-selector';
+import { PromptEditor, type AnalysisPrompts, type PromptConfig } from './prompt-editor';
 
 interface AnalysisConfigProps {
   prospectCount: number;
   onSubmit: (data: AnalysisOptionsFormData) => void;
   isLoading?: boolean;
   disabled?: boolean;
-  // Prompt editor props
   customPrompts?: AnalysisPrompts;
   defaultPrompts?: AnalysisPrompts;
   onPromptsChange?: (prompts: AnalysisPrompts) => void;
   promptsLocked?: boolean;
   leadsCount?: number;
+  modelSelections?: ModuleModelSelection;
+  defaultModelSelections?: ModuleModelSelection;
+  onModelSelectionsChange?: (selection: ModuleModelSelection) => void;
 }
 
-// Available AI models - OCTOBER 2025
-const AI_MODELS = [
-  // OpenAI GPT-5 series (Released August 2025)
-  { value: 'gpt-5', label: 'GPT-5', provider: 'OpenAI', description: 'Latest flagship with vision - $1.25/$10 per 1M tokens', cost: '$$', speed: 'Fast' },
-  { value: 'gpt-5-mini', label: 'GPT-5 Mini', provider: 'OpenAI', description: 'Budget GPT-5 with vision - $0.25/$2 per 1M tokens', cost: '$', speed: 'Very Fast' },
-
-  // OpenAI GPT-4o (Previous gen)
-  { value: 'gpt-4o', label: 'GPT-4o', provider: 'OpenAI', description: 'Previous gen with vision - $5/$15 per 1M tokens', cost: '$$', speed: 'Fast' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', provider: 'OpenAI', description: 'Budget GPT-4o - $0.15/$0.60 per 1M tokens', cost: '$', speed: 'Very Fast' },
-
-  // Anthropic Claude 4.5 series (Sept-Oct 2025)
-  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5', provider: 'Anthropic', description: 'Latest Claude - $3/$15 per 1M tokens', cost: '$$', speed: 'Fast' },
-  { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5', provider: 'Anthropic', description: 'Fast Claude 4.5 - $0.80/$4 per 1M tokens', cost: '$', speed: 'Very Fast' },
-
-  // xAI Grok models
-  { value: 'grok-4-fast', label: 'Grok 4 Fast', provider: 'xAI', description: 'Fast & cheap - $0.20/$0.50 per 1M tokens', cost: '$', speed: 'Very Fast' },
-  { value: 'grok-4', label: 'Grok 4', provider: 'xAI', description: 'Full Grok - $3/$15 per 1M tokens', cost: '$$', speed: 'Fast' }
-] as const;
-
-// Core modules (6 analyzers - matching backend exactly)
 const CORE_MODULES = [
-  { value: 'desktopVisual', label: 'Desktop Design', description: 'Vision analysis of desktop screenshots', defaultModel: 'gpt-4o' },
-  { value: 'mobileVisual', label: 'Mobile Design', description: 'Vision analysis of mobile screenshots', defaultModel: 'gpt-4o' },
-  { value: 'seo', label: 'SEO Analysis', description: 'Technical SEO + keywords', defaultModel: 'grok-4-fast' },
-  { value: 'content', label: 'Content Analysis', description: 'Copy quality + messaging', defaultModel: 'grok-4-fast' },
-  { value: 'social', label: 'Social Media', description: 'Social profiles + presence', defaultModel: 'grok-4-fast' },
-  { value: 'accessibility', label: 'Accessibility', description: 'WCAG 2.1 Level AA compliance', defaultModel: 'grok-4-fast' }
+  { value: 'desktopVisual', label: 'Desktop Design', description: 'Vision analysis of desktop screenshots', defaultModel: 'gpt-5' },
+  { value: 'mobileVisual', label: 'Mobile Design', description: 'Vision analysis of mobile screenshots', defaultModel: 'gpt-5' },
+  { value: 'seo', label: 'SEO Analysis', description: 'Technical SEO + keywords', defaultModel: 'gpt-5' },
+  { value: 'content', label: 'Content Analysis', description: 'Copy quality + messaging', defaultModel: 'gpt-5' },
+  { value: 'social', label: 'Social Media', description: 'Social profiles + presence', defaultModel: 'gpt-5' },
+  { value: 'accessibility', label: 'Accessibility', description: 'WCAG 2.1 Level AA compliance', defaultModel: 'gpt-5' },
+  { value: 'leadScorer', label: 'Lead Priority Scorer', description: 'AI qualification scoring', defaultModel: 'gpt-5' }
 ] as const;
+
+const AI_MODELS: readonly AIModel[] = [
+  {
+    value: 'gpt-5',
+    label: 'GPT-5 (Flagship)',
+    provider: 'OpenAI',
+    description: 'Best quality reasoning + vision (recommended)',
+    cost: '$$$',
+    speed: 'Medium'
+  },
+  {
+    value: 'gpt-5-mini',
+    label: 'GPT-5 Mini (Vision)',
+    provider: 'OpenAI',
+    description: 'Balanced quality, supports screenshots',
+    cost: '$$',
+    speed: 'Fast'
+  },
+  {
+    value: 'gpt-4o',
+    label: 'GPT-4o Vision',
+    provider: 'OpenAI',
+    description: 'Previous-gen multimodal model',
+    cost: '$$',
+    speed: 'Fast'
+  },
+  {
+    value: 'gpt-4o-mini',
+    label: 'GPT-4o Mini',
+    provider: 'OpenAI',
+    description: 'Cost-efficient fallback for light tasks',
+    cost: '$',
+    speed: 'Very Fast'
+  },
+  {
+    value: 'claude-sonnet-4-5',
+    label: 'Claude 3.5 Sonnet',
+    provider: 'Anthropic',
+    description: 'Strong writing + structured output',
+    cost: '$$',
+    speed: 'Fast'
+  },
+  {
+    value: 'claude-haiku-4-5',
+    label: 'Claude 3.5 Haiku',
+    provider: 'Anthropic',
+    description: 'Low-cost quick insights',
+    cost: '$',
+    speed: 'Very Fast'
+  },
+  {
+    value: 'grok-4-fast',
+    label: 'Grok-4 Fast',
+    provider: 'xAI',
+    description: 'Fast analysis, good for SEO modules',
+    cost: '$',
+    speed: 'Very Fast'
+  },
+  {
+    value: 'grok-4',
+    label: 'Grok-4 Large',
+    provider: 'xAI',
+    description: 'Higher quality xAI option',
+    cost: '$$',
+    speed: 'Fast'
+  }
+] as const;
+const deriveSelectionsFromPrompts = (prompts: AnalysisPrompts | null): ModuleModelSelection => {
+  const defaults: ModuleModelSelection = {};
+  CORE_MODULES.forEach(module => {
+    defaults[module.value] = module.defaultModel;
+  });
+  if (!prompts) {
+    return defaults;
+  }
+  CORE_MODULES.forEach(module => {
+    const prompt = prompts[module.value] as PromptConfig | undefined;
+    if (prompt?.model) {
+      defaults[module.value] = prompt.model;
+    }
+  });
+  return defaults;
+};
 
 export function AnalysisConfig({
   prospectCount,
@@ -78,41 +137,88 @@ export function AnalysisConfig({
   defaultPrompts: defaultPromptsFromPage,
   onPromptsChange,
   promptsLocked = false,
-  leadsCount = 0
+  leadsCount = 0,
+  modelSelections: externalModelSelections,
+  defaultModelSelections: externalDefaultSelections,
+  onModelSelectionsChange
 }: AnalysisConfigProps) {
-  // Initialize default model selections
-  const [modelSelections, setModelSelections] = useState<ModuleModelSelection>(() => {
-    const defaults: ModuleModelSelection = {};
-    CORE_MODULES.forEach(m => {
-      defaults[m.value] = m.defaultModel;
-    });
-    return defaults;
-  });
+  const baselineDefaultSelections = useMemo(() => deriveSelectionsFromPrompts(null), []);
 
-  // UI state
+  const [internalModelSelections, setInternalModelSelections] = useState<ModuleModelSelection>(
+    externalModelSelections ?? (externalDefaultSelections ?? baselineDefaultSelections)
+  );
+
+  useEffect(() => {
+    if (externalModelSelections) {
+      setInternalModelSelections(externalModelSelections);
+    }
+  }, [externalModelSelections]);
+
   const [maxPages, setMaxPages] = useState([10]);
-
-  // Internal prompt state (used if page doesn't provide prompts)
   const [internalCustomPrompts, setInternalCustomPrompts] = useState<AnalysisPrompts>({});
   const [internalDefaultPrompts, setInternalDefaultPrompts] = useState<AnalysisPrompts>({});
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
 
-  // Load default prompts internally if not provided by page
+  const customPrompts = customPromptsFromPage || internalCustomPrompts;
+  const defaultPrompts = defaultPromptsFromPage || internalDefaultPrompts;
+  const handlePromptsChange = onPromptsChange || setInternalCustomPrompts;
+
+  // Use ref to store the callback to avoid it being in dependencies
+  const onModelSelectionsChangeRef = useRef(onModelSelectionsChange);
+  useEffect(() => {
+    onModelSelectionsChangeRef.current = onModelSelectionsChange;
+  }, [onModelSelectionsChange]);
+
+  useEffect(() => {
+    if (customPrompts) {
+      const derived = deriveSelectionsFromPrompts(customPrompts);
+      if (externalModelSelections) {
+        onModelSelectionsChangeRef.current?.(derived);
+      } else {
+        setInternalModelSelections(derived);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customPrompts]);
+
+  // Track if prompts have been loaded to prevent infinite loops
+  const promptsLoadedRef = useRef(false);
+
   useEffect(() => {
     if (defaultPromptsFromPage) {
+      setInternalDefaultPrompts(defaultPromptsFromPage);
+      setInternalCustomPrompts(defaultPromptsFromPage);
       setIsLoadingPrompts(false);
+      
+      // Only call onModelSelectionsChange if we haven't already loaded
+      if (!promptsLoadedRef.current) {
+        const derived = deriveSelectionsFromPrompts(defaultPromptsFromPage);
+        if (externalModelSelections) {
+          onModelSelectionsChangeRef.current?.(derived);
+        } else {
+          setInternalModelSelections(derived);
+        }
+        promptsLoadedRef.current = true;
+      }
       return;
     }
 
     async function loadDefaultPrompts() {
       try {
-        const response = await fetch('/api/analysis/prompts/default');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setInternalDefaultPrompts(data.data);
-            setInternalCustomPrompts(data.data);
+        setIsLoadingPrompts(true);
+        const response = await fetch('/api/analysis/prompts');
+        const result = await response.json();
+
+        if (result.success) {
+          setInternalDefaultPrompts(result.data);
+          setInternalCustomPrompts(result.data);
+          const derived = deriveSelectionsFromPrompts(result.data as AnalysisPrompts);
+          if (externalModelSelections) {
+            onModelSelectionsChangeRef.current?.(derived);
+          } else {
+            setInternalModelSelections(derived);
           }
+          promptsLoadedRef.current = true;
         }
       } catch (error) {
         console.error('Failed to load default prompts:', error);
@@ -121,13 +227,41 @@ export function AnalysisConfig({
       }
     }
 
-    loadDefaultPrompts();
-  }, [defaultPromptsFromPage]);
+    if (!promptsLoadedRef.current) {
+      loadDefaultPrompts();
+    }
+  }, [defaultPromptsFromPage, externalModelSelections]); // Removed onModelSelectionsChange from dependencies
 
-  // Use page prompts if provided, otherwise use internal prompts
-  const customPrompts = customPromptsFromPage || internalCustomPrompts;
-  const defaultPrompts = defaultPromptsFromPage || internalDefaultPrompts;
-  const handlePromptsChange = onPromptsChange || setInternalCustomPrompts;
+  const activeModelSelections = externalModelSelections ?? internalModelSelections;
+  const defaultSelectionsForReset = externalDefaultSelections ?? baselineDefaultSelections;
+
+  const handleModelSelectionChange = (selection: ModuleModelSelection) => {
+    onModelSelectionsChange?.(selection);
+    if (!externalModelSelections) {
+      setInternalModelSelections(selection);
+    }
+
+    const updatedPrompts: AnalysisPrompts = { ...(customPrompts || {}) };
+    let changed = false;
+
+    CORE_MODULES.forEach(module => {
+      const existing = updatedPrompts[module.value];
+      if (existing && typeof existing === 'object') {
+        const prompt = existing as PromptConfig;
+        if (prompt.model !== selection[module.value]) {
+          updatedPrompts[module.value] = {
+            ...prompt,
+            model: selection[module.value]
+          };
+          changed = true;
+        }
+      }
+    });
+
+    if (changed) {
+      handlePromptsChange(updatedPrompts);
+    }
+  };
 
   const {
     control,
@@ -137,8 +271,8 @@ export function AnalysisConfig({
   } = useForm<AnalysisOptionsFormData>({
     resolver: zodResolver(analysisOptionsSchema),
     defaultValues: {
-      tier: 'tier3', // Deprecated but kept for backward compatibility
-      modules: ['desktopVisual', 'mobileVisual', 'seo', 'content', 'social', 'accessibility'], // All 6 core modules
+      tier: 'tier3',
+      modules: ['desktopVisual', 'mobileVisual', 'seo', 'content', 'social', 'accessibility'],
       capture_screenshots: true,
       multi_page_analysis: true,
       lead_scoring: true,
@@ -147,7 +281,7 @@ export function AnalysisConfig({
       use_sitemap: true,
       use_robots: true,
       use_navigation: true,
-      model_selections: modelSelections,
+      model_selections: activeModelSelections,
       autoEmail: false,
       autoAnalyze: false
     }
@@ -155,21 +289,16 @@ export function AnalysisConfig({
 
   const captureScreenshots = watch('capture_screenshots');
 
-  // Calculate estimated cost
-  // ~$0.017 per lead based on actual usage
   const costPerLead = 0.017;
   const estimatedCost = costPerLead * prospectCount;
 
-  // Handle form submission - IMPORTANT: Merge model selections into custom prompts
   const handleFormSubmit = (data: AnalysisOptionsFormData) => {
-    // Merge model selections into prompt configurations
-    const mergedPrompts: any = { ...customPrompts };
+    const mergedPrompts: AnalysisPrompts = { ...(customPrompts || {}) };
 
-    Object.entries(modelSelections).forEach(([module, modelId]) => {
+    Object.entries(activeModelSelections).forEach(([module, modelId]) => {
       if (mergedPrompts[module]) {
-        // Update the model field in the prompt config for this module
         mergedPrompts[module] = {
-          ...mergedPrompts[module],
+          ...(mergedPrompts[module] as PromptConfig),
           model: modelId
         };
       }
@@ -177,6 +306,7 @@ export function AnalysisConfig({
 
     onSubmit({
       ...data,
+      model_selections: activeModelSelections,
       custom_prompts: mergedPrompts
     });
   };
@@ -191,7 +321,7 @@ export function AnalysisConfig({
               <span>Analysis Configuration</span>
             </CardTitle>
             <CardDescription className="mt-1">
-              Complete website analysis with all 6 AI modules • Multi-page discovery • Lead scoring
+              Complete website analysis with all 6 AI modules · Multi-page discovery · Lead scoring
             </CardDescription>
           </div>
           <Badge variant="outline" className="flex items-center space-x-1">
@@ -203,17 +333,15 @@ export function AnalysisConfig({
 
       <CardContent>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-
-          {/* AI Model Selection - TOP */}
           <ModelSelector
             modules={CORE_MODULES}
             models={AI_MODELS}
-            selectedModels={modelSelections}
-            onChange={setModelSelections}
+            selectedModels={activeModelSelections}
+            onChange={handleModelSelectionChange}
             disabled={disabled || isLoading}
+            defaultSelections={defaultSelectionsForReset}
           />
 
-          {/* Prompt Editor (Expert) - SECOND */}
           {!isLoadingPrompts && Object.keys(defaultPrompts).length > 0 && (
             <PromptEditor
               prompts={customPrompts}
@@ -224,14 +352,12 @@ export function AnalysisConfig({
             />
           )}
 
-          {/* Advanced Analysis Settings */}
           <div className="space-y-4">
             <Label className="flex items-center space-x-2">
               <span>Intelligent Analysis Features</span>
               <Badge variant="secondary" className="text-xs">Enabled</Badge>
             </Label>
 
-            {/* Intelligent Multi-Page Analysis */}
             <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
               <div className="space-y-0.5">
                 <div className="flex items-center space-x-2">
@@ -245,7 +371,7 @@ export function AnalysisConfig({
                   Automatically discover & analyze key business pages
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  • Homepage • About/Services • Pricing • Contact • Blog
+                  ✓ Homepage ✓ About/Services ✓ Pricing ✓ Contact ✓ Blog
                 </p>
               </div>
               <Controller
@@ -263,7 +389,6 @@ export function AnalysisConfig({
               />
             </div>
 
-            {/* Lead Scoring */}
             <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
               <div className="space-y-0.5">
                 <div className="flex items-center space-x-2">
@@ -273,7 +398,7 @@ export function AnalysisConfig({
                   </Label>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Automatically prioritize leads: Hot (75+) • Warm (50-74) • Cold (0-49)
+                  Automatically prioritize leads: Hot (75+) · Warm (50-74) · Cold (0-49)
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Based on website quality, budget signals, urgency indicators
@@ -294,147 +419,81 @@ export function AnalysisConfig({
               />
             </div>
 
-            {/* Screenshots Toggle */}
-            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-2">
-                  <Globe className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <Label htmlFor="capture_screenshots" className="cursor-pointer font-medium">
-                    Capture Screenshots
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Full-page screenshots for AI vision analysis
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  • Desktop view • Mobile responsive view
-                </p>
-              </div>
-              <Controller
-                name="capture_screenshots"
-                control={control}
-                defaultValue={true}
-                render={({ field }) => (
-                  <Checkbox
-                    id="capture_screenshots"
-                    checked={field.value ?? true}
-                    onCheckedChange={field.onChange}
-                    disabled={disabled || isLoading}
-                  />
-                )}
-              />
-            </div>
+            <div className="space-y-4">
+              <Label className="flex items-center space-x-2">
+                <span>Page Discovery Methods</span>
+                <Badge variant="secondary" className="text-xs">Enabled</Badge>
+              </Label>
 
-            {/* Page Analysis Depth */}
-            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-2">
-                  <Search className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  <Label htmlFor="page_analysis" className="cursor-pointer font-medium">
-                    Deep Page Analysis
-                  </Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex items-center space-x-2">
+                    <Search className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <Label htmlFor="use_sitemap" className="text-sm cursor-pointer">Sitemap</Label>
+                      <p className="text-xs text-muted-foreground">sitemap.xml</p>
+                    </div>
+                  </div>
+                  <Controller
+                    name="use_sitemap"
+                    control={control}
+                    defaultValue={true}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="use_sitemap"
+                        checked={field.value ?? true}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled || isLoading}
+                      />
+                    )}
+                  />
                 </div>
+
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="flex items-center space-x-2">
+                    <Globe className="w-4 h-4 text-muted-foreground" />
+                    <div>
+                      <Label htmlFor="use_navigation" className="text-sm cursor-pointer">Navigation</Label>
+                      <p className="text-xs text-muted-foreground">Menu links</p>
+                    </div>
+                  </div>
+                  <Controller
+                    name="use_navigation"
+                    control={control}
+                    defaultValue={true}
+                    render={({ field }) => (
+                      <Checkbox
+                        id="use_navigation"
+                        checked={field.value ?? true}
+                        onCheckedChange={field.onChange}
+                        disabled={disabled || isLoading}
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-sm font-medium">Pages to Analyze</Label>
+                  <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{maxPages[0]} pages</span>
+                </div>
+                <Slider
+                  value={maxPages}
+                  onValueChange={setMaxPages}
+                  min={5}
+                  max={25}
+                  step={5}
+                  className="w-full mb-2"
+                  disabled={disabled || isLoading}
+                />
                 <p className="text-xs text-muted-foreground">
-                  Extract business intelligence from discovered pages
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  • Services offered • Pricing models • Team size • Location
+                  AI selects most important pages: Homepage, About, Services, Pricing, Contact
                 </p>
               </div>
-              <Controller
-                name="page_analysis"
-                control={control}
-                defaultValue={true}
-                render={({ field }) => (
-                  <Checkbox
-                    id="page_analysis"
-                    checked={field.value ?? true}
-                    onCheckedChange={field.onChange}
-                    disabled={disabled || isLoading}
-                  />
-                )}
-              />
             </div>
           </div>
 
-          {/* Discovery Configuration */}
-          <div className="space-y-4">
-            <Label className="flex items-center space-x-2">
-              <span>Page Discovery Methods</span>
-              <Badge variant="secondary" className="text-xs">Enabled</Badge>
-            </Label>
-
-            {/* Discovery Methods Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center space-x-2">
-                  <Search className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <Label htmlFor="use_sitemap" className="text-sm cursor-pointer">Sitemap</Label>
-                    <p className="text-xs text-muted-foreground">sitemap.xml</p>
-                  </div>
-                </div>
-                <Controller
-                  name="use_sitemap"
-                  control={control}
-                  defaultValue={true}
-                  render={({ field }) => (
-                    <Checkbox
-                      id="use_sitemap"
-                      checked={field.value ?? true}
-                      onCheckedChange={field.onChange}
-                      disabled={disabled || isLoading}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center space-x-2">
-                  <Globe className="w-4 h-4 text-muted-foreground" />
-                  <div>
-                    <Label htmlFor="use_navigation" className="text-sm cursor-pointer">Navigation</Label>
-                    <p className="text-xs text-muted-foreground">Menu links</p>
-                  </div>
-                </div>
-                <Controller
-                  name="use_navigation"
-                  control={control}
-                  defaultValue={true}
-                  render={({ field }) => (
-                    <Checkbox
-                      id="use_navigation"
-                      checked={field.value ?? true}
-                      onCheckedChange={field.onChange}
-                      disabled={disabled || isLoading}
-                    />
-                  )}
-                />
-              </div>
-            </div>
-
-            {/* Max Pages Setting */}
-            <div className="rounded-lg border p-4">
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-medium">Pages to Analyze</Label>
-                <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{maxPages[0]} pages</span>
-              </div>
-              <Slider
-                value={maxPages}
-                onValueChange={setMaxPages}
-                min={5}
-                max={25}
-                step={5}
-                className="w-full mb-2"
-                disabled={disabled || isLoading}
-              />
-              <p className="text-xs text-muted-foreground">
-                AI selects most important pages: Homepage, About, Services, Pricing, Contact
-              </p>
-            </div>
-          </div>
-
-          {/* Cost Estimate */}
           <div className="rounded-lg bg-muted p-4 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Estimated Total Cost</span>
@@ -452,7 +511,6 @@ export function AnalysisConfig({
             </div>
           </div>
 
-          {/* Submit Button */}
           <Button
             type="submit"
             className="w-full"

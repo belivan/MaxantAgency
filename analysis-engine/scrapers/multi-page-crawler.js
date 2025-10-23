@@ -19,6 +19,8 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+const SCREENSHOT_DELAY_MS = Number(process.env.SCREENSHOT_DELAY_MS || 5000);
+
 // Load scraper configuration
 let config;
 try {
@@ -585,7 +587,7 @@ export async function estimateCrawl(url) {
 export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, options = {}) {
   const {
     timeout = 60000,  // Increased from 30s to 60s for slow websites
-    concurrency = 3,
+    concurrency = 3,  // Parallel contexts within shared browser
     onProgress = null
   } = options;
 
@@ -596,13 +598,24 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
   let browser = null;
 
   try {
-    // Launch browser
+    // Launch SHARED browser instance for all pages
+    // This prevents resource exhaustion from creating browser per page
+    console.log('[Targeted Crawler] Launching shared browser...');
     browser = await chromium.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-software-rasterizer'
+      ]
     });
+    
+    console.log('[Targeted Crawler] Browser launched successfully');
 
     // Crawl pages in batches (concurrency control)
+    // Each page uses a separate context within the shared browser
     for (let i = 0; i < pageUrls.length; i += concurrency) {
       const batch = pageUrls.slice(i, i + concurrency);
 
@@ -614,7 +627,7 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
         });
       }
 
-      // Crawl batch in parallel
+      // Crawl batch in parallel using shared browser with separate contexts
       const batchResults = await Promise.allSettled(
         batch.map(pageUrl => crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout))
       );
@@ -629,26 +642,33 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
         } else {
           console.log(`[Targeted Crawler] ✗ Failed ${pageUrl}: ${result.reason.message}`);
           results.push({
-            url: pageUrl,
+            url: normalizeRelativeUrl(pageUrl),
+            fullUrl: new URL(pageUrl, baseUrl).href,
             success: false,
             error: result.reason.message,
-            screenshots: { desktop: null, mobile: null }
+            html: null,
+            screenshots: { desktop: null, mobile: null },
+            metadata: {
+              timestamp: new Date().toISOString()
+            }
           });
         }
+      }
+
+      // Small delay between batches to allow browser cleanup
+      if (i + concurrency < pageUrls.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
   } catch (error) {
     console.error('[Targeted Crawler] Crawl failed:', error.message);
     throw error;
-
   } finally {
+    // Clean up shared browser
     if (browser) {
-      try {
-        await browser.close();
-      } catch (e) {
-        // Ignore close errors
-      }
+      console.log('[Targeted Crawler] Closing shared browser...');
+      await browser.close();
     }
   }
 
@@ -660,89 +680,108 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
 
 /**
  * Crawl a single page with both desktop and mobile screenshots
+ * Uses shared browser with dedicated contexts to avoid resource exhaustion
  */
-async function crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout) {
+async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout) {
   const fullUrl = new URL(pageUrl, baseUrl).href;
   const startTime = Date.now();
 
+  // Use shared browser with separate contexts for isolation
+  let desktopContext = null;
+  let mobileContext = null;
+
   try {
-    // Create desktop context
-    const desktopContext = await browser.newContext({
+    // Create desktop context from shared browser
+    desktopContext = await sharedBrowser.newContext({
       viewport: { width: 1920, height: 1080 },
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     });
+    
     const desktopPage = await desktopContext.newPage();
     desktopPage.setDefaultTimeout(timeout);
 
     // Navigate and screenshot desktop
     await desktopPage.goto(fullUrl, {
-      waitUntil: 'load',  // Changed from 'networkidle' to 'load' - more reliable for slow sites
+      waitUntil: 'load',
       timeout
     });
 
+    // Extract content first (before screenshot to ensure page is ready)
+    const htmlContent = await desktopPage.content();
+    
+    // Capture desktop screenshot
     const desktopScreenshot = await desktopPage.screenshot({
       fullPage: true,
       type: 'png'
     });
 
-    // Get HTML and metadata
-    const html = await desktopPage.content();
-    const title = await desktopPage.title();
-    const metaDescription = await desktopPage.$eval('meta[name="description"]', el => el.content).catch(() => null);
-
+    // Clean up desktop context before creating mobile
     await desktopContext.close();
+    desktopContext = null;
 
-    // Create mobile context
-    const mobileContext = await browser.newContext({
+    // Create mobile context from shared browser
+    mobileContext = await sharedBrowser.newContext({
       viewport: { width: 375, height: 812 },
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
       isMobile: true,
       hasTouch: true
     });
+
     const mobilePage = await mobileContext.newPage();
     mobilePage.setDefaultTimeout(timeout);
 
-    // Navigate and screenshot mobile
+    // Navigate mobile page
     await mobilePage.goto(fullUrl, {
-      waitUntil: 'load',  // Changed from 'networkidle' to 'load' - more reliable for slow sites
+      waitUntil: 'load',
       timeout
     });
 
+    // Capture mobile screenshot
     const mobileScreenshot = await mobilePage.screenshot({
       fullPage: true,
       type: 'png'
     });
 
+    // Clean up mobile context
     await mobileContext.close();
+    mobileContext = null;
 
-    const loadTime = Date.now() - startTime;
+    const crawlTime = Date.now() - startTime;
 
     return {
-      url: pageUrl,
+      url: normalizeRelativeUrl(pageUrl),
       fullUrl,
       success: true,
-      html,
-      metadata: {
-        title,
-        description: metaDescription,
-        loadTime
-      },
+      html: htmlContent,
+      htmlContent,
       screenshots: {
-        desktop: desktopScreenshot,  // Buffer - will be analyzed then discarded
-        mobile: mobileScreenshot     // Buffer - will be analyzed then discarded
+        desktop: desktopScreenshot || null,
+        mobile: mobileScreenshot || null
+      },
+      metadata: {
+        crawlTime,
+        timestamp: new Date().toISOString()
       }
     };
 
   } catch (error) {
-    console.error(`[Targeted Crawler] Failed to crawl ${fullUrl}:`, error.message);
-    return {
-      url: pageUrl,
-      fullUrl,
-      success: false,
-      error: error.message,
-      html: null,
-      metadata: null,
-      screenshots: { desktop: null, mobile: null }
-    };
+    // Clean up contexts on error
+    if (desktopContext) await desktopContext.close().catch(() => {});
+    if (mobileContext) await mobileContext.close().catch(() => {});
+
+    throw new Error(`Failed to crawl ${fullUrl}: ${error.message}`);
+  }
+}
+
+function normalizeRelativeUrl(pageUrl) {
+  if (!pageUrl) {
+    return '/';
+  }
+
+  try {
+    const urlObject = new URL(pageUrl, 'http://placeholder');
+    return urlObject.pathname || '/';
+  } catch {
+    return pageUrl.startsWith('/') ? pageUrl : `/${pageUrl}`;
   }
 }

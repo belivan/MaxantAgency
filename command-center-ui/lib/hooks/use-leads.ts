@@ -3,7 +3,7 @@
  * Manages lead data fetching and state
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getLeads, getLead, getLeadsReadyForEmail } from '@/lib/api';
 import type { Lead, LeadFilters } from '@/lib/types';
 
@@ -21,6 +21,24 @@ export function useLeads(filters?: LeadFilters): UseLeadsReturn {
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
+  // Stringify filters to avoid infinite loops from object reference changes
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [
+    filters?.project_id, 
+    filters?.grade, 
+    filters?.priority_tier,
+    filters?.min_score,
+    filters?.max_score,
+    filters?.has_email,
+    filters?.has_phone,
+    filters?.industry,
+    filters?.location,
+    filters?.analysis_tier,
+    filters?.sort_by,
+    filters?.sort_order,
+    filters?.limit, 
+    filters?.offset
+  ]);
+
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -35,7 +53,7 @@ export function useLeads(filters?: LeadFilters): UseLeadsReturn {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filtersKey]);
 
   useEffect(() => {
     fetchLeads();
@@ -117,7 +135,7 @@ export function useLeadsReadyForEmail(projectId?: string): UseLeadsReturn {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId]); // projectId is a string, safe to use directly
 
   useEffect(() => {
     fetchLeads();

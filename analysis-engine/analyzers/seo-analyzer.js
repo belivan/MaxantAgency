@@ -1,5 +1,5 @@
 /**
- * SEO Analyzer - Uses Grok-4-fast to analyze technical SEO
+ * SEO Analyzer - Uses GPT-5 to analyze technical SEO
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: meta tags, headings, URLs, images, page speed, schema
@@ -125,6 +125,7 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
     // Add metadata
     return {
       ...result,
+      model: prompt.model,
       _meta: {
         analyzer: 'seo',
         model: prompt.model,
@@ -139,8 +140,10 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
     console.error('SEO analysis failed:', error);
 
     // Return graceful degradation
+    const fallbackModel = customPrompt?.model || 'gpt-5';
     return {
-      seoScore: 50,
+      model: fallbackModel,
+      seoScore: 30,
       issues: [{
         category: 'error',
         severity: 'high',
@@ -154,6 +157,7 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
       quickWins: [],
       _meta: {
         analyzer: 'seo',
+        model: fallbackModel,
         error: error.message,
         timestamp: new Date().toISOString()
       }

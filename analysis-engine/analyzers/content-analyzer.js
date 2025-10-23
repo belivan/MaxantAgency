@@ -1,5 +1,5 @@
 /**
- * Content Analyzer - Uses Grok-4-fast to analyze content quality and completeness
+ * Content Analyzer - Uses GPT-5 to analyze content quality and completeness
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: copy quality, blog posts, testimonials, CTAs, engagement hooks
@@ -141,6 +141,7 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
     // Add metadata
     return {
       ...result,
+      model: prompt.model,
       _meta: {
         analyzer: 'content',
         model: prompt.model,
@@ -155,8 +156,10 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
     console.error('Content analysis failed:', error);
 
     // Return graceful degradation
+    const fallbackModel = customPrompt?.model || 'gpt-5';
     return {
-      contentScore: 50,
+      model: fallbackModel,
+      contentScore: 30,
       issues: [{
         category: 'error',
         severity: 'high',
@@ -169,6 +172,7 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
       engagementHooks: [],
       _meta: {
         analyzer: 'content',
+        model: fallbackModel,
         error: error.message,
         timestamp: new Date().toISOString()
       }

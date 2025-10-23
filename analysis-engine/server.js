@@ -209,12 +209,13 @@ app.post('/api/analyze-url', async (req, res) => {
       // Business Intelligence
       business_intelligence: result.business_intelligence || {},
 
-      // Crawl & Analysis Metadata (simplified to avoid timeout)
-      crawl_metadata: result.crawl_metadata ? {
-        pages_crawled: result.crawl_metadata.pages_crawled || 0,
-        crawl_time: result.crawl_metadata.crawl_time || 0,
-        failed_pages: (result.crawl_metadata.failed_pages || []).length
-      } : {},
+      // Crawl & Analysis Metadata (preserve detailed page data for reports)
+      crawl_metadata: result.crawl_metadata
+        ? {
+            ...result.crawl_metadata,
+            failed_pages: result.crawl_metadata.failed_pages || []
+          }
+        : {},
       pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
       pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
       pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
@@ -309,7 +310,7 @@ app.post('/api/analyze-url', async (req, res) => {
             path: reportResult.storage_path,
             format: reportResult.format
           };
-          console.log(`[Report Generation] ✓ Report generated: ${reportResult.storage_path}`);
+          console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
         } else {
           console.warn(`[Report Generation] Failed: ${reportResult.error}`);
         }
@@ -586,11 +587,12 @@ app.post('/api/analyze', async (req, res) => {
             business_intelligence: result.business_intelligence || {},
 
             // Crawl & Analysis Metadata (simplified to avoid timeout)
-            crawl_metadata: result.crawl_metadata ? {
-              pages_crawled: result.crawl_metadata.pages_crawled || 0,
-              crawl_time: result.crawl_metadata.crawl_time || 0,
-              failed_pages: (result.crawl_metadata.failed_pages || []).length
-            } : {},
+            crawl_metadata: result.crawl_metadata
+              ? {
+                  ...result.crawl_metadata,
+                  failed_pages: result.crawl_metadata.failed_pages || []
+                }
+              : {},
             pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
             pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
             pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
@@ -658,7 +660,7 @@ app.post('/api/analyze', async (req, res) => {
               error: `Database save failed: ${saveError.message}`
             });
           } else {
-            console.log(`[Intelligent Analysis] ✓ ${prospect.company_name}: Grade ${result.grade} (${result.overall_score}/100)`);
+            console.log(`[Intelligent Analysis]  ${prospect.company_name}: Grade ${result.grade} (${result.overall_score}/100)`);
 
             // STEP 3b: Mark backup as successfully uploaded
             if (backupPath) {
@@ -696,7 +698,7 @@ app.post('/api/analyze', async (req, res) => {
                 });
 
                 if (reportResult.success) {
-                  console.log(`[Report Generation] ✓ Report generated: ${reportResult.storage_path}`);
+                  console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
                 } else {
                   console.warn(`[Report Generation] Failed: ${reportResult.error}`);
                 }
@@ -728,7 +730,7 @@ app.post('/api/analyze', async (req, res) => {
             score: result.overall_score
           });
         } else {
-          console.error(`[Intelligent Analysis] ✗ ${prospect.company_name}: ${result.error}`);
+          console.error(`[Intelligent Analysis]  ${prospect.company_name}: ${result.error}`);
           // Send error event
           sendEvent('error', {
             current: currentIndex,
@@ -748,7 +750,7 @@ app.post('/api/analyze', async (req, res) => {
           });
         }
       } catch (error) {
-        console.error(`[Intelligent Analysis] ✗ ${prospect.company_name}: ${error.message}`);
+        console.error(`[Intelligent Analysis]  ${prospect.company_name}: ${error.message}`);
         // Send error event
         sendEvent('error', {
           current: currentIndex,
@@ -1270,9 +1272,9 @@ app.delete('/api/reports/:id', async (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('');
   console.log(`Analysis Engine Server v2.0`);
-  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('');
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('');
   console.log('Endpoints:');
@@ -1289,7 +1291,8 @@ app.listen(PORT, () => {
   console.log(`  DELETE /api/reports/:id             - Delete a report`);
   console.log('');
   console.log('Ready to analyze websites!');
-  console.log('═══════════════════════════════════════════════════════════════');
+  console.log('');
 });
 
 export default app;
+

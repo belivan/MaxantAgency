@@ -93,10 +93,10 @@
 
   "defaults": {
     "missingScores": {
-      "design": 50,
-      "seo": 50,
-      "content": 50,
-      "social": 50,
+      "design": 30,
+      "seo": 30,
+      "content": 30,
+      "social": 30,
       "description": "Default scores if analysis cannot be completed (e.g., website failed to load)"
     }
   },

@@ -53,7 +53,7 @@ export async function generateReport(analysisResult, options = {}) {
 
   // For PDF format, generate HTML first then convert
   if (format === 'pdf') {
-    console.log('📄 Generating PDF report (HTML → PDF conversion)...');
+    console.log('Generating PDF report (HTML -> PDF conversion)...');
     
     const htmlContent = await generateHTMLReport(analysisResult);
     const outputPath = pdfOutputPath || `report-${Date.now()}.pdf`;
@@ -76,7 +76,7 @@ export async function generateReport(analysisResult, options = {}) {
           generation_method: pdfResult.method,
           message: pdfResult.message,
           generated_at: new Date().toISOString(),
-          images_embedded: true // Base64 images in HTML → embedded in PDF
+          images_embedded: true // Base64 images in HTML are embedded in PDF
         }
       };
     } else {
@@ -283,3 +283,4 @@ export function validateAnalysisResult(analysisResult) {
 
   return true;
 }
+

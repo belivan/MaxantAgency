@@ -1,5 +1,5 @@
 /**
- * Accessibility Analyzer - Uses Grok-4-fast + Axe-core to analyze accessibility
+ * Accessibility Analyzer - Uses GPT-5 + Axe-core to analyze accessibility
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: WCAG 2.1 compliance, color contrast, alt text, ARIA, keyboard nav, semantic HTML
@@ -116,6 +116,7 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
     // Add metadata
     return {
       ...result,
+      model: prompt.model,
       _meta: {
         analyzer: 'accessibility',
         model: prompt.model,
@@ -131,8 +132,10 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
     console.error('Accessibility analysis failed:', error);
 
     // Return graceful degradation
+    const fallbackModel = customPrompt?.model || 'gpt-5';
     return {
-      accessibilityScore: 50,
+      model: fallbackModel,
+      accessibilityScore: 30,
       wcagLevel: 'AA',
       compliance: 'partial',
       issues: [{
@@ -148,6 +151,7 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
       quickFixes: [],
       _meta: {
         analyzer: 'accessibility',
+        model: fallbackModel,
         error: error.message,
         timestamp: new Date().toISOString()
       }
@@ -253,7 +257,7 @@ function extractAccessibilityData($, url) {
     totalImages: images.length,
     formInputsWithoutLabels,
     totalFormInputs: formInputs.length,
-    headingHierarchy: headings.map(h => `h${h.level}`).join(' → '),
+    headingHierarchy: headings.map(h => `h${h.level}`).join(' -> '),
     headingSkips,
     linksWithoutText,
     totalLinks: links.length,

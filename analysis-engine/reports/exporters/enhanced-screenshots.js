@@ -70,7 +70,7 @@ export async function generateAllScreenshotsSection(crawlMetadata) {
   }
   
   // Support both field names: successful_pages (from tests) and pages_analyzed (from orchestrator)
-  const allPages = crawlMetadata.successful_pages || crawlMetadata.pages_analyzed;
+  const allPages = crawlMetadata.successful_pages || crawlMetadata.pages_analyzed || crawlMetadata.pages;
   
   if (!allPages) {
     return '';
@@ -85,7 +85,7 @@ export async function generateAllScreenshotsSection(crawlMetadata) {
   }
   
   let html = '<div class="section">\n';
-  html += '  <h2>📸 All Page Screenshots</h2>\n';
+  html += '  <h2>All Page Screenshots</h2>\n';
   html += `  <p class="text-secondary">Screenshots captured from ${pages.length} page(s) during analysis</p>\n\n`;
   
   for (const page of pages) {
@@ -101,7 +101,7 @@ export async function generateAllScreenshotsSection(crawlMetadata) {
       const desktopSrc = await imageToBase64(page.screenshot_paths.desktop);
       if (desktopSrc) {
         html += '    <div style="margin-bottom: 1.5rem;">\n';
-        html += '      <h4 style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 0.5rem;">🖥️ Desktop View</h4>\n';
+        html += '      <h4 style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 0.5rem;">Desktop View</h4>\n';
         html += '      <div style="border: 1px solid #333; border-radius: 8px; overflow: hidden;">\n';
         html += `        <img src="${desktopSrc}" alt="Desktop screenshot of ${escapeHtml(pageTitle)}" style="width: 100%; display: block;" />\n`;
         html += '      </div>\n';
@@ -114,7 +114,7 @@ export async function generateAllScreenshotsSection(crawlMetadata) {
       const mobileSrc = await imageToBase64(page.screenshot_paths.mobile);
       if (mobileSrc) {
         html += '    <div>\n';
-        html += '      <h4 style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 0.5rem;">📱 Mobile View</h4>\n';
+        html += '      <h4 style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 0.5rem;">Mobile View</h4>\n';
         html += '      <div style="max-width: 375px; border: 1px solid #333; border-radius: 8px; overflow: hidden;">\n';
         html += `        <img src="${mobileSrc}" alt="Mobile screenshot of ${escapeHtml(pageTitle)}" style="width: 100%; display: block;" />\n`;
         html += '      </div>\n';
@@ -138,3 +138,4 @@ function escapeHtml(text) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+

@@ -222,18 +222,18 @@ function generateQuickWinsHTML(quickWins) {
   if (!quickWins || quickWins.length === 0) return '';
 
   let html = '<div class="quick-wins">\n';
-  html += '  <h3>⚡ Quick Wins</h3>\n';
+  html += '  <h3>Quick Wins</h3>\n';
   html += '  <p class="text-secondary mb-2">High-impact improvements you can implement today:</p>\n';
 
   quickWins.slice(0, 5).forEach(win => {
     html += '  <div class="quick-win-item">\n';
-    html += '    <div class="quick-win-icon">⚡</div>\n';
+    html += '    <div class="quick-win-icon"></div>\n';
     html += '    <div>\n';
     html += `      <strong>${escapeHtml(win.title)}</strong>\n`;
     if (win.estimatedTime || win.impact) {
       html += '      <div class="text-muted mt-1">\n';
       if (win.estimatedTime) html += `        <span>${escapeHtml(win.estimatedTime)}</span>\n`;
-      if (win.impact) html += `        <span> • ${escapeHtml(win.impact)}</span>\n`;
+      if (win.impact) html += `        <span>  ${escapeHtml(win.impact)}</span>\n`;
       html += '      </div>\n';
     }
     html += '    </div>\n';
@@ -251,7 +251,7 @@ function generateDesktopHTML(analysisResult, screenshotSrc) {
   const { design_score_desktop, design_issues_desktop = [] } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>🖥️ Desktop Experience Analysis</h2>\n';
+  html += '  <h2>Desktop Experience Analysis</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(design_score_desktop)}</p>\n\n`;
 
   // Embed screenshot if available
@@ -262,7 +262,7 @@ function generateDesktopHTML(analysisResult, screenshotSrc) {
   }
 
   if (design_issues_desktop.length === 0) {
-    html += '  <p class="text-secondary">✅ No significant desktop UX issues detected. Your desktop experience is well-optimized.</p>\n';
+    html += '  <p class="text-secondary"> No significant desktop UX issues detected. Your desktop experience is well-optimized.</p>\n';
   } else {
     html += generateIssuesHTML(design_issues_desktop);
   }
@@ -278,11 +278,11 @@ function generateMobileHTML(analysisResult, screenshotSrc) {
   const { design_score_mobile, design_issues_mobile = [], is_mobile_friendly } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>📱 Mobile Experience Analysis</h2>\n';
+  html += '  <h2>Mobile Experience Analysis</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(design_score_mobile)}</p>\n`;
 
   if (is_mobile_friendly !== undefined) {
-    const status = is_mobile_friendly ? '✅ Mobile-Friendly' : '❌ Not Mobile-Friendly';
+    const status = is_mobile_friendly ? ' Mobile-Friendly' : ' Not Mobile-Friendly';
     html += `  <p><strong>Mobile-Friendly Test:</strong> ${status}</p>\n\n`;
   }
 
@@ -294,7 +294,7 @@ function generateMobileHTML(analysisResult, screenshotSrc) {
   }
 
   if (design_issues_mobile.length === 0) {
-    html += '  <p class="text-secondary">✅ No significant mobile UX issues detected. Your mobile experience is well-optimized.</p>\n';
+    html += '  <p class="text-secondary"> No significant mobile UX issues detected. Your mobile experience is well-optimized.</p>\n';
   } else {
     html += generateIssuesHTML(design_issues_mobile);
   }
@@ -310,7 +310,7 @@ function generateSEOHTML(analysisResult) {
   const { seo_score, seo_issues = [], page_title, meta_description, page_load_time, has_https } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>🔍 SEO & Technical Analysis</h2>\n';
+  html += '  <h2>SEO & Technical Analysis</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(seo_score)}</p>\n\n`;
 
   // Technical snapshot table
@@ -319,10 +319,10 @@ function generateSEOHTML(analysisResult) {
   html += '    <tr><th>Metric</th><th>Value</th></tr>\n';
   if (page_title) html += `    <tr><td>Page Title</td><td>${escapeHtml(page_title)}</td></tr>\n`;
   if (meta_description !== undefined) {
-    html += `    <tr><td>Meta Description</td><td>${meta_description ? escapeHtml(meta_description) : '❌ Missing'}</td></tr>\n`;
+    html += `    <tr><td>Meta Description</td><td>${meta_description ? escapeHtml(meta_description) : ' Missing'}</td></tr>\n`;
   }
   if (page_load_time) html += `    <tr><td>Page Load Time</td><td>${page_load_time}ms</td></tr>\n`;
-  if (has_https !== undefined) html += `    <tr><td>HTTPS</td><td>${has_https ? '✅ Yes' : '❌ No'}</td></tr>\n`;
+  if (has_https !== undefined) html += `    <tr><td>HTTPS</td><td>${has_https ? ' Yes' : ' No'}</td></tr>\n`;
   html += '  </table>\n\n';
 
   if (seo_issues.length > 0) {
@@ -341,7 +341,7 @@ function generateContentHTML(analysisResult) {
   const { content_score, content_issues = [], content_insights = {} } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>📝 Content Quality Analysis</h2>\n';
+  html += '  <h2>Content Quality Analysis</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(content_score)}</p>\n\n`;
 
   // Content insights
@@ -350,7 +350,7 @@ function generateContentHTML(analysisResult) {
     html += '  <table>\n';
     html += '    <tr><th>Metric</th><th>Value</th></tr>\n';
     if (content_insights.wordCount) html += `    <tr><td>Word Count</td><td>${content_insights.wordCount}</td></tr>\n`;
-    if (content_insights.hasBlog !== undefined) html += `    <tr><td>Blog</td><td>${content_insights.hasBlog ? '✅ Yes' : '❌ No'}</td></tr>\n`;
+    if (content_insights.hasBlog !== undefined) html += `    <tr><td>Blog</td><td>${content_insights.hasBlog ? ' Yes' : ' No'}</td></tr>\n`;
     if (content_insights.blogPostCount) html += `    <tr><td>Blog Posts</td><td>${content_insights.blogPostCount}</td></tr>\n`;
     if (content_insights.ctaCount) html += `    <tr><td>CTAs</td><td>${content_insights.ctaCount}</td></tr>\n`;
     html += '  </table>\n\n';
@@ -372,7 +372,7 @@ function generateSocialHTML(analysisResult) {
   const { social_score, social_issues = [], social_platforms_present = [], social_profiles = {} } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>📱 Social Media Presence</h2>\n';
+  html += '  <h2>Social Media Presence</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(social_score)}</p>\n\n`;
 
   // Platform presence
@@ -380,7 +380,7 @@ function generateSocialHTML(analysisResult) {
     html += '  <h3>Platform Presence</h3>\n';
     html += '  <p>';
     social_platforms_present.forEach(platform => {
-      html += `✅ ${escapeHtml(platform)} &nbsp; `;
+      html += ` ${escapeHtml(platform)} &nbsp; `;
     });
     html += '</p>\n\n';
   }
@@ -401,11 +401,11 @@ function generateAccessibilityHTML(analysisResult) {
   const { accessibility_score, accessibility_issues = [] } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>♿ Accessibility (WCAG 2.1 AA)</h2>\n';
+  html += '  <h2>Accessibility (WCAG 2.1 AA)</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(accessibility_score)}</p>\n\n`;
 
   if (accessibility_issues.length === 0) {
-    html += '  <p class="text-secondary">✅ No significant accessibility issues detected. Your site meets WCAG 2.1 AA standards.</p>\n';
+    html += '  <p class="text-secondary"> No significant accessibility issues detected. Your site meets WCAG 2.1 AA standards.</p>\n';
   } else {
     html += generateIssuesHTML(accessibility_issues);
   }
@@ -423,7 +423,7 @@ function generateBusinessIntelHTML(analysisResult) {
   if (Object.keys(business_intelligence).length === 0) return '';
 
   let html = '<div class="section">\n';
-  html += '  <h2>🏢 Business Intelligence</h2>\n';
+  html += '  <h2>Business Intelligence</h2>\n';
   html += '  <table>\n';
   html += '    <tr><th>Attribute</th><th>Value</th></tr>\n';
 
@@ -462,7 +462,7 @@ function generateLeadPriorityHTML(analysisResult) {
   if (!lead_priority) return '';
 
   let html = '<div class="section">\n';
-  html += '  <h2>🎯 Lead Priority Assessment</h2>\n';
+  html += '  <h2>Lead Priority Assessment</h2>\n';
   html += `  <p><strong>Priority Score:</strong> ${lead_priority}/100</p>\n`;
   if (priority_tier) html += `  <p><strong>Priority Tier:</strong> ${escapeHtml(priority_tier)}</p>\n\n`;
 
@@ -508,7 +508,7 @@ function generateActionPlanHTML(analysisResult) {
   const { quick_wins = [], design_issues_desktop = [], design_issues_mobile = [], seo_issues = [] } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>📋 Recommended Action Plan</h2>\n\n';
+  html += '  <h2>Recommended Action Plan</h2>\n\n';
 
   // Phase 1: Quick Wins
   if (quick_wins.length > 0) {
@@ -571,10 +571,10 @@ function generateAppendixHTML(analysisResult) {
   } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>📎 Appendix</h2>\n\n';
+  html += '  <h2>Appendix</h2>\n\n';
 
   // AI models used
-  html += '  <h3>🤖 Analysis Configuration</h3>\n';
+  html += '  <h3>Analysis Configuration</h3>\n';
   html += '  <table>\n';
   html += '    <tr><th>Module</th><th>Model Used</th></tr>\n';
 
@@ -690,3 +690,4 @@ function escapeHtml(text) {
   };
   return text.replace(/[&<>"']/g, m => map[m]);
 }
+

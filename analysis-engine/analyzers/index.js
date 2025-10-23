@@ -129,7 +129,8 @@ export async function runAllAnalyses(data, pages = []) {
  */
 function getDefaultDesignResults() {
   return {
-    overallDesignScore: 50,
+    model: 'unavailable',
+    overallDesignScore: 30,
     issues: [],
     positives: [],
     quickWinCount: 0,
@@ -139,7 +140,8 @@ function getDefaultDesignResults() {
 
 function getDefaultDesktopVisualResults() {
   return {
-    visualScore: 50,
+    model: 'unavailable',
+    visualScore: 30,
     issues: [],
     positives: [],
     quickWinCount: 0,
@@ -149,7 +151,8 @@ function getDefaultDesktopVisualResults() {
 
 function getDefaultMobileVisualResults() {
   return {
-    visualScore: 50,
+    model: 'unavailable',
+    visualScore: 30,
     issues: [],
     positives: [],
     quickWinCount: 0,
@@ -159,7 +162,8 @@ function getDefaultMobileVisualResults() {
 
 function getDefaultSEOResults() {
   return {
-    seoScore: 50,
+    model: 'unavailable',
+    seoScore: 30,
     issues: [],
     opportunities: [],
     quickWins: [],
@@ -169,7 +173,8 @@ function getDefaultSEOResults() {
 
 function getDefaultContentResults() {
   return {
-    contentScore: 50,
+    model: 'unavailable',
+    contentScore: 30,
     issues: [],
     engagementHooks: [],
     _meta: { analyzer: 'content', error: 'Analysis failed' }
@@ -178,7 +183,8 @@ function getDefaultContentResults() {
 
 function getDefaultSocialResults() {
   return {
-    socialScore: 50,
+    model: 'unavailable',
+    socialScore: 30,
     platformsPresent: [],
     mostActivePlatform: 'unknown',
     issues: [],

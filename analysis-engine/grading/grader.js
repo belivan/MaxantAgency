@@ -30,7 +30,7 @@ try {
       D: { min: 40, label: 'Poor' },
       F: { min: 0, label: 'Failing' }
     },
-    defaults: { missingScores: { design: 50, seo: 50, content: 50, social: 50 } },
+    defaults: { missingScores: { design: 30, seo: 30, content: 30, social: 30 } },
     bonuses: { quickWinBonus: { enabled: true, value: 5, threshold: 3 } },
     penalties: {
       brokenSite: { enabled: true, value: -20 },

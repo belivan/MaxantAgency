@@ -1,5 +1,5 @@
 /**
- * Desktop Visual Analyzer - Uses GPT-4o Vision to analyze desktop screenshot
+ * Desktop Visual Analyzer - Uses GPT-5 Vision to analyze desktop screenshot
  *
  * Cost: ~$0.015 per analysis
  * Analyzes: desktop layout, navigation, typography, visual hierarchy, design issues
@@ -133,13 +133,14 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
 
     // Add metadata
     return {
+      model: prompt.model,
       visualScore: avgScore,
       issues: allIssues,
       positives: allPositives,
       quickWinCount,
       _meta: {
         analyzer: 'desktop-visual',
-        model: customPrompt?.model || 'gpt-4o',
+        model: prompt.model,
         cost: totalCost,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pagesToAnalyze.length,
@@ -156,8 +157,10 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     console.error('Desktop visual analysis failed:', error);
 
     // Return graceful degradation
+    const fallbackModel = customPrompt?.model || 'gpt-5';
     return {
-      visualScore: 50,
+      model: fallbackModel,
+      visualScore: 30,
       issues: [{
         category: 'error',
         severity: 'high',
@@ -172,6 +175,7 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
       quickWinCount: 0,
       _meta: {
         analyzer: 'desktop-visual',
+        model: fallbackModel,
         error: error.message,
         timestamp: new Date().toISOString()
       }

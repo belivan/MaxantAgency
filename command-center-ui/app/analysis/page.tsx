@@ -6,17 +6,57 @@
  * Analyze prospects and convert to leads
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ProspectSelector, AnalysisConfig } from '@/components/analysis';
-import { type AnalysisPrompts } from '@/components/analysis/prompt-editor';
+import { type AnalysisPrompts, type PromptConfig } from '@/components/analysis/prompt-editor';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { updateProject, getProject } from '@/lib/api';
 import type { AnalysisOptionsFormData, SSEMessage } from '@/lib/types';
 
+const DEFAULT_ANALYSIS_MODEL = 'gpt-5';
+
+const buildDefaultModelSelections = (): Record<string, string> => ({
+  desktopVisual: DEFAULT_ANALYSIS_MODEL,
+  mobileVisual: DEFAULT_ANALYSIS_MODEL,
+  seo: DEFAULT_ANALYSIS_MODEL,
+  content: DEFAULT_ANALYSIS_MODEL,
+  social: DEFAULT_ANALYSIS_MODEL,
+  accessibility: DEFAULT_ANALYSIS_MODEL,
+  leadScorer: DEFAULT_ANALYSIS_MODEL
+});
+
+const ensureDefaultModels = (prompts: AnalysisPrompts | null, overwrite = false): AnalysisPrompts | null => {
+  if (!prompts) return prompts;
+  const updated: AnalysisPrompts = { ...prompts };
+  Object.entries(updated).forEach(([key, value]) => {
+    if (key === '_meta' || !value) return;
+    const prompt = value as PromptConfig;
+    if (overwrite || !prompt.model) {
+      updated[key] = {
+        ...prompt,
+        model: DEFAULT_ANALYSIS_MODEL
+      };
+    }
+  });
+  return updated;
+};
+
+const extractModelSelections = (prompts: AnalysisPrompts | null): Record<string, string> => {
+  const selections = buildDefaultModelSelections();
+  if (!prompts) return selections;
+  Object.entries(prompts).forEach(([key, value]) => {
+    if (key === '_meta' || !value) return;
+    const prompt = value as PromptConfig;
+    if (prompt.model) {
+      selections[key] = prompt.model;
+    }
+  });
+  return selections;
+};
 
 export default function AnalysisPage() {
   const searchParams = useSearchParams();
@@ -34,14 +74,31 @@ export default function AnalysisPage() {
   // Analysis state
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [sseUrl, setSseUrl] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{
-    current: number;
-    total: number;
-  } | undefined>();
+  const [progress, setProgress] = useState<{ current: number; total: number } | undefined>();
 
-  // Prompt state - SIMPLIFIED: No more tracking saved vs current
+  // Prompt state
   const [defaultPrompts, setDefaultPrompts] = useState<AnalysisPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<AnalysisPrompts | null>(null);
+  const [defaultModelSelections, setDefaultModelSelections] = useState<Record<string, string>>(buildDefaultModelSelections());
+  const [currentModelSelections, setCurrentModelSelections] = useState<Record<string, string>>(buildDefaultModelSelections());
+
+  // Use refs to store stable references for useEffect dependencies
+  const defaultPromptsRef = useRef<AnalysisPrompts | null>(null);
+  const defaultModelSelectionsRef = useRef<Record<string, string>>(buildDefaultModelSelections());
+  
+  // Track if we're loading prompts to prevent loops
+  const isLoadingPromptsRef = useRef(false);
+
+  // Update refs when state changes
+  useEffect(() => {
+    defaultPromptsRef.current = defaultPrompts;
+    defaultModelSelectionsRef.current = defaultModelSelections;
+  }, [defaultPrompts, defaultModelSelections]);
+
+  const handlePromptsChange = useCallback((prompts: AnalysisPrompts) => {
+    const normalized = ensureDefaultModels(prompts, false) as AnalysisPrompts;
+    setCurrentPrompts(normalized);
+  }, []);
   const [leadsCount, setLeadsCount] = useState(0);
   const [promptsLoading, setPromptsLoading] = useState(true);
 
@@ -52,7 +109,6 @@ export default function AnalysisPage() {
       console.log('SSE Message:', message);
 
       if (message.type === 'progress') {
-        // Update progress bar
         setProgress({
           current: message.data.current || 0,
           total: message.data.total || 100
@@ -76,18 +132,28 @@ export default function AnalysisPage() {
   useEffect(() => {
     async function loadDefaultPrompts() {
       try {
+        isLoadingPromptsRef.current = true;
         setPromptsLoading(true);
         const response = await fetch('/api/analysis/prompts');
         const result = await response.json();
 
         if (result.success) {
-          setDefaultPrompts(result.data);
-          setCurrentPrompts(result.data);
+          const promptsData = ensureDefaultModels(result.data as AnalysisPrompts, true);
+          setDefaultPrompts(promptsData);
+          setCurrentPrompts(promptsData);
+
+          const selections = extractModelSelections(promptsData);
+          setDefaultModelSelections(selections);
+          setCurrentModelSelections(selections);
         }
       } catch (error) {
         console.error('Failed to load default prompts:', error);
       } finally {
         setPromptsLoading(false);
+        // Delay clearing the loading flag to let child components stabilize
+        setTimeout(() => {
+          isLoadingPromptsRef.current = false;
+        }, 100);
       }
     }
 
@@ -97,8 +163,13 @@ export default function AnalysisPage() {
   // Load project-specific prompts and leads count when project changes
   useEffect(() => {
     async function loadProjectData() {
+      // Use refs to get current values without causing re-renders
+      const currentDefaultPrompts = defaultPromptsRef.current;
+      const currentDefaultModelSelections = defaultModelSelectionsRef.current;
+
       if (!selectedProjectId) {
-        setCurrentPrompts(defaultPrompts);
+        setCurrentPrompts(currentDefaultPrompts);
+        setCurrentModelSelections(currentDefaultModelSelections);
         setLeadsCount(0);
         return;
       }
@@ -106,15 +177,48 @@ export default function AnalysisPage() {
       try {
         const project = await getProject(selectedProjectId);
 
-        // Check if project has saved analysis prompts
         const projectPrompts = (project as any).analysis_prompts as AnalysisPrompts | undefined;
+        const projectModelSelections = (project as any).analysis_model_selections as Record<string, string> | undefined;
 
         if (projectPrompts) {
-          // Project has saved prompts - use them
-          setCurrentPrompts(projectPrompts);
+          const hasStoredSelections = !!projectModelSelections && Object.keys(projectModelSelections).length > 0;
+          const mergedPrompts = ensureDefaultModels(
+            { ...(currentDefaultPrompts || {}), ...projectPrompts } as AnalysisPrompts,
+            !hasStoredSelections
+          ) as AnalysisPrompts | null;
+
+          const syncedPrompts: AnalysisPrompts | null = mergedPrompts
+            ? Object.fromEntries(
+                Object.entries(mergedPrompts).map(([key, value]) => {
+                  if (key === '_meta' || !value) return [key, value];
+                  const selection = projectModelSelections?.[key] || (value as PromptConfig).model;
+                  return [
+                    key,
+                    {
+                      ...(value as PromptConfig),
+                      model: selection || DEFAULT_ANALYSIS_MODEL
+                    }
+                  ];
+                })
+              ) as AnalysisPrompts
+            : null;
+
+          setCurrentPrompts(syncedPrompts || currentDefaultPrompts);
+
+          if (projectModelSelections) {
+            setCurrentModelSelections({ ...currentDefaultModelSelections, ...projectModelSelections });
+          } else if (syncedPrompts) {
+            setCurrentModelSelections(extractModelSelections(syncedPrompts));
+          } else {
+            setCurrentModelSelections(currentDefaultModelSelections);
+          }
         } else {
-          // No saved prompts - use defaults
-          setCurrentPrompts(defaultPrompts);
+          setCurrentPrompts(currentDefaultPrompts);
+          if (projectModelSelections) {
+            setCurrentModelSelections({ ...currentDefaultModelSelections, ...projectModelSelections });
+          } else {
+            setCurrentModelSelections(currentDefaultModelSelections);
+          }
         }
 
         const leadsResponse = await fetch(`/api/leads?project_id=${selectedProjectId}`);
@@ -128,10 +232,18 @@ export default function AnalysisPage() {
       }
     }
 
-    if (defaultPrompts) {
+    if (defaultPromptsRef.current) {
       loadProjectData();
     }
-  }, [selectedProjectId, defaultPrompts]);
+  }, [selectedProjectId]); // Only depend on selectedProjectId to prevent infinite loop
+
+  const handleModelSelectionsChange = useCallback((selection: Record<string, string>) => {
+    // Prevent updates during initial load
+    if (isLoadingPromptsRef.current) {
+      return;
+    }
+    setCurrentModelSelections(selection);
+  }, []);
 
   const handleAnalyze = async (config: AnalysisOptionsFormData) => {
     if (selectedIds.length === 0) {
@@ -139,37 +251,32 @@ export default function AnalysisPage() {
       return;
     }
 
-    // Auto-inherit project_id from the prospects being analyzed
-    // The ProspectSelector filters prospects by project, so we use that project
     if (!selectedProjectId) {
-      alert('⚠️ Project Required\n\nPlease select a project from the "Select Project (Required)" card at the top of the page.\n\nAll analyzed leads will automatically belong to the project you select.');
+      alert('?? Project Required\n\nPlease select a project from the "Select Project (Required)" card at the top of the page.\n\nAll analyzed leads will automatically belong to the project you select.');
       return;
     }
 
     setIsAnalyzing(true);
     setProgress(undefined);
 
-    // SIMPLIFIED: Just save to current project - NO FORKING!
     if (selectedProjectId && currentPrompts) {
       try {
         await updateProject(selectedProjectId, {
-          analysis_prompts: currentPrompts
+          analysis_prompts: ensureDefaultModels(currentPrompts, true),
+          analysis_model_selections: currentModelSelections
         } as any);
-        console.log('✅ Saved analysis prompts to project:', selectedProjectId);
+        console.log('? Saved analysis prompts to project:', selectedProjectId);
       } catch (error: any) {
         console.error('Failed to save analysis prompts:', error);
-        // Don't block analysis if save fails
       }
     }
 
-    // Start global progress task
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const taskTitle = `Intelligent Analysis: ${selectedIds.length} prospects (${timestamp})`;
     const taskId = startTask('analysis', taskTitle, selectedIds.length);
 
     const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
 
-    // Use SSE with fetch for batch analysis (supports POST)
     try {
       addLog(taskId, 'Starting intelligent multi-page analysis...', 'info');
 
@@ -178,8 +285,9 @@ export default function AnalysisPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prospect_ids: selectedIds,
-          project_id: selectedProjectId,  // Required - validated above
-          custom_prompts: (config as any).custom_prompts || undefined
+          project_id: selectedProjectId,
+          custom_prompts: (config as any).custom_prompts || undefined,
+          model_selections: (config as any).model_selections || currentModelSelections
         })
       });
 
@@ -187,10 +295,8 @@ export default function AnalysisPage() {
         throw new Error(`Analysis failed: ${response.statusText}`);
       }
 
-      // Check if response is SSE
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('text/event-stream')) {
-        // Handle SSE response
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
 
@@ -211,53 +317,44 @@ export default function AnalysisPage() {
 
           for (const line of lines) {
             if (line.startsWith('event:')) {
-              const eventType = line.slice(6).trim();
+              continue;
             } else if (line.startsWith('data:')) {
               try {
                 const data = JSON.parse(line.slice(5));
 
-                // Handle different event types based on data
                 if (data.message && data.total) {
-                  // Start event
                   addLog(taskId, data.message, 'info');
                 } else if (data.current && data.company) {
-                  // Analyzing event
                   addLog(taskId, `Analyzing ${data.company} (${data.current}/${data.total})...`, 'info');
                 } else if (data.success === false && data.company) {
-                  // Error event
                   analyzed++;
                   updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
-                  addLog(taskId, `✗ ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
+                  addLog(taskId, `? ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
                 } else if (data.grade && data.company) {
-                  // Success event
                   analyzed++;
                   updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
-                  addLog(taskId, `✓ ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
+                  addLog(taskId, `? ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
                 } else if (data.successful !== undefined && data.failed !== undefined) {
-                  // Complete event
                   addLog(taskId, `Analysis complete: ${data.successful}/${data.total} successful`, 'success');
                   completeTask(taskId);
                 }
               } catch (e) {
-                // Not JSON, ignore
                 console.log('Non-JSON SSE data:', line);
               }
             }
           }
         }
       } else {
-        // Fallback: Handle as regular JSON response (for backwards compatibility)
         const result = await response.json();
 
         if (result.success) {
-          // Log each result
           result.data.results.forEach((r: any, i: number) => {
             updateTask(taskId, i + 1, `Completed ${i + 1}/${result.data.total}`);
 
             if (r.success) {
-              addLog(taskId, `✓ ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
+              addLog(taskId, `? ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
             } else {
-              addLog(taskId, `✗ ${r.company_name}: ${r.error}`, 'error');
+              addLog(taskId, `? ${r.company_name}: ${r.error}`, 'error');
             }
           });
 
@@ -282,15 +379,13 @@ export default function AnalysisPage() {
   return (
     <>
       <div className="container mx-auto p-6 space-y-6">
-        {/* Header */}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Analysis</h1>
           <p className="text-muted-foreground">
-            Complete website analysis using all 6 AI modules • Automatic page discovery • Lead scoring & prioritization
+            Complete website analysis using all 6 AI modules  Automatic page discovery  Lead scoring & prioritization
           </p>
         </div>
 
-        {/* Engine Offline Warning */}
         {isAnalysisEngineOffline && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -301,36 +396,39 @@ export default function AnalysisPage() {
           </Alert>
         )}
 
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - Prospect Selector */}
-        <div className="lg:col-span-2">
-          <ProspectSelector
-            selectedIds={selectedIds}
-            onSelectionChange={setSelectedIds}
-            preSelectedIds={preSelectedIds}
-            projectId={selectedProjectId}
-            onProjectChange={setSelectedProjectId}
-          />
-        </div>
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <ProspectSelector
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              preSelectedIds={preSelectedIds}
+              projectId={selectedProjectId}
+              onProjectChange={setSelectedProjectId}
+            />
+          </div>
 
-        {/* Right Column - Analysis Config */}
-        <div>
-          <AnalysisConfig
-            prospectCount={selectedIds.length}
-            onSubmit={handleAnalyze}
-            isLoading={isAnalyzing}
-            disabled={isAnalysisEngineOffline}
-            customPrompts={currentPrompts || undefined}
-            defaultPrompts={defaultPrompts || undefined}
-            onPromptsChange={setCurrentPrompts}
-            promptsLocked={false}  // SIMPLIFIED: Never lock prompts
-            leadsCount={leadsCount}
-          />
+          <div>
+            <AnalysisConfig
+              prospectCount={selectedIds.length}
+              onSubmit={handleAnalyze}
+              isLoading={isAnalyzing}
+              disabled={isAnalysisEngineOffline}
+              customPrompts={currentPrompts || undefined}
+              defaultPrompts={defaultPrompts || undefined}
+              onPromptsChange={handlePromptsChange}
+              promptsLocked={false}
+              leadsCount={leadsCount}
+              modelSelections={currentModelSelections}
+              defaultModelSelections={defaultModelSelections}
+              onModelSelectionsChange={handleModelSelectionsChange}
+            />
+          </div>
         </div>
-      </div>
 
       </div>
     </>
   );
 }
+
+
+

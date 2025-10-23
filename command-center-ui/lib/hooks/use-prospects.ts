@@ -3,7 +3,7 @@
  * Manages prospect data fetching and state
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getProspects, getProspect } from '@/lib/api';
 import type { Prospect, ProspectFilters } from '@/lib/types';
 
@@ -21,6 +21,19 @@ export function useProspects(filters?: ProspectFilters): UseProspectsReturn {
   const [error, setError] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
 
+  // Stringify filters to avoid infinite loops from object reference changes
+  const filtersKey = useMemo(() => JSON.stringify(filters || {}), [
+    filters?.status,
+    filters?.industry,
+    filters?.city,
+    filters?.min_rating,
+    filters?.verified,
+    filters?.has_email,
+    filters?.project_id,
+    filters?.limit,
+    filters?.offset
+  ]);
+
   const fetchProspects = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -36,7 +49,7 @@ export function useProspects(filters?: ProspectFilters): UseProspectsReturn {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filtersKey]);
 
   useEffect(() => {
     fetchProspects();

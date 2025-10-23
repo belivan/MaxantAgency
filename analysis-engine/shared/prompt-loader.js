@@ -15,6 +15,21 @@ const __dirname = dirname(__filename);
 const promptCache = new Map();
 
 /**
+ * Remove BOM and other unsupported leading characters from JSON content.
+ *
+ * @param {string} content - Raw file content
+ * @returns {string} Sanitized JSON string safe for parsing
+ */
+function sanitizeJSON(content) {
+  if (!content) return content;
+  // Strip UTF-8 BOM if present
+  if (content.charCodeAt(0) === 0xFEFF) {
+    return content.slice(1);
+  }
+  return content;
+}
+
+/**
  * Load a prompt configuration from JSON file
  *
  * @param {string} promptPath - Path relative to config/prompts/ (e.g., 'web-design/design-critique')
@@ -35,7 +50,7 @@ export async function loadPrompt(promptPath, variables = {}) {
     // Load JSON file
     try {
       const fileContent = await readFile(fullPath, 'utf-8');
-      promptConfig = JSON.parse(fileContent);
+      promptConfig = JSON.parse(sanitizeJSON(fileContent));
 
       // Validate prompt config
       validatePromptConfig(promptConfig, promptPath);
@@ -172,8 +187,8 @@ export async function getPromptMetadata(promptPath) {
   const fullPath = join(__dirname, '../config/prompts', `${promptPath}.json`);
 
   try {
-    const fileContent = await readFile(fullPath, 'utf-8');
-    const config = JSON.parse(fileContent);
+      const fileContent = await readFile(fullPath, 'utf-8');
+      const config = JSON.parse(sanitizeJSON(fileContent));
 
     return {
       name: config.name,
@@ -199,8 +214,8 @@ export async function getRawPromptConfig(promptPath) {
   const fullPath = join(__dirname, '../config/prompts', `${promptPath}.json`);
 
   try {
-    const fileContent = await readFile(fullPath, 'utf-8');
-    const config = JSON.parse(fileContent);
+      const fileContent = await readFile(fullPath, 'utf-8');
+      const config = JSON.parse(sanitizeJSON(fileContent));
 
     // Validate before returning
     validatePromptConfig(config, promptPath);

@@ -15,7 +15,8 @@ import {
   ScanSearch,
   Users,
   Mail,
-  BarChart3
+  BarChart3,
+  Info
 } from 'lucide-react';
 
 interface NavItem {
@@ -60,6 +61,11 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Analytics',
     href: '/analytics',
     icon: <BarChart3 className="w-5 h-5" />
+  },
+  {
+    label: 'About',
+    href: '/about',
+    icon: <Info className="w-5 h-5" />
   }
 ];
 

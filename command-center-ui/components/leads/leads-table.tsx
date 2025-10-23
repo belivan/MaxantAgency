@@ -90,13 +90,14 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
 
-  // Notify parent when selection changes
+  // Notify parent when selection changes (removed onSelectionChange from deps to prevent infinite loop)
   useEffect(() => {
     if (onSelectionChange) {
       const selectedLeads = leads.filter(lead => selectedIds.includes(lead.id));
       onSelectionChange(selectedIds, selectedLeads);
     }
-  }, [selectedIds, leads, onSelectionChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedIds]); // Only depend on selectedIds, not the callback or leads array
 
   // Expanded rows state
   const [expandedIds, setExpandedIds] = useState<string[]>([]);

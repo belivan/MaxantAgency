@@ -134,7 +134,9 @@ async function callOpenAICompatible({
       });
     }
 
-    // Build request
+    const adjustedMaxTokens = model.startsWith('gpt-5') ? Math.min(maxTokens, 2048) : maxTokens;
+
+
     const requestBody = {
       model,
       messages: [
@@ -150,20 +152,20 @@ async function callOpenAICompatible({
     };
 
     // GPT-5 uses max_completion_tokens instead of max_tokens
-    if (model === 'gpt-5') {
-      requestBody.max_completion_tokens = maxTokens;
+    if (model.startsWith('gpt-5')) {
+      requestBody.max_completion_tokens = adjustedMaxTokens;
     } else {
-      requestBody.max_tokens = maxTokens;
+      requestBody.max_tokens = adjustedMaxTokens;
     }
 
     // GPT-5 only supports temperature=1 (default), so skip it for GPT-5
-    if (model !== 'gpt-5') {
+    if (!model.startsWith('gpt-5')) {
       requestBody.temperature = temperature;
     }
 
     // Enable JSON mode if requested
     // Note: GPT-5 doesn't support response_format parameter, relies on prompt instructions
-    if (jsonMode && model !== 'gpt-5') {
+    if (jsonMode && !model.startsWith('gpt-5')) {
       requestBody.response_format = { type: 'json_object' };
     }
 
@@ -368,3 +370,5 @@ export default {
   callAI,
   parseJSONResponse
 };
+
+

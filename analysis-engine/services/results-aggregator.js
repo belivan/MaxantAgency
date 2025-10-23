@@ -1,0 +1,452 @@
+/**
+ * Results Aggregator
+ * 
+ * Responsible for compiling final analysis results:
+ * - Calculating scores and grades
+ * - Extracting quick wins
+ * - Generating critique
+ * - Lead scoring
+ * - Saving screenshots
+ * 
+ * Single Responsibility: Results Compilation & Grading
+ */
+
+import { calculateGrade, extractQuickWins as extractQuickWinsFromModules, getTopIssue } from '../grading/grader.js';
+import { generateCritique, generateOneLiner } from '../grading/critique-generator.js';
+import { scoreLeadPriority } from '../analyzers/lead-scorer.js';
+import { saveDualScreenshots } from '../utils/screenshot-storage.js';
+import { countCriticalDesktopIssues } from '../analyzers/desktop-visual-analyzer.js';
+import { countCriticalMobileIssues } from '../analyzers/mobile-visual-analyzer.js';
+import { calculateTotalCost } from '../analyzers/index.js';
+
+export class ResultsAggregator {
+  constructor(options = {}) {
+    this.onProgress = options.onProgress || (() => {});
+  }
+
+  /**
+   * Aggregate all analysis results into final output
+   * 
+   * @param {object} analysisResults - Results from AnalysisCoordinator
+   * @param {object} crawlData - Data from CrawlingService
+   * @param {object} pageSelection - Selection from PageSelectionService
+   * @param {object} discoveryData - Data from DiscoveryService
+   * @param {object} context - Business context
+   * @param {string} baseUrl - Base website URL
+   * @param {number} startTime - Analysis start timestamp
+   * @returns {Promise<object>} Complete analysis results
+   */
+  async aggregate(analysisResults, crawlData, pageSelection, discoveryData, context, baseUrl, startTime) {
+    const { pages, homepage, businessIntel } = crawlData;
+    const { parsedData, enrichedContext } = analysisResults.metadata;
+
+    // PHASE 1: Calculate Scores
+    const scores = this.calculateScores(analysisResults);
+
+    // PHASE 2: Extract Quick Wins
+    const quickWins = this.extractQuickWins(analysisResults);
+
+    // PHASE 3: Calculate Grade
+    this.onProgress({ step: 'grade', message: 'Calculating overall grade...' });
+
+    const gradeMetadata = {
+      quickWinCount: quickWins.length,
+      isMobileFriendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
+      hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
+      siteAccessible: true,
+      industry: context.industry
+    };
+
+    const gradeResults = calculateGrade({
+      design: scores.design_score,
+      seo: scores.seo_score,
+      content: scores.content_score,
+      social: scores.social_score
+    }, gradeMetadata);
+
+    // PHASE 4: Generate Critique
+    this.onProgress({ step: 'critique', message: 'Generating actionable critique...' });
+    const critique = generateCritique(analysisResults, gradeResults, enrichedContext);
+
+    // PHASE 5: Lead Scoring
+    this.onProgress({ step: 'lead-scoring', message: 'Scoring lead priority and qualification...' });
+    
+    const leadScoringData = await scoreLeadPriority({
+      company_name: context.company_name,
+      industry: context.industry,
+      url: homepage.fullUrl,
+      city: context.city,
+      state: context.state,
+      website_grade: gradeResults.grade,
+      overall_score: gradeResults.overallScore,
+      design_score: scores.design_score,
+      seo_score: scores.seo_score,
+      content_score: scores.content_score,
+      social_score: scores.social_score,
+      tech_stack: homepage.metadata?.techStack || 'Unknown',
+      page_load_time: homepage.metadata?.loadTime || null,
+      is_mobile_friendly: gradeMetadata.isMobileFriendly,
+      has_https: gradeMetadata.hasHTTPS,
+      design_issues: [...(analysisResults.desktopVisual?.issues || []), ...(analysisResults.mobileVisual?.issues || [])],
+      quick_wins: quickWins,
+      top_issue: getTopIssue(analysisResults),
+      one_liner: generateOneLiner(
+        context.company_name || 'This business',
+        critique.topIssue,
+        gradeResults.grade,
+        quickWins.length
+      ),
+      social_platforms_present: parsedData.social.platformsPresent,
+      contact_email: parsedData.content?.contactInfo?.emails?.[0] || context.contact_email || null,
+
+      // Business intelligence data
+      years_in_business: businessIntel.yearsInBusiness?.estimatedYears,
+      founded_year: businessIntel.yearsInBusiness?.foundedYear,
+      employee_count: businessIntel.companySize?.employeeCount,
+      location_count: businessIntel.companySize?.locationCount,
+      pricing_visible: businessIntel.pricingVisibility?.visible,
+      pricing_range: businessIntel.pricingVisibility?.priceRange,
+      blog_active: businessIntel.contentFreshness?.blogActive,
+      content_last_update: businessIntel.contentFreshness?.lastUpdate,
+      decision_maker_email: businessIntel.decisionMakerAccessibility?.hasDirectEmail,
+      decision_maker_phone: businessIntel.decisionMakerAccessibility?.hasDirectPhone,
+      owner_name: businessIntel.decisionMakerAccessibility?.ownerName,
+      premium_features: businessIntel.premiumFeatures?.detected || [],
+      budget_indicator: businessIntel.premiumFeatures?.budgetIndicator,
+      pages_crawled: pages.length
+    });
+
+    console.log(`[ResultsAggregator] Lead scoring complete:`, {
+      priority: leadScoringData.lead_priority,
+      tier: leadScoringData.priority_tier,
+      budget: leadScoringData.budget_likelihood
+    });
+
+    // PHASE 6: Save Screenshots
+    const screenshotPaths = await this.saveScreenshots(pages, context, baseUrl);
+
+    // PHASE 7: Calculate Costs & Timing
+    const analysisTime = Date.now() - startTime;
+    const analysisCost = calculateTotalCost(analysisResults);
+
+    // PHASE 8: Build Final Results
+    return this.buildFinalResults({
+      analysisResults,
+      scores,
+      gradeResults,
+      quickWins,
+      critique,
+      leadScoringData,
+      crawlData,
+      pageSelection,
+      discoveryData,
+      screenshotPaths,
+      parsedData,
+      businessIntel,
+      context,
+      homepage,
+      analysisTime,
+      analysisCost
+    });
+  }
+
+  /**
+   * Calculate aggregated scores
+   */
+  calculateScores(analysisResults = {}) {
+    const designScore = Math.round(
+      ((extractScore(analysisResults.desktopVisual, 'visualScore') || 0) +
+       (extractScore(analysisResults.mobileVisual, 'visualScore') || 0)) / 2
+    );
+
+    return {
+      design_score: normalizeScore(designScore),
+      seo_score: normalizeScore(extractScore(analysisResults.seo, 'seoScore')),
+      content_score: normalizeScore(extractScore(analysisResults.content, 'contentScore')),
+      social_score: normalizeScore(extractScore(analysisResults.social, 'socialScore'))
+    };
+  }
+
+  /**
+   * Save screenshots to local storage
+   */
+  async saveScreenshots(pages, context, baseUrl) {
+    const baseScreenshotLabel = (() => {
+      if (context.company_name) return context.company_name;
+      try {
+        return new URL(baseUrl).hostname || 'website';
+      } catch {
+        return 'website';
+      }
+    })();
+
+    const slugify = (value) => {
+      if (!value) return 'page';
+      return value
+        .toString()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'page';
+    };
+
+    const screenshotPaths = {};
+
+    for (const page of pages) {
+      if (!page.screenshots) {
+        screenshotPaths[page.url] = { desktop: null, mobile: null };
+        continue;
+      }
+
+      const pageLabel = slugify(page.url === '/' || page.url === '' ? 'homepage' : page.url);
+      const label = `${slugify(baseScreenshotLabel)}-${pageLabel}`;
+
+      const paths = await saveDualScreenshots(
+        {
+          desktop: ensureBuffer(page.screenshots.desktop),
+          mobile: ensureBuffer(page.screenshots.mobile)
+        },
+        label
+      );
+
+      screenshotPaths[page.url] = paths;
+      page.screenshot_paths = paths;
+    }
+
+    return screenshotPaths;
+  }
+
+  /**
+   * Build final results object
+   */
+  buildFinalResults(data) {
+    const {
+      analysisResults,
+      scores,
+      gradeResults,
+      quickWins,
+      critique,
+      leadScoringData,
+      crawlData,
+      pageSelection,
+      discoveryData,
+      screenshotPaths,
+      parsedData,
+      businessIntel,
+      context,
+      homepage,
+      analysisTime,
+      analysisCost
+    } = data;
+
+    return {
+      // Core analysis data
+      company_name: context.company_name,
+      industry: context.industry,
+      url: homepage.fullUrl,
+      website_grade: gradeResults.grade,
+      overall_score: gradeResults.overallScore,
+
+      // Scores
+      design_score: scores.design,
+      design_score_desktop: analysisResults.desktopVisual?.visualScore,
+      design_score_mobile: analysisResults.mobileVisual?.visualScore,
+      seo_score: scores.seo,
+      content_score: scores.content,
+      social_score: scores.social,
+      accessibility_score: analysisResults.accessibility?.accessibilityScore,
+
+      // Issues
+      design_issues: [...(analysisResults.desktopVisual?.issues || []), ...(analysisResults.mobileVisual?.issues || [])],
+      design_issues_desktop: analysisResults.desktopVisual?.issues || [],
+      design_issues_mobile: analysisResults.mobileVisual?.issues || [],
+      mobile_critical_issues: countCriticalMobileIssues(analysisResults.mobileVisual),
+      desktop_critical_issues: countCriticalDesktopIssues(analysisResults.desktopVisual),
+      seo_issues: analysisResults.seo?.issues || [],
+      content_issues: analysisResults.content?.issues || [],
+      social_issues: analysisResults.social?.issues || [],
+      accessibility_issues: analysisResults.accessibility?.issues || [],
+      accessibility_compliance: analysisResults.accessibility?.wcagCompliance || {},
+
+      // Models used
+      seo_analysis_model: analysisResults.seo?.model,
+      content_analysis_model: analysisResults.content?.model,
+      desktop_visual_model: analysisResults.desktopVisual?.model,
+      mobile_visual_model: analysisResults.mobileVisual?.model,
+      social_analysis_model: analysisResults.social?.model,
+      accessibility_analysis_model: analysisResults.accessibility?.model,
+
+      // Quick wins & critique
+      quick_wins: quickWins,
+      analysis_summary: critique.summary,
+      top_issue: critique.topIssue,
+      one_liner: critique.one_liner,
+      call_to_action: critique.callToAction,
+      outreach_angle: critique.outreachAngle,
+
+      // Lead scoring
+      ...leadScoringData,
+
+      // Technical data
+      tech_stack: homepage.metadata?.techStack || 'Unknown',
+      page_load_time: homepage.metadata?.loadTime,
+      is_mobile_friendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
+      has_https: homepage.fullUrl?.startsWith('https://') || false,
+      has_blog: parsedData.content.hasBlog,
+
+      // Screenshots
+      screenshot_desktop_url: screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop,
+      screenshot_mobile_url: screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile,
+
+      // Social data
+      social_profiles: parsedData.social.links,
+      social_platforms_present: parsedData.social.platformsPresent,
+      social_metadata: analysisResults.social?.socialMetadata,
+
+      // Content insights
+      content_insights: analysisResults.content?.contentInsights,
+      page_title: parsedData.seo?.title,
+      meta_description: parsedData.seo?.description,
+
+      // Business intelligence
+      business_intelligence: businessIntel,
+
+      // Multi-page crawl metadata
+      crawl_metadata: {
+        pages_discovered: discoveryData.totalPages,
+        pages_crawled: crawlData.pages.length,
+        pages_analyzed: crawlData.pages.length,
+        discovery_sources: discoveryData.sources,
+        discovery_errors: discoveryData.errors,
+        failed_pages: (crawlData.failedPages || []).map(p => ({
+          url: p.url,
+          fullUrl: p.fullUrl,
+          error: p.error || null,
+          timestamp: p.timestamp || null
+        })),
+          pages: crawlData.pages.map(p => {
+            const storedPaths = screenshotPaths[p.url] || screenshotPaths[p.fullUrl] || { desktop: null, mobile: null };
+            return {
+              url: p.url,
+              fullUrl: p.fullUrl,
+              success: p.success,
+              screenshot_paths: storedPaths,
+              analyzed_for: p.analyzed_for || {}
+            };
+          })
+      },
+
+      // AI page selection
+      ai_page_selection: {
+        seo_pages: pageSelection.seo_pages,
+        content_pages: pageSelection.content_pages,
+        visual_pages: pageSelection.visual_pages,
+        social_pages: pageSelection.social_pages,
+        reasoning: pageSelection.reasoning
+      },
+
+      // Performance metrics
+      analyzed_at: new Date().toISOString(),
+      analysis_cost: analysisCost,
+      analysis_time: analysisTime,
+
+      // Discovery log (complete audit trail)
+      discovery_log: {
+        sitemap: discoveryData,
+        page_selection: pageSelection,
+        crawl_results: crawlData.pages.map(p => ({
+          url: p.url,
+          success: p.success,
+          error: p.error,
+          screenshot_paths: p.screenshot_paths
+        })),
+        analysis_results: analysisResults,
+        timing: {
+          total_ms: analysisTime,
+          discovery_ms: discoveryData.discoveryTime,
+          crawl_ms: crawlData.crawlTime
+        }
+      }
+    };
+  }
+
+  extractQuickWins(analysisResults) {
+    return extractQuickWinsFromModules(analysisResults);
+  }
+
+  calculateGrade(score) {
+    if (score >= 90) return 'A';
+    if (score >= 80) return 'B';
+    if (score >= 70) return 'C';
+    if (score >= 60) return 'D';
+    return 'F';
+  }
+
+  calculateLeadScore(moduleResults = {}, metadata = {}) {
+    const scores = [];
+
+    Object.values(moduleResults).forEach((module) => {
+      if (module && typeof module.score === 'number' && !Number.isNaN(module.score)) {
+        scores.push(module.score);
+      }
+    });
+
+    const averageScore = scores.length > 0
+      ? Math.round(scores.reduce((sum, value) => sum + value, 0) / scores.length)
+      : 0;
+
+    let priorityTier = 'Cold';
+    if (averageScore >= 80) {
+      priorityTier = 'Hot';
+    } else if (averageScore >= 60) {
+      priorityTier = 'Warm';
+    }
+
+    return {
+      lead_priority: averageScore,
+      priority_tier: priorityTier,
+      priority_reasoning: `Average module score ${averageScore}/100 across ${scores.length || 0} modules.`,
+      metadata
+    };
+  }
+}
+
+function normalizeScore(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function extractScore(moduleResult, primaryKey) {
+  if (!moduleResult) return 0;
+
+  if (typeof moduleResult.score === 'number') {
+    return moduleResult.score;
+  }
+
+  if (typeof moduleResult[primaryKey] === 'number') {
+    return moduleResult[primaryKey];
+  }
+
+  if (typeof moduleResult.averageScore === 'number') {
+    return moduleResult.averageScore;
+  }
+
+  return 0;
+}
+
+function ensureBuffer(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (Buffer.isBuffer(value)) {
+    return value;
+  }
+
+  try {
+    return Buffer.from(value, 'base64');
+  } catch {
+    return null;
+  }
+}

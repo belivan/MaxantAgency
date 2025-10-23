@@ -15,6 +15,7 @@
     "dev:ui": "cd command-center-ui && npm run dev",
     "install:all": "cd prospecting-engine && npm install && cd ../analysis-engine && npm install && cd ../outreach-engine && npm install && cd ../pipeline-orchestrator && npm install && cd ../command-center-ui && npm install && cd ..",
     "build": "cd command-center-ui && npm run build && cd ..",
+    "screenshot": "node scripts/screenshot-ui.js",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
@@ -26,7 +27,8 @@
     "pm2:logs": "pm2 logs"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "playwright": "^1.56.1"
   },
   "author": "Maksant",
   "license": "MIT",

@@ -1,5 +1,5 @@
 /**
- * Social Media Analyzer - Uses Grok-4-fast to analyze social media presence
+ * Social Media Analyzer - Uses GPT-5 to analyze social media presence
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: profile completeness, branding consistency, activity, integration
@@ -101,6 +101,7 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
     // Add metadata
     return {
       ...result,
+      model: prompt.model,
       _meta: {
         analyzer: 'social',
         model: prompt.model,
@@ -116,8 +117,10 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
     console.error('Social analysis failed:', error);
 
     // Return graceful degradation
+    const fallbackModel = customPrompt?.model || 'gpt-5';
     return {
-      socialScore: 50,
+      model: fallbackModel,
+      socialScore: 30,
       platformsPresent: Object.keys(socialProfiles || {}),
       mostActivePlatform: 'unknown',
       issues: [{
@@ -133,6 +136,7 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
       strengths: [],
       _meta: {
         analyzer: 'social',
+        model: fallbackModel,
         error: error.message,
         timestamp: new Date().toISOString()
       }
