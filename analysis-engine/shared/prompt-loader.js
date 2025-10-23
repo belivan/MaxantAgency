@@ -69,9 +69,19 @@ export async function loadPrompt(promptPath, variables = {}) {
     promptConfig.variables
   );
 
+  // Resolve model from environment variable if using env: prefix
+  let resolvedModel = promptConfig.model;
+  if (typeof resolvedModel === 'string' && resolvedModel.startsWith('env:')) {
+    const envVar = resolvedModel.substring(4); // Remove 'env:' prefix
+    resolvedModel = process.env[envVar] || promptConfig.model; // Fallback to original if not set
+    if (!process.env[envVar]) {
+      console.warn(`[Prompt Loader] Environment variable ${envVar} not set, using default: ${promptConfig.model}`);
+    }
+  }
+
   return {
     name: promptConfig.name,
-    model: promptConfig.model,
+    model: resolvedModel,
     temperature: promptConfig.temperature,
     systemPrompt: promptConfig.systemPrompt,
     userPrompt,

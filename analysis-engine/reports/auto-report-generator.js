@@ -85,6 +85,14 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         console.log(`   - Consolidated Issues: ${synthesisData.consolidatedIssues?.length || 0}`);
         console.log(`   - Executive Summary: ${synthesisData.executiveSummary ? 'Generated' : 'Missing'}`);
         console.log(`   - Synthesis Errors: ${synthesisData.errors?.length || 0}`);
+        
+        // DEBUG: Log synthesis data structure
+        console.log(`[AUTO-REPORT] Synthesis data structure check:`);
+        console.log(`  - synthesisData keys: ${Object.keys(synthesisData).join(', ')}`);
+        if (synthesisData.executiveSummary) {
+          console.log(`  - executiveSummary type: ${typeof synthesisData.executiveSummary}`);
+          console.log(`  - executiveSummary keys: ${Object.keys(synthesisData.executiveSummary).join(', ')}`);
+        }
 
       } catch (synthesisError) {
         console.warn(`⚠️  AI synthesis failed, using fallback: ${synthesisError.message}`);

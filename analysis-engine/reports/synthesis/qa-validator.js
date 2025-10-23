@@ -105,33 +105,35 @@ function validateExecutiveSummary(executiveSummary, synthesisResults) {
   const errors = [];
   const warnings = [];
   
-  // Check required fields
-  if (!executiveSummary.overview) {
-    errors.push('Missing overview section');
+  // Check required fields (support both old and new format)
+  if (!executiveSummary.overview && !executiveSummary.headline) {
+    errors.push('Missing overview/headline section');
   }
   
-  if (!executiveSummary.keyFindings || !Array.isArray(executiveSummary.keyFindings)) {
-    errors.push('Missing or invalid keyFindings array');
-  } else if (executiveSummary.keyFindings.length === 0) {
+  // Support both old (keyFindings) and new (criticalFindings) format
+  const findings = executiveSummary.keyFindings || executiveSummary.criticalFindings;
+  if (!findings || !Array.isArray(findings)) {
+    errors.push('Missing or invalid keyFindings/criticalFindings array');
+  } else if (findings.length === 0) {
     warnings.push('No key findings listed');
   }
   
-  if (!executiveSummary.priorityActions || !Array.isArray(executiveSummary.priorityActions)) {
-    errors.push('Missing or invalid priorityActions array');
-  } else if (executiveSummary.priorityActions.length === 0) {
-    warnings.push('No priority actions listed');
+  // Support both old (priorityActions) and new (strategicRoadmap) format
+  const actions = executiveSummary.priorityActions || executiveSummary.strategicRoadmap;
+  if (!actions) {
+    errors.push('Missing or invalid priorityActions/strategicRoadmap');
   }
   
-  if (!executiveSummary.nextSteps) {
-    warnings.push('Missing nextSteps section');
+  if (!executiveSummary.nextSteps && !executiveSummary.callToAction) {
+    warnings.push('Missing nextSteps/callToAction section');
   }
   
   // Validate screenshot references in executive summary
   const fullText = [
-    executiveSummary.overview,
-    ...(executiveSummary.keyFindings || []).map(f => `${f.title} ${f.description} ${f.evidence || ''}`),
-    ...(executiveSummary.priorityActions || []).map(a => `${a.title} ${a.rationale || ''} ${a.evidence || ''}`),
-    executiveSummary.nextSteps
+    executiveSummary.overview || executiveSummary.headline || '',
+    ...(findings || []).map(f => `${f.title || f.issue || ''} ${f.description || f.impact || ''} ${f.evidence || ''}`),
+    JSON.stringify(actions || {}),
+    executiveSummary.nextSteps || executiveSummary.callToAction || ''
   ].join(' ');
   
   const screenshotValidation = validateScreenshotReferences(

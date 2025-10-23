@@ -116,8 +116,8 @@ export async function generateHTMLReport(analysisResult, synthesisData = null) {
   }
 
   // Register all screenshots from crawl metadata
-  if (analysisResult.crawl_metadata && analysisResult.crawl_metadata.pages_analyzed) {
-    analysisResult.crawl_metadata.pages_analyzed.forEach(page => {
+  if (analysisResult.crawl_metadata && analysisResult.crawl_metadata.pages) {
+    analysisResult.crawl_metadata.pages.forEach(page => {
       if (page.screenshot_paths) {
         // Register desktop screenshot
         if (page.screenshot_paths.desktop) {
@@ -200,9 +200,37 @@ async function generateHTMLContent(analysisResult, options = {}) {
   // Extract consolidated issues from synthesis data for use in sections
   const consolidatedIssues = synthesisData?.consolidatedIssues || null;
 
+  // DEBUG: Log synthesis data structure
+  console.log('[HTML Exporter] Synthesis Data Check:');
+  console.log(`  - synthesisData exists: ${!!synthesisData}`);
+  console.log(`  - executiveSummary exists: ${!!synthesisData?.executiveSummary}`);
+  if (synthesisData) {
+    console.log(`  - synthesisData keys: ${Object.keys(synthesisData).join(', ')}`);
+    if (synthesisData.executiveSummary) {
+      console.log(`  - executiveSummary type: ${typeof synthesisData.executiveSummary}`);
+      console.log(`  - executiveSummary keys: ${Object.keys(synthesisData.executiveSummary).join(', ')}`);
+    }
+  }
+
   // Executive Summary (AI-generated if synthesis available)
-  if (synthesisData && synthesisData.executiveSummary) {
-    content += generateExecutiveSummaryHTML(synthesisData.executiveSummary, analysisResult, registry);
+  // Handle nested structure: synthesis returns { executiveSummary: { executiveSummary: {...}, metadata: {...} } }
+  let executiveSummaryData = null;
+  if (synthesisData?.executiveSummary) {
+    // Check if it's nested (from synthesis module)
+    if (synthesisData.executiveSummary.executiveSummary) {
+      console.log('[HTML Exporter] 📋 Using nested executiveSummary structure');
+      executiveSummaryData = synthesisData.executiveSummary.executiveSummary;
+    } else {
+      console.log('[HTML Exporter] 📋 Using direct executiveSummary structure');
+      executiveSummaryData = synthesisData.executiveSummary;
+    }
+  }
+
+  if (executiveSummaryData) {
+    console.log('[HTML Exporter] ✅ Generating executive summary section');
+    content += generateExecutiveSummaryHTML(executiveSummaryData, analysisResult, registry);
+  } else {
+    console.log('[HTML Exporter] ⚠️  Skipping executive summary - not available');
   }
 
   // Score cards grid
@@ -517,18 +545,23 @@ function generateQuickWinsHTML(quickWins) {
   if (!quickWins || quickWins.length === 0) return '';
 
   let html = '<div class="quick-wins">\n';
-  html += '  <h3>Quick Wins</h3>\n';
+  html += '  <h3>⚡ Quick Wins</h3>\n';
   html += '  <p class="text-secondary mb-2">High-impact improvements you can implement today:</p>\n';
 
   quickWins.slice(0, 5).forEach(win => {
+    // Handle different data structures
+    const title = win.title || win.name || 'Quick Win';
+    const time = win.estimatedTime || win.estimated_time || win.effort;
+    const impact = win.impact || win.expectedImpact || win.expected_impact;
+    
     html += '  <div class="quick-win-item">\n';
-    html += '    <div class="quick-win-icon"></div>\n';
+    html += '    <div class="quick-win-icon">⚡</div>\n';
     html += '    <div>\n';
-    html += `      <strong>${escapeHtml(win.title)}</strong>\n`;
-    if (win.estimatedTime || win.impact) {
+    html += `      <strong>${escapeHtml(title)}</strong>\n`;
+    if (time || impact) {
       html += '      <div class="text-muted mt-1">\n';
-      if (win.estimatedTime) html += `        <span>${escapeHtml(win.estimatedTime)}</span>\n`;
-      if (win.impact) html += `        <span>  ${escapeHtml(win.impact)}</span>\n`;
+      if (time) html += `        <span>Time: ${escapeHtml(String(time))}</span>\n`;
+      if (impact) html += `        <span class="ml-2">Impact: ${escapeHtml(String(impact))}</span>\n`;
       html += '      </div>\n';
     }
     html += '    </div>\n';
@@ -542,13 +575,25 @@ function generateQuickWinsHTML(quickWins) {
 /**
  * Generate desktop analysis section
  */
-function generateDesktopHTML(analysisResult, screenshotId, registry, synthesisData) {
+function generateDesktopHTML(analysisResult, screenshotId, registry, consolidatedIssues) {
   const { design_score_desktop } = analysisResult;
 
-  // Use consolidated issues if available, otherwise use original issues
-  const desktopIssues = synthesisData?.consolidatedIssues?.filter(i =>
-    i.sources?.includes('desktop')
-  ) || analysisResult.design_issues_desktop || [];
+  // Use consolidated issues if available (filtered to desktop), otherwise use original issues
+  let desktopIssues = [];
+  if (consolidatedIssues && Array.isArray(consolidatedIssues)) {
+    // Filter to issues that affect desktop
+    desktopIssues = consolidatedIssues.filter(i =>
+      i.sources?.includes('desktop') || !i.sources // Include if no sources specified
+    );
+    console.log(`[HTML Exporter] Using ${desktopIssues.length} consolidated desktop issues`);
+  } else {
+    desktopIssues = analysisResult.design_issues_desktop || [];
+    console.log(`[HTML Exporter] Using ${desktopIssues.length} original desktop issues (no consolidation)`);
+  }
+
+  // CONDENSING: Limit to top 5 highest priority issues for brevity
+  const topDesktopIssues = prioritizeAndLimitIssues(desktopIssues, 5);
+  const skippedCount = desktopIssues.length - topDesktopIssues.length;
 
   let html = '<div class="section">\n';
   html += '  <h2>🖥️ Desktop Experience Analysis</h2>\n';
@@ -562,10 +607,15 @@ function generateDesktopHTML(analysisResult, screenshotId, registry, synthesisDa
 
   html += '\n';
 
-  if (desktopIssues.length === 0) {
+  if (topDesktopIssues.length === 0) {
     html += '  <p class="text-secondary">✓ No significant desktop UX issues detected. Your desktop experience is well-optimized.</p>\n';
   } else {
-    html += generateIssuesHTML(desktopIssues);
+    html += generateIssuesHTML(topDesktopIssues, registry);
+    
+    // Show count of additional issues if condensed
+    if (skippedCount > 0) {
+      html += `  <p class="text-muted" style="margin-top: 20px; font-style: italic;">+ ${skippedCount} additional lower-priority issues identified</p>\n`;
+    }
   }
 
   html += '</div>\n\n';
@@ -575,13 +625,25 @@ function generateDesktopHTML(analysisResult, screenshotId, registry, synthesisDa
 /**
  * Generate mobile analysis section
  */
-function generateMobileHTML(analysisResult, screenshotId, registry, synthesisData) {
+function generateMobileHTML(analysisResult, screenshotId, registry, consolidatedIssues) {
   const { design_score_mobile, is_mobile_friendly } = analysisResult;
 
-  // Use consolidated issues if available, otherwise use original issues
-  const mobileIssues = synthesisData?.consolidatedIssues?.filter(i =>
-    i.sources?.includes('mobile')
-  ) || analysisResult.design_issues_mobile || [];
+  // Use consolidated issues if available (filtered to mobile), otherwise use original issues
+  let mobileIssues = [];
+  if (consolidatedIssues && Array.isArray(consolidatedIssues)) {
+    // Filter to issues that affect mobile
+    mobileIssues = consolidatedIssues.filter(i =>
+      i.sources?.includes('mobile') || !i.sources // Include if no sources specified
+    );
+    console.log(`[HTML Exporter] Using ${mobileIssues.length} consolidated mobile issues`);
+  } else {
+    mobileIssues = analysisResult.design_issues_mobile || [];
+    console.log(`[HTML Exporter] Using ${mobileIssues.length} original mobile issues (no consolidation)`);
+  }
+
+  // CONDENSING: Limit to top 5 highest priority issues for brevity
+  const topMobileIssues = prioritizeAndLimitIssues(mobileIssues, 5);
+  const skippedCount = mobileIssues.length - topMobileIssues.length;
 
   let html = '<div class="section">\n';
   html += '  <h2>📱 Mobile Experience Analysis</h2>\n';
@@ -600,10 +662,15 @@ function generateMobileHTML(analysisResult, screenshotId, registry, synthesisDat
 
   html += '\n';
 
-  if (mobileIssues.length === 0) {
+  if (topMobileIssues.length === 0) {
     html += '  <p class="text-secondary">✓ No significant mobile UX issues detected. Your mobile experience is well-optimized.</p>\n';
   } else {
-    html += generateIssuesHTML(mobileIssues);
+    html += generateIssuesHTML(topMobileIssues, registry);
+    
+    // Show count of additional issues if condensed
+    if (skippedCount > 0) {
+      html += `  <p class="text-muted" style="margin-top: 20px; font-style: italic;">+ ${skippedCount} additional lower-priority issues identified</p>\n`;
+    }
   }
 
   html += '</div>\n\n';
@@ -613,13 +680,24 @@ function generateMobileHTML(analysisResult, screenshotId, registry, synthesisDat
 /**
  * Generate SEO section
  */
-function generateSEOHTML(analysisResult, synthesisData) {
+function generateSEOHTML(analysisResult, consolidatedIssues, registry) {
   const { seo_score, page_title, meta_description, page_load_time, has_https } = analysisResult;
 
-  // Use consolidated issues if available, otherwise use original issues
-  const seoIssues = synthesisData?.consolidatedIssues?.filter(i =>
-    i.sources?.includes('seo')
-  ) || analysisResult.seo_issues || [];
+  // Use consolidated issues if available (filtered to SEO), otherwise use original issues
+  let seoIssues = [];
+  if (consolidatedIssues && Array.isArray(consolidatedIssues)) {
+    seoIssues = consolidatedIssues.filter(i =>
+      i.sources?.includes('seo') || !i.sources
+    );
+    console.log(`[HTML Exporter] Using ${seoIssues.length} consolidated SEO issues`);
+  } else {
+    seoIssues = analysisResult.seo_issues || [];
+    console.log(`[HTML Exporter] Using ${seoIssues.length} original SEO issues (no consolidation)`);
+  }
+
+  // CONDENSING: Limit to top 5 SEO issues
+  const topSeoIssues = prioritizeAndLimitIssues(seoIssues, 5);
+  const skippedCount = seoIssues.length - topSeoIssues.length;
 
   let html = '<div class="section">\n';
   html += '  <h2>🔍 SEO & Technical Analysis</h2>\n';
@@ -637,9 +715,13 @@ function generateSEOHTML(analysisResult, synthesisData) {
   if (has_https !== undefined) html += `    <tr><td>HTTPS</td><td>${has_https ? '✓ Yes' : '✗ No'}</td></tr>\n`;
   html += '  </table>\n\n';
 
-  if (seoIssues.length > 0) {
-    html += '  <h3>SEO Issues</h3>\n';
-    html += generateIssuesHTML(seoIssues);
+  if (topSeoIssues.length > 0) {
+    html += '  <h3>Key SEO Issues</h3>\n';
+    html += generateIssuesHTML(topSeoIssues, registry);
+    
+    if (skippedCount > 0) {
+      html += `  <p class="text-muted" style="margin-top: 20px; font-style: italic;">+ ${skippedCount} additional SEO improvements identified</p>\n`;
+    }
   }
 
   html += '</div>\n\n';
@@ -828,54 +910,83 @@ function generateLeadPriorityHTML(analysisResult) {
  */
 function generateActionPlanHTML(analysisResult, consolidatedIssues = null, registry = null) {
   // Use consolidated issues if available, otherwise combine all original issues
-  const allIssues = consolidatedIssues || [
-    ...(analysisResult.design_issues_desktop || []),
-    ...(analysisResult.design_issues_mobile || []),
-    ...(analysisResult.seo_issues || []),
-    ...(analysisResult.content_issues || []),
-    ...(analysisResult.social_issues || []),
-    ...(analysisResult.accessibility_issues || [])
-  ];
+  let allIssues = [];
+  if (consolidatedIssues && Array.isArray(consolidatedIssues)) {
+    allIssues = consolidatedIssues;
+    console.log(`[HTML Exporter] Action Plan using ${allIssues.length} consolidated issues`);
+  } else {
+    allIssues = [
+      ...(analysisResult.design_issues_desktop || []),
+      ...(analysisResult.design_issues_mobile || []),
+      ...(analysisResult.seo_issues || []),
+      ...(analysisResult.content_issues || []),
+      ...(analysisResult.social_issues || []),
+      ...(analysisResult.accessibility_issues || [])
+    ];
+    console.log(`[HTML Exporter] Action Plan using ${allIssues.length} original issues (no consolidation)`);
+  }
   
   const { quick_wins = [] } = analysisResult;
 
   let html = '<div class="section">\n';
-  html += '  <h2>Recommended Action Plan</h2>\n\n';
+  html += '  <h2>📋 Recommended Action Plan</h2>\n\n';
 
-  // Phase 1: Quick Wins
+  // Phase 1: Quick Wins (top 5)
   if (quick_wins.length > 0) {
     html += '  <div class="action-phase">\n';
     html += '    <h3>Phase 1: Quick Wins (Week 1)</h3>\n';
+    html += '    <p class="text-secondary">Implement these high-impact, low-effort improvements first:</p>\n';
     html += '    <div class="action-phase-meta">\n';
     html += '      <div><strong>Timeline:</strong> 1 week</div>\n';
-    html += '      <div><strong>Estimated Time:</strong> ~4 hours</div>\n';
-    html += '      <div><strong>Estimated Cost:</strong> $400-600</div>\n';
+    html += '      <div><strong>Estimated Time:</strong> 4-8 hours</div>\n';
+    html += '      <div><strong>Estimated Cost:</strong> $400-800</div>\n';
     html += '    </div>\n';
     html += '    <ul>\n';
     quick_wins.slice(0, 5).forEach(win => {
-      html += `      <li><strong>${escapeHtml(win.title)}</strong> - ${escapeHtml(win.impact || '')}</li>\n`;
+      const title = win.title || win.name || 'Quick Win';
+      const impact = win.impact || win.expectedImpact || '';
+      html += `      <li><strong>${escapeHtml(title)}</strong>${impact ? ' - ' + escapeHtml(String(impact)) : ''}</li>\n`;
     });
     html += '    </ul>\n';
     html += '  </div>\n\n';
   }
 
-  // Phase 2: High-Impact Fixes
-  const highPriorityIssues = allIssues
-    .filter(i => i.priority === 'high' || i.severity === 'critical')
-    .slice(0, 5);
+  // Phase 2: High-Impact Fixes (top 5 high/critical priority issues)
+  const highPriorityIssues = prioritizeAndLimitIssues(
+    allIssues.filter(i => i.priority === 'high' || i.severity === 'critical' || i.priority === 'critical'),
+    5
+  );
 
   if (highPriorityIssues.length > 0) {
     html += '  <div class="action-phase">\n';
     html += '    <h3>Phase 2: High-Impact Fixes (Month 1)</h3>\n';
+    html += '    <p class="text-secondary">Address these critical issues to significantly improve site performance:</p>\n';
     html += '    <div class="action-phase-meta">\n';
     html += '      <div><strong>Timeline:</strong> 1 month</div>\n';
-    html += '      <div><strong>Estimated Time:</strong> ~20 hours</div>\n';
+    html += '      <div><strong>Estimated Time:</strong> 20-30 hours</div>\n';
     html += '      <div><strong>Estimated Cost:</strong> $2,000-3,000</div>\n';
     html += '    </div>\n';
     html += '    <ul>\n';
     highPriorityIssues.forEach(issue => {
-      html += `      <li><strong>${escapeHtml(issue.title)}</strong> - ${escapeHtml(issue.impact || '')}</li>\n`;
+      const title = issue.title || 'Issue';
+      const impact = issue.impact || '';
+      html += `      <li><strong>${escapeHtml(title)}</strong>${impact ? ' - ' + escapeHtml(String(impact)) : ''}</li>\n`;
     });
+    html += '    </ul>\n';
+    html += '  </div>\n\n';
+  }
+
+  // Phase 3: Ongoing Optimization (mention count of remaining issues)
+  const remainingIssues = allIssues.length - highPriorityIssues.length;
+  if (remainingIssues > 0) {
+    html += '  <div class="action-phase">\n';
+    html += '    <h3>Phase 3: Ongoing Optimization (Months 2-3)</h3>\n';
+    html += '    <p class="text-secondary">Continue improving with these enhancements:</p>\n';
+    html += '    <ul>\n';
+    html += `      <li>${remainingIssues} additional improvements identified for continued optimization</li>\n`;
+    html += '      <li>Monitor performance metrics and user feedback</li>\n';
+    html += '      <li>A/B test key changes to measure impact</li>\n';
+    html += '      <li>Regular content updates and SEO maintenance</li>\n';
     html += '    </ul>\n';
     html += '  </div>\n\n';
   }
@@ -1036,5 +1147,31 @@ function escapeHtml(text) {
     "'": '&#039;'
   };
   return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+/**
+ * Prioritize and limit issues to top N
+ * Sorts by severity (critical > high > medium > low) and returns top N
+ */
+function prioritizeAndLimitIssues(issues, limit = 5) {
+  if (!Array.isArray(issues) || issues.length === 0) return [];
+  
+  // Severity ranking
+  const severityRank = {
+    'critical': 4,
+    'high': 3,
+    'medium': 2,
+    'low': 1
+  };
+  
+  // Sort by severity (highest first)
+  const sorted = [...issues].sort((a, b) => {
+    const aSeverity = severityRank[a.severity || a.priority] || 0;
+    const bSeverity = severityRank[b.severity || b.priority] || 0;
+    return bSeverity - aSeverity;
+  });
+  
+  // Return top N
+  return sorted.slice(0, limit);
 }
 
