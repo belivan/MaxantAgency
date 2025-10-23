@@ -701,10 +701,11 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
     desktopPage.setDefaultTimeout(timeout);
 
     // Navigate and screenshot desktop
-    await desktopPage.goto(fullUrl, {
-      waitUntil: 'load',
-      timeout
-    });
+    const desktopWaitStrategy = await navigateWithFallback(desktopPage, fullUrl, timeout);
+
+    if (SCREENSHOT_DELAY_MS > 0) {
+      await desktopPage.waitForTimeout(SCREENSHOT_DELAY_MS);
+    }
 
     // Extract content first (before screenshot to ensure page is ready)
     const htmlContent = await desktopPage.content();
@@ -731,10 +732,11 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
     mobilePage.setDefaultTimeout(timeout);
 
     // Navigate mobile page
-    await mobilePage.goto(fullUrl, {
-      waitUntil: 'load',
-      timeout
-    });
+    const mobileWaitStrategy = await navigateWithFallback(mobilePage, fullUrl, timeout);
+
+    if (SCREENSHOT_DELAY_MS > 0) {
+      await mobilePage.waitForTimeout(SCREENSHOT_DELAY_MS);
+    }
 
     // Capture mobile screenshot
     const mobileScreenshot = await mobilePage.screenshot({
@@ -760,7 +762,17 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
       },
       metadata: {
         crawlTime,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        strategies: {
+          desktop: {
+            waitUntil: desktopWaitStrategy,
+            postNavigationDelayMs: SCREENSHOT_DELAY_MS
+          },
+          mobile: {
+            waitUntil: mobileWaitStrategy,
+            postNavigationDelayMs: SCREENSHOT_DELAY_MS
+          }
+        }
       }
     };
 
@@ -771,6 +783,32 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
 
     throw new Error(`Failed to crawl ${fullUrl}: ${error.message}`);
   }
+}
+
+async function navigateWithFallback(page, url, timeout) {
+  const strategies = ['load', 'networkidle', 'domcontentloaded'];
+
+  for (let i = 0; i < strategies.length; i++) {
+    const strategy = strategies[i];
+    try {
+      await page.goto(url, { waitUntil: strategy, timeout });
+      if (strategy !== 'load') {
+        console.warn(`[Targeted Crawler] ${url} required fallback waitUntil=\"${strategy}\"`);
+      }
+      return strategy;
+    } catch (error) {
+      const isLastAttempt = i === strategies.length - 1;
+      const isTimeout = error && typeof error.message === 'string' && error.message.includes('Timeout');
+
+      if (!isTimeout || isLastAttempt) {
+        throw error;
+      }
+
+      console.warn(`[Targeted Crawler] ${url} timed out waiting for \"${strategy}\". Retrying with fallback...`);
+    }
+  }
+
+  return 'load';
 }
 
 function normalizeRelativeUrl(pageUrl) {

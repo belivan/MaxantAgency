@@ -27,10 +27,10 @@ export function generateLeadPrioritySection(analysisResult) {
 
   // Overall Priority
   const tierEmoji = {
-    'high': '🔥',
-    'medium': '⚡',
-    'low': '📌'
-  }[priority_tier?.toLowerCase()] || '📊';
+    'hot': '🔥',
+    'warm': '♨️',
+    'cold': '❄️'
+  }[priority_tier?.toLowerCase()] || '⭐';
 
   output += `**Overall Priority Score:** ${formatScore(lead_priority)}\n\n`;
   output += `**Priority Tier:** ${tierEmoji} **${priority_tier || 'Unknown'}**\n\n`;
@@ -41,54 +41,35 @@ export function generateLeadPrioritySection(analysisResult) {
   }
 
   // Dimension Breakdown
-  if (quality_gap_score || budget_score || urgency_score) {
-    output += `## 📊 Dimension Breakdown\n\n`;
+  const dimensionConfigs = [
+    { key: 'quality_gap_score', label: '🔥 **Quality Gap**', max: 25, descriptors: ['High improvement potential', 'Moderate improvement potential', 'Limited improvement potential'] },
+    { key: 'budget_score', label: '💰 **Budget Likelihood**', max: 25, descriptors: ['Strong budget indicators', 'Moderate budget signals', 'Limited budget evidence'] },
+    { key: 'urgency_score', label: '⏱️ **Urgency**', max: 20, descriptors: ['High urgency to fix issues', 'Moderate urgency', 'Low urgency'] },
+    { key: 'industry_fit_score', label: '🎯 **Industry Fit**', max: 15, descriptors: ['Excellent fit for services', 'Good fit', 'Moderate fit'] },
+    { key: 'company_size_score', label: '🏢 **Company Size**', max: 10, descriptors: ['Ideal company size', 'Acceptable size', 'Smaller company'] },
+    { key: 'engagement_score', label: '🤝 **Engagement Potential**', max: 5, descriptors: ['High engagement potential', 'Moderate engagement', 'Low engagement signals'] }
+  ];
 
+  const dimensionRows = dimensionConfigs
+    .map(config => {
+      const score = analysisResult[config.key];
+      if (score === undefined || score === null) return null;
+
+      const ratio = score / config.max;
+      const [high, medium, low] = config.descriptors;
+      const description = ratio >= 0.75 ? high : ratio >= 0.45 ? medium : low;
+
+      return `| ${config.label} | ${score}/${config.max} | ${description} |`;
+    })
+    .filter(Boolean);
+
+  if (dimensionRows.length > 0) {
+    output += `## Score Breakdown by Dimension\n\n`;
     output += `| Dimension | Score | Analysis |\n`;
     output += `|-----------|-------|----------|\n`;
-
-    if (quality_gap_score) {
-      const analysis = quality_gap_score >= 7 ? 'High improvement potential' :
-                      quality_gap_score >= 5 ? 'Moderate improvement potential' :
-                      'Limited improvement potential';
-      output += `| 🎯 **Quality Gap** | ${quality_gap_score}/10 | ${analysis} |\n`;
-    }
-
-    if (budget_score) {
-      const analysis = budget_score >= 7 ? 'Strong budget indicators' :
-                      budget_score >= 5 ? 'Moderate budget signals' :
-                      'Limited budget evidence';
-      output += `| 💰 **Budget Likelihood** | ${budget_score}/10 | ${analysis} |\n`;
-    }
-
-    if (urgency_score) {
-      const analysis = urgency_score >= 7 ? 'High urgency to fix issues' :
-                      urgency_score >= 5 ? 'Moderate urgency' :
-                      'Low urgency';
-      output += `| ⏰ **Urgency** | ${urgency_score}/10 | ${analysis} |\n`;
-    }
-
-    if (industry_fit_score) {
-      const analysis = industry_fit_score >= 7 ? 'Excellent fit for services' :
-                      industry_fit_score >= 5 ? 'Good fit' :
-                      'Moderate fit';
-      output += `| 🎨 **Industry Fit** | ${industry_fit_score}/10 | ${analysis} |\n`;
-    }
-
-    if (company_size_score) {
-      const analysis = company_size_score >= 7 ? 'Ideal company size' :
-                      company_size_score >= 5 ? 'Acceptable size' :
-                      'Small company';
-      output += `| 🏢 **Company Size** | ${company_size_score}/10 | ${analysis} |\n`;
-    }
-
-    if (engagement_score) {
-      const analysis = engagement_score >= 7 ? 'High engagement potential' :
-                      engagement_score >= 5 ? 'Moderate engagement' :
-                      'Low engagement signals';
-      output += `| 📞 **Engagement Potential** | ${engagement_score}/10 | ${analysis} |\n`;
-    }
-
+    dimensionRows.forEach(row => {
+      output += `${row}\n`;
+    });
     output += '\n';
   }
 

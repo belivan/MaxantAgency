@@ -132,6 +132,7 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
 
     // Validate response
     validateContentResponse(result);
+    const modelUsed = response.model || prompt.model;
 
     // Add site-wide patterns to the results
     if (siteWidePatterns.issues && siteWidePatterns.issues.length > 0) {
@@ -141,11 +142,12 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
     // Add metadata
     return {
       ...result,
-      model: prompt.model,
+      model: modelUsed,
       _meta: {
         analyzer: 'content',
-        model: prompt.model,
+        model: modelUsed,
         cost: response.cost,
+        usage: response.usage || null,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pages.length,
         pagesData: pagesSummary  // Include summary for debugging

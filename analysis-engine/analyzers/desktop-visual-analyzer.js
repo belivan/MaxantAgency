@@ -74,8 +74,6 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
       }
 
       // Call GPT-4o Vision API with screenshot
-      lastPromptModel = prompt.model;
-
       const response = await callAI({
         model: prompt.model,
         systemPrompt: prompt.systemPrompt,
@@ -85,12 +83,19 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
         jsonMode: true
       });
 
+      const modelUsed = response.model || prompt.model;
+      lastPromptModel = modelUsed;
+
       // Parse JSON response
       const result = parseJSONResponse(response.content);
       validateDesktopVisualResponse(result);
 
       individualResults.push({
         url: page.url,
+        _meta: {
+          model: modelUsed,
+          usage: response.usage || null
+        },
         ...result
       });
 
@@ -136,7 +141,7 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     const quickWinCount = allIssues.filter(issue => issue.difficulty === 'quick-win').length;
 
     // Add metadata
-    const resolvedModel = customPrompt?.model || lastPromptModel || 'gpt-5';
+    const resolvedModel = lastPromptModel || customPrompt?.model || 'gpt-5';
 
     return {
       model: resolvedModel,

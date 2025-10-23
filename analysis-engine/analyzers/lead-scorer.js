@@ -123,6 +123,7 @@ export async function scoreLeadPriority(leadData) {
 
     // Parse JSON response (extract content from response object)
     const result = parseJSONResponse(response.content);
+    const modelUsed = response.model || prompt.model;
 
     // Validate and normalize result
     const normalizedResult = {
@@ -152,7 +153,8 @@ export async function scoreLeadPriority(leadData) {
       _metadata: {
         analyzer: 'lead-scorer',
         version: '2.0',
-        model: prompt.model,
+        model: modelUsed,
+        usage: response.usage || null,
         timestamp: new Date().toISOString()
       }
     };

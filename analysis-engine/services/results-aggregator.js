@@ -18,6 +18,8 @@ import { saveDualScreenshots } from '../utils/screenshot-storage.js';
 import { countCriticalDesktopIssues } from '../analyzers/desktop-visual-analyzer.js';
 import { countCriticalMobileIssues } from '../analyzers/mobile-visual-analyzer.js';
 import { calculateTotalCost } from '../analyzers/index.js';
+import { runReportSynthesis } from '../reports/synthesis/report-synthesis.js';
+import { validateReportQuality, generateQAReport } from '../reports/synthesis/qa-validator.js';
 
 export class ResultsAggregator {
   constructor(options = {}) {
@@ -125,11 +127,84 @@ export class ResultsAggregator {
     // PHASE 6: Save Screenshots
     const screenshotPaths = await this.saveScreenshots(pages, context, baseUrl);
 
-    // PHASE 7: Calculate Costs & Timing
+    // PHASE 7: Run report synthesis pipeline
+    let synthesisResults = {
+      consolidatedIssues: [],
+      mergeLog: [],
+      consolidationStatistics: null,
+      quickWinStrategy: null,
+      executiveSummary: null,
+      executiveMetadata: null,
+      screenshotReferences: [],
+      stageMetadata: {},
+      errors: []
+    };
+
+    try {
+      synthesisResults = await runReportSynthesis({
+        companyName: context.company_name,
+        industry: context.industry,
+        grade: gradeResults.grade,
+        overallScore: gradeResults.overallScore,
+        url: homepage.fullUrl,
+        issuesByModule: {
+          desktop: analysisResults.desktopVisual?.issues || [],
+          mobile: analysisResults.mobileVisual?.issues || [],
+          seo: analysisResults.seo?.issues || [],
+          content: analysisResults.content?.issues || [],
+          social: analysisResults.social?.issues || [],
+          accessibility: analysisResults.accessibility?.issues || []
+        },
+        quickWins,
+        leadScoring: leadScoringData,
+        topIssue: getTopIssue(analysisResults),
+        techStack: homepage.metadata?.techStack || parsedData?.tech?.stack || parsedData?.techStack || 'Unknown',
+        hasBlog: parsedData?.content?.hasBlog,
+        socialPlatforms: parsedData?.social?.platformsPresent || [],
+        isMobileFriendly: gradeMetadata.isMobileFriendly,
+        hasHttps: gradeMetadata.hasHTTPS,
+        crawlPages: crawlData.pages
+      });
+    } catch (error) {
+      console.error('[ResultsAggregator] Report synthesis failed:', error);
+      synthesisResults.errors.push({
+        stage: 'pipeline',
+        message: error.message
+      });
+    }
+
+    // PHASE 7.5: QA Validation
+    this.onProgress({ step: 'qa', message: 'Running QA validation...' });
+    let qaValidation = null;
+    
+    try {
+      qaValidation = validateReportQuality(synthesisResults);
+      
+      // Log QA report
+      const qaReport = generateQAReport(qaValidation);
+      console.log('\n' + qaReport);
+      
+      // Warn if quality is low
+      if (qaValidation.status === 'FAIL' || qaValidation.status === 'WARN') {
+        console.warn(`[QA WARNING] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
+        console.warn('[QA WARNING] Recommendations:', qaValidation.recommendations);
+      } else {
+        console.log(`[QA PASS] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
+      }
+    } catch (error) {
+      console.error('[ResultsAggregator] QA validation failed:', error);
+      qaValidation = {
+        status: 'ERROR',
+        qualityScore: 0,
+        error: error.message
+      };
+    }
+
+    // PHASE 8: Calculate Costs & Timing
     const analysisTime = Date.now() - startTime;
     const analysisCost = calculateTotalCost(analysisResults);
 
-    // PHASE 8: Build Final Results
+    // PHASE 9: Build Final Results
     return this.buildFinalResults({
       analysisResults,
       scores,
@@ -141,6 +216,8 @@ export class ResultsAggregator {
       pageSelection,
       discoveryData,
       screenshotPaths,
+      synthesisResults,
+      qaValidation,
       parsedData,
       businessIntel,
       context,
@@ -230,6 +307,8 @@ export class ResultsAggregator {
       pageSelection,
       discoveryData,
       screenshotPaths,
+      synthesisResults,
+      qaValidation,
       parsedData,
       businessIntel,
       context,
@@ -277,11 +356,25 @@ export class ResultsAggregator {
 
       // Quick wins & critique
       quick_wins: quickWins,
+      quick_wins_rebalanced: synthesisResults.quickWinStrategy?.topQuickWins || [],
       analysis_summary: critique.summary,
       top_issue: critique.topIssue,
       one_liner: critique.one_liner,
       call_to_action: critique.callToAction,
       outreach_angle: critique.outreachAngle,
+
+      // Synthesis outputs
+      consolidated_issues: synthesisResults.consolidatedIssues || [],
+      consolidated_issue_stats: synthesisResults.consolidationStatistics,
+      consolidated_issue_merge_log: synthesisResults.mergeLog || [],
+      executive_summary: synthesisResults.executiveSummary,
+      executive_summary_metadata: synthesisResults.executiveMetadata,
+      screenshot_references: synthesisResults.screenshotReferences || [],
+      synthesis_stage_metadata: synthesisResults.stageMetadata || {},
+      synthesis_errors: synthesisResults.errors || [],
+
+      // QA Validation
+      qa_validation: qaValidation || { status: 'NOT_RUN' },
 
       // Lead scoring
       ...leadScoringData,

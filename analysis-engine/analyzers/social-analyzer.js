@@ -92,6 +92,7 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
 
     // Validate response
     validateSocialResponse(result);
+    const modelUsed = response.model || prompt.model;
 
     // Add integration issues if found
     if (integrationData && integrationData.issues.length > 0) {
@@ -101,11 +102,12 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
     // Add metadata
     return {
       ...result,
-      model: prompt.model,
+      model: modelUsed,
       _meta: {
         analyzer: 'social',
-        model: prompt.model,
+        model: modelUsed,
         cost: response.cost,
+        usage: response.usage || null,
         timestamp: new Date().toISOString(),
         profilesAnalyzed: Object.keys(socialProfiles),
         pagesAnalyzed: pages ? pages.length : 1,

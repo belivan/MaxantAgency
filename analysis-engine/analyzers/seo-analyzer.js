@@ -116,6 +116,7 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
 
     // Validate response
     validateSEOResponse(result);
+    const modelUsed = response.model || prompt.model;
 
     // Add site-wide issues to the results
     if (siteWideIssues.length > 0) {
@@ -128,8 +129,9 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
       model: prompt.model,
       _meta: {
         analyzer: 'seo',
-        model: prompt.model,
+        model: modelUsed,
         cost: response.cost,
+        usage: response.usage || null,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pages.length,
         pagesData: pagesSummary  // Include summary for debugging

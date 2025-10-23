@@ -107,6 +107,7 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
 
     // Validate response
     validateAccessibilityResponse(result);
+    const modelUsed = response.model || prompt.model;
 
     // Add site-wide issues to the results
     if (siteWideIssues.length > 0) {
@@ -116,11 +117,12 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
     // Add metadata
     return {
       ...result,
-      model: prompt.model,
+      model: modelUsed,
       _meta: {
         analyzer: 'accessibility',
-        model: prompt.model,
+        model: modelUsed,
         cost: response.cost,
+        usage: response.usage || null,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pages.length,
         wcagLevel: 'AA',

@@ -63,7 +63,7 @@ function getAnthropicClient() {
  * @param {string|Buffer} options.image - Optional image (base64 string or Buffer)
  * @param {boolean} options.jsonMode - Enable JSON output mode
  * @param {number} options.maxTokens - Maximum tokens to generate (default: 16384 for generous limits)
- * @param {boolean} options.autoFallback - Auto-fallback to GPT-4o if GPT-5 fails with length error (default: true)
+ * @param {boolean} options.autoFallback - Auto-fallback to GPT-4o if GPT-5 fails with length error (default: false)
  * @returns {Promise<object>} {content, usage, cost}
  */
 export async function callAI({
@@ -74,7 +74,7 @@ export async function callAI({
   image = null,
   jsonMode = false,
   maxTokens = 16384,  // Increased default to 16k tokens
-  autoFallback = true
+  autoFallback = false
 }) {
   // Determine provider from model ID
   const provider = getProvider(model);
@@ -85,9 +85,10 @@ export async function callAI({
     try {
       return await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, image, jsonMode, maxTokens, provider });
     } catch (error) {
-      // Auto-fallback to GPT-4o if GPT-5 hits token limits
-      if (autoFallback && model.startsWith('gpt-5') && error.message.includes('token limit')) {
-        console.warn(`⚠️  GPT-5 failed due to token limits. Falling back to GPT-4o...`);
+      const message = (error?.message || '').toLowerCase();
+      // Auto-fallback to GPT-4o if GPT-5 hits token limits (only when explicitly enabled)
+      if (autoFallback && model.startsWith('gpt-5') && message.includes('token limit')) {
+        console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-4o.');
         return await callOpenAICompatible({ 
           model: 'gpt-4o', 
           systemPrompt, 
