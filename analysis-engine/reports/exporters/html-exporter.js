@@ -159,7 +159,7 @@ async function generateHTMLContent(analysisResult, screenshots = {}) {
 
   // ALL SCREENSHOTS SECTION - New! Shows all crawled pages with desktop + mobile screenshots
   if (analysisResult.crawl_metadata && (analysisResult.crawl_metadata.successful_pages || analysisResult.crawl_metadata.pages_analyzed)) {
-    const allScreenshotsSection = await generateAllScreenshotsSection(analysisResult.crawl_metadata);
+    const allScreenshotsSection = await generateAllScreenshotsSection(analysisResult.crawl_metadata, analysisResult);
     content += allScreenshotsSection;
   }
 

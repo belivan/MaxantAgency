@@ -11,6 +11,74 @@ import { existsSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+function normalizeRelativeUrl(value) {
+  if (!value || typeof value !== 'string') return null;
+  try {
+    const parsed = new URL(value, 'https://example.com');
+    return parsed.pathname || '/';
+  } catch {
+    return value.startsWith('/') ? value : `/${value}`;
+  }
+}
+
+function issueMatchesPage(issue, pageUrls) {
+  if (!issue) return false;
+  const candidates = new Set();
+  const addCandidate = (val) => {
+    const normalized = normalizeRelativeUrl(val);
+    if (normalized) candidates.add(normalized);
+  };
+
+  if (issue.page) addCandidate(issue.page);
+  if (issue.url) addCandidate(issue.url);
+  if (Array.isArray(issue.affectedPages)) issue.affectedPages.forEach(addCandidate);
+  if (Array.isArray(issue.pages)) issue.pages.forEach(addCandidate);
+  if (issue.location) addCandidate(issue.location);
+
+  for (const candidate of candidates) {
+    if (pageUrls.has(candidate)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function formatIssueSummary(issue) {
+  const parts = [];
+  if (issue.title) parts.push(`<strong>${escapeHtml(issue.title)}</strong>`);
+  if (issue.description) parts.push(escapeHtml(issue.description));
+  if (issue.recommendation) parts.push(`<em>Fix: ${escapeHtml(issue.recommendation)}</em>`);
+  return parts.join(' &mdash; ');
+}
+
+function collectInsightsForPage(page, analysisResult = {}) {
+  const modules = [
+    { key: 'design_issues', label: 'Design' },
+    { key: 'seo_issues', label: 'SEO' },
+    { key: 'content_issues', label: 'Content' },
+    { key: 'social_issues', label: 'Social' },
+    { key: 'accessibility_issues', label: 'Accessibility' }
+  ];
+
+  const pageUrls = new Set(
+    [normalizeRelativeUrl(page.url), normalizeRelativeUrl(page.fullUrl)].filter(Boolean)
+  );
+
+  const insights = [];
+
+  for (const { key, label } of modules) {
+    const relevant = (analysisResult[key] || []).filter(issue => issueMatchesPage(issue, pageUrls));
+    if (relevant.length) {
+      insights.push({
+        label,
+        items: relevant.map(formatIssueSummary)
+      });
+    }
+  }
+
+  return insights;
+}
+
 /**
  * Convert image file to base64 data URI
  */
@@ -120,6 +188,23 @@ export async function generateAllScreenshotsSection(crawlMetadata, analysisResul
         html += '      </div>\n';
         html += '    </div>\n';
       }
+    }
+
+    const insights = collectInsightsForPage(page, analysisResult);
+    if (insights.length > 0) {
+      html += '    <div style="margin-top: 1.25rem; padding: 1rem; background: var(--bg-muted); border-radius: 8px;">\n';
+      html += '      <h4 style="margin-bottom: 0.75rem; color: var(--accent-blue); font-size: 0.95em;">Page-Specific Insights</h4>\n';
+      insights.forEach(section => {
+        html += `      <div style="margin-bottom: 0.75rem;">\n`;
+        html += `        <h5 style="margin: 0 0 0.35rem; font-size: 0.85em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">${escapeHtml(section.label)}</h5>\n`;
+        html += '        <ul style="margin: 0; padding-left: 1.1rem; font-size: 0.9em; color: var(--text-muted-secondary);">\n';
+        section.items.forEach(item => {
+          html += `          <li style="margin-bottom: 0.35rem;">${item}</li>\n`;
+        });
+        html += '        </ul>\n';
+        html += '      </div>\n';
+      });
+      html += '    </div>\n';
     }
     
     html += '  </div>\n';
