@@ -82,8 +82,12 @@ function buildScreenshotReferences(pages = []) {
  * Helper to invoke a synthesis prompt and return parsed JSON with metadata.
  */
 async function runSynthesisStage(stageId, variables) {
+  console.log(`[Report Synthesis] Loading prompt: ${SYNTHESIS_NAMESPACE}/${stageId}`);
   const promptPath = `${SYNTHESIS_NAMESPACE}/${stageId}`;
   const prompt = await loadPrompt(promptPath, variables);
+  
+  console.log(`[Report Synthesis] Calling AI (model: ${prompt.model})...`);
+  const startTime = Date.now();
 
   const response = await callAI({
     model: prompt.model,
@@ -93,6 +97,9 @@ async function runSynthesisStage(stageId, variables) {
     jsonMode: true,
     autoFallback: false
   });
+  
+  const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+  console.log(`[Report Synthesis] AI response received (${duration}s, ${response.usage?.total_tokens || 'unknown'} tokens)`);
 
   const parsed = parseJSONResponse(response.content);
 
@@ -102,7 +109,8 @@ async function runSynthesisStage(stageId, variables) {
       model: response.model || prompt.model,
       usage: response.usage || null,
       cost: response.cost || null,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      duration: `${duration}s`
     }
   };
 }
@@ -185,6 +193,9 @@ export async function runReportSynthesis({
   hasHttps,
   crawlPages
 }) {
+  console.log('[Report Synthesis] runReportSynthesis called');
+  console.log(`[Report Synthesis] Company: ${companyName}, Industry: ${industry}, Grade: ${grade}`);
+  
   const errors = [];
   const stageMetadata = {};
 
@@ -201,18 +212,21 @@ export async function runReportSynthesis({
     accessibility_issues_json: safeStringify(issuesByModule?.accessibility)
   };
 
+  console.log('[Report Synthesis] Stage 1/2: Running issue deduplication...');
   let dedupResult = null;
 
   try {
     const dedup = await runSynthesisStage(STAGES.DEDUP, consolidatedContext);
     dedupResult = dedup.data;
     stageMetadata.issueDeduplication = dedup.meta;
+    console.log(`[Report Synthesis] ✓ Deduplication complete: ${dedupResult?.consolidatedIssues?.length || 0} consolidated issues`);
   } catch (error) {
-    console.error('[Report Synthesis] Issue deduplication failed:', error);
+    console.error('[Report Synthesis] ✗ Issue deduplication failed:', error);
     errors.push({ stage: STAGES.DEDUP, message: error.message });
   }
 
   const screenshotReferences = buildScreenshotReferences(crawlPages);
+  console.log(`[Report Synthesis] Built ${screenshotReferences.length} screenshot references`);
 
   const execSummaryContext = {
     company_name: companyName || 'Unknown Company',
@@ -230,17 +244,22 @@ export async function runReportSynthesis({
     screenshot_references_json: safeStringify(screenshotReferences)
   };
 
+  console.log('[Report Synthesis] Stage 2/2: Generating executive summary...');
   let executiveSummary = null;
 
   try {
     const execSummary = await runSynthesisStage(STAGES.EXEC_SUMMARY, execSummaryContext);
     executiveSummary = execSummary.data;
     stageMetadata.executiveSummary = execSummary.meta;
+    console.log('[Report Synthesis] ✓ Executive summary generated successfully');
   } catch (error) {
-    console.error('[Report Synthesis] Executive summary generation failed:', error);
+    console.error('[Report Synthesis] ✗ Executive summary generation failed:', error);
     errors.push({ stage: STAGES.EXEC_SUMMARY, message: error.message });
   }
 
+  console.log('[Report Synthesis] Pipeline complete');
+  console.log(`[Report Synthesis] Total errors: ${errors.length}`);
+  
   return {
     consolidatedIssues: dedupResult?.consolidatedIssues || formatConsolidatedFallback(issuesByModule),
     mergeLog: dedupResult?.mergeLog || [],

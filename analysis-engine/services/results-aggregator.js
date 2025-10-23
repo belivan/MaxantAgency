@@ -128,11 +128,13 @@ export class ResultsAggregator {
     const screenshotPaths = await this.saveScreenshots(pages, context, baseUrl);
 
     // PHASE 7: Run report synthesis pipeline
+    this.onProgress({ step: 'synthesis', message: 'Running AI synthesis pipeline...' });
+    console.log('\n[Report Synthesis] Starting synthesis pipeline...');
+    
     let synthesisResults = {
       consolidatedIssues: [],
       mergeLog: [],
       consolidationStatistics: null,
-      quickWinStrategy: null,
       executiveSummary: null,
       executiveMetadata: null,
       screenshotReferences: [],
@@ -141,6 +143,7 @@ export class ResultsAggregator {
     };
 
     try {
+      console.log('[Report Synthesis] Calling runReportSynthesis...');
       synthesisResults = await runReportSynthesis({
         companyName: context.company_name,
         industry: context.industry,
@@ -165,8 +168,12 @@ export class ResultsAggregator {
         hasHttps: gradeMetadata.hasHTTPS,
         crawlPages: crawlData.pages
       });
+      console.log('[Report Synthesis] Synthesis completed successfully');
+      console.log(`[Report Synthesis] Generated ${synthesisResults.consolidatedIssues?.length || 0} consolidated issues`);
+      console.log(`[Report Synthesis] Executive summary: ${synthesisResults.executiveSummary ? 'YES' : 'NO'}`);
     } catch (error) {
       console.error('[ResultsAggregator] Report synthesis failed:', error);
+      console.error('[ResultsAggregator] Stack:', error.stack);
       synthesisResults.errors.push({
         stage: 'pipeline',
         message: error.message
@@ -175,6 +182,10 @@ export class ResultsAggregator {
 
     // PHASE 7.5: QA Validation
     this.onProgress({ step: 'qa', message: 'Running QA validation...' });
+    console.log('\n═══════════════════════════════════════════════════════════');
+    console.log('[QA Validation] Starting QA validation...');
+    console.log('═══════════════════════════════════════════════════════════\n');
+    
     let qaValidation = null;
     
     try {
@@ -182,17 +193,21 @@ export class ResultsAggregator {
       
       // Log QA report
       const qaReport = generateQAReport(qaValidation);
-      console.log('\n' + qaReport);
+      console.log(qaReport);
       
       // Warn if quality is low
       if (qaValidation.status === 'FAIL' || qaValidation.status === 'WARN') {
-        console.warn(`[QA WARNING] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
-        console.warn('[QA WARNING] Recommendations:', qaValidation.recommendations);
+        console.warn(`\n[QA WARNING] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
+        console.warn('[QA WARNING] Recommendations:');
+        qaValidation.recommendations.forEach((rec, idx) => {
+          console.warn(`  ${idx + 1}. ${rec}`);
+        });
       } else {
-        console.log(`[QA PASS] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
+        console.log(`\n[QA PASS] ✅ Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
       }
     } catch (error) {
-      console.error('[ResultsAggregator] QA validation failed:', error);
+      console.error('\n[ResultsAggregator] QA validation failed:', error);
+      console.error('[ResultsAggregator] Stack:', error.stack);
       qaValidation = {
         status: 'ERROR',
         qualityScore: 0,
