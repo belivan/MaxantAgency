@@ -11,10 +11,10 @@
  *   - Handles errors gracefully (returns default scores on failure)
  */
 
-// DEPRECATED: Old single-viewport design analyzer (kept for backward compatibility)
-export { analyzeDesign, countQuickWins } from './design-analyzer.js';
+// DEPRECATED: Old single-viewport design analyzer has been REMOVED
+// Use desktop-visual-analyzer.js and mobile-visual-analyzer.js instead
 
-// NEW: Desktop Visual Analyzer (GPT-4o Vision) - ~$0.015 per call
+// Desktop Visual Analyzer (GPT-4o Vision) - ~$0.015 per call
 export { analyzeDesktopVisual, countCriticalDesktopIssues } from './desktop-visual-analyzer.js';
 
 // NEW: Mobile Visual Analyzer (GPT-4o Vision) - ~$0.015 per call

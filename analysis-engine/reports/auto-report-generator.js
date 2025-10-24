@@ -96,11 +96,15 @@ export async function autoGenerateReport(analysisResult, options = {}) {
 
       } catch (synthesisError) {
         console.warn(`⚠️  AI synthesis failed, using fallback: ${synthesisError.message}`);
-        // Continue with regular report generation - synthesis is optional
-        synthesisData = null;
+        // Generate basic fallback summary instead of null
+        synthesisData = generateFallbackSynthesis(reportData);
+        console.log('✅ Using fallback synthesis (non-AI generated)');
       }
     } else {
       console.log('ℹ️  AI synthesis disabled (USE_AI_SYNTHESIS=false)');
+      // Generate basic fallback summary even when synthesis is disabled
+      synthesisData = generateFallbackSynthesis(reportData);
+      console.log('✅ Using fallback synthesis (non-AI generated)');
     }
 
     // Generate the report (with or without synthesis data)
@@ -273,6 +277,96 @@ export async function batchGenerateReports(analysisResults, options = {}) {
   }
 
   return results;
+}
+
+/**
+ * Generate fallback synthesis when AI synthesis fails
+ * Provides basic executive summary without AI processing
+ */
+function generateFallbackSynthesis(reportData) {
+  const {
+    company_name,
+    grade,
+    overall_score,
+    design_issues_desktop = [],
+    design_issues_mobile = [],
+    seo_issues = [],
+    content_issues = [],
+    social_issues = [],
+    accessibility_issues = []
+  } = reportData;
+
+  // Combine all issues
+  const allIssues = [
+    ...design_issues_desktop,
+    ...design_issues_mobile,
+    ...seo_issues,
+    ...content_issues,
+    ...social_issues,
+    ...accessibility_issues
+  ];
+
+  // Sort by priority (critical > high > medium > low)
+  const priorityRank = { 'critical': 4, 'high': 3, 'medium': 2, 'low': 1 };
+  const sortedIssues = allIssues.sort((a, b) => {
+    const aPriority = priorityRank[a.priority || a.severity] || 0;
+    const bPriority = priorityRank[b.priority || b.severity] || 0;
+    return bPriority - aPriority;
+  });
+
+  // Get top 3 issues for critical findings
+  const topIssues = sortedIssues.slice(0, 3);
+
+  // Generate basic executive summary
+  const gradeText = {
+    'A': 'excellent',
+    'B': 'good',
+    'C': 'average',
+    'D': 'below average',
+    'F': 'poor'
+  }[grade] || 'average';
+
+  return {
+    executiveSummary: {
+      headline: `${company_name} achieves a ${grade}-grade (${overall_score}/100) - ${gradeText} overall performance`,
+      overview: `Our analysis identified ${allIssues.length} areas for improvement across design, SEO, content, and accessibility. With focused improvements, this website can significantly enhance user experience and conversion rates.`,
+      criticalFindings: topIssues.map((issue, index) => ({
+        rank: index + 1,
+        issue: issue.title || 'Website improvement needed',
+        impact: issue.impact || 'Affects user experience and conversion rates',
+        evidence: [],
+        recommendation: issue.fix || issue.recommendation || 'Address this issue to improve site performance',
+        estimatedValue: null
+      })),
+      strategicRoadmap: {
+        month1: {
+          title: 'Quick Wins & Foundation',
+          description: 'Implement high-impact improvements with minimal effort',
+          priorities: topIssues.slice(0, 2).map(i => i.title || 'Priority improvement'),
+          estimatedCost: '$500-$1,500',
+          expectedROI: '2-3x return'
+        },
+        month2: {
+          title: 'Core Improvements',
+          description: 'Address fundamental design and technical issues',
+          priorities: ['Improve mobile responsiveness', 'Enhance SEO optimization', 'Optimize page speed'],
+          estimatedCost: '$2,000-$4,000',
+          expectedROI: '3-4x return'
+        },
+        month3: {
+          title: 'Advanced Optimization',
+          description: 'Fine-tune and scale improvements',
+          priorities: ['A/B testing implementation', 'Content strategy refinement', 'Conversion optimization'],
+          estimatedCost: '$3,000-$5,000',
+          expectedROI: '4-5x return'
+        }
+      },
+      roiStatement: 'Based on typical improvements, expect 3-5x return on investment within 6 months through increased conversions and improved user engagement.',
+      callToAction: 'Ready to transform your website? Let\'s discuss implementing these improvements.'
+    },
+    consolidatedIssues: allIssues, // Use original issues as-is (no deduplication)
+    errors: []
+  };
 }
 
 /**

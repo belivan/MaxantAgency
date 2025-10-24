@@ -101,6 +101,11 @@
       "description": "Number of Google reviews"
     },
     {
+      "name": "most_recent_review_date",
+      "type": "timestamptz",
+      "description": "Timestamp of the most recent Google review (for filtering active businesses)"
+    },
+    {
       "name": "social_profiles",
       "type": "jsonb",
       "description": "Social media profile URLs (instagram, facebook, linkedin, twitter)"

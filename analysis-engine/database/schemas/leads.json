@@ -79,7 +79,7 @@
 
     {
       "name": "design_score",
-      "type": "decimal",
+      "type": "integer",
       "required": true,
       "description": "Design analysis score 0-100 (legacy - use design_score_desktop/mobile for new records)"
     },
@@ -95,19 +95,19 @@
     },
     {
       "name": "seo_score",
-      "type": "decimal",
+      "type": "integer",
       "required": true,
       "description": "SEO analysis score 0-100"
     },
     {
       "name": "content_score",
-      "type": "decimal",
+      "type": "integer",
       "required": true,
       "description": "Content analysis score 0-100"
     },
     {
       "name": "social_score",
-      "type": "decimal",
+      "type": "integer",
       "required": true,
       "description": "Social media analysis score 0-100"
     },
@@ -452,6 +452,42 @@
       "name": "discovery_log",
       "type": "jsonb",
       "description": "Complete discovery and analysis log with all pages found, AI reasoning, errors, and critical findings"
+    },
+
+    {
+      "name": "consolidated_issues",
+      "type": "jsonb",
+      "description": "AI-deduplicated issues across all analysis modules (design, SEO, content, social, accessibility) - reduces redundancy by 40-70%"
+    },
+    {
+      "name": "consolidated_issue_stats",
+      "type": "jsonb",
+      "description": "Statistics about issue consolidation process (original count, consolidated count, reduction percentage)"
+    },
+    {
+      "name": "consolidated_issue_merge_log",
+      "type": "jsonb",
+      "description": "Detailed log of which issues were merged together during deduplication process"
+    },
+    {
+      "name": "executive_summary",
+      "type": "jsonb",
+      "description": "AI-generated executive summary with headline, overview, critical findings, 30/60/90 day strategic roadmap, and ROI projections"
+    },
+    {
+      "name": "executive_summary_metadata",
+      "type": "jsonb",
+      "description": "Metadata about executive summary generation (AI model used, tokens, cost, timestamp)"
+    },
+    {
+      "name": "synthesis_stage_metadata",
+      "type": "jsonb",
+      "description": "Report synthesis stage metadata (AI models used, token usage, costs, timing for each stage)"
+    },
+    {
+      "name": "synthesis_errors",
+      "type": "jsonb",
+      "description": "Any errors encountered during synthesis pipeline (stage name, error message, timestamp)"
     },
 
     {

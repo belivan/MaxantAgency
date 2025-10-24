@@ -11,6 +11,8 @@ import { dirname, join, isAbsolute } from 'path';
 import { existsSync } from 'fs';
 import { generateAllScreenshotsSection } from './enhanced-screenshots.js';
 import { ScreenshotRegistry } from '../utils/screenshot-registry.js';
+import { compressImageFromFile, compressImageFromDataUri } from '../utils/image-compressor.js';
+import { generateAtAGlanceHTML } from '../templates/sections/at-a-glance.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -88,8 +90,8 @@ export async function generateHTMLReport(analysisResult, synthesisData = null) {
     }
   };
 
-  const desktopScreenshotSrc = await toBase64DataURI(screenshot_desktop_url);
-  const mobileScreenshotSrc = await toBase64DataURI(screenshot_mobile_url);
+  const desktopScreenshotSrc = await toBase64DataURI(screenshot_desktop_url, 600);
+  const mobileScreenshotSrc = await toBase64DataURI(screenshot_mobile_url, 600);
 
   // Register main screenshots in registry
   let desktopScreenshotId = null;
@@ -226,11 +228,16 @@ async function generateHTMLContent(analysisResult, options = {}) {
     }
   }
 
+  // At a Glance (ALWAYS show - it's a quick summary)
+  console.log('[HTML Exporter] 📊 Generating At a Glance section');
+  content += generateAtAGlanceHTML(analysisResult, synthesisData);
+
+  // Executive Summary (AI-generated if synthesis available)
   if (executiveSummaryData) {
     console.log('[HTML Exporter] ✅ Generating executive summary section');
     content += generateExecutiveSummaryHTML(executiveSummaryData, analysisResult, registry);
   } else {
-    console.log('[HTML Exporter] ⚠️  Skipping executive summary - not available');
+    console.log('[HTML Exporter] ⚠️  Skipping executive summary - synthesis not available');
   }
 
   // Score cards grid
@@ -305,7 +312,7 @@ async function generateHTMLContent(analysisResult, options = {}) {
  * Generate executive summary section (AI-generated)
  */
 function generateExecutiveSummaryHTML(executiveSummary, analysisResult, registry) {
-  const { headline, criticalFindings = [], strategicRoadmap } = executiveSummary;
+  const { headline, overview, criticalFindings = [], strategicRoadmap, roiStatement, callToAction } = executiveSummary;
 
   let html = '<div class="section executive-summary">\n';
   html += '  <h2>📋 Executive Summary</h2>\n';
@@ -313,6 +320,11 @@ function generateExecutiveSummaryHTML(executiveSummary, analysisResult, registry
   // Headline
   if (headline) {
     html += `  <p class="executive-headline"><strong>${escapeHtml(headline)}</strong></p>\n\n`;
+  }
+
+  // Overview
+  if (overview) {
+    html += `  <p class="executive-overview">${escapeHtml(overview)}</p>\n\n`;
   }
 
   // Critical Findings
@@ -501,6 +513,21 @@ function generateExecutiveSummaryHTML(executiveSummary, analysisResult, registry
     html += '  </div>\n';
   }
 
+  // ROI Statement
+  if (roiStatement) {
+    html += '  <div class="roi-statement">\n';
+    html += '    <h3>💰 Expected ROI</h3>\n';
+    html += `    <p>${escapeHtml(roiStatement)}</p>\n`;
+    html += '  </div>\n\n';
+  }
+
+  // Call to Action
+  if (callToAction) {
+    html += '  <div class="call-to-action">\n';
+    html += `    <p><em>${escapeHtml(callToAction)}</em></p>\n`;
+    html += '  </div>\n';
+  }
+
   html += '</div>\n\n';
   return html;
 }
@@ -592,7 +619,7 @@ function generateDesktopHTML(analysisResult, screenshotId, registry, consolidate
   }
 
   // CONDENSING: Limit to top 5 highest priority issues for brevity
-  const topDesktopIssues = prioritizeAndLimitIssues(desktopIssues, 5);
+  const topDesktopIssues = prioritizeAndLimitIssues(desktopIssues, 3);
   const skippedCount = desktopIssues.length - topDesktopIssues.length;
 
   let html = '<div class="section">\n';
@@ -642,7 +669,7 @@ function generateMobileHTML(analysisResult, screenshotId, registry, consolidated
   }
 
   // CONDENSING: Limit to top 5 highest priority issues for brevity
-  const topMobileIssues = prioritizeAndLimitIssues(mobileIssues, 5);
+  const topMobileIssues = prioritizeAndLimitIssues(mobileIssues, 3);
   const skippedCount = mobileIssues.length - topMobileIssues.length;
 
   let html = '<div class="section">\n';
@@ -696,7 +723,7 @@ function generateSEOHTML(analysisResult, consolidatedIssues, registry) {
   }
 
   // CONDENSING: Limit to top 5 SEO issues
-  const topSeoIssues = prioritizeAndLimitIssues(seoIssues, 5);
+  const topSeoIssues = prioritizeAndLimitIssues(seoIssues, 3);
   const skippedCount = seoIssues.length - topSeoIssues.length;
 
   let html = '<div class="section">\n';
@@ -731,11 +758,27 @@ function generateSEOHTML(analysisResult, consolidatedIssues, registry) {
 /**
  * Generate content section
  */
-function generateContentHTML(analysisResult) {
-  const { content_score, content_issues = [], content_insights = {} } = analysisResult;
+function generateContentHTML(analysisResult, consolidatedIssues = null, registry = null) {
+  const { content_score, content_insights = {} } = analysisResult;
+
+  // Use consolidated issues if available (filtered to content), otherwise use original issues
+  let contentIssues = [];
+  if (consolidatedIssues && Array.isArray(consolidatedIssues)) {
+    contentIssues = consolidatedIssues.filter(i =>
+      i.sources?.includes('content') || !i.sources
+    );
+    console.log(`[HTML Exporter] Using ${contentIssues.length} consolidated content issues`);
+  } else {
+    contentIssues = analysisResult.content_issues || [];
+    console.log(`[HTML Exporter] Using ${contentIssues.length} original content issues (no consolidation)`);
+  }
+
+  // CONDENSING: Limit to top 5 content issues
+  const topContentIssues = prioritizeAndLimitIssues(contentIssues, 3);
+  const skippedCount = contentIssues.length - topContentIssues.length;
 
   let html = '<div class="section">\n';
-  html += '  <h2>Content Quality Analysis</h2>\n';
+  html += '  <h2>📝 Content Quality Analysis</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(content_score)}</p>\n\n`;
 
   // Content insights
@@ -744,15 +787,19 @@ function generateContentHTML(analysisResult) {
     html += '  <table>\n';
     html += '    <tr><th>Metric</th><th>Value</th></tr>\n';
     if (content_insights.wordCount) html += `    <tr><td>Word Count</td><td>${content_insights.wordCount}</td></tr>\n`;
-    if (content_insights.hasBlog !== undefined) html += `    <tr><td>Blog</td><td>${content_insights.hasBlog ? ' Yes' : ' No'}</td></tr>\n`;
+    if (content_insights.hasBlog !== undefined) html += `    <tr><td>Blog</td><td>${content_insights.hasBlog ? '✓ Yes' : '✗ No'}</td></tr>\n`;
     if (content_insights.blogPostCount) html += `    <tr><td>Blog Posts</td><td>${content_insights.blogPostCount}</td></tr>\n`;
     if (content_insights.ctaCount) html += `    <tr><td>CTAs</td><td>${content_insights.ctaCount}</td></tr>\n`;
     html += '  </table>\n\n';
   }
 
-  if (content_issues.length > 0) {
-    html += '  <h3>Content Issues</h3>\n';
-    html += generateIssuesHTML(content_issues);
+  if (topContentIssues.length > 0) {
+    html += '  <h3>Key Content Issues</h3>\n';
+    html += generateIssuesHTML(topContentIssues, registry);
+    
+    if (skippedCount > 0) {
+      html += `  <p class="text-muted" style="margin-top: 20px; font-style: italic;">+ ${skippedCount} additional content improvements identified</p>\n`;
+    }
   }
 
   html += '</div>\n\n';
@@ -763,15 +810,26 @@ function generateContentHTML(analysisResult) {
  * Generate social section
  */
 function generateSocialHTML(analysisResult, consolidatedIssues = null, registry = null) {
-  // Use consolidated issues if available, otherwise use original issues
-  const socialIssues = consolidatedIssues?.filter(i =>
-    i.sources?.includes('social')
-  ) || analysisResult.social_issues || [];
-  
   const { social_score, social_platforms_present = [], social_profiles = {} } = analysisResult;
 
+  // Use consolidated issues if available (filtered to social), otherwise use original issues
+  let socialIssues = [];
+  if (consolidatedIssues && Array.isArray(consolidatedIssues)) {
+    socialIssues = consolidatedIssues.filter(i =>
+      i.sources?.includes('social') || !i.sources
+    );
+    console.log(`[HTML Exporter] Using ${socialIssues.length} consolidated social issues`);
+  } else {
+    socialIssues = analysisResult.social_issues || [];
+    console.log(`[HTML Exporter] Using ${socialIssues.length} original social issues (no consolidation)`);
+  }
+
+  // CONDENSING: Limit to top 5 social issues
+  const topSocialIssues = prioritizeAndLimitIssues(socialIssues, 3);
+  const skippedCount = socialIssues.length - topSocialIssues.length;
+
   let html = '<div class="section">\n';
-  html += '  <h2>Social Media Presence</h2>\n';
+  html += '  <h2>📱 Social Media Presence</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(social_score)}</p>\n\n`;
 
   // Platform presence
@@ -779,14 +837,20 @@ function generateSocialHTML(analysisResult, consolidatedIssues = null, registry 
     html += '  <h3>Platform Presence</h3>\n';
     html += '  <p>';
     social_platforms_present.forEach(platform => {
-      html += ` ${escapeHtml(platform)} &nbsp; `;
+      html += `✓ ${escapeHtml(platform)} &nbsp;&nbsp; `;
     });
     html += '</p>\n\n';
   }
 
-  if (socialIssues.length > 0) {
-    html += '  <h3>Social Media Issues</h3>\n';
-    html += generateIssuesHTML(socialIssues, registry);
+  if (topSocialIssues.length > 0) {
+    html += '  <h3>Key Social Media Issues</h3>\n';
+    html += generateIssuesHTML(topSocialIssues, registry);
+    
+    if (skippedCount > 0) {
+      html += `  <p class="text-muted" style="margin-top: 20px; font-style: italic;">+ ${skippedCount} additional social media improvements identified</p>\n`;
+    }
+  } else if (socialIssues.length === 0) {
+    html += '  <p class="text-secondary">✓ Social media integration is well-optimized.</p>\n';
   }
 
   html += '</div>\n\n';
@@ -797,21 +861,37 @@ function generateSocialHTML(analysisResult, consolidatedIssues = null, registry 
  * Generate accessibility section
  */
 function generateAccessibilityHTML(analysisResult, consolidatedIssues = null, registry = null) {
-  // Use consolidated issues if available, otherwise use original issues
-  const accessibilityIssues = consolidatedIssues?.filter(i =>
-    i.sources?.includes('accessibility')
-  ) || analysisResult.accessibility_issues || [];
-  
   const { accessibility_score } = analysisResult;
 
+  // Use consolidated issues if available (filtered to accessibility), otherwise use original issues
+  let accessibilityIssues = [];
+  if (consolidatedIssues && Array.isArray(consolidatedIssues)) {
+    accessibilityIssues = consolidatedIssues.filter(i =>
+      i.sources?.includes('accessibility') || !i.sources
+    );
+    console.log(`[HTML Exporter] Using ${accessibilityIssues.length} consolidated accessibility issues`);
+  } else {
+    accessibilityIssues = analysisResult.accessibility_issues || [];
+    console.log(`[HTML Exporter] Using ${accessibilityIssues.length} original accessibility issues (no consolidation)`);
+  }
+
+  // CONDENSING: Limit to top 5 accessibility issues
+  const topAccessibilityIssues = prioritizeAndLimitIssues(accessibilityIssues, 3);
+  const skippedCount = accessibilityIssues.length - topAccessibilityIssues.length;
+
   let html = '<div class="section">\n';
-  html += '  <h2>Accessibility (WCAG 2.1 AA)</h2>\n';
+  html += '  <h2>♿ Accessibility (WCAG 2.1 AA)</h2>\n';
   html += `  <p><strong>Score:</strong> ${formatScoreBadge(accessibility_score)}</p>\n\n`;
 
-  if (accessibilityIssues.length === 0) {
-    html += '  <p class="text-secondary"> No significant accessibility issues detected. Your site meets WCAG 2.1 AA standards.</p>\n';
+  if (topAccessibilityIssues.length === 0) {
+    html += '  <p class="text-secondary">✓ No significant accessibility issues detected. Your site meets WCAG 2.1 AA standards.</p>\n';
   } else {
-    html += generateIssuesHTML(accessibilityIssues, registry);
+    html += '  <h3>Key Accessibility Issues</h3>\n';
+    html += generateIssuesHTML(topAccessibilityIssues, registry);
+    
+    if (skippedCount > 0) {
+      html += `  <p class="text-muted" style="margin-top: 20px; font-style: italic;">+ ${skippedCount} additional accessibility improvements identified</p>\n`;
+    }
   }
 
   html += '</div>\n\n';

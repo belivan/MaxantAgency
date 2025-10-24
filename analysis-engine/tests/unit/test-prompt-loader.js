@@ -4,7 +4,7 @@
  * Verifies that prompts load correctly and variable substitution works
  */
 
-import { loadPrompt, listPrompts, getPromptMetadata } from '../shared/prompt-loader.js';
+import { loadPrompt, listPrompts, getPromptMetadata } from '../../shared/prompt-loader.js';
 
 console.log('═══════════════════════════════════════════════════════════════');
 console.log('PROMPT LOADER TEST');

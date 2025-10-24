@@ -33,12 +33,12 @@ console.log('Test 1: Import grading modules');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const grader = await import('../grading/grader.js');
+  const grader = await import('../../grading/grader.js');
   assert(typeof grader.calculateGrade === 'function', 'grader exports calculateGrade');
   assert(typeof grader.extractQuickWins === 'function', 'grader exports extractQuickWins');
   assert(typeof grader.getTopIssue === 'function', 'grader exports getTopIssue');
 
-  const critiqueGen = await import('../grading/critique-generator.js');
+  const critiqueGen = await import('../../grading/critique-generator.js');
   assert(typeof critiqueGen.generateCritique === 'function', 'critique-generator exports generateCritique');
   assert(typeof critiqueGen.generateOneLiner === 'function', 'critique-generator exports generateOneLiner');
 
@@ -53,7 +53,7 @@ console.log('Test 2: Calculate letter grades');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { calculateGrade } = await import('../grading/grader.js');
+  const { calculateGrade } = await import('../../grading/grader.js');
 
   // Test A grade
   const gradeA = calculateGrade({ design: 90, seo: 88, content: 85, social: 86 });
@@ -88,7 +88,7 @@ console.log('Test 3: Quick-win bonus calculation');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { calculateGrade } = await import('../grading/grader.js');
+  const { calculateGrade } = await import('../../grading/grader.js');
 
   // Without bonus
   const withoutBonus = calculateGrade(
@@ -123,7 +123,7 @@ console.log('Test 4: Penalty calculation');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { calculateGrade } = await import('../grading/grader.js');
+  const { calculateGrade } = await import('../../grading/grader.js');
 
   // Without penalties
   const noPenalties = calculateGrade(
@@ -164,7 +164,7 @@ console.log('Test 5: Extract quick wins from analysis results');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { extractQuickWins } = await import('../grading/grader.js');
+  const { extractQuickWins } = await import('../../grading/grader.js');
 
   const mockAnalysis = {
     design: {
@@ -207,7 +207,7 @@ console.log('Test 6: Get top issue from analysis');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { getTopIssue } = await import('../grading/grader.js');
+  const { getTopIssue } = await import('../../grading/grader.js');
 
   const mockAnalysis = {
     design: {
@@ -237,7 +237,7 @@ console.log('Test 7: Generate critique');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { generateCritique } = await import('../grading/critique-generator.js');
+  const { generateCritique } = await import('../../grading/critique-generator.js');
 
   const mockAnalysis = {
     design: {
@@ -295,7 +295,7 @@ console.log('Test 8: Generate one-liner');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { generateOneLiner } = await import('../grading/critique-generator.js');
+  const { generateOneLiner } = await import('../../grading/critique-generator.js');
 
   const topIssue = {
     title: 'Mobile menu is broken',

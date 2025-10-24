@@ -10,6 +10,7 @@
  *   });
  */
 
+import { generateAtAGlanceMarkdown } from './templates/sections/at-a-glance.js';
 import { generateExecutiveSummary } from './templates/sections/executive-summary.js';
 import { generateDesktopAnalysis } from './templates/sections/desktop-analysis.js';
 import { generateMobileAnalysis } from './templates/sections/mobile-analysis.js';
@@ -24,6 +25,7 @@ import { generateAnalysisScope } from './templates/sections/analysis-scope.js';
 import { generateActionPlan } from './templates/sections/action-plan.js';
 import { generateAppendix } from './templates/sections/appendix.js';
 import { generateHTMLReport } from './exporters/html-exporter.js';
+import { generateHTMLReportV2 } from './exporters/html-exporter-v2.js';
 import { generatePDF, generatePDFFromContent } from './exporters/pdf-generator.js';
 
 /**
@@ -56,7 +58,12 @@ export async function generateReport(analysisResult, options = {}) {
   if (format === 'pdf') {
     console.log('Generating PDF report (HTML -> PDF conversion)...');
     
-    const htmlContent = await generateHTMLReport(analysisResult, synthesisData);
+    // Use V2 exporter for executive-focused reports (default when synthesis is enabled)
+    const useV2 = synthesisData !== null || process.env.REPORT_STYLE === 'executive';
+    const htmlContent = useV2 
+      ? await generateHTMLReportV2(analysisResult, synthesisData)
+      : await generateHTMLReport(analysisResult, synthesisData);
+    
     const outputPath = pdfOutputPath || `report-${Date.now()}.pdf`;
     
     const pdfResult = await generatePDFFromContent(htmlContent, outputPath);
@@ -77,7 +84,8 @@ export async function generateReport(analysisResult, options = {}) {
           generation_method: pdfResult.method,
           message: pdfResult.message,
           generated_at: new Date().toISOString(),
-          images_embedded: true // Base64 images in HTML are embedded in PDF
+          images_embedded: true, // Base64 images in HTML are embedded in PDF
+          report_version: useV2 ? 'v2-executive' : 'v1-technical'
         }
       };
     } else {
@@ -97,7 +105,8 @@ export async function generateReport(analysisResult, options = {}) {
           message: pdfResult.message,
           instructions_path: pdfResult.instructions_path,
           generated_at: new Date().toISOString(),
-          note: 'PDF generation failed. HTML report provided. See instructions for manual conversion.'
+          note: 'PDF generation failed. HTML report provided. See instructions for manual conversion.',
+          report_version: useV2 ? 'v2-executive' : 'v1-technical'
         }
       };
     }
@@ -105,7 +114,13 @@ export async function generateReport(analysisResult, options = {}) {
 
   // For HTML format, use dedicated HTML exporter
   if (format === 'html') {
-    const htmlContent = await generateHTMLReport(analysisResult, synthesisData);
+    // Use V2 exporter for executive-focused reports (default when synthesis is enabled)
+    const useV2 = synthesisData !== null || process.env.REPORT_STYLE === 'executive';
+    
+    const htmlContent = useV2 
+      ? await generateHTMLReportV2(analysisResult, synthesisData)
+      : await generateHTMLReport(analysisResult, synthesisData);
+    
     const generationTime = Date.now() - startTime;
 
     return {
@@ -120,7 +135,8 @@ export async function generateReport(analysisResult, options = {}) {
         generation_time_ms: generationTime,
         content_length: htmlContent.length,
         word_count: countWords(htmlContent.replace(/<[^>]*>/g, '')), // Strip HTML tags for word count
-        generated_at: new Date().toISOString()
+        generated_at: new Date().toISOString(),
+        report_version: useV2 ? 'v2-executive' : 'v1-technical'
       }
     };
   }
@@ -130,6 +146,11 @@ export async function generateReport(analysisResult, options = {}) {
   const shouldInclude = (sectionName) => includeAll || sections.includes(sectionName);
 
   let reportContent = '';
+
+  // Add "At a Glance" section for Markdown reports (HTML has its own in the exporter)
+  if (format === 'markdown' && shouldInclude('at-a-glance')) {
+    reportContent += generateAtAGlanceMarkdown(analysisResult, synthesisData);
+  }
 
   // Generate sections (pass synthesisData to all sections)
   if (shouldInclude('executive')) {
@@ -145,35 +166,35 @@ export async function generateReport(analysisResult, options = {}) {
   }
 
   if (shouldInclude('seo')) {
-    reportContent += generateSEOSection(analysisResult);
+    reportContent += generateSEOSection(analysisResult, synthesisData);
   }
 
   if (shouldInclude('content')) {
-    reportContent += generateContentSection(analysisResult);
+    reportContent += generateContentSection(analysisResult, synthesisData);
   }
 
   if (shouldInclude('social')) {
-    reportContent += generateSocialSection(analysisResult);
+    reportContent += generateSocialSection(analysisResult, synthesisData);
   }
 
   if (shouldInclude('accessibility')) {
-    reportContent += generateAccessibilitySection(analysisResult);
+    reportContent += generateAccessibilitySection(analysisResult, synthesisData);
   }
 
   if (shouldInclude('business-intel')) {
-    reportContent += generateBusinessIntelSection(analysisResult);
+    reportContent += generateBusinessIntelSection(analysisResult, synthesisData);
   }
 
   if (shouldInclude('outreach-strategy')) {
-    reportContent += generateOutreachStrategy(analysisResult);
+    reportContent += generateOutreachStrategy(analysisResult, synthesisData);
   }
 
   if (shouldInclude('lead-priority')) {
-    reportContent += generateLeadPrioritySection(analysisResult);
+    reportContent += generateLeadPrioritySection(analysisResult, synthesisData);
   }
 
   if (shouldInclude('analysis-scope')) {
-    reportContent += generateAnalysisScope(analysisResult);
+    reportContent += generateAnalysisScope(analysisResult, synthesisData);
   }
 
   if (shouldInclude('action-plan')) {
@@ -181,7 +202,7 @@ export async function generateReport(analysisResult, options = {}) {
   }
 
   if (shouldInclude('appendix')) {
-    reportContent += generateAppendix(analysisResult);
+    reportContent += generateAppendix(analysisResult, synthesisData);
   }
 
   const generationTime = Date.now() - startTime;

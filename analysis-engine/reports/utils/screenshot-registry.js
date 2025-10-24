@@ -70,6 +70,15 @@ export class ScreenshotRegistry {
   }
 
   /**
+   * Check if a screenshot reference exists
+   * @param {string} id - Screenshot ID
+   * @returns {boolean} True if screenshot exists
+   */
+  hasReference(id) {
+    return this.screenshots.some(s => s.id === id);
+  }
+
+  /**
    * Get screenshot by ID
    * @param {string} id - Screenshot ID
    * @returns {object|null} Screenshot object or null
@@ -113,17 +122,21 @@ export class ScreenshotRegistry {
     const mobileScreenshots = this.getByViewport('mobile');
 
     if (desktopScreenshots.length > 0) {
-      html += '  <h3>Desktop Screenshots</h3>\n\n';
+      html += '  <h3>Desktop Screenshots</h3>\n';
+      html += '  <div class="screenshot-grid">\n';
       desktopScreenshots.forEach(screenshot => {
         html += this.generateScreenshotHTML(screenshot);
       });
+      html += '  </div>\n\n';
     }
 
     if (mobileScreenshots.length > 0) {
-      html += '  <h3>Mobile Screenshots</h3>\n\n';
+      html += '  <h3>Mobile Screenshots</h3>\n';
+      html += '  <div class="screenshot-grid">\n';
       mobileScreenshots.forEach(screenshot => {
         html += this.generateScreenshotHTML(screenshot);
       });
+      html += '  </div>\n\n';
     }
 
     html += '</div>\n\n';
@@ -136,39 +149,21 @@ export class ScreenshotRegistry {
    * @returns {string} HTML
    */
   generateScreenshotHTML(screenshot) {
-    let html = `  <div class="screenshot-item" id="${screenshot.id}">\n`;
-    html += `    <div class="screenshot-header">\n`;
-    html += `      <h4>${screenshot.id}: ${this.escapeHtml(screenshot.title)}</h4>\n`;
-
-    if (screenshot.page) {
-      html += `      <p class="text-muted"><strong>Page:</strong> ${this.escapeHtml(screenshot.page)}</p>\n`;
-    }
-
-    html += `    </div>\n`;
-
-    // Image container with appropriate width
-    const maxWidth = screenshot.viewport === 'mobile' ? '375px' : '100%';
-    html += `    <div class="screenshot-image-container" style="max-width: ${maxWidth};">\n`;
+    let html = `  <div class="screenshot-grid-item" id="${screenshot.id}">\n`;
+    html += `    <div class="screenshot-id-badge">${screenshot.id}</div>\n`;
 
     if (screenshot.src) {
-      html += `      <img src="${screenshot.src}" alt="${this.escapeHtml(screenshot.title)}" class="screenshot-image" loading="lazy" />\n`;
+      html += `    <img src="${screenshot.src}" alt="${this.escapeHtml(screenshot.title)}" class="screenshot-thumbnail" loading="lazy" />\n`;
     } else {
-      html += `      <div class="screenshot-placeholder">Screenshot not available</div>\n`;
+      html += `    <div class="screenshot-placeholder">Not available</div>\n`;
     }
 
-    html += `    </div>\n`;
-
-    // Description if available
-    if (screenshot.description) {
-      html += `    <p class="screenshot-description">${this.escapeHtml(screenshot.description)}</p>\n`;
-    }
-
-    // Show where this screenshot is referenced
+    html += `    <div class="screenshot-caption">\n`;
+    html += `      <div class="screenshot-title">${this.escapeHtml(screenshot.title)}</div>\n`;
     if (screenshot.referencedIn.length > 0) {
-      html += `    <p class="screenshot-references">\n`;
-      html += `      <strong>Referenced in:</strong> ${screenshot.referencedIn.join(', ')}\n`;
-      html += `    </p>\n`;
+      html += `      <div class="screenshot-refs">Ref: ${screenshot.referencedIn.join(', ')}</div>\n`;
     }
+    html += `    </div>\n`;
 
     html += `  </div>\n\n`;
     return html;

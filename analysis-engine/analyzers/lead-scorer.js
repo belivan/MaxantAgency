@@ -66,6 +66,45 @@ export async function scoreLeadPriority(leadData) {
       ? leadData.premium_features.join(', ')
       : 'None detected';
 
+    // Format services if available
+    const servicesText = Array.isArray(leadData.services) && leadData.services.length > 0
+      ? leadData.services.join(', ')
+      : 'Not available';
+
+    // Calculate review recency for urgency scoring
+    let reviewRecencyText = 'Not available';
+    let daysSinceLastReview = null;
+    if (leadData.most_recent_review_date) {
+      try {
+        const lastReviewDate = new Date(leadData.most_recent_review_date);
+        daysSinceLastReview = Math.floor((Date.now() - lastReviewDate) / (1000 * 60 * 60 * 24));
+
+        if (daysSinceLastReview <= 30) {
+          reviewRecencyText = `${daysSinceLastReview} days ago (RECENT - active business)`;
+        } else if (daysSinceLastReview <= 90) {
+          reviewRecencyText = `${daysSinceLastReview} days ago (somewhat recent)`;
+        } else if (daysSinceLastReview <= 180) {
+          reviewRecencyText = `${daysSinceLastReview} days ago (moderately stale)`;
+        } else {
+          reviewRecencyText = `${daysSinceLastReview} days ago (STALE - may indicate low activity)`;
+        }
+      } catch (error) {
+        console.error('[Lead Scorer] Failed to parse review date:', error);
+      }
+    }
+
+    // Format website status for urgency assessment
+    const websiteStatusText = leadData.website_status || 'Unknown';
+    const websiteStatusEmoji = {
+      'active': '✅',
+      'timeout': '⚠️ URGENT',
+      'ssl_error': '⚠️ URGENT',
+      'not_found': '⚠️ URGENT',
+      'no_website': '⚠️ CRITICAL OPPORTUNITY',
+      'parking_page': '❌'
+    };
+    const formattedWebsiteStatus = `${websiteStatusText} ${websiteStatusEmoji[websiteStatusText] || ''}`;
+
     // Load lead priority scoring prompt
     const prompt = await loadPrompt('lead-qualification/lead-priority-scorer', {
       company_name: leadData.company_name || 'Unknown Company',
@@ -109,7 +148,16 @@ export async function scoreLeadPriority(leadData) {
 
       // Contact Info
       contact_email: leadData.contact_email || 'Not found',
-      social_platforms_present: socialPresenceText
+      social_platforms_present: socialPresenceText,
+
+      // Prospect Intelligence (NEW)
+      google_rating: leadData.google_rating ? String(leadData.google_rating) : 'Not available',
+      google_review_count: leadData.google_review_count ? String(leadData.google_review_count) : '0',
+      icp_match_score: leadData.icp_match_score ? String(leadData.icp_match_score) : 'Not available',
+      most_recent_review: reviewRecencyText,
+      website_status: formattedWebsiteStatus,
+      description: leadData.description || 'Not available',
+      services: servicesText
     });
 
     // Call AI API

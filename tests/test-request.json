@@ -1,0 +1,11 @@
+{
+  "prospect_ids": ["43504c38-7168-4133-8a47-2b314e7b2665"],
+  "project_id": "00000000-0000-0000-0000-000000000001",
+  "custom_prompts": {
+    "seo": { "model": "grok-4-fast" },
+    "content": { "model": "grok-4-fast" },
+    "social": { "model": "grok-4-fast" },
+    "desktop_visual": { "model": "gpt-4o-mini" },
+    "mobile_visual": { "model": "gpt-4o-mini" }
+  }
+}

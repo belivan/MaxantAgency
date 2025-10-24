@@ -40,19 +40,26 @@ console.log('Test 1: Import analyzer modules');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const designAnalyzer = await import('../analyzers/design-analyzer.js');
-  assert(typeof designAnalyzer.analyzeDesign === 'function', 'design-analyzer exports analyzeDesign function');
-  assert(typeof designAnalyzer.countQuickWins === 'function', 'design-analyzer exports countQuickWins function');
+  // DEPRECATED: design-analyzer.js removed - use desktop-visual-analyzer and mobile-visual-analyzer instead
+  console.log('⚠️  Skipping deprecated design-analyzer (use desktop/mobile analyzers)');
 
-  const seoAnalyzer = await import('../analyzers/seo-analyzer.js');
+  const desktopAnalyzer = await import('../../analyzers/desktop-visual-analyzer.js');
+  assert(typeof desktopAnalyzer.analyzeDesktopVisual === 'function', 'desktop-visual-analyzer exports analyzeDesktopVisual function');
+  assert(typeof desktopAnalyzer.countCriticalDesktopIssues === 'function', 'desktop-visual-analyzer exports countCriticalDesktopIssues function');
+
+  const mobileAnalyzer = await import('../../analyzers/mobile-visual-analyzer.js');
+  assert(typeof mobileAnalyzer.analyzeMobileVisual === 'function', 'mobile-visual-analyzer exports analyzeMobileVisual function');
+  assert(typeof mobileAnalyzer.countCriticalMobileIssues === 'function', 'mobile-visual-analyzer exports countCriticalMobileIssues function');
+
+  const seoAnalyzer = await import('../../analyzers/seo-analyzer.js');
   assert(typeof seoAnalyzer.analyzeSEO === 'function', 'seo-analyzer exports analyzeSEO function');
   assert(typeof seoAnalyzer.countCriticalSEOIssues === 'function', 'seo-analyzer exports countCriticalSEOIssues function');
 
-  const contentAnalyzer = await import('../analyzers/content-analyzer.js');
+  const contentAnalyzer = await import('../../analyzers/content-analyzer.js');
   assert(typeof contentAnalyzer.analyzeContent === 'function', 'content-analyzer exports analyzeContent function');
   assert(typeof contentAnalyzer.getBestEngagementHook === 'function', 'content-analyzer exports getBestEngagementHook function');
 
-  const socialAnalyzer = await import('../analyzers/social-analyzer.js');
+  const socialAnalyzer = await import('../../analyzers/social-analyzer.js');
   assert(typeof socialAnalyzer.analyzeSocial === 'function', 'social-analyzer exports analyzeSocial function');
   assert(typeof socialAnalyzer.hasSocialPresence === 'function', 'social-analyzer exports hasSocialPresence function');
 
@@ -68,8 +75,10 @@ console.log('Test 2: Import barrel export (analyzers/index.js)');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const analyzers = await import('../analyzers/index.js');
-  assert(typeof analyzers.analyzeDesign === 'function', 'Barrel exports analyzeDesign');
+  const analyzers = await import('../../analyzers/index.js');
+  // DEPRECATED: analyzeDesign removed from barrel export
+  assert(typeof analyzers.analyzeDesktopVisual === 'function', 'Barrel exports analyzeDesktopVisual');
+  assert(typeof analyzers.analyzeMobileVisual === 'function', 'Barrel exports analyzeMobileVisual');
   assert(typeof analyzers.analyzeSEO === 'function', 'Barrel exports analyzeSEO');
   assert(typeof analyzers.analyzeContent === 'function', 'Barrel exports analyzeContent');
   assert(typeof analyzers.analyzeSocial === 'function', 'Barrel exports analyzeSocial');
@@ -88,18 +97,18 @@ console.log('Test 3: Verify prompt configurations');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { loadPrompt } = await import('../shared/prompt-loader.js');
+  const { loadPrompt } = await import('../../shared/prompt-loader.js');
 
-  // Design prompt
-  const designPrompt = await loadPrompt('web-design/design-critique', {
+  // Desktop Visual prompt (replaces old design-critique)
+  const desktopPrompt = await loadPrompt('web-design/desktop-visual-analysis', {
     company_name: 'Test Company',
     industry: 'Restaurant',
     url: 'https://test.com',
     tech_stack: 'WordPress',
     load_time: '2.5'
   });
-  assert(designPrompt.model === 'gpt-4o', 'Design analyzer uses GPT-4o Vision');
-  assert(designPrompt.userPrompt.includes('Test Company'), 'Design prompt substitutes company_name');
+  assert(desktopPrompt.model === 'gpt-5', 'Desktop visual analyzer uses GPT-5');
+  assert(desktopPrompt.userPrompt.includes('Test Company'), 'Desktop visual prompt substitutes company_name');
 
   // SEO prompt
   const seoPrompt = await loadPrompt('web-design/seo-analysis', {
@@ -109,7 +118,7 @@ try {
     tech_stack: 'WordPress',
     html: '<html><head><title>Test</title></head><body><h1>Test</h1></body></html>'
   });
-  assert(seoPrompt.model === 'grok-4-fast', 'SEO analyzer uses Grok-4-fast');
+  assert(seoPrompt.model === 'gpt-5', 'SEO analyzer uses GPT-5');
 
   // Content prompt
   const contentPrompt = await loadPrompt('web-design/content-analysis', {
@@ -120,7 +129,7 @@ try {
     blog_posts: 'No blog posts found',
     key_pages: '- About section: Present\n- Services section: Present'
   });
-  assert(contentPrompt.model === 'grok-4-fast', 'Content analyzer uses Grok-4-fast');
+  assert(contentPrompt.model === 'gpt-5', 'Content analyzer uses GPT-5');
 
   // Social prompt
   const socialPrompt = await loadPrompt('web-design/social-analysis', {
@@ -131,7 +140,7 @@ try {
     social_metadata: '{}',
     website_branding: '{}'
   });
-  assert(socialPrompt.model === 'grok-4-fast', 'Social analyzer uses Grok-4-fast');
+  assert(socialPrompt.model === 'gpt-5', 'Social analyzer uses GPT-5');
 
   console.log('');
 
@@ -145,21 +154,12 @@ console.log('Test 4: Test analyzer helper functions');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { countQuickWins } = await import('../analyzers/design-analyzer.js');
-  const { countCriticalSEOIssues } = await import('../analyzers/seo-analyzer.js');
-  const { getBestEngagementHook } = await import('../analyzers/content-analyzer.js');
-  const { hasSocialPresence } = await import('../analyzers/social-analyzer.js');
+  // DEPRECATED: countQuickWins from design-analyzer.js removed
+  console.log('⚠️  Skipping deprecated countQuickWins test (design-analyzer removed)');
 
-  // Test countQuickWins
-  const mockDesignResults = {
-    issues: [
-      { effort: 'quick-win' },
-      { effort: '30 minutes' },
-      { priority: 'quick-win' }
-    ]
-  };
-  const quickWinCount = countQuickWins(mockDesignResults);
-  assert(quickWinCount === 3, `countQuickWins returns correct count (expected 3, got ${quickWinCount})`);
+  const { countCriticalSEOIssues } = await import('../../analyzers/seo-analyzer.js');
+  const { getBestEngagementHook } = await import('../../analyzers/content-analyzer.js');
+  const { hasSocialPresence } = await import('../../analyzers/social-analyzer.js');
 
   // Test countCriticalSEOIssues
   const mockSEOResults = {
@@ -201,7 +201,7 @@ console.log('Test 5: Test cost calculation');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const { calculateTotalCost } = await import('../analyzers/index.js');
+  const { calculateTotalCost } = await import('../../analyzers/index.js');
 
   const mockResults = {
     design: { _meta: { cost: 0.015 } },
@@ -228,7 +228,7 @@ console.log('Test 6: Test AI client utility');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const aiClient = await import('../shared/ai-client.js');
+  const aiClient = await import('../../shared/ai-client.js');
 
   assert(typeof aiClient.callAI === 'function', 'AI client exports callAI function');
   assert(typeof aiClient.parseJSONResponse === 'function', 'AI client exports parseJSONResponse function');

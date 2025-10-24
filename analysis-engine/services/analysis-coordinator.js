@@ -70,7 +70,10 @@ export class AnalysisCoordinator {
       analyzeMobileVisual(visualPages, enrichedContext, customPrompts?.mobileVisual),
       analyzeSocial(socialPages, parsedData.social.links, {
         platformCount: parsedData.social.platformCount,
-        platformsPresent: parsedData.social.platformsPresent
+        platformsPresent: parsedData.social.platformsPresent,
+        // Prospect social data from Google Maps/Discovery
+        profilesFromProspect: context.social_profiles_from_prospect || null,
+        metadataFromProspect: context.social_metadata_from_prospect || null
       }, enrichedContext, customPrompts?.social),
       analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
     ]);

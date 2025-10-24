@@ -140,6 +140,13 @@ export async function getProspects(filters = {}) {
       query = query.eq('project_prospects.project_id', filters.projectId);
     }
 
+    // Filter by recently reviewed (in months)
+    if (filters.recentlyReviewedWithin) {
+      const monthsAgo = new Date();
+      monthsAgo.setMonth(monthsAgo.getMonth() - filters.recentlyReviewedWithin);
+      query = query.gte('most_recent_review_date', monthsAgo.toISOString());
+    }
+
     // Order first (before limit/offset)
     query = query.order('created_at', { ascending: false });
 

@@ -7,13 +7,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node tests/test-prompt-loader.js && node tests/test-analyzers.js && node tests/test-grading-system.js",
-    "test:prompts": "node tests/test-prompt-loader.js",
-    "test:analyzers": "node tests/test-analyzers.js",
-    "test:grading": "node tests/test-grading-system.js",
-    "test:design": "node tests/test-design-analysis.js",
-    "test:seo": "node tests/test-seo-analysis.js",
-    "test:full": "node tests/test-full-pipeline.js"
+    "test": "node tests/unit/test-prompt-loader.js && node tests/unit/test-analyzers.js && node tests/unit/test-grading-system.js",
+    "test:prompts": "node tests/unit/test-prompt-loader.js",
+    "test:analyzers": "node tests/unit/test-analyzers.js",
+    "test:grading": "node tests/unit/test-grading-system.js"
   },
   "keywords": [
     "website-analysis",
@@ -36,7 +33,7 @@
     "openai": "^4.75.0",
     "playwright": "^1.40.0",
     "postgres": "^3.4.7",
-    "sharp": "^0.33.0",
+    "sharp": "^0.34.4",
     "winston": "^3.11.0",
     "xml2js": "^0.6.2"
   },

@@ -233,6 +233,15 @@ app.post('/api/analyze-url', async (req, res) => {
         sources: result.discovery_log.sources || []
       } : {},
 
+      // Report Synthesis Results (AI-generated condensed insights)
+      consolidated_issues: result.consolidated_issues || [],
+      consolidated_issue_stats: result.consolidated_issue_stats || null,
+      consolidated_issue_merge_log: result.consolidated_issue_merge_log || [],
+      executive_summary: result.executive_summary || null,
+      executive_summary_metadata: result.executive_summary_metadata || null,
+      synthesis_stage_metadata: result.synthesis_stage_metadata || {},
+      synthesis_errors: result.synthesis_errors || [],
+
       // Timestamps
       analyzed_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -374,7 +383,7 @@ app.post('/api/analyze', async (req, res) => {
       // IMPORTANT: Fetch prospects and verify they belong to the specified project
       const { data: fetchedProspects, error: fetchError } = await supabase
         .from('prospects')
-        .select('id, company_name, website, industry, city, state, address, contact_email, contact_phone, contact_name, description, services, social_profiles, social_metadata, icp_match_score, google_rating, google_review_count')
+        .select('id, company_name, website, industry, city, state, address, contact_email, contact_phone, contact_name, description, services, social_profiles, social_metadata, icp_match_score, google_rating, google_review_count, most_recent_review_date, website_status')
         .in('id', prospect_ids)
         .not('website', 'is', null);
 
@@ -487,7 +496,18 @@ app.post('/api/analyze', async (req, res) => {
           project_notes: assignment.notes || null,
           project_status: assignment.status || null,
           custom_score: assignment.custom_score || null,
-          discovery_query: assignment.discovery_query || null
+          discovery_query: assignment.discovery_query || null,
+
+          // Prospect intelligence data (NEW)
+          description: prospect.description || null,
+          services: prospect.services || null,
+          google_rating: prospect.google_rating || null,
+          google_review_count: prospect.google_review_count || null,
+          icp_match_score: prospect.icp_match_score || null,
+          most_recent_review_date: prospect.most_recent_review_date || null,
+          website_status: prospect.website_status || null,
+          social_profiles_from_prospect: prospect.social_profiles || null,
+          social_metadata_from_prospect: prospect.social_metadata || null
         }, {
           customPrompts: custom_prompts || undefined
         });

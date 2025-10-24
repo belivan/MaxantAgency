@@ -54,6 +54,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
     verified: 0,
     saved: 0,
     skipped: 0,
+    filteredInactive: 0, // Count of prospects skipped due to being inactive/closed
     failed: 0,
     cost: 0,
     timeMs: 0,
@@ -254,7 +255,8 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
                 // Scrape website with Playwright (get screenshot + page object)
                 websiteData = await scrapeWebsite(company.website, {
                   timeout: 30000,
-                  screenshotDir: './screenshots'
+                  screenshotDir: './screenshots',
+                  fullPage: options.fullPageScreenshots !== false  // Default true, can opt-out
                 });
 
                 if (websiteData.status === 'success') {
@@ -278,9 +280,9 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
                     pagesVisited: extractedData.pages_visited?.length || 1
                   });
 
-                  // Step 4b: Use Grok Vision as fallback (only if low confidence)
-                  if (extractedData.confidence < 50 && options.useGrokFallback !== false) {
-                    logInfo('Low confidence, using Grok Vision fallback', {
+                  // Step 4b: Use Vision AI as fallback (only if very low confidence)
+                  if (extractedData.confidence < 40 && options.useGrokFallback !== false) {
+                    logInfo('Very low confidence, using Vision AI fallback', {
                       company: company.name,
                       confidence: extractedData.confidence
                     });
@@ -311,7 +313,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
                         100
                       );
 
-                      logInfo('Grok Vision fallback applied', {
+                      logInfo('Vision AI fallback applied', {
                         company: company.name,
                         newConfidence: extractedData.confidence
                       });
@@ -322,7 +324,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
 
                   logInfo('Data extraction complete', {
                     company: company.name,
-                    method: extractedData.confidence >= 50 ? 'DOM only' : 'DOM + Grok',
+                    method: extractedData.confidence >= 40 ? 'DOM only' : 'DOM + Vision AI',
                     hasEmail: !!extractedData.contact_email,
                     hasPhone: !!extractedData.contact_phone,
                     services: extractedData.services?.length || 0
@@ -427,6 +429,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           google_place_id: company.googlePlaceId,
           google_rating: company.rating,
           google_review_count: company.reviewCount,
+          most_recent_review_date: company.mostRecentReviewDate,
           social_profiles: socialProfiles,
           social_metadata: socialMetadata
         };
@@ -471,6 +474,73 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
             });
             // Continue saving prospect even if relevance check fails
           }
+        }
+
+        // ========================================
+        // QUALITY FILTER: Skip inactive/closed businesses
+        // ========================================
+        // Calculate days since last review (if available)
+        let daysSinceLastReview = null;
+        if (company.mostRecentReviewDate) {
+          try {
+            const lastReviewDate = new Date(company.mostRecentReviewDate);
+            const now = Date.now();
+            daysSinceLastReview = Math.floor((now - lastReviewDate) / (1000 * 60 * 60 * 24));
+          } catch (error) {
+            logError('Failed to parse review date', error, {
+              company: company.name,
+              date: company.mostRecentReviewDate
+            });
+          }
+        }
+
+        // FILTER 1: Broken website + No recent activity = Likely closed
+        // A broken website with no reviews in 180+ days suggests the business is no longer operating
+        if (
+          ['ssl_error', 'timeout', 'not_found'].includes(websiteStatus) &&
+          (daysSinceLastReview === null || daysSinceLastReview > 180)
+        ) {
+          logInfo('Skipping inactive prospect (broken site + no recent reviews)', {
+            company: company.name,
+            websiteStatus,
+            daysSinceLastReview: daysSinceLastReview === null ? 'never' : daysSinceLastReview,
+            reason: 'Likely out of business - broken website with no activity'
+          });
+          results.skipped++;
+          results.filteredInactive = (results.filteredInactive || 0) + 1;
+          continue;
+        }
+
+        // FILTER 2: No website + No recent activity + Low rating
+        // No website, no recent customer engagement, and poor rating = not a viable prospect
+        if (
+          websiteStatus === 'no_website' &&
+          (daysSinceLastReview === null || daysSinceLastReview > 180) &&
+          (company.rating === null || company.rating < 3.5)
+        ) {
+          logInfo('Skipping inactive prospect (no website + no recent reviews + low rating)', {
+            company: company.name,
+            websiteStatus,
+            daysSinceLastReview: daysSinceLastReview === null ? 'never' : daysSinceLastReview,
+            rating: company.rating || 'none',
+            reason: 'Not viable - no website, no activity, poor reputation'
+          });
+          results.skipped++;
+          results.filteredInactive = (results.filteredInactive || 0) + 1;
+          continue;
+        }
+
+        // FILTER 3: Parking page = Domain for sale
+        // Parking pages indicate the domain is for sale, not an active business
+        if (websiteStatus === 'parking_page') {
+          logInfo('Skipping parking page', {
+            company: company.name,
+            websiteStatus,
+            reason: 'Domain for sale, not an active business'
+          });
+          results.skipped++;
+          results.filteredInactive = (results.filteredInactive || 0) + 1;
+          continue;
         }
 
         // Track actual models used for this prospect

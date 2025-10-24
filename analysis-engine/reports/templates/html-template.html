@@ -696,13 +696,259 @@
       color: var(--text-secondary);
     }
 
-    /* Print Styles */
+    /* At a Glance Section */
+    .at-a-glance {
+      background: linear-gradient(135deg, #1a1f2e 0%, #1e1a2e 100%);
+      border: 2px solid var(--accent-blue);
+    }
+
+    .glance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin: 24px 0;
+    }
+
+    .glance-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .glance-card:hover {
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .glance-highlight {
+      border: 2px solid var(--accent-blue);
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    .glance-positive {
+      border: 2px solid var(--accent-green);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .glance-roi {
+      border: 2px solid var(--accent-yellow);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .glance-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .glance-value {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 8px 0;
+    }
+
+    .glance-value.grade-a { color: var(--accent-green); }
+    .glance-value.grade-b { color: var(--accent-blue); }
+    .glance-value.grade-c { color: var(--accent-yellow); }
+    .glance-value.grade-d { color: var(--accent-red); }
+    .glance-value.grade-f { color: var(--accent-red); }
+
+    .glance-sublabel {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .top-issue-banner {
+      background: rgba(239, 68, 68, 0.1);
+      border: 2px solid var(--accent-red);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .top-issue-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .top-issue-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .top-issue-text {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .health-indicators {
+      margin-top: 24px;
+    }
+
+    .indicators-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .indicator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      border: 2px solid var(--border-color);
+      font-weight: 600;
+    }
+
+    .indicator-good {
+      border-color: var(--accent-green);
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+    }
+
+    .indicator-warning {
+      border-color: var(--accent-yellow);
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--accent-yellow);
+    }
+
+    .indicator-bad {
+      border-color: var(--accent-red);
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+    }
+
+    .indicator-icon {
+      font-size: 1.2rem;
+    }
+
+    /* Screenshot Grid (4 per row for desktop/mobile comparison) */
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 30px 0;
+    }
+
+    /* Responsive: 3 columns on tablets */
+    @media (max-width: 1200px) {
+      .screenshot-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    /* Responsive: 2 columns on mobile */
+    @media (max-width: 768px) {
+      .screenshot-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .screenshot-grid-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .screenshot-grid-item:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .screenshot-id-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      padding: 4px 8px;
+      background: var(--accent-blue);
+      color: white;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      z-index: 10;
+    }
+
+    .screenshot-thumbnail {
+      width: 100%;
+      height: auto;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .screenshot-caption {
+      font-size: 0.85rem;
+    }
+
+    .screenshot-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .screenshot-refs {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+        /* Print Styles - Optimized for 5-page max */
     @media print {
       body { background: white; color: black; }
-      .section { page-break-inside: avoid; }
-      .screenshot-item { page-break-inside: avoid; }
+      .container { max-width: 100%; padding: 20px; }
+      .section {
+        page-break-inside: avoid;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .screenshot-grid-item { page-break-inside: avoid; }
       .critical-finding { page-break-inside: avoid; }
-      .roadmap-phase { page-break-inside: avoid; }
+      .roadmap-phase {
+        page-break-inside: avoid;
+        padding: 15px;
+      }
+      .screenshot-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .screenshot-thumbnail {
+        max-height: 120px;
+      }
+      .header {
+        padding: 30px 15px;
+      }
+      .score-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
     }
   </style>
 </head>

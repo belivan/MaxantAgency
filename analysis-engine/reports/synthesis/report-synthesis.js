@@ -18,6 +18,9 @@ const STAGES = {
   EXEC_SUMMARY: 'executive-insights-generator'
 };
 
+// Default timeout is 3 minutes (180 seconds) per stage
+const SYNTHESIS_TIMEOUT = process.env.SYNTHESIS_TIMEOUT ? parseInt(process.env.SYNTHESIS_TIMEOUT) : 180000;
+
 /**
  * Safely stringify a value for prompt variables.
  */
@@ -76,6 +79,36 @@ function buildScreenshotReferences(pages = []) {
   }
 
   return references;
+}
+
+/**
+ * Create a promise that rejects after the specified timeout
+ */
+function createTimeoutPromise(timeoutMs, stageName) {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Stage "${stageName}" timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+}
+
+/**
+ * Run a synthesis stage with timeout protection
+ */
+async function runSynthesisStageWithTimeout(stage, context, timeoutMs = SYNTHESIS_TIMEOUT) {
+  const stagePromise = runSynthesisStage(stage, context);
+  const timeoutPromise = createTimeoutPromise(timeoutMs, stage);
+
+  try {
+    // Race between the actual stage and the timeout
+    const result = await Promise.race([stagePromise, timeoutPromise]);
+    return result;
+  } catch (error) {
+    if (error.message.includes('timed out')) {
+      console.warn(`[Report Synthesis] Stage ${stage} timed out after ${timeoutMs}ms`);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -235,10 +268,10 @@ export async function runReportSynthesis({
     screenshot_references_json: safeStringify(screenshotReferences)
   };
 
-  // Run both stages in parallel
+  // Run both stages in parallel with timeout protection
   const [dedupResponse, execSummaryResponse] = await Promise.allSettled([
-    runSynthesisStage(STAGES.DEDUP, consolidatedContext),
-    runSynthesisStage(STAGES.EXEC_SUMMARY, execSummaryContext)
+    runSynthesisStageWithTimeout(STAGES.DEDUP, consolidatedContext, SYNTHESIS_TIMEOUT),
+    runSynthesisStageWithTimeout(STAGES.EXEC_SUMMARY, execSummaryContext, SYNTHESIS_TIMEOUT)
   ]);
 
   // Process deduplication results

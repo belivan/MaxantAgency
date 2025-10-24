@@ -30,17 +30,43 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
   try {
     console.log(`[Social Analyzer] Analyzing social media presence across ${pages?.length || 0} pages...`);
 
-    // Check if we have social profiles to analyze
-    if (!socialProfiles || Object.keys(socialProfiles).length === 0) {
+    // Merge prospect social data with website-discovered social profiles
+    // Prioritize prospect data from Google Maps (often more complete/accurate)
+    let mergedSocialProfiles = { ...socialProfiles };
+    let mergedSocialMetadata = { ...socialMetadata };
+
+    if (socialMetadata.profilesFromProspect) {
+      console.log('[Social Analyzer] Merging social profiles from prospect data (Google Maps)...');
+      // Merge prospect profiles (prioritize prospect data if conflicts)
+      mergedSocialProfiles = {
+        ...mergedSocialProfiles,
+        ...socialMetadata.profilesFromProspect
+      };
+    }
+
+    if (socialMetadata.metadataFromProspect) {
+      console.log('[Social Analyzer] Merging social metadata from prospect...');
+      // Merge prospect metadata (follower counts, etc.)
+      mergedSocialMetadata = {
+        ...mergedSocialMetadata,
+        ...socialMetadata.metadataFromProspect,
+        // Keep the original counts/presence data
+        platformCount: socialMetadata.platformCount,
+        platformsPresent: socialMetadata.platformsPresent
+      };
+    }
+
+    // Check if we have social profiles to analyze (after merge)
+    if (!mergedSocialProfiles || Object.keys(mergedSocialProfiles).length === 0) {
       return createNoSocialProfilesResponse();
     }
 
     // Analyze social integration across pages
     const integrationData = pages ? analyzeSocialIntegration(pages) : null;
 
-    // Format social profiles for prompt
-    const profilesSummary = formatSocialProfiles(socialProfiles);
-    const metadataSummary = formatSocialMetadata(socialMetadata);
+    // Format social profiles for prompt (use merged data)
+    const profilesSummary = formatSocialProfiles(mergedSocialProfiles);
+    const metadataSummary = formatSocialMetadata(mergedSocialMetadata);
     const integrationSummary = integrationData ? formatIntegrationData(integrationData) : 'No integration data available';
 
     // Format website branding

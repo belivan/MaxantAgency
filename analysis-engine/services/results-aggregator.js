@@ -115,7 +115,16 @@ export class ResultsAggregator {
       owner_name: businessIntel.decisionMakerAccessibility?.ownerName,
       premium_features: businessIntel.premiumFeatures?.detected || [],
       budget_indicator: businessIntel.premiumFeatures?.budgetIndicator,
-      pages_crawled: pages.length
+      pages_crawled: pages.length,
+
+      // Prospect intelligence data (NEW)
+      google_rating: context.google_rating || null,
+      google_review_count: context.google_review_count || null,
+      icp_match_score: context.icp_match_score || null,
+      most_recent_review_date: context.most_recent_review_date || null,
+      website_status: context.website_status || null,
+      description: context.description || null,
+      services: context.services || null
     });
 
     console.log(`[ResultsAggregator] Lead scoring complete:`, {

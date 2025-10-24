@@ -207,6 +207,7 @@ async function extractCompanyData(place) {
         state: cachedProspect.state,
         rating: place.rating || cachedProspect.google_rating,
         reviewCount: place.user_ratings_total || cachedProspect.google_review_count,
+        mostRecentReviewDate: cachedProspect.most_recent_review_date,  // From cache
         googlePlaceId: place.place_id,
         types: place.types || [],
         industry: cachedProspect.industry,
@@ -239,6 +240,9 @@ async function extractCompanyData(place) {
       initialSocialProfiles[websiteValidation.socialProfile.platform] = websiteValidation.socialProfile.url;
     }
 
+    // Extract most recent review date
+    const mostRecentReviewDate = getMostRecentReviewDate(details.reviews);
+
     return {
       name: place.name,
       website: websiteValidation.website,  // null if it was a social URL
@@ -248,6 +252,7 @@ async function extractCompanyData(place) {
       state: addressComponents.state,
       rating: place.rating || null,
       reviewCount: place.user_ratings_total || null,
+      mostRecentReviewDate: mostRecentReviewDate,  // NEW: Most recent review timestamp
       googlePlaceId: place.place_id,
       types: place.types || [],
       industry: industry,
@@ -274,7 +279,7 @@ async function getPlaceDetails(placeId) {
     const response = await client.placeDetails({
       params: {
         place_id: placeId,
-        fields: ['website', 'formatted_phone_number', 'address_components', 'opening_hours'],
+        fields: ['website', 'formatted_phone_number', 'address_components', 'opening_hours', 'reviews'],
         key: apiKey
       },
       timeout: 10000
@@ -321,6 +326,28 @@ function parseAddressComponents(components) {
   });
 
   return address;
+}
+
+/**
+ * Extract the most recent review date from reviews array
+ *
+ * @param {Array} reviews - Reviews from Google Place Details
+ * @returns {string|null} ISO timestamp of most recent review, or null
+ */
+function getMostRecentReviewDate(reviews) {
+  if (!reviews || !Array.isArray(reviews) || reviews.length === 0) {
+    return null;
+  }
+
+  // Google reviews have a 'time' field (Unix timestamp)
+  const mostRecentTime = Math.max(...reviews.map(r => r.time || 0));
+
+  if (mostRecentTime === 0) {
+    return null;
+  }
+
+  // Convert Unix timestamp to ISO string
+  return new Date(mostRecentTime * 1000).toISOString();
 }
 
 /**

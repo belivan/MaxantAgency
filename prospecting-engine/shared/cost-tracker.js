@@ -24,6 +24,7 @@ class CostTracker {
       googleSearch: 0,
       grokAi: 0,
       openAi: 0,
+      anthropic: 0,
       total: 0
     };
 
@@ -32,12 +33,14 @@ class CostTracker {
       googleSearch: 0,
       grokAi: 0,
       openAi: 0,
+      anthropic: 0,
       total: 0
     };
 
     this.tokens = {
       grokAi: { input: 0, output: 0 },
-      openAi: { input: 0, output: 0 }
+      openAi: { input: 0, output: 0 },
+      anthropic: { input: 0, output: 0 }
     };
   }
 
@@ -162,6 +165,52 @@ class CostTracker {
   }
 
   /**
+   * Track Anthropic (Claude) usage
+   * @param {object} usage - Token usage from API response
+   * @param {string} model - Model name (claude-sonnet-4-5, claude-haiku-4-5, etc.)
+   */
+  trackAnthropic(usage, model = 'claude-sonnet-4-5') {
+    if (!usage) return 0;
+
+    const inputTokens = usage.prompt_tokens || usage.input_tokens || 0;
+    const outputTokens = usage.completion_tokens || usage.output_tokens || 0;
+
+    // Anthropic pricing (as of Oct 2025)
+    let inputCostPer1M = 3;   // Claude Sonnet 4.5 default
+    let outputCostPer1M = 15;
+
+    if (model.includes('haiku')) {
+      inputCostPer1M = 0.80;
+      outputCostPer1M = 4;
+    } else if (model.includes('3-5-sonnet') || model.includes('claude-3')) {
+      inputCostPer1M = 3;
+      outputCostPer1M = 15;
+    }
+
+    const inputCost = (inputTokens / 1_000_000) * inputCostPer1M;
+    const outputCost = (outputTokens / 1_000_000) * outputCostPer1M;
+    const cost = inputCost + outputCost;
+
+    this.costs.anthropic += cost;
+    this.costs.total += cost;
+    this.calls.anthropic += 1;
+    this.calls.total += 1;
+    this.tokens.anthropic.input += inputTokens;
+    this.tokens.anthropic.output += outputTokens;
+
+    if (process.env.ENABLE_COST_TRACKING === 'true') {
+      logCost('Anthropic', cost, {
+        model,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+        total_cost: this.costs.anthropic
+      });
+    }
+
+    return cost;
+  }
+
+  /**
    * Get current cost summary
    * @returns {object} Cost breakdown
    */
@@ -172,6 +221,7 @@ class CostTracker {
         googleSearch: this.costs.googleSearch.toFixed(4),
         grokAi: this.costs.grokAi.toFixed(4),
         openAi: this.costs.openAi.toFixed(4),
+        anthropic: this.costs.anthropic.toFixed(4),
         total: this.costs.total.toFixed(4)
       },
       calls: this.calls,
@@ -195,6 +245,7 @@ class CostTracker {
     console.log(`Google Search API:  $${summary.costs.googleSearch} (${summary.calls.googleSearch} calls)`);
     console.log(`Grok AI:            $${summary.costs.grokAi} (${summary.calls.grokAi} calls, ${summary.tokens.grokAi.input + summary.tokens.grokAi.output} tokens)`);
     console.log(`OpenAI:             $${summary.costs.openAi} (${summary.calls.openAi} calls, ${summary.tokens.openAi.input + summary.tokens.openAi.output} tokens)`);
+    console.log(`Anthropic:          $${summary.costs.anthropic} (${summary.calls.anthropic} calls, ${summary.tokens.anthropic.input + summary.tokens.anthropic.output} tokens)`);
     console.log('───────────────────────────────────────────────────────');
     console.log(`TOTAL COST:         $${summary.costs.total}`);
     console.log(`Avg Cost/Call:      $${summary.averageCostPerCall}`);

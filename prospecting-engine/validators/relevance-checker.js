@@ -34,6 +34,21 @@ export async function checkRelevance(prospect, brief, options = {}) {
       model: modelOverride || (customPrompt?.model) || 'default'
     });
 
+    // Calculate time since last review
+    let reviewRecencyText = 'No recent reviews';
+    if (prospect.most_recent_review_date) {
+      const reviewDate = new Date(prospect.most_recent_review_date);
+      const now = new Date();
+      const daysSince = Math.floor((now - reviewDate) / (1000 * 60 * 60 * 24));
+
+      if (daysSince < 30) {
+        reviewRecencyText = `${daysSince} day${daysSince !== 1 ? 's' : ''} ago`;
+      } else {
+        const monthsSince = Math.floor(daysSince / 30);
+        reviewRecencyText = `${monthsSince} month${monthsSince !== 1 ? 's' : ''} ago`;
+      }
+    }
+
     // Prepare variables for prompt
     const variables = {
       icp_industry: brief.industry || 'business',
@@ -49,7 +64,8 @@ export async function checkRelevance(prospect, brief, options = {}) {
       company_description: prospect.description || 'N/A',
       company_services: Array.isArray(prospect.services) ? prospect.services.join(', ') : 'N/A',
       website_status: prospect.website_status || 'unknown',
-      social_count: countSocialProfiles(prospect.social_profiles)
+      social_count: countSocialProfiles(prospect.social_profiles),
+      most_recent_review: reviewRecencyText
     };
 
     // Use custom prompt if provided, otherwise load default
@@ -140,79 +156,98 @@ function calculateRuleBasedScore(prospect, brief) {
     locationMatch: 0,
     qualityScore: 0,
     presenceScore: 0,
-    dataScore: 0
+    dataScore: 0,
+    reviewRecency: 0
   };
 
-  // Industry match (40 points)
+  // Industry match (36 points) - reduced from 40
   if (prospect.industry) {
     const prospectIndustry = prospect.industry.toLowerCase();
     const targetIndustry = (brief.industry || '').toLowerCase();
 
     if (prospectIndustry.includes(targetIndustry) || targetIndustry.includes(prospectIndustry)) {
-      breakdown.industryMatch = 40;
-      score += 40;
+      breakdown.industryMatch = 36;
+      score += 36;
     } else if (prospectIndustry && targetIndustry) {
-      breakdown.industryMatch = 10;
-      score += 10; // Partial match
+      breakdown.industryMatch = 9;
+      score += 9; // Partial match
     }
   }
 
-  // Location match (20 points)
+  // Location match (18 points) - reduced from 20
   if (prospect.city && brief.city) {
     const prospectCity = prospect.city.toLowerCase();
     const targetCity = brief.city.toLowerCase();
 
     if (prospectCity.includes(targetCity) || targetCity.includes(prospectCity)) {
-      breakdown.locationMatch = 20;
-      score += 20;
+      breakdown.locationMatch = 18;
+      score += 18;
     } else if (prospect.state && brief.city && brief.city.includes(prospect.state)) {
-      breakdown.locationMatch = 10;
-      score += 10; // Same state
+      breakdown.locationMatch = 9;
+      score += 9; // Same state
     }
   }
 
-  // Quality score (20 points)
+  // Quality score (18 points) - reduced from 20
   if (prospect.google_rating) {
     const rating = parseFloat(prospect.google_rating);
     if (rating >= 4.5) {
-      breakdown.qualityScore = 20;
-      score += 20;
+      breakdown.qualityScore = 18;
+      score += 18;
     } else if (rating >= 4.0) {
-      breakdown.qualityScore = 15;
-      score += 15;
+      breakdown.qualityScore = 14;
+      score += 14;
     } else if (rating >= 3.5) {
-      breakdown.qualityScore = 10;
-      score += 10;
+      breakdown.qualityScore = 9;
+      score += 9;
     } else {
       breakdown.qualityScore = 5;
       score += 5;
     }
   }
 
-  // Online presence (10 points)
+  // Online presence (9 points) - reduced from 10
   const hasWebsite = prospect.website_status === 'active';
   const socialCount = countSocialProfiles(prospect.social_profiles);
 
   if (hasWebsite && socialCount > 0) {
-    breakdown.presenceScore = 10;
-    score += 10;
+    breakdown.presenceScore = 9;
+    score += 9;
   } else if (hasWebsite) {
-    breakdown.presenceScore = 7;
-    score += 7;
+    breakdown.presenceScore = 6;
+    score += 6;
   } else {
     breakdown.presenceScore = 3;
     score += 3;
   }
 
-  // Data completeness (10 points)
+  // Data completeness (9 points) - reduced from 10
   let dataPoints = 0;
   if (prospect.contact_email) dataPoints++;
   if (prospect.contact_phone) dataPoints++;
   if (prospect.description) dataPoints++;
   if (prospect.services && prospect.services.length > 0) dataPoints++;
 
-  breakdown.dataScore = Math.min(10, dataPoints * 2.5);
+  breakdown.dataScore = Math.min(9, Math.round(dataPoints * 2.25));
   score += breakdown.dataScore;
+
+  // Review recency (10 points) - NEW!
+  if (prospect.most_recent_review_date) {
+    const reviewDate = new Date(prospect.most_recent_review_date);
+    const now = new Date();
+    const daysSince = Math.floor((now - reviewDate) / (1000 * 60 * 60 * 24));
+
+    if (daysSince < 30) {
+      breakdown.reviewRecency = 10; // Reviewed within 1 month
+      score += 10;
+    } else if (daysSince < 90) {
+      breakdown.reviewRecency = 7;  // Reviewed within 3 months
+      score += 7;
+    } else if (daysSince < 180) {
+      breakdown.reviewRecency = 5;  // Reviewed within 6 months
+      score += 5;
+    }
+  }
 
   const isRelevant = score >= 60;
 
@@ -225,7 +260,7 @@ function calculateRuleBasedScore(prospect, brief) {
   return {
     score: Math.round(score),
     isRelevant,
-    reasoning: `Rule-based scoring: Industry (${breakdown.industryMatch}), Location (${breakdown.locationMatch}), Quality (${breakdown.qualityScore}), Presence (${breakdown.presenceScore}), Data (${breakdown.dataScore}). Total: ${Math.round(score)}`,
+    reasoning: `Rule-based scoring: Industry (${breakdown.industryMatch}), Location (${breakdown.locationMatch}), Quality (${breakdown.qualityScore}), Presence (${breakdown.presenceScore}), Data (${breakdown.dataScore}), Review Recency (${breakdown.reviewRecency}). Total: ${Math.round(score)}`,
     recommendation: isRelevant ? 'Relevant prospect' : 'Below relevance threshold',
     breakdown
   };
