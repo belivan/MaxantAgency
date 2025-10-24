@@ -57,12 +57,20 @@ export async function generateReport(analysisResult, options = {}) {
   // For PDF format, generate HTML first then convert
   if (format === 'pdf') {
     console.log('Generating PDF report (HTML -> PDF conversion)...');
-    
-    // Use V2 exporter for executive-focused reports (default when synthesis is enabled)
-    const useV2 = synthesisData !== null || process.env.REPORT_STYLE === 'executive';
-    const htmlContent = useV2 
-      ? await generateHTMLReportV2(analysisResult, synthesisData)
-      : await generateHTMLReport(analysisResult, synthesisData);
+
+    // Use V3 exporter for concise professional reports (default)
+    const useV3 = process.env.REPORT_VERSION !== 'v2' && process.env.REPORT_VERSION !== 'v1';
+    const useV2 = !useV3 && (synthesisData !== null || process.env.REPORT_STYLE === 'executive');
+
+    let htmlContent;
+    if (useV3) {
+      const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3-concise.js');
+      htmlContent = await generateHTMLReportV3(analysisResult, synthesisData);
+    } else if (useV2) {
+      htmlContent = await generateHTMLReportV2(analysisResult, synthesisData);
+    } else {
+      htmlContent = await generateHTMLReport(analysisResult, synthesisData);
+    }
     
     const outputPath = pdfOutputPath || `report-${Date.now()}.pdf`;
     
@@ -114,12 +122,20 @@ export async function generateReport(analysisResult, options = {}) {
 
   // For HTML format, use dedicated HTML exporter
   if (format === 'html') {
-    // Use V2 exporter for executive-focused reports (default when synthesis is enabled)
-    const useV2 = synthesisData !== null || process.env.REPORT_STYLE === 'executive';
-    
-    const htmlContent = useV2 
-      ? await generateHTMLReportV2(analysisResult, synthesisData)
-      : await generateHTMLReport(analysisResult, synthesisData);
+    // Use V3 exporter for concise professional reports (default)
+    // V3 is the latest with light theme, mobile-responsive, and no repetition
+    const useV3 = process.env.REPORT_VERSION !== 'v2' && process.env.REPORT_VERSION !== 'v1';
+    const useV2 = !useV3 && (synthesisData !== null || process.env.REPORT_STYLE === 'executive');
+
+    let htmlContent;
+    if (useV3) {
+      const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3-concise.js');
+      htmlContent = await generateHTMLReportV3(analysisResult, synthesisData);
+    } else if (useV2) {
+      htmlContent = await generateHTMLReportV2(analysisResult, synthesisData);
+    } else {
+      htmlContent = await generateHTMLReport(analysisResult, synthesisData);
+    }
     
     const generationTime = Date.now() - startTime;
 

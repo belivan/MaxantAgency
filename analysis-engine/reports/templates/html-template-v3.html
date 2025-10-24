@@ -779,7 +779,51 @@
            RESPONSIVE DESIGN
            =============================================== */
 
-        @media (max-width: 768px) {
+        @media screen and (max-width: 768px) {
+            /* SIGNIFICANTLY increase base font size for mobile readability */
+            html {
+                font-size: 22px !important; /* Doubled from base 16px for mobile */
+            }
+
+            /* Make all text substantially larger on mobile */
+            body {
+                font-size: 1.1rem; /* Even larger base text */
+                line-height: 1.8;
+            }
+
+            /* Adjust specific text sizes for mobile */
+            .section-description {
+                font-size: 1.2rem; /* Much larger body text */
+                line-height: 1.8;
+            }
+
+            .action-description {
+                font-size: 1.1rem;
+                line-height: 1.8;
+            }
+
+            .action-title {
+                font-size: 1.4rem; /* Larger headings */
+                font-weight: 600;
+            }
+
+            .section-title {
+                font-size: 1.8rem; /* Much bigger section titles */
+            }
+
+            /* Make all paragraph text larger */
+            p {
+                font-size: 1.1rem;
+                line-height: 1.8;
+            }
+
+            /* Increase list text */
+            ul li, ol li {
+                font-size: 1.1rem;
+                line-height: 1.8;
+                margin-bottom: 0.5rem;
+            }
+
             .hero-section {
                 padding: var(--space-8) 0;
             }
@@ -819,11 +863,104 @@
                 left: 0;
                 margin: 0 auto var(--space-4);
             }
+
+            /* Much larger table text on mobile */
+            .data-table td {
+                font-size: 1.1rem;
+                padding: var(--space-4);
+                line-height: 1.8;
+            }
+
+            .data-table th {
+                font-size: 1rem;
+                padding: var(--space-4);
+            }
+
+            /* Much larger touch targets for easier interaction */
+            .task-checkbox {
+                width: 28px;
+                height: 28px;
+            }
+
+            .action-number {
+                width: 44px;
+                height: 44px;
+                font-size: 1.2rem;
+                font-weight: 600;
+            }
+
+            /* Ensure metric values are large enough */
+            .metric-card-value {
+                font-size: 2rem; /* Big numbers */
+            }
+
+            .metric-card-detail {
+                font-size: 1rem; /* Readable detail text */
+            }
+
+            /* Score display adjustments */
+            .grade-letter {
+                font-size: 3.5rem; /* Huge grade letter */
+            }
+
+            .score-value {
+                font-size: 1.5rem; /* Large score number */
+            }
+
+            /* Ensure buttons and badges are readable */
+            .action-priority {
+                font-size: 0.9rem;
+                padding: 0.3rem 0.7rem;
+            }
+
+            .phase-timeline {
+                font-size: 1rem;
+                padding: 0.4rem 0.8rem;
+            }
         }
 
-        @media (max-width: 480px) {
+        @media screen and (max-width: 480px) {
+            /* MUCH larger text for small phones - nearly double */
             html {
-                font-size: 14px;
+                font-size: 24px !important; /* Nearly doubled for small screens */
+            }
+
+            /* Ensure all text is very readable on small phones */
+            body {
+                font-size: 1.1rem;
+                line-height: 1.9;
+            }
+
+            .section-description,
+            .action-description,
+            p {
+                font-size: 1.15rem; /* Larger than base for maximum readability */
+                line-height: 1.9;
+            }
+
+            /* Even bigger headings on small phones */
+            .section-title {
+                font-size: 2rem;
+                line-height: 1.3;
+            }
+
+            .action-title {
+                font-size: 1.5rem;
+                line-height: 1.4;
+            }
+
+            /* Larger labels and meta text */
+            .metric-label,
+            .impact-label,
+            .metric-card-title {
+                font-size: 1rem; /* No tiny text */
+            }
+
+            /* Lists need to be readable too */
+            ul li, ol li {
+                font-size: 1.15rem;
+                line-height: 1.9;
+                margin-bottom: 0.75rem;
             }
 
             .container {
@@ -832,6 +969,15 @@
 
             .screenshots-grid {
                 grid-template-columns: 1fr;
+            }
+
+            /* Increase button/card padding for easier tapping */
+            .action-card {
+                padding: var(--space-6);
+            }
+
+            .metric-card {
+                padding: var(--space-6);
             }
         }
 

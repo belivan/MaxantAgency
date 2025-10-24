@@ -275,7 +275,7 @@ async function processScreenshots(analysisResult, registry) {
       console.log(`[HTML Exporter V2] Compressing screenshot: ${absolutePath}`);
       const compressedDataUri = await compressImageFromFile(absolutePath, {
         maxWidth: 1200,
-        quality: 0.85
+        quality: 85  // Changed from 0.85 to integer percentage
       });
 
       const sizeKB = Math.round(compressedDataUri.length / 1024);

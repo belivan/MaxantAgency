@@ -47,6 +47,8 @@ export interface AnalysisPrompts {
   accessibility?: PromptConfig;
   industry?: PromptConfig;
   leadScorer?: PromptConfig;
+  issueDeduplication?: PromptConfig;
+  executiveInsights?: PromptConfig;
   [key: string]: PromptConfig | AnalysisPrompts['_meta'] | undefined;
   _meta?: {
     collectedAt: string;
@@ -80,7 +82,9 @@ export function PromptEditor({
     'content',
     'social',
     'accessibility',
-    'leadScorer'
+    'leadScorer',
+    'issueDeduplication',
+    'executiveInsights'
   ];
 
   const PROMPT_LABELS: Record<string, { title: string; description: string }> = {
@@ -111,6 +115,14 @@ export function PromptEditor({
     leadScorer: {
       title: 'Lead Priority Scorer',
       description: 'Qualification & tier assignment'
+    },
+    issueDeduplication: {
+      title: 'Issue Deduplication',
+      description: 'AI consolidation of redundant findings (~$0.036/lead)'
+    },
+    executiveInsights: {
+      title: 'Executive Insights Generator',
+      description: 'AI-powered executive summaries & roadmaps (~$0.025/lead)'
     }
   };
 

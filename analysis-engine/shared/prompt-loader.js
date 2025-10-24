@@ -253,7 +253,9 @@ export async function collectAnalysisPrompts() {
       socialPrompt,
       accessibilityPrompt,
       industryPrompt,
-      leadScorerPrompt
+      leadScorerPrompt,
+      issueDeduplicationPrompt,
+      executiveInsightsPrompt
     ] = await Promise.all([
       getRawPromptConfig('web-design/design-critique'),
       getRawPromptConfig('web-design/desktop-visual-analysis'),
@@ -263,7 +265,9 @@ export async function collectAnalysisPrompts() {
       getRawPromptConfig('web-design/social-analysis'),
       getRawPromptConfig('web-design/accessibility-analysis'),
       getRawPromptConfig('web-design/industry-critique'),
-      getRawPromptConfig('lead-qualification/lead-priority-scorer')
+      getRawPromptConfig('lead-qualification/lead-priority-scorer'),
+      getRawPromptConfig('report-synthesis/issue-deduplication'),
+      getRawPromptConfig('report-synthesis/executive-insights-generator')
     ]);
 
     return {
@@ -276,6 +280,8 @@ export async function collectAnalysisPrompts() {
       accessibility: accessibilityPrompt,
       industry: industryPrompt,
       leadScorer: leadScorerPrompt,
+      issueDeduplication: issueDeduplicationPrompt,
+      executiveInsights: executiveInsightsPrompt,
       _meta: {
         collectedAt: new Date().toISOString(),
         version: '1.0'

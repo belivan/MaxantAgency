@@ -45,7 +45,10 @@ function buildScreenshotReferences(pages = []) {
   const references = [];
   let counter = 1;
 
-  for (const page of pages || []) {
+  // Ensure pages is iterable
+  const pageList = Array.isArray(pages) ? pages : [];
+
+  for (const page of pageList) {
     const baseTitle = page.title || page.metadata?.title || page.url || 'Page';
     const modules = Object.entries(page.analyzed_for || {})
       .filter(([, used]) => Boolean(used))
@@ -246,7 +249,9 @@ export async function runReportSynthesis({
   };
 
   // Build screenshot references upfront (needed by both stages)
-  const screenshotReferences = buildScreenshotReferences(crawlPages);
+  // Ensure crawlPages is an array before passing it
+  const safeCrawlPages = Array.isArray(crawlPages) ? crawlPages : [];
+  const screenshotReferences = buildScreenshotReferences(safeCrawlPages);
   console.log(`[Report Synthesis] Built ${screenshotReferences.length} screenshot references`);
 
   // ⚡ PARALLEL SYNTHESIS: Run both stages simultaneously

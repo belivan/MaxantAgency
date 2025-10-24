@@ -6,6 +6,7 @@
 import { generateReport, generateStoragePath, generateReportFilename, validateAnalysisResult } from './report-generator.js';
 import { uploadReport, saveReportMetadata } from './storage/supabase-storage.js';
 import { runReportSynthesis } from './synthesis/report-synthesis.js';
+import { generateHTMLReportV3 } from './exporters/html-exporter-v3-concise.js';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
