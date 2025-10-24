@@ -46,7 +46,9 @@ try {
  * @param {object} scores - Scores from all analyzers
  * @param {number} scores.design - Design score (0-100)
  * @param {number} scores.seo - SEO score (0-100)
+ * @param {number} scores.performance - Performance score (0-100) from PageSpeed
  * @param {number} scores.content - Content score (0-100)
+ * @param {number} scores.accessibility - Accessibility score (0-100)
  * @param {number} scores.social - Social media score (0-100)
  * @param {object} metadata - Additional data for bonuses/penalties
  * @param {number} metadata.quickWinCount - Number of quick-win fixes identified
@@ -64,7 +66,9 @@ export function calculateGrade(scores, metadata = {}) {
   const finalScores = {
     design: scores.design ?? config.defaults.missingScores.design,
     seo: scores.seo ?? config.defaults.missingScores.seo,
+    performance: scores.performance ?? config.defaults.missingScores.performance,
     content: scores.content ?? config.defaults.missingScores.content,
+    accessibility: scores.accessibility ?? config.defaults.missingScores.accessibility,
     social: scores.social ?? config.defaults.missingScores.social
   };
 
@@ -75,7 +79,9 @@ export function calculateGrade(scores, metadata = {}) {
   const weightedScore =
     finalScores.design * weights.design +
     finalScores.seo * weights.seo +
+    finalScores.performance * weights.performance +
     finalScores.content * weights.content +
+    finalScores.accessibility * weights.accessibility +
     finalScores.social * weights.social;
 
   // Apply bonuses

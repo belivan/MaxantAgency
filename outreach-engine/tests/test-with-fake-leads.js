@@ -120,7 +120,7 @@ async function testEmailGeneration() {
         body: JSON.stringify({
           url: lead.url,
           strategy: 'problem-first',
-          model: 'claude-haiku-3-5',
+          model: 'claude-haiku-4-5',
           lead: lead  // Pass full lead data
         })
       });

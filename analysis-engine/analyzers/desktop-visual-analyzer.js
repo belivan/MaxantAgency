@@ -1,5 +1,5 @@
 /**
- * Desktop Visual Analyzer - Uses GPT-5 Vision to analyze desktop screenshot
+ * Desktop Visual Analyzer - Uses gpt-5-mini Vision to analyze desktop screenshot
  *
  * Cost: ~$0.015 per analysis
  * Analyzes: desktop layout, navigation, typography, visual hierarchy, design issues
@@ -141,7 +141,7 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     const quickWinCount = allIssues.filter(issue => issue.difficulty === 'quick-win').length;
 
     // Add metadata
-    const resolvedModel = lastPromptModel || customPrompt?.model || 'gpt-5';
+    const resolvedModel = lastPromptModel || customPrompt?.model || 'gpt-5-mini-mini';
 
     return {
       model: resolvedModel,
@@ -168,7 +168,7 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     console.error('Desktop visual analysis failed:', error);
 
     // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5';
+    const fallbackModel = customPrompt?.model || 'gpt-5-mini-mini';
     return {
       model: fallbackModel,
       visualScore: 30,

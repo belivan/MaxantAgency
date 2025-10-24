@@ -37,10 +37,10 @@ import { autoGenerateReport } from './reports/auto-report-generator.js';
  * @returns {Promise<object>} Complete analysis results
  */
 export async function analyzeWebsiteIntelligent(url, context = {}, options = {}) {
-  const { 
-    customPrompts, 
-    onProgress, 
-    maxPagesPerModule = 5,
+  const {
+    customPrompts,
+    onProgress,
+    maxPagesPerModule = process.env.MAX_PAGES_PER_MODULE ? parseInt(process.env.MAX_PAGES_PER_MODULE) : 5,
     generate_report = false,
     report_format = 'html',
     save_to_database = false
@@ -53,40 +53,82 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     }
   };
 
+  // Check if multi-page crawl is enabled
+  const enableMultiPageCrawl = process.env.ENABLE_MULTI_PAGE_CRAWL !== 'false';
+
   try {
-    // ========================================
-    // PHASE 1: DISCOVERY
-    // ========================================
-    const discoveryService = new DiscoveryService({ 
-      timeout: 30000,
-      onProgress: progress 
-    });
+    let sitemap, pageSelection, crawlData;
 
-    const sitemap = await discoveryService.discover(url);
-    console.log(`[Orchestrator] Discovery:`, discoveryService.getStatistics(sitemap));
+    if (enableMultiPageCrawl) {
+      // ========================================
+      // PHASE 1: DISCOVERY (Multi-Page Mode)
+      // ========================================
+      const discoveryService = new DiscoveryService({
+        timeout: 30000,
+        onProgress: progress
+      });
 
-    // ========================================
-    // PHASE 2: PAGE SELECTION
-    // ========================================
-    const pageSelectionService = new PageSelectionService({ 
-      maxPagesPerModule,
-      onProgress: progress 
-    });
+      sitemap = await discoveryService.discover(url);
+      console.log(`[Orchestrator] Discovery:`, discoveryService.getStatistics(sitemap));
 
-    const pageSelection = await pageSelectionService.selectPages(sitemap, context);
-    console.log(`[Orchestrator] Page Selection:`, pageSelectionService.getStatistics(pageSelection));
+      // ========================================
+      // PHASE 2: PAGE SELECTION (Multi-Page Mode)
+      // ========================================
+      const pageSelectionService = new PageSelectionService({
+        maxPagesPerModule,
+        onProgress: progress
+      });
 
-    // ========================================
-    // PHASE 3: CRAWLING
-    // ========================================
-    const crawlingService = new CrawlingService({ 
-      timeout: 30000,
-      concurrency: 3,  // Parallel contexts using shared browser
-      onProgress: progress 
-    });
+      pageSelection = await pageSelectionService.selectPages(sitemap, context);
+      console.log(`[Orchestrator] Page Selection:`, pageSelectionService.getStatistics(pageSelection));
 
-    const crawlData = await crawlingService.crawl(url, pageSelection.uniquePages);
-    console.log(`[Orchestrator] Crawling:`, crawlingService.getStatistics(crawlData));
+      // ========================================
+      // PHASE 3: CRAWLING (Multi-Page Mode)
+      // ========================================
+      const crawlingService = new CrawlingService({
+        timeout: 30000,
+        concurrency: 3,  // Parallel contexts using shared browser
+        onProgress: progress
+      });
+
+      crawlData = await crawlingService.crawl(url, pageSelection.uniquePages);
+      console.log(`[Orchestrator] Crawling:`, crawlingService.getStatistics(crawlData));
+
+    } else {
+      // ========================================
+      // SINGLE-PAGE MODE (ENABLE_MULTI_PAGE_CRAWL=false)
+      // ========================================
+      console.log(`[Orchestrator] Multi-page crawl disabled. Running single-page analysis only.`);
+      progress({ step: 'crawl', message: 'Single-page mode: crawling homepage only...' });
+
+      const crawlingService = new CrawlingService({
+        timeout: 30000,
+        concurrency: 1,
+        onProgress: progress
+      });
+
+      // Only crawl the homepage
+      crawlData = await crawlingService.crawl(url, ['/']);
+
+      // Create minimal sitemap/page selection for single page
+      sitemap = {
+        pages: [{ url: '/', fullUrl: url }],
+        totalPages: 1,
+        sources: ['single-page-mode'],
+        errors: {}
+      };
+
+      pageSelection = {
+        strategy: 'single-page-mode',
+        seo_pages: ['/'],
+        content_pages: ['/'],
+        visual_pages: ['/'],
+        social_pages: ['/'],
+        uniquePages: ['/']
+      };
+
+      console.log(`[Orchestrator] Single-page mode: homepage crawled successfully`);
+    }
 
     // ========================================
     // PHASE 4: ANALYSIS
@@ -104,6 +146,39 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       customPrompts
     );
     console.log(`[Orchestrator] Analysis:`, analysisCoordinator.getStatistics(analysisResults));
+
+    // ========================================
+    // PHASE 4.5: PERFORMANCE ANALYTICS (OPTIONAL)
+    // ========================================
+    const enablePerformance = process.env.ENABLE_PERFORMANCE_API !== 'false';
+
+    if (enablePerformance) {
+      console.log(`[Orchestrator] Fetching performance analytics...`);
+      progress({ step: 'performance', message: 'Fetching PageSpeed + CrUX data...' });
+
+      const { PerformanceService } = await import('./services/performance-service.js');
+      const performanceService = new PerformanceService({ onProgress: progress });
+
+      const performanceData = await performanceService.fetchAllPerformanceData(url);
+      const performanceIssues = performanceService.generatePerformanceIssues(performanceData);
+
+      analysisResults.performance = {
+        pageSpeed: performanceData.pageSpeed,
+        crux: performanceData.crux,
+        issues: performanceIssues,
+        errors: performanceData.errors,
+        model: 'performance-api'  // Not AI, but for consistency
+      };
+
+      console.log(`[Orchestrator] Performance data fetched:`, {
+        pageSpeedMobile: performanceData.pageSpeed.mobile ? 'SUCCESS' : 'FAILED',
+        pageSpeedDesktop: performanceData.pageSpeed.desktop ? 'SUCCESS' : 'FAILED',
+        cruxData: performanceData.crux.hasData ? 'SUCCESS' : 'NO DATA',
+        issuesFound: performanceIssues.length
+      });
+    } else {
+      console.log(`[Orchestrator] Performance analytics disabled`);
+    }
 
     // ========================================
     // PHASE 5: RESULTS AGGREGATION
@@ -131,59 +206,53 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     if (generate_report) {
       console.log(`\n[Report Generation] Starting ${report_format.toUpperCase()} report generation...`);
       progress({ step: 'report', message: `Generating ${report_format} report...` });
-      
-      try {
-        const reportResult = await autoGenerateReport(finalResults, {
-          format: report_format,
-          sections: ['all'],
-          saveToDatabase: save_to_database,
-          project_id: context.project_id
-        });
 
-        if (reportResult.success) {
-          console.log(`[Report Generation] ✅ Report generated successfully`);
-          console.log(`[Report Generation] 📄 Local path: ${reportResult.local_path}`);
-          
-          // Add report paths to the result
-          finalResults.report_html_path = reportResult.local_path;
-          finalResults.report_markdown_path = null;
-          finalResults.report_storage_path = reportResult.storage_path;
-          finalResults.report_format = report_format;
-          
-          // Add synthesis metadata if available
-          if (reportResult.synthesis?.used) {
-            const totalOriginalIssues = 
-              (finalResults.design_issues_desktop?.length || 0) +
-              (finalResults.design_issues_mobile?.length || 0) +
-              (finalResults.seo_issues?.length || 0) +
-              (finalResults.content_issues?.length || 0) +
-              (finalResults.social_issues?.length || 0) +
-              (finalResults.accessibility_issues?.length || 0);
+      const reportResult = await autoGenerateReport(finalResults, {
+        format: report_format,
+        sections: ['all'],
+        saveToDatabase: save_to_database,
+        project_id: context.project_id
+      });
 
-            finalResults.synthesis_metadata = {
-              success: true,
-              original_issue_count: totalOriginalIssues,
-              consolidated_issue_count: reportResult.synthesis.consolidatedIssuesCount,
-              reduction_percentage: totalOriginalIssues > 0 
-                ? Math.round((1 - reportResult.synthesis.consolidatedIssuesCount / totalOriginalIssues) * 100)
-                : 0,
-              total_duration_seconds: reportResult.metadata?.generation_time_ms 
-                ? (reportResult.metadata.generation_time_ms / 1000).toFixed(1) 
-                : 'N/A',
-              total_tokens_used: reportResult.metadata?.total_tokens || 0,
-              total_cost: reportResult.metadata?.total_cost || 0,
-              errors: reportResult.synthesis.errors
-            };
-          }
-          
-          progress({ step: 'report', message: `Report saved to ${reportResult.local_path}` });
-        } else {
-          console.warn(`[Report Generation] ⚠️  Report generation failed: ${reportResult.error}`);
-          finalResults.report_error = reportResult.error;
+      if (reportResult.success) {
+        console.log(`[Report Generation] ✅ Report generated successfully`);
+        console.log(`[Report Generation] 📄 Local path: ${reportResult.local_path}`);
+
+        // Add report paths to the result
+        finalResults.report_html_path = reportResult.local_path;
+        finalResults.report_markdown_path = null;
+        finalResults.report_storage_path = reportResult.storage_path;
+        finalResults.report_format = report_format;
+
+        // Add synthesis metadata if available
+        if (reportResult.synthesis?.used) {
+          const totalOriginalIssues =
+            (finalResults.design_issues_desktop?.length || 0) +
+            (finalResults.design_issues_mobile?.length || 0) +
+            (finalResults.seo_issues?.length || 0) +
+            (finalResults.content_issues?.length || 0) +
+            (finalResults.social_issues?.length || 0) +
+            (finalResults.accessibility_issues?.length || 0);
+
+          finalResults.synthesis_metadata = {
+            success: true,
+            original_issue_count: totalOriginalIssues,
+            consolidated_issue_count: reportResult.synthesis.consolidatedIssuesCount,
+            reduction_percentage: totalOriginalIssues > 0
+              ? Math.round((1 - reportResult.synthesis.consolidatedIssuesCount / totalOriginalIssues) * 100)
+              : 0,
+            total_duration_seconds: reportResult.metadata?.generation_time_ms
+              ? (reportResult.metadata.generation_time_ms / 1000).toFixed(1)
+              : 'N/A',
+            total_tokens_used: reportResult.metadata?.total_tokens || 0,
+            total_cost: reportResult.metadata?.total_cost || 0,
+            errors: reportResult.synthesis.errors
+          };
         }
-      } catch (reportError) {
-        console.error(`[Report Generation] ❌ Report generation failed:`, reportError);
-        finalResults.report_error = reportError.message;
+
+        progress({ step: 'report', message: `Report saved to ${reportResult.local_path}` });
+      } else {
+        throw new Error(`Report generation failed: ${reportResult.error}`);
       }
     }
 

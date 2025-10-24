@@ -81,7 +81,7 @@ curl -X POST http://localhost:3002/api/compose \
     "url": "https://zahavrestaurant.com",
     "strategy": "problem-first",
     "generateVariants": false,
-    "model": "claude-haiku-3-5"
+    "model": "claude-haiku-4-5"
   }'
 ```
 
@@ -91,7 +91,7 @@ curl -X POST http://localhost:3002/api/compose \
 | `url` | string | Yes | - | Website URL of the lead |
 | `strategy` | string | No | `"compliment-sandwich"` | Email strategy to use |
 | `generateVariants` | boolean | No | `false` | Generate A/B test variants |
-| `model` | string | No | `"claude-haiku-3-5"` | AI model to use |
+| `model` | string | No | `"claude-haiku-4-5"` | AI model to use |
 
 **Strategies:**
 - `compliment-sandwich` - Compliment → Issue → Encouragement
@@ -143,7 +143,7 @@ curl -X POST http://localhost:3002/api/compose-social \
 | `url` | string | Yes | - | Website URL of the lead |
 | `platform` | string | No | `"instagram"` | Social platform (`instagram`, `facebook`, `linkedin`) |
 | `strategy` | string | No | `"value-first"` | DM strategy |
-| `model` | string | No | `"claude-haiku-3-5"` | AI model |
+| `model` | string | No | `"claude-haiku-4-5"` | AI model |
 
 **Platform Limits:**
 - Instagram: 1000 chars (no URLs!)

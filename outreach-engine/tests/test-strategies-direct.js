@@ -41,7 +41,7 @@ async function testStrategy(strategyName) {
   try {
     const result = await generateCompleteEmail(testLead, {
       strategy: strategyName,
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     const validation = validateEmail({

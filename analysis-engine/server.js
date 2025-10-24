@@ -289,43 +289,38 @@ app.post('/api/analyze-url', async (req, res) => {
     const reportConfig = getReportConfig();
 
     if (reportConfig.autoGenerateReports) {
-      try {
-        const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
+      const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
 
-        // Ensure reports bucket exists
-        await ensureReportsBucket();
+      // Ensure reports bucket exists
+      await ensureReportsBucket();
 
-        // Generate and upload report with full analysis payload (includes crawl_metadata.pages_analyzed)
-        const reportPayload = {
-          ...result,
-          id: savedLead.id,
-          project_id: project_id ?? result.project_id ?? savedLead.project_id,
-          grade: result.grade || savedLead.website_grade,
-          overall_score: result.overall_score || savedLead.overall_score,
-          website_grade: savedLead.website_grade || result.grade,
-          website_score: savedLead.overall_score || result.overall_score
+      // Generate and upload report with full analysis payload (includes crawl_metadata.pages_analyzed)
+      const reportPayload = {
+        ...result,
+        id: savedLead.id,
+        project_id: project_id ?? result.project_id ?? savedLead.project_id,
+        grade: result.grade || savedLead.website_grade,
+        overall_score: result.overall_score || savedLead.overall_score,
+        website_grade: savedLead.website_grade || result.grade,
+        website_score: savedLead.overall_score || result.overall_score
+      };
+
+      const reportResult = await autoGenerateReport(reportPayload, {
+        format: reportConfig.defaultFormat,
+        sections: reportConfig.defaultSections,
+        saveToDatabase: true,
+        project_id: project_id
+      });
+
+      if (reportResult.success) {
+        reportInfo = {
+          id: reportResult.report_id,
+          path: reportResult.storage_path,
+          format: reportResult.format
         };
-
-        const reportResult = await autoGenerateReport(reportPayload, {
-          format: reportConfig.defaultFormat,
-          sections: reportConfig.defaultSections,
-          saveToDatabase: true,
-          project_id: project_id
-        });
-
-        if (reportResult.success) {
-          reportInfo = {
-            id: reportResult.report_id,
-            path: reportResult.storage_path,
-            format: reportResult.format
-          };
-          console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
-        } else {
-          console.warn(`[Report Generation] Failed: ${reportResult.error}`);
-        }
-      } catch (reportError) {
-        console.error(`[Report Generation] Error:`, reportError.message);
-        // Don't fail the whole request if report generation fails
+        console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
+      } else {
+        throw new Error(`Report generation failed: ${reportResult.error}`);
       }
     } else {
       console.log(`[Report Generation] Skipped (AUTO_GENERATE_REPORTS=false)`);
@@ -693,38 +688,33 @@ app.post('/api/analyze', async (req, res) => {
             const reportConfig = getReportConfig();
 
             if (reportConfig.autoGenerateReports) {
-              try {
-                const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
+              const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
 
-                // Ensure reports bucket exists
-                await ensureReportsBucket();
+              // Ensure reports bucket exists
+              await ensureReportsBucket();
 
-                // Generate and upload report with full analysis payload
-                const reportPayload = {
-                  ...result,
-                  id: savedLead.id,
-                  project_id: project_id ?? result.project_id ?? savedLead.project_id,
-                  grade: result.grade || savedLead.website_grade,
-                  overall_score: result.overall_score || savedLead.overall_score,
-                  website_grade: savedLead.website_grade || result.grade,
-                  website_score: savedLead.overall_score || result.overall_score
-                };
+              // Generate and upload report with full analysis payload
+              const reportPayload = {
+                ...result,
+                id: savedLead.id,
+                project_id: project_id ?? result.project_id ?? savedLead.project_id,
+                grade: result.grade || savedLead.website_grade,
+                overall_score: result.overall_score || savedLead.overall_score,
+                website_grade: savedLead.website_grade || result.grade,
+                website_score: savedLead.overall_score || result.overall_score
+              };
 
-                const reportResult = await autoGenerateReport(reportPayload, {
-                  format: reportConfig.defaultFormat,
-                  sections: reportConfig.defaultSections,
-                  saveToDatabase: true,
-                  project_id: project_id
-                });
+              const reportResult = await autoGenerateReport(reportPayload, {
+                format: reportConfig.defaultFormat,
+                sections: reportConfig.defaultSections,
+                saveToDatabase: true,
+                project_id: project_id
+              });
 
-                if (reportResult.success) {
-                  console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
-                } else {
-                  console.warn(`[Report Generation] Failed: ${reportResult.error}`);
-                }
-              } catch (reportError) {
-                console.error(`[Report Generation] Error for ${prospect.company_name}:`, reportError.message);
-                // Don't fail the whole analysis if report generation fails
+              if (reportResult.success) {
+                console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
+              } else {
+                throw new Error(`Report generation failed: ${reportResult.error}`);
               }
             }
 

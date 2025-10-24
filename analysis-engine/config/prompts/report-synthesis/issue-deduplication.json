@@ -150,7 +150,7 @@
     }
   ],
   "costEstimate": {
-    "model": "gpt-5",
+    "model": "gpt-5-mini-mini",
     "inputTokens": "~4000 (all analyzer outputs)",
     "outputTokens": "~2000 (consolidated issues + merge log)",
     "estimatedCost": "$0.036 per synthesis"

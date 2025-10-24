@@ -137,7 +137,7 @@ async function testDatabaseIntegration() {
         body: 'Test body for Phase 3 integration test. This is a mock email.',
         strategy: 'test-strategy',
         platform: 'email',
-        model_used: 'claude-haiku-3-5',
+        model_used: 'claude-haiku-4-5',
         generation_time_ms: 1000,
         cost: 0.0001,
         validation_score: 95,

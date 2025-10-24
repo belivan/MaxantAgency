@@ -295,7 +295,7 @@ Edit JSON files in `config/prompts/email-strategies/`:
   "version": "1.0",
   "name": "my-custom-strategy",
   "description": "Custom approach",
-  "model": "claude-haiku-3-5",
+  "model": "claude-haiku-4-5",
   "temperature": 0.7,
   "systemPrompt": "You are an expert cold email writer...",
   "userPromptTemplate": "Write an email to {{company_name}}...",

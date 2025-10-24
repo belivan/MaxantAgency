@@ -1,5 +1,5 @@
 /**
- * Accessibility Analyzer - Uses GPT-5 + Axe-core to analyze accessibility
+ * Accessibility Analyzer - Uses gpt-5-mini + Axe-core to analyze accessibility
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: WCAG 2.1 compliance, color contrast, alt text, ARIA, keyboard nav, semantic HTML
@@ -134,7 +134,7 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
     console.error('Accessibility analysis failed:', error);
 
     // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5';
+    const fallbackModel = customPrompt?.model || 'gpt-5-mini';
     return {
       model: fallbackModel,
       accessibilityScore: 30,

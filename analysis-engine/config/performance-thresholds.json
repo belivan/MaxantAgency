@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "description": "Configurable thresholds for performance metrics based on Google Core Web Vitals standards",
+
+  "largestContentfulPaint": {
+    "good": 2500,
+    "needsImprovement": 4000,
+    "unit": "milliseconds",
+    "description": "Time to render largest visible element (LCP)",
+    "source": "https://web.dev/lcp/"
+  },
+
+  "firstInputDelay": {
+    "good": 100,
+    "needsImprovement": 300,
+    "unit": "milliseconds",
+    "description": "Time from first user interaction to browser response (FID)",
+    "source": "https://web.dev/fid/"
+  },
+
+  "cumulativeLayoutShift": {
+    "good": 0.1,
+    "needsImprovement": 0.25,
+    "unit": "score",
+    "description": "Visual stability - measures unexpected layout shifts (CLS)",
+    "source": "https://web.dev/cls/"
+  },
+
+  "firstContentfulPaint": {
+    "good": 1800,
+    "needsImprovement": 3000,
+    "unit": "milliseconds",
+    "description": "Time to first text/image render (FCP)",
+    "source": "https://web.dev/fcp/"
+  },
+
+  "interactionToNextPaint": {
+    "good": 200,
+    "needsImprovement": 500,
+    "unit": "milliseconds",
+    "description": "Responsiveness to user interactions (INP)",
+    "source": "https://web.dev/inp/"
+  },
+
+  "performanceScore": {
+    "good": 90,
+    "needsImprovement": 50,
+    "unit": "0-100",
+    "description": "Overall Lighthouse performance score"
+  },
+
+  "severityMapping": {
+    "good": "low",
+    "needsImprovement": "medium",
+    "poor": "high"
+  },
+
+  "businessImpact": {
+    "lcp": {
+      "poor": "Google ranking penalty + 53% of mobile users abandon slow sites",
+      "needsImprovement": "Slow page load affects user experience and conversions",
+      "good": "Fast page load improves engagement and SEO"
+    },
+    "cls": {
+      "poor": "Poor user experience, accidental clicks, frustrated users",
+      "needsImprovement": "Layout shifts reduce user trust and engagement",
+      "good": "Stable layout provides smooth user experience"
+    },
+    "fid": {
+      "poor": "Site feels unresponsive, users may leave before interacting",
+      "needsImprovement": "Delayed interactions frustrate users",
+      "good": "Responsive site encourages user engagement"
+    }
+  }
+}

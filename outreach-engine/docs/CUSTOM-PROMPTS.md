@@ -25,7 +25,7 @@ When determining which model and temperature to use, the system follows this pri
 
 **Model Selection:**
 ```
-options.model > customPrompt.model > prompt.model > default (claude-haiku-3-5)
+options.model > customPrompt.model > prompt.model > default (claude-haiku-4-5)
 ```
 
 **Temperature Selection:**
@@ -52,7 +52,7 @@ This allows you to override at any level depending on your needs.
   "temperature": 0.5,
   "generateVariants": false,
   "customPrompt": {
-    "model": "claude-haiku-3-5",
+    "model": "claude-haiku-4-5",
     "temperature": 0.7,
     "systemPrompt": "You are a professional email copywriter...",
     "userPromptTemplate": "Generate an email for {{business_name}}...",
@@ -64,7 +64,7 @@ This allows you to override at any level depending on your needs.
 **Parameters:**
 - `url` (required): Website URL of the lead
 - `strategy` (optional): Email strategy to use (default: "compliment-sandwich")
-- `model` (optional): AI model override (e.g., "claude-sonnet-3-5", "claude-haiku-3-5")
+- `model` (optional): AI model override (e.g., "claude-sonnet-3-5", "claude-haiku-4-5")
 - `temperature` (optional): Temperature override (0.0 - 1.0, default: 0.7)
 - `generateVariants` (optional): Generate A/B test variants (default: false)
 - `customPrompt` (optional): Full custom prompt configuration (see below)
@@ -113,7 +113,7 @@ Returns Server-Sent Events (SSE) with progress updates.
   "model": "claude-sonnet-3-5",
   "temperature": 0.8,
   "customPrompt": {
-    "model": "claude-haiku-3-5",
+    "model": "claude-haiku-4-5",
     "temperature": 0.8,
     "platforms": ["instagram", "facebook", "linkedin"],
     "systemPrompt": "You are a social media expert...",
@@ -291,7 +291,7 @@ const response = await fetch('http://localhost:3002/api/compose-batch', {
 
 ```javascript
 const socialPrompt = {
-  model: 'claude-haiku-3-5',
+  model: 'claude-haiku-4-5',
   temperature: 0.9,  // Higher for more creative social content
   platforms: ['instagram'],
   
@@ -333,7 +333,7 @@ const response = await fetch('http://localhost:3002/api/compose-social', {
 
 | Model | Speed | Cost | Quality | Best For |
 |-------|-------|------|---------|----------|
-| **claude-haiku-3-5** | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | Batch operations, quick drafts |
+| **claude-haiku-4-5** | ⚡⚡⚡ Fast | 💰 Low | ⭐⭐⭐ Good | Batch operations, quick drafts |
 | **claude-sonnet-3-5** | ⚡⚡ Medium | 💰💰 Medium | ⭐⭐⭐⭐ Excellent | High-value leads, important emails |
 | **claude-opus-3** | ⚡ Slow | 💰💰💰 High | ⭐⭐⭐⭐⭐ Outstanding | VIP clients, critical communications |
 
@@ -433,7 +433,7 @@ await fetch('/api/compose', {
 ### Model not found error
 
 **Supported models:**
-- `claude-haiku-3-5`
+- `claude-haiku-4-5`
 - `claude-sonnet-3-5`
 - `claude-opus-3`
 

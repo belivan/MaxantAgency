@@ -43,7 +43,7 @@ async function testVariants() {
         url: fakeLead.url,
         strategy: 'problem-first',
         generateVariants: true,  // ⭐ Enable A/B testing
-        model: 'claude-haiku-3-5',
+        model: 'claude-haiku-4-5',
         lead: fakeLead
       })
     });

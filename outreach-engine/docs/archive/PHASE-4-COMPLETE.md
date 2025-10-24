@@ -128,7 +128,7 @@
 ```
 URL: https://zahavrestaurant.com
 Strategy: problem-first
-Model: claude-haiku-3-5
+Model: claude-haiku-4-5
 
 ✅ Results:
 - Subject: "missing contact info on zahavrestaurant.com" (43 chars)

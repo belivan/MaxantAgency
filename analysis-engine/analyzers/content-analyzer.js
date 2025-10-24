@@ -1,5 +1,5 @@
 /**
- * Content Analyzer - Uses GPT-5 to analyze content quality and completeness
+ * Content Analyzer - Uses gpt-5-mini to analyze content quality and completeness
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: copy quality, blog posts, testimonials, CTAs, engagement hooks
@@ -158,7 +158,7 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
     console.error('Content analysis failed:', error);
 
     // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5';
+    const fallbackModel = customPrompt?.model || 'gpt-5-mini';
     return {
       model: fallbackModel,
       contentScore: 30,

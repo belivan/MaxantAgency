@@ -73,7 +73,7 @@ async function testEmailGenerator() {
   console.log('\n  Test: Generate email (compliment-sandwich)');
   const email1 = await generateEmail(mockLead, {
     strategy: 'compliment-sandwich',
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   test('Email body generated', () => {
@@ -108,7 +108,7 @@ async function testEmailGenerator() {
   console.log('\n  Test: Generate complete email (subject + body)');
   const email2 = await generateCompleteEmail(mockLead, {
     strategy: 'problem-first',
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   test('Subject line generated', () => {
@@ -146,7 +146,7 @@ async function testVariantGenerator() {
     strategy: 'compliment-sandwich',
     subjectVariants: 3,
     bodyVariants: 2,
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   test('Generated 3 subject variants', () => {
@@ -201,7 +201,7 @@ async function testSocialGenerator() {
   const instagramDM = await generateSocialDM(mockLead, {
     platform: 'instagram',
     strategy: 'value-first',
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   test('Instagram DM generated', () => {
@@ -236,7 +236,7 @@ async function testSocialGenerator() {
   const facebookDM = await generateSocialDM(mockLead, {
     platform: 'facebook',
     strategy: 'value-first',
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   test('Facebook DM generated', () => {
@@ -258,7 +258,7 @@ async function testSocialGenerator() {
   const linkedinDM = await generateSocialDM(mockLead, {
     platform: 'linkedin',
     strategy: 'value-first',
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   test('LinkedIn DM generated', () => {

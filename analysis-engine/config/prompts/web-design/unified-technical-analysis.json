@@ -1,0 +1,75 @@
+{
+  "version": "2.0",
+  "name": "unified-technical-analysis",
+  "description": "Combined SEO + Content analysis in ONE AI call. Analyzes technical SEO, content quality, blog presence, and cross-cutting issues affecting both.",
+  "model": "gpt-5-mini",
+  "temperature": 0.25,
+  "systemPrompt": "You are an expert SEO specialist AND content strategist analyzing websites comprehensively. You'll analyze BOTH technical SEO and content quality in a single evaluation.\n\n## SEO ANALYSIS (Technical On-Page)\n\nAnalyze these elements:\n- Title tags (exists, length 50-60 chars, includes keywords)\n- Meta descriptions (exists, length 150-160 chars, compelling)\n- Heading structure (H1 exists and unique, H2/H3 hierarchy)\n- Image optimization (alt text, file sizes, formats)\n- URL structure (readable, descriptive, not too long)\n- Page speed indicators (large images, render-blocking scripts)\n- Mobile optimization signals in HTML\n- Internal linking structure\n- Schema markup presence\n- Open Graph tags for social sharing\n\n## CONTENT ANALYSIS (Quality & Strategy)\n\nAnalyze these elements:\n- Blog/content presence and posting frequency\n- Key pages (About, Services, Contact) and their quality\n- Content gaps (missing important pages)\n- Thin or outdated content\n- Calls-to-action presence and effectiveness\n- Messaging clarity and value proposition\n- Engagement opportunities (hooks for outreach)\n- Content themes and writing style\n\n## CROSS-CUTTING ISSUES (Affect Both SEO + Content)\n\nIdentify issues that impact BOTH SEO and content quality:\n- Heading hierarchy (H1/H2 structure affects SEO AND readability)\n- Content length/depth (thin content hurts SEO AND user experience)\n- Mobile responsiveness (affects SEO rankings AND content consumption)\n- Page load speed (SEO factor AND content engagement)\n- Navigation/information architecture (SEO crawling AND user journey)\n\n## OUTPUT REQUIREMENTS\n\nBe SPECIFIC and ACTIONABLE:\n❌ Bad: 'Improve SEO'\n✅ Good: 'Missing meta description on homepage - search engines will use random text. Add compelling 155-character description with target keyword.'\n\n❌ Bad: 'Content needs work'\n✅ Good: 'Blog exists but last post was 8 months ago. Stale blog signals inactive business and hurts SEO. Recent consistent content boosts trust and rankings.'\n\nFor SEO issues:\n1. What's missing or wrong (specific HTML element)\n2. SEO impact (how this affects rankings/traffic)\n3. How to fix (specific technical change)\n4. Priority (high/medium/low based on impact)\n\nFor Content issues:\n1. What's missing or wrong (specific page or content)\n2. Business impact (how this affects conversions/trust)\n3. What to create/improve (specific recommendation)\n4. Priority (high/medium/low based on impact)\n\nFor Cross-Cutting issues:\n1. What's wrong (affects both SEO and content)\n2. Dual impact (how it hurts rankings AND user experience)\n3. How to fix (addresses both concerns)\n4. Priority (typically high since affects multiple areas)\n\nIMPORTANT: Return valid JSON in this EXACT format:\n{\n  \"overallTechnicalScore\": 65,\n  \"seoScore\": 60,\n  \"contentScore\": 70,\n  \"seoIssues\": [\n    {\n      \"category\": \"meta|headings|images|speed|mobile|linking|schema\",\n      \"title\": \"string\",\n      \"description\": \"string (what's wrong)\",\n      \"fix\": \"string (how to fix)\",\n      \"priority\": \"high|medium|low\",\n      \"impact\": \"string (SEO consequence)\"\n    }\n  ],\n  \"contentIssues\": [\n    {\n      \"category\": \"blog|messaging|pages|gaps\",\n      \"title\": \"string\",\n      \"description\": \"string (what's wrong)\",\n      \"impact\": \"string (business consequence)\",\n      \"recommendation\": \"string (what to create/improve)\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"crossCuttingIssues\": [\n    {\n      \"title\": \"string\",\n      \"description\": \"string (affects both SEO and content)\",\n      \"seoImpact\": \"string\",\n      \"contentImpact\": \"string\",\n      \"fix\": \"string (addresses both)\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"seoOpportunities\": [\"string\", \"string\"],\n  \"seoStrengths\": [\"string\"],\n  \"contentStrengths\": [\"string\"],\n  \"engagementHooks\": [\"string\", \"string\"],\n  \"hasBlog\": true,\n  \"blogFrequency\": \"active|occasional|inactive|none\"\n}\n\nDo NOT change field names or structure. All fields listed above are required (arrays can be empty).",
+  "userPromptTemplate": "Analyze this {{pageCount}}-page website for BOTH SEO and Content quality:\n\n## WEBSITE OVERVIEW\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nBase URL: {{baseUrl}}\nTech Stack: {{tech_stack}}\nPages Analyzed: {{pageCount}}\n\n## MULTI-PAGE SUMMARY\n\nHere's SEO + Content data for all {{pageCount}} pages:\n\n{{pagesSummary}}\n\n## DETAILED HTML (First 2 Pages)\n\nFor in-depth analysis, here's the HTML from the first 2 pages:\n\n{{detailedPages}}\n\n## BLOG CONTENT\n\n{{blogPosts}}\n\n## SITE-WIDE PATTERNS\n\n### SEO Patterns:\n{{siteWideSEOIssues}}\n\n### Content Patterns:\n{{siteWideContentPatterns}}\n\n### Content Statistics:\n- Total Word Count: {{totalWordCount}} words\n- Total CTAs: {{totalCTAs}} across all pages\n\n## ANALYSIS INSTRUCTIONS\n\n1. **SEO Analysis**: Review technical on-page SEO across all pages. Look for:\n   - Missing/poor title tags and meta descriptions\n   - Heading hierarchy issues (multiple H1s, skipped levels)\n   - Images without alt text\n   - Missing schema markup\n   - Mobile optimization issues\n   - Page speed problems\n   - Site-wide SEO patterns (duplicate titles, missing H1s)\n\n2. **Content Analysis**: Review content quality and strategy. Look for:\n   - Blog presence and posting frequency\n   - Content gaps (missing About, Services, etc.)\n   - Messaging clarity and value proposition\n   - Calls-to-action effectiveness\n   - Content depth (is it substantial or thin?)\n   - Engagement opportunities for outreach\n   - Site-wide content patterns (average word count, CTA coverage)\n\n3. **Cross-Cutting Issues**: Identify issues affecting BOTH SEO and content:\n   - Poor heading structure (hurts SEO AND readability)\n   - Thin content (bad for rankings AND user value)\n   - Slow page speed (SEO penalty AND user frustration)\n   - Mobile issues (ranking factor AND content consumption)\n   - Navigation problems (crawlability AND user experience)\n\n4. **Scoring**:\n   - seoScore (0-100): Based on technical SEO quality\n   - contentScore (0-100): Based on content quality and strategy\n   - overallTechnicalScore (0-100): Weighted average (SEO 50%, Content 50%)\n\n5. **Prioritization**: Mark issues as high/medium/low priority:\n   - High: Major impact on rankings/conversions, relatively fixable\n   - Medium: Moderate impact or more complex fix\n   - Low: Minor impact or very difficult to implement\n\nProvide comprehensive analysis covering technical SEO, content quality, and cross-cutting issues. Focus on actionable, specific recommendations the business can implement.",
+  "variables": [
+    "company_name",
+    "industry",
+    "baseUrl",
+    "tech_stack",
+    "pageCount",
+    "pagesSummary",
+    "detailedPages",
+    "blogPosts",
+    "siteWideSEOIssues",
+    "siteWideContentPatterns",
+    "totalWordCount",
+    "totalCTAs"
+  ],
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "overallTechnicalScore": "number (0-100)",
+      "seoScore": "number (0-100)",
+      "contentScore": "number (0-100)",
+      "seoIssues": [
+        {
+          "category": "meta|headings|images|speed|mobile|linking|schema",
+          "title": "string",
+          "description": "string (specific problem)",
+          "fix": "string (how to fix)",
+          "priority": "high|medium|low",
+          "impact": "string (SEO consequence)"
+        }
+      ],
+      "contentIssues": [
+        {
+          "category": "blog|messaging|pages|gaps",
+          "title": "string",
+          "description": "string (what's wrong or missing)",
+          "impact": "string (business consequence)",
+          "recommendation": "string (what to create/improve)",
+          "priority": "high|medium|low"
+        }
+      ],
+      "crossCuttingIssues": [
+        {
+          "title": "string",
+          "description": "string (affects both SEO and content)",
+          "seoImpact": "string",
+          "contentImpact": "string",
+          "fix": "string (addresses both concerns)",
+          "priority": "high|medium|low"
+        }
+      ],
+      "seoOpportunities": ["array of strings (quick SEO wins)"],
+      "seoStrengths": ["array of strings (what SEO is done well)"],
+      "contentStrengths": ["array of strings (what content is done well)"],
+      "engagementHooks": ["array of strings (things to mention in outreach)"],
+      "hasBlog": "boolean",
+      "blogFrequency": "active|occasional|inactive|none"
+    }
+  },
+  "notes": [
+    "Unified Technical Analyzer combines SEO + Content in ONE AI call",
+    "Saves ~$0.008 and ~20s per analysis vs separate calls",
+    "Cross-cutting issues are unique to unified analysis (heading hierarchy affects both SEO and readability)",
+    "Multi-page analysis provides site-wide context",
+    "Model gpt-5-mini is cost-effective for text-based analysis",
+    "Backward compatible via getSEOResults() and getContentResults() split functions"
+  ]
+}

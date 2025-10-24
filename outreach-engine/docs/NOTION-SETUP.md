@@ -83,7 +83,7 @@ Here are all properties that can be configured (auto-setup adds all of these):
 ### AI Metadata
 | Property | Type | Purpose |
 |----------|------|---------|
-| AI Model | Select | claude-haiku-3-5, claude-sonnet-4-5 |
+| AI Model | Select | claude-haiku-4-5, claude-sonnet-4-5 |
 | Cost | Number | Generation cost (format: Dollar/Currency) |
 | Generation Time (ms) | Number | How long AI took to generate |
 | Created At | Date | When email was generated |

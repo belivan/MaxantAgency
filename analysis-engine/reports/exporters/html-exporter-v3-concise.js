@@ -96,10 +96,7 @@ async function generateConciseContent(analysisResult, synthesisData, registry, s
   // 2. Strategic Assessment (Combined Summary & Business Impact)
   content += generateStrategicAssessment(analysisResult, synthesisData);
 
-  // 3. Action Plan (Prioritized Issues Without Repetition)
-  content += generateActionPlan(analysisResult, synthesisData);
-
-  // 4. Implementation Timeline (Simplified Roadmap)
+  // 3. Implementation Timeline (90-Day Action Plan)
   content += generateTimeline(analysisResult, synthesisData);
 
   // 5. Visual Evidence (Screenshots if Available)
@@ -447,21 +444,25 @@ function generateTimeline(analysisResult, synthesisData) {
   html += '          <span class="section-title-icon">📅</span>\n';
   html += '          30-60-90 Day Implementation Plan\n';
   html += '        </h2>\n';
+  html += '        <p class="section-description">Phased approach to prioritize quick wins and high-impact improvements</p>\n';
   html += '      </div>\n';
 
   html += '      <div class="roadmap-timeline">\n';
   html += '        <div class="timeline-connector"></div>\n';
 
-  // 30 Days - Address Critical Issues and Quick Wins
+  // Get consolidated issues if available
+  const consolidatedIssues = synthesisData?.consolidatedIssues || [];
+
+  // 30 Days - Quick Wins & Critical Fixes
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">30</div>\n';
   html += '          <div class="phase-content">\n';
-  html += '            <h3 class="phase-title">First 30 Days: Critical Fixes</h3>\n';
+  html += '            <h3 class="phase-title">First 30 Days: Quick Wins & Critical Fixes</h3>\n';
 
-  // Use actual quick wins and critical issues
+  // Show quick wins and top critical items by title only
   const phase1Items = [];
   
-  // Add top issue first if exists
+  // Add top issue first
   if (top_issue) {
     const topIssueText = typeof top_issue === 'string' ? top_issue : (top_issue.title || top_issue.description || '');
     if (topIssueText) {
@@ -469,17 +470,7 @@ function generateTimeline(analysisResult, synthesisData) {
     }
   }
   
-  // Add critical issues
-  if (criticalIssues.length > 0) {
-    criticalIssues.slice(0, 2).forEach(issue => {
-      const text = issue.title || issue.description;
-      if (text && !phase1Items.includes(text)) {
-        phase1Items.push(text);
-      }
-    });
-  }
-  
-  // Add quick wins
+  // Add quick wins (concise references)
   if (quick_wins.length > 0) {
     quick_wins.slice(0, 4).forEach(win => {
       if (win && !phase1Items.includes(win)) {
@@ -495,41 +486,45 @@ function generateTimeline(analysisResult, synthesisData) {
     });
     html += '            </ul>\n';
   } else {
-    html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Address immediate issues and implement quick wins</p>\n';
+    html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Implement immediate fixes and low-hanging fruit improvements</p>\n';
   }
 
   html += '          </div>\n';
   html += '        </div>\n';
 
-  // 60 Days - High Priority Issues
+  // 60 Days - High-Impact Improvements
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">60</div>\n';
   html += '          <div class="phase-content">\n';
-  html += '            <h3 class="phase-title">Days 31-60: Core Improvements</h3>\n';
+  html += '            <h3 class="phase-title">Days 31-60: High-Impact Improvements</h3>\n';
 
-  // Use actual high priority issues
+  // Reference consolidated issues by title only (no descriptions)
   const phase2Items = [];
   
-  // Add high priority issues
-  if (highIssues.length > 0) {
-    highIssues.slice(0, 2).forEach(issue => {
-      const text = issue.title || issue.description;
-      if (text) phase2Items.push(text);
-    });
+  if (consolidatedIssues.length > 0) {
+    // Get issues marked as high priority
+    consolidatedIssues
+      .filter(i => i.severity === 'high' || i.priority === 'high')
+      .slice(0, 3)
+      .forEach(issue => {
+        phase2Items.push(issue.title);
+      });
   }
   
-  // Add design issues
-  if (design_issues.length > 0) {
-    design_issues.slice(0, 2).forEach(issue => {
-      const text = typeof issue === 'string' ? issue : (issue.title || issue.description || '');
-      if (text && !phase2Items.includes(text)) {
-        phase2Items.push(text);
-      }
-    });
+  // Fallback to design/content issues if no consolidated issues
+  if (phase2Items.length === 0) {
+    if (design_issues.length > 0) {
+      design_issues.slice(0, 2).forEach(issue => {
+        const text = typeof issue === 'string' ? issue : (issue.title || issue.description || '');
+        if (text && !phase2Items.includes(text)) {
+          phase2Items.push(text);
+        }
+      });
+    }
   }
   
-  // Add SEO issues
-  if (seo_issues.length > 0) {
+  // Add a few SEO issues if phase2 needs more items
+  if (phase2Items.length < 3 && seo_issues.length > 0) {
     seo_issues.slice(0, 2).forEach(issue => {
       const text = typeof issue === 'string' ? issue : (issue.title || issue.description || '');
       if (text && !phase2Items.includes(text)) {
@@ -540,35 +535,27 @@ function generateTimeline(analysisResult, synthesisData) {
 
   if (phase2Items.length > 0) {
     html += '            <ul style="margin: 8px 0; padding-left: 20px; color: var(--text-secondary);">\n';
-    phase2Items.slice(0, 5).forEach(item => {
+    phase2Items.slice(0, 4).forEach(item => {
       html += `              <li style="margin-bottom: 4px;">${escapeHtml(item)}</li>\n`;
     });
     html += '            </ul>\n';
   } else {
-    html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Enhance user experience and address high-priority issues</p>\n';
+    html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Enhance user experience and SEO foundations</p>\n';
   }
 
   html += '          </div>\n';
   html += '        </div>\n';
 
-  // 90 Days - Long-term Strategy
+  // 90 Days - Strategic Enhancements  
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">90</div>\n';
   html += '          <div class="phase-content">\n';
   html += '            <h3 class="phase-title">Days 61-90: Strategic Enhancements</h3>\n';
 
-  // Industry-specific recommendations
+  // Industry-specific strategic recommendations (not repeating issues)
   const phase3Items = [];
   
-  // Add content issues first
-  if (content_issues && content_issues.length > 0) {
-    content_issues.slice(0, 2).forEach(issue => {
-      const text = typeof issue === 'string' ? issue : (issue.title || issue.description || '');
-      if (text) phase3Items.push(text);
-    });
-  }
-
-  // Add industry-specific items
+  // Add industry-specific growth initiatives based on business type
   if (industry) {
     const industryLower = industry.toLowerCase();
     if (industryLower.includes('hvac') || industryLower.includes('plumb') || industryLower.includes('electric')) {

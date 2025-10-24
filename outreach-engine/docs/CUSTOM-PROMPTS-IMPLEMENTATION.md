@@ -61,7 +61,7 @@ The system determines which model and temperature to use based on this hierarchy
 ├─────────────────┤
 │ prompt.model    │ ← Strategy config file
 ├─────────────────┤
-│ default model   │ ← Fallback (claude-haiku-3-5)
+│ default model   │ ← Fallback (claude-haiku-4-5)
 └─────────────────┘
 
 Same hierarchy for temperature
@@ -71,14 +71,14 @@ Same hierarchy for temperature
 ```javascript
 // If you send:
 {
-  model: 'claude-haiku-3-5',        // Priority level 1
+  model: 'claude-haiku-4-5',        // Priority level 1
   customPrompt: {
     model: 'claude-sonnet-3-5',     // Priority level 2 (ignored)
     temperature: 0.5
   }
 }
 
-// Result: Uses claude-haiku-3-5 (options.model wins)
+// Result: Uses claude-haiku-4-5 (options.model wins)
 //         Uses 0.5 temperature (from customPrompt, no options.temperature provided)
 ```
 
@@ -136,7 +136,7 @@ POST /api/compose-social
 {
   "lead": { /* lead data */ },
   "platform": "instagram",
-  "model": "claude-haiku-3-5",
+  "model": "claude-haiku-4-5",
   "temperature": 0.9
 }
 ```
@@ -218,7 +218,7 @@ node test-custom-prompts.js
 
 ### Expected Test Results
 ```
-✅ TEST 1: Default Prompt - Works with claude-haiku-3-5
+✅ TEST 1: Default Prompt - Works with claude-haiku-4-5
 ✅ TEST 2: Model Override - Uses claude-sonnet-3-5
 ✅ TEST 3: Temperature Override - Uses 0.3
 ✅ TEST 4: Custom Prompt - Uses sonnet model + custom system/user prompts
@@ -276,7 +276,7 @@ All new parameters are optional.
 
 | Model | Speed | Cost | Quality | Use Case |
 |-------|-------|------|---------|----------|
-| claude-haiku-3-5 | ⚡⚡⚡ | 💰 | ⭐⭐⭐ | Batch, testing |
+| claude-haiku-4-5 | ⚡⚡⚡ | 💰 | ⭐⭐⭐ | Batch, testing |
 | claude-sonnet-3-5 | ⚡⚡ | 💰💰 | ⭐⭐⭐⭐ | Hot leads |
 | claude-opus-3 | ⚡ | 💰💰💰 | ⭐⭐⭐⭐⭐ | VIP clients |
 

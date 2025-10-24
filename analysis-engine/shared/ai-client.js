@@ -9,12 +9,18 @@ import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { mkdir, writeFile } from 'fs/promises';
 import { getCachedResponse, cacheResponse } from './ai-cache.js';
 
 // Load environment variables from the root .env file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../../.env') });
+
+// Debug configuration
+const DEBUG_AI_CALLS = process.env.DEBUG_AI_CALLS === 'true';
+const DEBUG_AI_SAVE_TO_FILE = process.env.DEBUG_AI_SAVE_TO_FILE === 'true';
+const DEBUG_OUTPUT_DIR = process.env.DEBUG_OUTPUT_DIR || './debug-logs';
 
 // Initialize clients lazily to avoid errors during import when API keys not set
 let openai = null;
@@ -59,6 +65,70 @@ function getAnthropicClient() {
 }
 
 /**
+ * Debug Utilities - Log AI calls for transparency
+ */
+let debugCallCounter = 0;
+
+function truncateForDisplay(text, maxLength = 500) {
+  if (!text) return '[empty]';
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + `...[${text.length - maxLength} more chars]`;
+}
+
+function logDebugCall(model, systemPrompt, userPrompt, hasImage, temperature, jsonMode) {
+  if (!DEBUG_AI_CALLS) return;
+
+  debugCallCounter++;
+
+  console.log('\n' + '='.repeat(80));
+  console.log(`🤖 AI CALL #${debugCallCounter} - ${model}`);
+  console.log('='.repeat(80));
+  console.log(`Temperature: ${temperature} | JSON Mode: ${jsonMode} | Has Image: ${hasImage}`);
+  console.log('\n📝 SYSTEM PROMPT:');
+  console.log('-'.repeat(80));
+  console.log(truncateForDisplay(systemPrompt, 1000));
+  console.log('\n📝 USER PROMPT:');
+  console.log('-'.repeat(80));
+  console.log(truncateForDisplay(userPrompt, 1000));
+  console.log('='.repeat(80) + '\n');
+}
+
+function logDebugResponse(content, usage, cost, cached = false) {
+  if (!DEBUG_AI_CALLS) return;
+
+  console.log('\n' + '='.repeat(80));
+  console.log(`✅ AI RESPONSE #${debugCallCounter} ${cached ? '(CACHED)' : ''}`);
+  console.log('='.repeat(80));
+  console.log(`Tokens: ${usage?.prompt_tokens || 0} input + ${usage?.completion_tokens || 0} output = ${usage?.total_tokens || 0} total`);
+  console.log(`Cost: $${cost?.toFixed(4) || '0.0000'}`);
+  console.log('\n📄 RESPONSE CONTENT:');
+  console.log('-'.repeat(80));
+  console.log(truncateForDisplay(content, 2000));
+  console.log('='.repeat(80) + '\n');
+}
+
+async function saveDebugToFile(callData) {
+  if (!DEBUG_AI_SAVE_TO_FILE) return;
+
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `ai-call-${debugCallCounter}-${timestamp}.json`;
+    const dir = join(process.cwd(), DEBUG_OUTPUT_DIR, 'ai-calls');
+
+    await mkdir(dir, { recursive: true });
+
+    const filepath = join(dir, filename);
+    await writeFile(filepath, JSON.stringify(callData, null, 2), 'utf8');
+
+    if (DEBUG_AI_CALLS) {
+      console.log(`💾 Debug data saved to: ${filepath}\n`);
+    }
+  } catch (error) {
+    console.error('Failed to save debug file:', error.message);
+  }
+}
+
+/**
  * Call AI model with text or vision prompt
  *
  * @param {object} options - Call options
@@ -82,10 +152,15 @@ export async function callAI({
   maxTokens = 16384,  // Increased default to 16k tokens
   autoFallback = false
 }) {
+  const callStartTime = Date.now();
+
+  // Log the AI call for debugging
+  logDebugCall(model, systemPrompt, userPrompt, !!image, temperature, jsonMode);
   // ⚡ Check cache first (only for non-image requests)
   if (!image) {
     const cached = getCachedResponse(model, systemPrompt, userPrompt, temperature, jsonMode);
     if (cached) {
+      logDebugResponse(cached.content, cached.usage, cached.cost, true);
       return cached;
     }
   }
@@ -104,20 +179,52 @@ export async function callAI({
       // Auto-fallback to GPT-4o if GPT-5 hits token limits (only when explicitly enabled)
       if (autoFallback && model.startsWith('gpt-5') && message.includes('token limit')) {
         console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-4o.');
-        response = await callOpenAICompatible({ 
-          model: 'gpt-4o', 
-          systemPrompt, 
-          userPrompt, 
-          temperature, 
-          image, 
-          jsonMode, 
-          maxTokens, 
-          provider: 'openai' 
+        response = await callOpenAICompatible({
+          model: 'gpt-4o',
+          systemPrompt,
+          userPrompt,
+          temperature,
+          image,
+          jsonMode,
+          maxTokens,
+          provider: 'openai'
         });
       } else {
         throw error;
       }
     }
+  }
+
+  const callDuration = Date.now() - callStartTime;
+
+  // Log the response for debugging
+  logDebugResponse(response.content, response.usage, response.cost, false);
+
+  // Save debug data to file if enabled
+  if (DEBUG_AI_SAVE_TO_FILE) {
+    await saveDebugToFile({
+      callNumber: debugCallCounter,
+      timestamp: new Date().toISOString(),
+      request: {
+        model,
+        systemPrompt,
+        userPrompt,
+        temperature,
+        hasImage: !!image,
+        jsonMode,
+        maxTokens
+      },
+      response: {
+        content: response.content,
+        usage: response.usage,
+        cost: response.cost,
+        provider: response.provider
+      },
+      metadata: {
+        durationMs: callDuration,
+        cached: false
+      }
+    });
   }
 
   // ⚡ Cache successful response (only for non-image requests)
@@ -155,10 +262,6 @@ async function callOpenAICompatible({
 
     // Add image if provided
     if (image) {
-      if (provider === 'grok') {
-        throw new Error('Grok models do not support vision - use GPT-4o for image analysis');
-      }
-
       // Convert Buffer to base64 if needed
       let base64Image;
       if (Buffer.isBuffer(image)) {

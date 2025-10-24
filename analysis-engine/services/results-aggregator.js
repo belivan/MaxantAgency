@@ -62,7 +62,9 @@ export class ResultsAggregator {
     const gradeResults = calculateGrade({
       design: scores.design_score,
       seo: scores.seo_score,
+      performance: scores.performance_score,
       content: scores.content_score,
+      accessibility: scores.accessibility_score,
       social: scores.social_score
     }, gradeMetadata);
 
@@ -139,89 +141,57 @@ export class ResultsAggregator {
     // PHASE 7: Run report synthesis pipeline
     this.onProgress({ step: 'synthesis', message: 'Running AI synthesis pipeline...' });
     console.log('\n[Report Synthesis] Starting synthesis pipeline...');
-    
-    let synthesisResults = {
-      consolidatedIssues: [],
-      mergeLog: [],
-      consolidationStatistics: null,
-      executiveSummary: null,
-      executiveMetadata: null,
-      screenshotReferences: [],
-      stageMetadata: {},
-      errors: []
-    };
 
-    try {
-      console.log('[Report Synthesis] Calling runReportSynthesis...');
-      synthesisResults = await runReportSynthesis({
-        companyName: context.company_name,
-        industry: context.industry,
-        grade: gradeResults.grade,
-        overallScore: gradeResults.overallScore,
-        url: homepage.fullUrl,
-        issuesByModule: {
-          desktop: analysisResults.desktopVisual?.issues || [],
-          mobile: analysisResults.mobileVisual?.issues || [],
-          seo: analysisResults.seo?.issues || [],
-          content: analysisResults.content?.issues || [],
-          social: analysisResults.social?.issues || [],
-          accessibility: analysisResults.accessibility?.issues || []
-        },
-        quickWins,
-        leadScoring: leadScoringData,
-        topIssue: getTopIssue(analysisResults),
-        techStack: homepage.metadata?.techStack || parsedData?.tech?.stack || parsedData?.techStack || 'Unknown',
-        hasBlog: parsedData?.content?.hasBlog,
-        socialPlatforms: parsedData?.social?.platformsPresent || [],
-        isMobileFriendly: gradeMetadata.isMobileFriendly,
-        hasHttps: gradeMetadata.hasHTTPS,
-        crawlPages: crawlData.pages
-      });
-      console.log('[Report Synthesis] Synthesis completed successfully');
-      console.log(`[Report Synthesis] Generated ${synthesisResults.consolidatedIssues?.length || 0} consolidated issues`);
-      console.log(`[Report Synthesis] Executive summary: ${synthesisResults.executiveSummary ? 'YES' : 'NO'}`);
-    } catch (error) {
-      console.error('[ResultsAggregator] Report synthesis failed:', error);
-      console.error('[ResultsAggregator] Stack:', error.stack);
-      synthesisResults.errors.push({
-        stage: 'pipeline',
-        message: error.message
-      });
-    }
+    console.log('[Report Synthesis] Calling runReportSynthesis...');
+    const synthesisResults = await runReportSynthesis({
+      companyName: context.company_name,
+      industry: context.industry,
+      grade: gradeResults.grade,
+      overallScore: gradeResults.overallScore,
+      url: homepage.fullUrl,
+      issuesByModule: {
+        desktop: analysisResults.desktopVisual?.issues || [],
+        mobile: analysisResults.mobileVisual?.issues || [],
+        seo: analysisResults.seo?.issues || [],
+        content: analysisResults.content?.issues || [],
+        social: analysisResults.social?.issues || [],
+        accessibility: analysisResults.accessibility?.issues || []
+      },
+      quickWins,
+      leadScoring: leadScoringData,
+      topIssue: getTopIssue(analysisResults),
+      techStack: homepage.metadata?.techStack || parsedData?.tech?.stack || parsedData?.techStack || 'Unknown',
+      hasBlog: parsedData?.content?.hasBlog,
+      socialPlatforms: parsedData?.social?.platformsPresent || [],
+      isMobileFriendly: gradeMetadata.isMobileFriendly,
+      hasHttps: gradeMetadata.hasHTTPS,
+      crawlPages: crawlData.pages
+    });
+    console.log('[Report Synthesis] Synthesis completed successfully');
+    console.log(`[Report Synthesis] Generated ${synthesisResults.consolidatedIssues?.length || 0} consolidated issues`);
+    console.log(`[Report Synthesis] Executive summary: ${synthesisResults.executiveSummary ? 'YES' : 'NO'}`);
 
     // PHASE 7.5: QA Validation
     this.onProgress({ step: 'qa', message: 'Running QA validation...' });
     console.log('\n═══════════════════════════════════════════════════════════');
     console.log('[QA Validation] Starting QA validation...');
     console.log('═══════════════════════════════════════════════════════════\n');
-    
-    let qaValidation = null;
-    
-    try {
-      qaValidation = validateReportQuality(synthesisResults);
-      
-      // Log QA report
-      const qaReport = generateQAReport(qaValidation);
-      console.log(qaReport);
-      
-      // Warn if quality is low
-      if (qaValidation.status === 'FAIL' || qaValidation.status === 'WARN') {
-        console.warn(`\n[QA WARNING] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
-        console.warn('[QA WARNING] Recommendations:');
-        qaValidation.recommendations.forEach((rec, idx) => {
-          console.warn(`  ${idx + 1}. ${rec}`);
-        });
-      } else {
-        console.log(`\n[QA PASS] ✅ Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
-      }
-    } catch (error) {
-      console.error('\n[ResultsAggregator] QA validation failed:', error);
-      console.error('[ResultsAggregator] Stack:', error.stack);
-      qaValidation = {
-        status: 'ERROR',
-        qualityScore: 0,
-        error: error.message
-      };
+
+    const qaValidation = validateReportQuality(synthesisResults);
+
+    // Log QA report
+    const qaReport = generateQAReport(qaValidation);
+    console.log(qaReport);
+
+    // Warn if quality is low
+    if (qaValidation.status === 'FAIL' || qaValidation.status === 'WARN') {
+      console.warn(`\n[QA WARNING] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
+      console.warn('[QA WARNING] Recommendations:');
+      qaValidation.recommendations.forEach((rec, idx) => {
+        console.warn(`  ${idx + 1}. ${rec}`);
+      });
+    } else {
+      console.log(`\n[QA PASS] ✅ Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
     }
 
     // PHASE 8: Calculate Costs & Timing
@@ -260,10 +230,19 @@ export class ResultsAggregator {
        (extractScore(analysisResults.mobileVisual, 'visualScore') || 0)) / 2
     );
 
+    // Performance score: Use mobile PageSpeed score (more critical for conversions)
+    // Fall back to desktop if mobile unavailable, then default to 50 (neutral)
+    const performanceScore =
+      analysisResults.performance?.pageSpeed?.mobile?.performanceScore ||
+      analysisResults.performance?.pageSpeed?.desktop?.performanceScore ||
+      50;
+
     return {
       design_score: normalizeScore(designScore),
       seo_score: normalizeScore(extractScore(analysisResults.seo, 'seoScore')),
+      performance_score: normalizeScore(performanceScore),
       content_score: normalizeScore(extractScore(analysisResults.content, 'contentScore')),
+      accessibility_score: normalizeScore(extractScore(analysisResults.accessibility, 'accessibilityScore')),
       social_score: normalizeScore(extractScore(analysisResults.social, 'socialScore'))
     };
   }
@@ -361,9 +340,10 @@ export class ResultsAggregator {
       design_score_desktop: analysisResults.desktopVisual?.visualScore,
       design_score_mobile: analysisResults.mobileVisual?.visualScore,
       seo_score: scores.seo_score,
+      performance_score: scores.performance_score,
       content_score: scores.content_score,
+      accessibility_score: scores.accessibility_score,
       social_score: scores.social_score,
-      accessibility_score: analysisResults.accessibility?.accessibilityScore,
 
       // Issues
       design_issues: [...(analysisResults.desktopVisual?.issues || []), ...(analysisResults.mobileVisual?.issues || [])],
@@ -376,6 +356,14 @@ export class ResultsAggregator {
       social_issues: analysisResults.social?.issues || [],
       accessibility_issues: analysisResults.accessibility?.issues || [],
       accessibility_compliance: analysisResults.accessibility?.wcagCompliance || {},
+
+      // Performance analytics
+      performance_metrics_pagespeed: analysisResults.performance?.pageSpeed || null,
+      performance_metrics_crux: analysisResults.performance?.crux || null,
+      performance_issues: analysisResults.performance?.issues || [],
+      performance_score_mobile: analysisResults.performance?.pageSpeed?.mobile?.performanceScore || null,
+      performance_score_desktop: analysisResults.performance?.pageSpeed?.desktop?.performanceScore || null,
+      performance_api_errors: analysisResults.performance?.errors || [],
 
       // Models used
       seo_analysis_model: analysisResults.seo?.model,

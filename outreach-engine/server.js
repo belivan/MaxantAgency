@@ -128,7 +128,7 @@ app.post('/api/compose', async (req, res) => {
       strategy_id,
       strategy = strategy_id || 'compliment-sandwich',
       generateVariants = false,
-      model = 'claude-haiku-3-5'
+      model = 'claude-haiku-4-5'
     } = req.body;
 
     if (!url) {
@@ -306,7 +306,7 @@ app.post('/api/compose-social', async (req, res) => {
       url,
       platform = 'instagram',
       strategy = 'value-first',
-      model = 'claude-haiku-3-5'
+      model = 'claude-haiku-4-5'
     } = req.body;
 
     if (!url) {
@@ -385,7 +385,7 @@ app.post('/api/compose-batch', async (req, res) => {
       grade = null,
       projectId = null,
       strategy = 'compliment-sandwich',
-      model = 'claude-haiku-3-5'
+      model = 'claude-haiku-4-5'
     } = req.body;
 
     console.log(`\n📦 Starting batch email composition...`);

@@ -38,7 +38,7 @@ export async function generateSocialDM(lead, options = {}) {
   const {
     platform = 'instagram',
     strategy = 'value-first',
-    model = 'claude-haiku-3-5',
+    model = 'claude-haiku-4-5',
     variants = 1
   } = options;
 
@@ -129,7 +129,7 @@ export async function generateSocialDM(lead, options = {}) {
 export async function generateSocialVariants(lead, options = {}) {
   if (!lead) throw new Error('Lead is required for social variant generation');
 
-  const { platform = 'instagram', count = 3, model = 'claude-haiku-3-5' } = options;
+  const { platform = 'instagram', count = 3, model = 'claude-haiku-4-5' } = options;
 
   if (count < 1 || count > 5) {
     throw new Error('Count must be between 1 and 5');
@@ -244,7 +244,7 @@ async function callClaude(model, systemPrompt, userPrompt, temperature = 0.8) {
 
   try {
     const modelMap = {
-      'claude-haiku-3-5': 'claude-3-5-haiku-20241022',
+      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
       'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929'
     };
 
@@ -285,7 +285,7 @@ function calculateCost(model, usage) {
   }
 
   const pricing = {
-    'claude-haiku-3-5': { input: 0.25, output: 1.25 },
+    'claude-haiku-4-5': { input: 0.25, output: 1.25 },
     'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
     'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
     'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 }

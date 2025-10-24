@@ -200,7 +200,7 @@
     {
       "name": "ai_model",
       "type": "text",
-      "description": "AI model used (claude-haiku-3-5, etc.)"
+      "description": "AI model used (claude-haiku-4-5, etc.)"
     },
     {
       "name": "generation_cost",

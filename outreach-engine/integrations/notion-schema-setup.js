@@ -146,7 +146,7 @@ const REQUIRED_PROPERTIES = {
   'AI Model': {
     select: {
       options: [
-        { name: 'claude-haiku-3-5', color: 'blue' },
+        { name: 'claude-haiku-4-5', color: 'blue' },
         { name: 'claude-sonnet-4-5', color: 'purple' }
       ]
     }

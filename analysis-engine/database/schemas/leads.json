@@ -215,6 +215,39 @@
     },
 
     {
+      "name": "performance_metrics_pagespeed",
+      "type": "jsonb",
+      "description": "PageSpeed Insights data (mobile + desktop metrics, Core Web Vitals, opportunities)"
+    },
+    {
+      "name": "performance_metrics_crux",
+      "type": "jsonb",
+      "description": "Chrome UX Report data (real user metrics from Chrome browsers)"
+    },
+    {
+      "name": "performance_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Performance issues generated from PageSpeed + CrUX data"
+    },
+    {
+      "name": "performance_score_mobile",
+      "type": "integer",
+      "description": "PageSpeed Insights mobile performance score (0-100)"
+    },
+    {
+      "name": "performance_score_desktop",
+      "type": "integer",
+      "description": "PageSpeed Insights desktop performance score (0-100)"
+    },
+    {
+      "name": "performance_api_errors",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "Any errors from performance API calls"
+    },
+
+    {
       "name": "quick_wins",
       "type": "jsonb",
       "default": "[]",
@@ -585,6 +618,16 @@
       "type": "check",
       "name": "chk_social_score_range",
       "expression": "social_score >= 0 AND social_score <= 100"
+    },
+    {
+      "type": "check",
+      "name": "chk_performance_score_mobile_range",
+      "expression": "performance_score_mobile IS NULL OR (performance_score_mobile >= 0 AND performance_score_mobile <= 100)"
+    },
+    {
+      "type": "check",
+      "name": "chk_performance_score_desktop_range",
+      "expression": "performance_score_desktop IS NULL OR (performance_score_desktop >= 0 AND performance_score_desktop <= 100)"
     },
     {
       "type": "check",

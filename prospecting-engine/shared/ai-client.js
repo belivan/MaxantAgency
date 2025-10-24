@@ -128,10 +128,6 @@ async function callOpenAICompatible({
 
     // Add image if provided
     if (image) {
-      if (provider === 'grok') {
-        throw new Error('Grok models do not support vision - use GPT-4o for image analysis');
-      }
-
       // Convert Buffer to base64 if needed
       let base64Image;
       if (Buffer.isBuffer(image)) {

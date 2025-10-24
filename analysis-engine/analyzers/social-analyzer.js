@@ -1,5 +1,5 @@
 /**
- * Social Media Analyzer - Uses GPT-5 to analyze social media presence
+ * Social Media Analyzer - Uses gpt-5-mini to analyze social media presence
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: profile completeness, branding consistency, activity, integration
@@ -145,7 +145,7 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
     console.error('Social analysis failed:', error);
 
     // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5';
+    const fallbackModel = customPrompt?.model || 'gpt-5-mini';
     return {
       model: fallbackModel,
       socialScore: 30,

@@ -3,7 +3,7 @@
  * Tests the new concise, professional, mobile-responsive report design
  */
 
-import { generateHTMLReportV3 } from './reports/exporters/html-exporter-v3-concise.js';
+import { generateHTMLReportV3 } from '../reports/exporters/html-exporter-v3-concise.js';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 

@@ -22,6 +22,12 @@
     "install:all": "cd prospecting-engine && npm install && cd ../analysis-engine && npm install && cd ../outreach-engine && npm install && cd ../pipeline-orchestrator && npm install && cd ../command-center-ui && npm install && cd ..",
     "build": "cd command-center-ui && npm run build && cd ..",
     "screenshot": "node scripts/screenshot-ui.js",
+    "test:transparent": "cd analysis-engine && node tests/debug/test-transparent-analysis.js",
+    "test:debug": "cd analysis-engine && cross-env DEBUG_AI_CALLS=true DEBUG_AI_SAVE_TO_FILE=true node tests/debug/test-transparent-analysis.js",
+    "test:seo-only": "cd analysis-engine && cross-env ENABLE_SEO_ANALYZER=true ENABLE_CONTENT_ANALYZER=false ENABLE_DESKTOP_VISUAL_ANALYZER=false ENABLE_MOBILE_VISUAL_ANALYZER=false ENABLE_SOCIAL_ANALYZER=false ENABLE_ACCESSIBILITY_ANALYZER=false node tests/debug/test-transparent-analysis.js",
+    "test:single-page": "cd analysis-engine && cross-env ENABLE_MULTI_PAGE_CRAWL=false node tests/debug/test-transparent-analysis.js",
+    "db:validate": "cd database-tools && npm run db:validate",
+    "db:setup": "cd database-tools && npm run db:setup",
     "docker:build": "docker-compose build",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
@@ -34,6 +40,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "playwright": "^1.56.1"
   },
   "author": "Maksant",

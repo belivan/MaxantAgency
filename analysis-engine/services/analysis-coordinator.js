@@ -16,7 +16,7 @@ export class AnalysisCoordinator {
 
   /**
    * Run all 6 analyzers in parallel
-   * 
+   *
    * @param {object} crawlData - Data from CrawlingService
    * @param {object} pageSelection - Selection from PageSelectionService
    * @param {object} discoveryData - Data from DiscoveryService
@@ -26,9 +26,9 @@ export class AnalysisCoordinator {
    * @returns {Promise<object>} Analysis results
    */
   async runAnalysis(crawlData, pageSelection, discoveryData, context, baseUrl, customPrompts = {}) {
-    this.onProgress({ 
-      step: 'analyze', 
-      message: 'Running multi-page SEO, content, and visual analysis...' 
+    this.onProgress({
+      step: 'analyze',
+      message: 'Running multi-page SEO, content, and visual analysis...'
     });
 
     const { pages, homepage } = crawlData;
@@ -54,42 +54,305 @@ export class AnalysisCoordinator {
       discoveryData
     );
 
-    // Import analyzers (lazy loading)
-    const { analyzeSEO } = await import('../analyzers/seo-analyzer.js');
-    const { analyzeContent } = await import('../analyzers/content-analyzer.js');
-    const { analyzeDesktopVisual } = await import('../analyzers/desktop-visual-analyzer.js');
-    const { analyzeMobileVisual } = await import('../analyzers/mobile-visual-analyzer.js');
-    const { analyzeSocial } = await import('../analyzers/social-analyzer.js');
-    const { analyzeAccessibility } = await import('../analyzers/accessibility-analyzer.js');
+    // Check which analyzers are enabled via environment variables
+    const enableSEO = process.env.ENABLE_SEO_ANALYZER !== 'false';
+    const enableContent = process.env.ENABLE_CONTENT_ANALYZER !== 'false';
+    const enableDesktopVisual = process.env.ENABLE_DESKTOP_VISUAL_ANALYZER !== 'false';
+    const enableMobileVisual = process.env.ENABLE_MOBILE_VISUAL_ANALYZER !== 'false';
+    const enableSocial = process.env.ENABLE_SOCIAL_ANALYZER !== 'false';
+    const enableAccessibility = process.env.ENABLE_ACCESSIBILITY_ANALYZER !== 'false';
 
-    // Run all analyzers in parallel
-    const [seoResults, contentResults, desktopVisualResults, mobileVisualResults, socialResults, accessibilityResults] = await Promise.all([
-      analyzeSEO(seoPages, enrichedContext, customPrompts?.seo),
-      analyzeContent(contentPages, enrichedContext, customPrompts?.content),
-      analyzeDesktopVisual(visualPages, enrichedContext, customPrompts?.desktopVisual),
-      analyzeMobileVisual(visualPages, enrichedContext, customPrompts?.mobileVisual),
-      analyzeSocial(socialPages, parsedData.social.links, {
-        platformCount: parsedData.social.platformCount,
-        platformsPresent: parsedData.social.platformsPresent,
-        // Prospect social data from Google Maps/Discovery
-        profilesFromProspect: context.social_profiles_from_prospect || null,
-        metadataFromProspect: context.social_metadata_from_prospect || null
-      }, enrichedContext, customPrompts?.social),
-      analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
-    ]);
+    // Check if unified visual analyzer is enabled (analyzes desktop + mobile in one call)
+    const useUnifiedVisual = process.env.USE_UNIFIED_VISUAL_ANALYZER === 'true';
 
-    return {
-      seo: seoResults,
-      content: contentResults,
-      desktopVisual: desktopVisualResults,
-      mobileVisual: mobileVisualResults,
-      social: socialResults,
-      accessibility: accessibilityResults,
-      metadata: {
-        parsedData,
-        enrichedContext
+    // Check if unified technical analyzer is enabled (analyzes SEO + Content in one call)
+    const useUnifiedTechnical = process.env.USE_UNIFIED_TECHNICAL_ANALYZER === 'true';
+
+    // Log which analyzers are disabled
+    const disabledAnalyzers = [];
+    if (!enableSEO) disabledAnalyzers.push('SEO');
+    if (!enableContent) disabledAnalyzers.push('Content');
+    if (!enableDesktopVisual) disabledAnalyzers.push('Desktop Visual');
+    if (!enableMobileVisual) disabledAnalyzers.push('Mobile Visual');
+    if (!enableSocial) disabledAnalyzers.push('Social');
+    if (!enableAccessibility) disabledAnalyzers.push('Accessibility');
+
+    if (disabledAnalyzers.length > 0) {
+      console.log(`[Analysis Coordinator] Skipping disabled analyzers: ${disabledAnalyzers.join(', ')}`);
+    }
+
+    // Import analyzers (lazy loading) - only import what's enabled
+    const analyzers = {};
+
+    // Technical analyzers: Use unified (SEO + Content in one call) or separate
+    if (useUnifiedTechnical && (enableSEO || enableContent)) {
+      console.log('[Analysis Coordinator] Using unified technical analyzer (SEO + Content in one call)');
+      const { analyzeUnifiedTechnical, getSEOResults, getContentResults } = await import('../analyzers/unified-technical-analyzer.js');
+      analyzers.analyzeUnifiedTechnical = analyzeUnifiedTechnical;
+      analyzers.getSEOResults = getSEOResults;
+      analyzers.getContentResults = getContentResults;
+    } else {
+      // Legacy: separate SEO and Content analyzers
+      if (enableSEO) {
+        const { analyzeSEO } = await import('../analyzers/seo-analyzer.js');
+        analyzers.analyzeSEO = analyzeSEO;
       }
-    };
+      if (enableContent) {
+        const { analyzeContent } = await import('../analyzers/content-analyzer.js');
+        analyzers.analyzeContent = analyzeContent;
+      }
+    }
+
+    // Visual analyzers: Use unified (both viewports in one call) or separate
+    if (useUnifiedVisual && (enableDesktopVisual || enableMobileVisual)) {
+      console.log('[Analysis Coordinator] Using unified visual analyzer (desktop + mobile in one call)');
+      const { analyzeUnifiedVisual, getDesktopResults, getMobileResults } = await import('../analyzers/unified-visual-analyzer.js');
+      analyzers.analyzeUnifiedVisual = analyzeUnifiedVisual;
+      analyzers.getDesktopResults = getDesktopResults;
+      analyzers.getMobileResults = getMobileResults;
+    } else {
+      // Legacy: separate desktop and mobile analyzers
+      if (enableDesktopVisual) {
+        const { analyzeDesktopVisual } = await import('../analyzers/desktop-visual-analyzer.js');
+        analyzers.analyzeDesktopVisual = analyzeDesktopVisual;
+      }
+      if (enableMobileVisual) {
+        const { analyzeMobileVisual } = await import('../analyzers/mobile-visual-analyzer.js');
+        analyzers.analyzeMobileVisual = analyzeMobileVisual;
+      }
+    }
+
+    if (enableSocial) {
+      const { analyzeSocial } = await import('../analyzers/social-analyzer.js');
+      analyzers.analyzeSocial = analyzeSocial;
+    }
+    if (enableAccessibility) {
+      const { analyzeAccessibility } = await import('../analyzers/accessibility-analyzer.js');
+      analyzers.analyzeAccessibility = analyzeAccessibility;
+    }
+
+    // Run enabled analyzers in parallel
+    let unifiedTechnicalResults = null;
+    let unifiedVisualResults = null;
+    let seoResults, contentResults, desktopVisualResults, mobileVisualResults;
+
+    // Determine which technical analyzer to run (unified or separate)
+    const technicalPromise = useUnifiedTechnical && analyzers.analyzeUnifiedTechnical
+      ? analyzers.analyzeUnifiedTechnical(seoPages.length > 0 ? seoPages : contentPages, enrichedContext, customPrompts?.unifiedTechnical)
+      : null;
+
+    // Determine which visual analyzer to run (unified or separate)
+    const visualPromise = useUnifiedVisual && analyzers.analyzeUnifiedVisual
+      ? analyzers.analyzeUnifiedVisual(visualPages, enrichedContext, customPrompts?.unifiedVisual || customPrompts?.desktopVisual)
+      : null;
+
+    if (useUnifiedVisual && analyzers.analyzeUnifiedVisual) {
+      // NEW: Unified visual analysis (both viewports in ONE AI call)
+      if (useUnifiedTechnical && analyzers.analyzeUnifiedTechnical) {
+        // NEWEST: Both unified technical AND unified visual (maximum optimization)
+        const [unifiedTech, unifiedVis, socialResults, accessibilityResults] = await Promise.all([
+          technicalPromise,
+          visualPromise,
+          enableSocial && analyzers.analyzeSocial
+            ? analyzers.analyzeSocial(socialPages, parsedData.social.links, {
+                platformCount: parsedData.social.platformCount,
+                platformsPresent: parsedData.social.platformsPresent,
+                profilesFromProspect: context.social_profiles_from_prospect || null,
+                metadataFromProspect: context.social_metadata_from_prospect || null
+              }, enrichedContext, customPrompts?.social)
+            : Promise.resolve(getDefaultSocialResults()),
+          enableAccessibility && analyzers.analyzeAccessibility
+            ? analyzers.analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
+            : Promise.resolve(getDefaultAccessibilityResults())
+        ]);
+
+        // Split unified technical results for backward compatibility
+        unifiedTechnicalResults = unifiedTech;
+        seoResults = enableSEO ? analyzers.getSEOResults(unifiedTech) : getDefaultSEOResults();
+        contentResults = enableContent ? analyzers.getContentResults(unifiedTech) : getDefaultContentResults();
+
+        // Split unified visual results for backward compatibility
+        unifiedVisualResults = unifiedVis;
+        if (unifiedVis) {
+          desktopVisualResults = enableDesktopVisual ? analyzers.getDesktopResults(unifiedVis) : getDefaultVisualResults('desktop');
+          mobileVisualResults = enableMobileVisual ? analyzers.getMobileResults(unifiedVis) : getDefaultVisualResults('mobile');
+        } else {
+          desktopVisualResults = getDefaultVisualResults('desktop');
+          mobileVisualResults = getDefaultVisualResults('mobile');
+        }
+
+        return {
+          seo: seoResults,
+          content: contentResults,
+          desktopVisual: desktopVisualResults,
+          mobileVisual: mobileVisualResults,
+          unifiedTechnical: unifiedTechnicalResults, // NEW: Full unified technical results with cross-cutting issues
+          unifiedVisual: unifiedVisualResults, // NEW: Full unified visual results with responsive design insights
+          social: socialResults,
+          accessibility: accessibilityResults,
+          metadata: {
+            parsedData,
+            enrichedContext,
+            analyzersDisabled: disabledAnalyzers,
+            usedUnifiedTechnical: true,
+            usedUnifiedVisual: true
+          }
+        };
+
+      } else {
+        // Unified visual only (legacy technical analyzers)
+        const [seo, content, unifiedVis, socialResults, accessibilityResults] = await Promise.all([
+          enableSEO && analyzers.analyzeSEO
+            ? analyzers.analyzeSEO(seoPages, enrichedContext, customPrompts?.seo)
+            : Promise.resolve(getDefaultSEOResults()),
+          enableContent && analyzers.analyzeContent
+            ? analyzers.analyzeContent(contentPages, enrichedContext, customPrompts?.content)
+            : Promise.resolve(getDefaultContentResults()),
+          visualPromise,
+          enableSocial && analyzers.analyzeSocial
+            ? analyzers.analyzeSocial(socialPages, parsedData.social.links, {
+                platformCount: parsedData.social.platformCount,
+                platformsPresent: parsedData.social.platformsPresent,
+                profilesFromProspect: context.social_profiles_from_prospect || null,
+                metadataFromProspect: context.social_metadata_from_prospect || null
+              }, enrichedContext, customPrompts?.social)
+            : Promise.resolve(getDefaultSocialResults()),
+          enableAccessibility && analyzers.analyzeAccessibility
+            ? analyzers.analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
+            : Promise.resolve(getDefaultAccessibilityResults())
+        ]);
+
+        seoResults = seo;
+        contentResults = content;
+
+        // Split unified visual results for backward compatibility
+        unifiedVisualResults = unifiedVis;
+        if (unifiedVis) {
+          desktopVisualResults = enableDesktopVisual ? analyzers.getDesktopResults(unifiedVis) : getDefaultVisualResults('desktop');
+          mobileVisualResults = enableMobileVisual ? analyzers.getMobileResults(unifiedVis) : getDefaultVisualResults('mobile');
+        } else {
+          desktopVisualResults = getDefaultVisualResults('desktop');
+          mobileVisualResults = getDefaultVisualResults('mobile');
+        }
+
+        return {
+          seo: seoResults,
+          content: contentResults,
+          desktopVisual: desktopVisualResults,
+          mobileVisual: mobileVisualResults,
+          unifiedVisual: unifiedVisualResults, // NEW: Full unified results with responsive design insights
+          social: socialResults,
+          accessibility: accessibilityResults,
+          metadata: {
+            parsedData,
+            enrichedContext,
+            analyzersDisabled: disabledAnalyzers,
+            usedUnifiedTechnical: false,
+            usedUnifiedVisual: true
+          }
+        };
+      }
+
+    } else {
+      // LEGACY: Separate desktop and mobile visual analysis (TWO AI calls)
+      if (useUnifiedTechnical && analyzers.analyzeUnifiedTechnical) {
+        // Unified technical only (legacy visual analyzers)
+        const [unifiedTech, desktopResults, mobileResults, socialResults, accessibilityResults] = await Promise.all([
+          technicalPromise,
+          enableDesktopVisual && analyzers.analyzeDesktopVisual
+            ? analyzers.analyzeDesktopVisual(visualPages, enrichedContext, customPrompts?.desktopVisual)
+            : Promise.resolve(getDefaultVisualResults('desktop')),
+          enableMobileVisual && analyzers.analyzeMobileVisual
+            ? analyzers.analyzeMobileVisual(visualPages, enrichedContext, customPrompts?.mobileVisual)
+            : Promise.resolve(getDefaultVisualResults('mobile')),
+          enableSocial && analyzers.analyzeSocial
+            ? analyzers.analyzeSocial(socialPages, parsedData.social.links, {
+                platformCount: parsedData.social.platformCount,
+                platformsPresent: parsedData.social.platformsPresent,
+                profilesFromProspect: context.social_profiles_from_prospect || null,
+                metadataFromProspect: context.social_metadata_from_prospect || null
+              }, enrichedContext, customPrompts?.social)
+            : Promise.resolve(getDefaultSocialResults()),
+          enableAccessibility && analyzers.analyzeAccessibility
+            ? analyzers.analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
+            : Promise.resolve(getDefaultAccessibilityResults())
+        ]);
+
+        // Split unified technical results for backward compatibility
+        unifiedTechnicalResults = unifiedTech;
+        seoResults = enableSEO ? analyzers.getSEOResults(unifiedTech) : getDefaultSEOResults();
+        contentResults = enableContent ? analyzers.getContentResults(unifiedTech) : getDefaultContentResults();
+
+        desktopVisualResults = desktopResults;
+        mobileVisualResults = mobileResults;
+
+        return {
+          seo: seoResults,
+          content: contentResults,
+          desktopVisual: desktopVisualResults,
+          mobileVisual: mobileVisualResults,
+          unifiedTechnical: unifiedTechnicalResults, // NEW: Full unified technical results with cross-cutting issues
+          social: socialResults,
+          accessibility: accessibilityResults,
+          metadata: {
+            parsedData,
+            enrichedContext,
+            analyzersDisabled: disabledAnalyzers,
+            usedUnifiedTechnical: true,
+            usedUnifiedVisual: false
+          }
+        };
+
+      } else {
+        // FULL LEGACY: All separate analyzers (no unified)
+        const [seo, content, desktopResults, mobileResults, socialResults, accessibilityResults] = await Promise.all([
+          enableSEO && analyzers.analyzeSEO
+            ? analyzers.analyzeSEO(seoPages, enrichedContext, customPrompts?.seo)
+            : Promise.resolve(getDefaultSEOResults()),
+          enableContent && analyzers.analyzeContent
+            ? analyzers.analyzeContent(contentPages, enrichedContext, customPrompts?.content)
+            : Promise.resolve(getDefaultContentResults()),
+          enableDesktopVisual && analyzers.analyzeDesktopVisual
+            ? analyzers.analyzeDesktopVisual(visualPages, enrichedContext, customPrompts?.desktopVisual)
+            : Promise.resolve(getDefaultVisualResults('desktop')),
+          enableMobileVisual && analyzers.analyzeMobileVisual
+            ? analyzers.analyzeMobileVisual(visualPages, enrichedContext, customPrompts?.mobileVisual)
+            : Promise.resolve(getDefaultVisualResults('mobile')),
+          enableSocial && analyzers.analyzeSocial
+            ? analyzers.analyzeSocial(socialPages, parsedData.social.links, {
+                platformCount: parsedData.social.platformCount,
+                platformsPresent: parsedData.social.platformsPresent,
+                profilesFromProspect: context.social_profiles_from_prospect || null,
+                metadataFromProspect: context.social_metadata_from_prospect || null
+              }, enrichedContext, customPrompts?.social)
+            : Promise.resolve(getDefaultSocialResults()),
+          enableAccessibility && analyzers.analyzeAccessibility
+            ? analyzers.analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
+            : Promise.resolve(getDefaultAccessibilityResults())
+        ]);
+
+        seoResults = seo;
+        contentResults = content;
+        desktopVisualResults = desktopResults;
+        mobileVisualResults = mobileResults;
+
+        return {
+          seo: seoResults,
+          content: contentResults,
+          desktopVisual: desktopVisualResults,
+          mobileVisual: mobileVisualResults,
+          social: socialResults,
+          accessibility: accessibilityResults,
+          metadata: {
+            parsedData,
+            enrichedContext,
+            analyzersDisabled: disabledAnalyzers,
+            usedUnifiedTechnical: false,
+            usedUnifiedVisual: false
+          }
+        };
+      }
+    }
   }
 
   /**
@@ -199,4 +462,68 @@ function extractModuleScore(moduleName, moduleResult) {
   }
 
   return 0;
+}
+
+/**
+ * Default results for disabled analyzers
+ * These provide neutral scores so the grading system still works
+ */
+function getDefaultSEOResults() {
+  return {
+    model: 'disabled',
+    seoScore: 50,
+    issues: [],
+    opportunities: [],
+    quickWins: [],
+    _meta: { analyzer: 'seo', disabled: true, message: 'Analyzer disabled via ENABLE_SEO_ANALYZER=false' }
+  };
+}
+
+function getDefaultContentResults() {
+  return {
+    model: 'disabled',
+    contentScore: 50,
+    issues: [],
+    engagementHooks: [],
+    _meta: { analyzer: 'content', disabled: true, message: 'Analyzer disabled via ENABLE_CONTENT_ANALYZER=false' }
+  };
+}
+
+function getDefaultVisualResults(type = 'desktop') {
+  return {
+    model: 'disabled',
+    visualScore: 50,
+    issues: [],
+    positives: [],
+    quickWinCount: 0,
+    _meta: {
+      analyzer: `${type}-visual`,
+      disabled: true,
+      message: `Analyzer disabled via ENABLE_${type.toUpperCase()}_VISUAL_ANALYZER=false`
+    }
+  };
+}
+
+function getDefaultSocialResults() {
+  return {
+    model: 'disabled',
+    socialScore: 50,
+    platformsPresent: [],
+    mostActivePlatform: 'unknown',
+    issues: [],
+    quickWins: [],
+    strengths: [],
+    _meta: { analyzer: 'social', disabled: true, message: 'Analyzer disabled via ENABLE_SOCIAL_ANALYZER=false' }
+  };
+}
+
+function getDefaultAccessibilityResults() {
+  return {
+    model: 'disabled',
+    accessibilityScore: 50,
+    issues: [],
+    compliance: {},
+    wcagLevel: 'AA',
+    _meta: { analyzer: 'accessibility', disabled: true, message: 'Analyzer disabled via ENABLE_ACCESSIBILITY_ANALYZER=false' }
+  };
 }

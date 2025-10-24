@@ -41,7 +41,7 @@ async function testMultiChannel() {
 
     const emailResult = await generateCompleteEmail(lead, {
       strategy: 'compliment-sandwich',
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     const emailDuration = Date.now() - emailStart;
@@ -90,7 +90,7 @@ async function testMultiChannel() {
     const dmResult = await generateSocialDM(lead, {
       platform: 'instagram',
       strategy: 'value-first',
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     const dmDuration = Date.now() - dmStart;

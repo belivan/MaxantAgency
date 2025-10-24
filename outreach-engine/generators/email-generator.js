@@ -62,7 +62,7 @@ export async function generateEmail(lead, options = {}) {
     const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
 
     // Determine model to use
-    const modelToUse = model || prompt.model || 'claude-haiku-3-5';
+    const modelToUse = model || prompt.model || 'claude-haiku-4-5';
 
     // Call Claude AI
     const startTime = Date.now();
@@ -123,7 +123,7 @@ async function callClaude(model, systemPrompt, userPrompt, temperature = 0.7) {
 
   // Map model names to actual Claude model IDs
   const modelMap = {
-    'claude-haiku-3-5': 'claude-3-5-haiku-20241022',
+    'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
     'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
     'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
   };
@@ -181,7 +181,7 @@ function calculateCost(model, usage) {
 
     // Pricing per million tokens (input / output)
     const pricing = {
-      'claude-haiku-3-5': { input: 0.25, output: 1.25 },
+      'claude-haiku-4-5': { input: 0.25, output: 1.25 },
       'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
       'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
       'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 },
@@ -254,7 +254,7 @@ async function generateSubjectLine(lead, options = {}) {
     context.variant_count = 1; // Single subject for now
 
     const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
-    const modelToUse = options.model || prompt.model || 'claude-haiku-3-5';
+    const modelToUse = options.model || prompt.model || 'claude-haiku-4-5';
 
     const startTime = Date.now();
     const response = await callClaude(

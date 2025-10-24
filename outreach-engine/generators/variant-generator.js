@@ -35,7 +35,7 @@ export async function generateEmailVariants(lead, options = {}) {
     strategy = 'compliment-sandwich',
     subjectVariants = 3,
     bodyVariants = 2,
-    model = 'claude-haiku-3-5'
+    model = 'claude-haiku-4-5'
   } = options;
 
   // Validate variant counts
@@ -108,7 +108,7 @@ export async function generateEmailVariants(lead, options = {}) {
 async function generateSubjectVariants(lead, options = {}) {
   if (!lead) throw new Error('Lead is required for subject variant generation');
 
-  const { count = 3, model = 'claude-haiku-3-5' } = options;
+  const { count = 3, model = 'claude-haiku-4-5' } = options;
 
   try {
     console.log(`   Generating ${count} subject variants...`);
@@ -169,7 +169,7 @@ async function generateSubjectVariants(lead, options = {}) {
 async function generateBodyVariants(lead, options = {}) {
   if (!lead) throw new Error('Lead is required for body variant generation');
 
-  const { strategy = 'compliment-sandwich', count = 2, model = 'claude-haiku-3-5' } = options;
+  const { strategy = 'compliment-sandwich', count = 2, model = 'claude-haiku-4-5' } = options;
 
   try {
     console.log(`   Generating ${count} body variants...`);
@@ -285,7 +285,7 @@ async function callClaude(model, systemPrompt, userPrompt, temperature = 0.7) {
 
   try {
     const modelMap = {
-      'claude-haiku-3-5': 'claude-3-5-haiku-20241022',
+      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
       'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929'
     };
 
@@ -331,7 +331,7 @@ function calculateCost(model, usage) {
 
   try {
     const pricing = {
-      'claude-haiku-3-5': { input: 0.25, output: 1.25 },
+      'claude-haiku-4-5': { input: 0.25, output: 1.25 },
       'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
       'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
       'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 }

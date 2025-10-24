@@ -18,7 +18,7 @@ const testEmail = {
   status: 'ready',
   validation_score: 95,
   cost: 0.0001,
-  model_used: 'claude-haiku-3-5',
+  model_used: 'claude-haiku-4-5',
   generation_time_ms: 1234,
   id: 'test-12345'
 };

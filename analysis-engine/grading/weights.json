@@ -3,16 +3,20 @@
   "description": "Grading weights and scale definitions for website analysis",
 
   "weights": {
-    "design": 0.30,
-    "seo": 0.30,
-    "content": 0.20,
-    "social": 0.20
+    "design": 0.25,
+    "seo": 0.25,
+    "performance": 0.20,
+    "content": 0.15,
+    "accessibility": 0.10,
+    "social": 0.05
   },
 
   "weightsDescription": {
     "design": "Design and UX quality - most visible to visitors, biggest impact on conversions",
     "seo": "Technical SEO - determines search visibility and organic traffic",
+    "performance": "Page speed and Core Web Vitals - affects both conversions and SEO rankings",
     "content": "Content quality and completeness - builds trust and provides value",
+    "accessibility": "ADA compliance and usability - legal protection and broader reach",
     "social": "Social media presence - extends reach and builds credibility"
   },
 
@@ -95,9 +99,11 @@
     "missingScores": {
       "design": 30,
       "seo": 30,
+      "performance": 50,
       "content": 30,
+      "accessibility": 50,
       "social": 30,
-      "description": "Default scores if analysis cannot be completed (e.g., website failed to load)"
+      "description": "Default scores if analysis cannot be completed (e.g., website failed to load). Performance and accessibility default to 50 (neutral) as they're often optional."
     }
   },
 
@@ -165,8 +171,10 @@
 
   "notes": [
     "Weights are configurable and can be adjusted based on business needs",
-    "Design and SEO weighted equally (30% each) as most impactful for web design agency",
-    "Content and social each 20% - important but secondary to core web design",
+    "Design and SEO weighted equally (25% each) - core foundation of web presence",
+    "Performance weighted heavily (20%) - directly impacts conversions and Google rankings",
+    "Content (15%) and Accessibility (10%) - important but secondary",
+    "Social reduced to 5% - nice-to-have, not critical to website quality",
     "Quick-win bonus encourages finding easy fixes that show immediate value",
     "Grade boundaries designed so most sites fall in B-C range (realistic improvement opportunities)",
     "A grades are rare - reserved for genuinely excellent websites",

@@ -1,6 +1,6 @@
 /**
  * Migration: Add AI Lead Scoring Columns to Leads Table
- * Adds new columns for GPT-5 lead priority scoring and business intelligence
+ * Adds new columns for gpt-5-mini lead priority scoring and business intelligence
  */
 
 import { createClient } from '@supabase/supabase-js';

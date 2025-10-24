@@ -1,5 +1,5 @@
 /**
- * SEO Analyzer - Uses GPT-5 to analyze technical SEO
+ * SEO Analyzer - Uses gpt-5-mini to analyze technical SEO
  *
  * Cost: ~$0.006 per analysis
  * Analyzes: meta tags, headings, URLs, images, page speed, schema
@@ -142,7 +142,7 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
     console.error('SEO analysis failed:', error);
 
     // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5';
+    const fallbackModel = customPrompt?.model || 'gpt-5-mini';
     return {
       model: fallbackModel,
       seoScore: 30,

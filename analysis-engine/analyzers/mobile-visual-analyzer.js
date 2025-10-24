@@ -1,5 +1,5 @@
 /**
- * Mobile Visual Analyzer - Uses GPT-5 Vision to analyze mobile screenshot
+ * Mobile Visual Analyzer - Uses gpt-5-mini Vision to analyze mobile screenshot
  *
  * Cost: ~$0.015 per analysis
  * Analyzes: mobile layout, touch targets, navigation, typography, mobile UX issues
@@ -141,7 +141,7 @@ export async function analyzeMobileVisual(pages, context = {}, customPrompt = nu
     const quickWinCount = allIssues.filter(issue => issue.difficulty === 'quick-win').length;
 
     // Add metadata
-    const resolvedModel = lastPromptModel || customPrompt?.model || 'gpt-5';
+    const resolvedModel = lastPromptModel || customPrompt?.model || 'gpt-5-mini';
 
     return {
       model: resolvedModel,
@@ -168,7 +168,7 @@ export async function analyzeMobileVisual(pages, context = {}, customPrompt = nu
     console.error('Mobile visual analysis failed:', error);
 
     // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5';
+    const fallbackModel = customPrompt?.model || 'gpt-5-mini';
     return {
       model: fallbackModel,
       visualScore: 30,

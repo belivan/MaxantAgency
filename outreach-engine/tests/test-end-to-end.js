@@ -46,7 +46,7 @@ async function testEmailWorkflow() {
 
     const emailResult = await generateCompleteEmail(lead, {
       strategy: 'compliment-sandwich',
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     const duration = Date.now() - startTime;
@@ -170,7 +170,7 @@ async function testSocialWorkflow() {
     const dmResult = await generateSocialDM(lead, {
       platform: platform,
       strategy: 'value-first',
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     console.log(`   ✅ DM generated`);

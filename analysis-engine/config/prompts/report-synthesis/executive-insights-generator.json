@@ -154,7 +154,7 @@
     }
   ],
   "costEstimate": {
-    "model": "gpt-5",
+    "model": "gpt-5-mini-mini",
     "inputTokens": "~3000 (consolidated data)",
     "outputTokens": "~1200 (executive summary)",
     "estimatedCost": "$0.025 per summary"

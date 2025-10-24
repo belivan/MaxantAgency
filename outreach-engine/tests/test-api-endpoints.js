@@ -208,7 +208,7 @@ async function testEmailComposition() {
   const compose = await request('POST', '/api/compose', {
     url: testLead.url,
     strategy: 'compliment-sandwich',
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   const duration = Date.now() - startTime;
@@ -257,7 +257,7 @@ async function testEmailComposition() {
     url: testLead.url,
     strategy: 'problem-first',
     generateVariants: true,
-    model: 'claude-haiku-3-5'
+    model: 'claude-haiku-4-5'
   });
 
   test('Variant composition returns success', () => {
@@ -317,7 +317,7 @@ async function testSocialComposition() {
       url: testLead.url,
       platform,
       strategy: 'value-first',
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     test('Social DM returns success', () => {

@@ -33,7 +33,7 @@ async function generateEmail(lead, index) {
 
     const emailResult = await generateCompleteEmail(lead, {
       strategy: 'compliment-sandwich',
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     const validation = validateEmail({
@@ -92,7 +92,7 @@ async function generateDM(lead, platform, index) {
     const dmResult = await generateSocialDM(lead, {
       platform: platform,
       strategy: 'value-first',
-      model: 'claude-haiku-3-5'
+      model: 'claude-haiku-4-5'
     });
 
     const validation = validateSocialDM({
