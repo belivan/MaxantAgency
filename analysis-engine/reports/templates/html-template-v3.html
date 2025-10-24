@@ -755,24 +755,39 @@
             padding: var(--space-12) 0;
             text-align: center;
             border-top: 1px solid var(--border-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .report-footer .container {
+            display: flex;
+            justify-content: center;
         }
 
         .footer-content {
-            max-width: 600px;
+            max-width: 400px;
             margin: 0 auto;
+            padding: 0 var(--space-6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .footer-logo {
-            font-size: var(--text-2xl);
+            font-size: var(--text-xl);
             font-weight: 700;
             color: var(--primary);
-            margin-bottom: var(--space-4);
+            margin-bottom: var(--space-3);
+            text-align: center;
         }
 
         .footer-text {
             color: var(--text-secondary);
             font-size: var(--text-sm);
-            line-height: 1.6;
+            line-height: 1.5;
+            margin: 0;
+            text-align: center;
         }
 
         /* ===============================================
@@ -917,6 +932,26 @@
                 font-size: 1rem;
                 padding: 0.4rem 0.8rem;
             }
+
+            /* Footer mobile adjustments */
+            .report-footer {
+                padding: var(--space-8) 0;
+            }
+
+            .footer-content {
+                max-width: 100%;
+                padding: 0 var(--space-4);
+            }
+
+            .footer-logo {
+                font-size: 1.5rem;
+                margin-bottom: var(--space-3);
+            }
+
+            .footer-text {
+                font-size: 1.1rem;
+                line-height: 1.8;
+            }
         }
 
         @media screen and (max-width: 480px) {
@@ -978,6 +1013,25 @@
 
             .metric-card {
                 padding: var(--space-6);
+            }
+
+            /* Footer adjustments for small phones */
+            .report-footer {
+                padding: var(--space-6) 0;
+            }
+
+            .footer-content {
+                padding: 0 var(--space-3);
+            }
+
+            .footer-logo {
+                font-size: 1.6rem;
+                margin-bottom: var(--space-2);
+            }
+
+            .footer-text {
+                font-size: 1.15rem;
+                line-height: 1.9;
             }
         }
 

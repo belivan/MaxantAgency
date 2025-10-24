@@ -2,7 +2,7 @@
  * Test V3 Report with Much Larger Mobile Text
  */
 
-import { generateHTMLReportV3 } from './analysis-engine/reports/exporters/html-exporter-v3-concise.js';
+import { generateHTMLReportV3 } from '../analysis-engine/reports/exporters/html-exporter-v3-concise.js';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 

@@ -3,8 +3,8 @@
  * Tests report generation with mock data
  */
 
-import { generateHTMLReportV3 } from './analysis-engine/reports/exporters/html-exporter-v3-concise.js';
-import { runReportSynthesis } from './analysis-engine/reports/synthesis/report-synthesis.js';
+import { generateHTMLReportV3 } from '../analysis-engine/reports/exporters/html-exporter-v3-concise.js';
+import { runReportSynthesis } from '../analysis-engine/reports/synthesis/report-synthesis.js';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import dotenv from 'dotenv';

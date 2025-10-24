@@ -4,7 +4,7 @@
  */
 
 import { analyzeWebsite } from './analysis-engine/orchestrator.js';
-import { autoGenerateReport } from './analysis-engine/reports/auto-report-generator.js';
+import { autoGenerateReport } from '../analysis-engine/reports/auto-report-generator.js';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import dotenv from 'dotenv';

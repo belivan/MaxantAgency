@@ -143,10 +143,45 @@ function generateHeroSection(analysisResult, synthesisData) {
   html += '  <div class="container">\n';
   html += '    <div class="hero-content">\n';
 
-  // Header
+  // Header with contact info
   html += '      <div class="hero-header">\n';
   html += `        <h1 class="company-name">${escapeHtml(company_name)}</h1>\n`;
-  html += `        <p class="company-meta">${escapeHtml(industry || 'Business')} • ${escapeHtml(city || 'Location')}</p>\n`;
+  
+  // Show industry and city
+  const metaParts = [];
+  if (industry) metaParts.push(escapeHtml(industry));
+  if (city) metaParts.push(escapeHtml(city));
+  if (metaParts.length > 0) {
+    html += `        <p class="company-meta">${metaParts.join(' • ')}</p>\n`;
+  }
+
+  // Add contact information if available - prominent black box
+  const { contact_email, contact_phone, url } = analysisResult;
+  if (contact_email || contact_phone || url) {
+    html += '        <div class="contact-info-box" style="margin-top: 24px; padding: 16px 24px; background: rgba(0, 0, 0, 0.4); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 12px; backdrop-filter: blur(10px); display: inline-block;">\n';
+    html += '          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: center;">\n';
+
+    if (contact_email) {
+      html += `            <a href="mailto:${escapeHtml(contact_email)}" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 8px 12px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">`;
+      html += `<span style="font-size: 1.2em;">📧</span><span>${escapeHtml(contact_email)}</span></a>\n`;
+    }
+
+    if (contact_phone) {
+      const cleanPhone = contact_phone.replace(/\D/g, '');
+      html += `            <a href="tel:${cleanPhone}" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 8px 12px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">`;
+      html += `<span style="font-size: 1.2em;">📞</span><span>${escapeHtml(contact_phone)}</span></a>\n`;
+    }
+
+    if (url) {
+      const displayUrl = url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+      html += `            <a href="${escapeHtml(url)}" target="_blank" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 8px 12px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">`;
+      html += `<span style="font-size: 1.2em;">🌐</span><span>${escapeHtml(displayUrl)}</span></a>\n`;
+    }
+
+    html += '          </div>\n';
+    html += '        </div>\n';
+  }
+
   html += '      </div>\n';
 
   // Score Card
@@ -408,9 +443,26 @@ function generateActionCard(issue, number, priority) {
 }
 
 /**
- * Generate implementation roadmap section
+ * Generate implementation roadmap section with REAL data-driven tasks
  */
 function generateRoadmap(analysisResult, synthesisData) {
+  const {
+    quick_wins = [],
+    design_issues_desktop = [],
+    design_issues_mobile = [],
+    seo_issues = [],
+    content_issues = [],
+    accessibility_issues = [],
+    top_issue,
+    industry
+  } = analysisResult;
+
+  // Get consolidated issues for better organization
+  const issues = synthesisData.consolidatedIssues || generateConsolidatedIssuesFromRaw(analysisResult);
+  const criticalIssues = issues.filter(i => i.severity === 'critical');
+  const highIssues = issues.filter(i => i.severity === 'high');
+  const mediumIssues = issues.filter(i => i.severity === 'medium');
+
   let html = '    <!-- Implementation Roadmap -->\n';
   html += '    <section class="section" id="roadmap">\n';
   html += '      <div class="section-header">\n';
@@ -418,34 +470,52 @@ function generateRoadmap(analysisResult, synthesisData) {
   html += '          <span class="section-title-icon">📅</span>\n';
   html += '          Implementation Roadmap\n';
   html += '        </h2>\n';
-  html += '        <p class="section-description">A phased approach to website improvement, designed to deliver quick wins while building toward long-term excellence.</p>\n';
+  html += '        <p class="section-description">A phased approach based on your specific website issues, prioritized for maximum impact.</p>\n';
   html += '      </div>\n';
 
   html += '      <div class="roadmap-timeline">\n';
   html += '        <div class="timeline-connector"></div>\n';
 
-  // Phase 1: Quick Fixes (Week 1-2)
+  // PHASE 1: Week 1-2 - Quick Wins & Critical Issues
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">1</div>\n';
   html += '          <div class="phase-content">\n';
   html += '            <div class="phase-header">\n';
-  html += '              <h3 class="phase-title">Quick Fixes & Foundation</h3>\n';
-  html += '              <span class="phase-timeline">📅 Week 1-2</span>\n';
+  html += '              <h3 class="phase-title">Week 1-2: Critical Fixes & Quick Wins</h3>\n';
+  html += `              <span class="phase-timeline">📅 ${quick_wins.length + criticalIssues.length} items</span>\n`;
   html += '            </div>\n';
   html += '            <div class="phase-tasks">\n';
 
-  const phase1Tasks = [
-    'Fix critical accessibility issues',
-    'Optimize images and page load speed',
-    'Update meta tags and descriptions',
-    'Fix broken links and 404 errors',
-    'Add missing alt text to images'
-  ];
+  let phase1Tasks = [];
+  
+  // Add top issue first if it exists
+  if (top_issue) {
+    phase1Tasks.push(typeof top_issue === 'string' ? top_issue : (top_issue.title || top_issue.description || 'Address critical issue'));
+  }
+  
+  // Add critical issues
+  criticalIssues.slice(0, 2).forEach(issue => {
+    phase1Tasks.push(issue.title || issue.description);
+  });
+  
+  // Add quick wins
+  quick_wins.slice(0, 5).forEach(win => {
+    phase1Tasks.push(win);
+  });
 
-  phase1Tasks.forEach((task, index) => {
+  // If no real tasks, add generic ones
+  if (phase1Tasks.length === 0) {
+    phase1Tasks = [
+      'Fix critical accessibility issues',
+      'Optimize images and page load speed',
+      'Update meta tags and descriptions'
+    ];
+  }
+
+  phase1Tasks.slice(0, 6).forEach((task, index) => {
     html += '              <div class="task-item">\n';
     html += `                <input type="checkbox" class="task-checkbox" id="task-1-${index}">\n`;
-    html += `                <label class="task-label" for="task-1-${index}">${task}</label>\n`;
+    html += `                <label class="task-label" for="task-1-${index}">${escapeHtml(task)}</label>\n`;
     html += '              </div>\n';
   });
 
@@ -453,28 +523,52 @@ function generateRoadmap(analysisResult, synthesisData) {
   html += '          </div>\n';
   html += '        </div>\n';
 
-  // Phase 2: Core Improvements (Week 3-4)
+  // PHASE 2: Week 3-6 - High Priority Issues
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">2</div>\n';
   html += '          <div class="phase-content">\n';
   html += '            <div class="phase-header">\n';
-  html += '              <h3 class="phase-title">Core Improvements</h3>\n';
-  html += '              <span class="phase-timeline">📅 Week 3-4</span>\n';
+  html += '              <h3 class="phase-title">Week 3-6: Core Improvements</h3>\n';
+  html += `              <span class="phase-timeline">📅 ${highIssues.length} items</span>\n`;
   html += '            </div>\n';
   html += '            <div class="phase-tasks">\n';
 
-  const phase2Tasks = [
-    'Enhance mobile responsiveness',
-    'Improve navigation structure',
-    'Optimize conversion paths',
-    'Implement structured data',
-    'Enhance content quality'
-  ];
+  let phase2Tasks = [];
+  
+  // Add high-priority issues
+  highIssues.slice(0, 4).forEach(issue => {
+    phase2Tasks.push(issue.title || issue.description);
+  });
+  
+  // Add specific SEO issues
+  seo_issues.slice(0, 2).forEach(issue => {
+    if (typeof issue === 'string') {
+      phase2Tasks.push(issue);
+    } else {
+      phase2Tasks.push(issue.title || issue.description || 'Improve SEO');
+    }
+  });
 
-  phase2Tasks.forEach((task, index) => {
+  // Add specific design issues
+  const designIssues = [...(design_issues_desktop || []), ...(design_issues_mobile || [])];
+  designIssues.slice(0, 2).forEach(issue => {
+    if (typeof issue === 'string' && !phase2Tasks.includes(issue)) {
+      phase2Tasks.push(issue);
+    }
+  });
+
+  if (phase2Tasks.length === 0) {
+    phase2Tasks = [
+      'Enhance mobile responsiveness',
+      'Improve navigation structure',
+      'Optimize conversion paths'
+    ];
+  }
+
+  phase2Tasks.slice(0, 6).forEach((task, index) => {
     html += '              <div class="task-item">\n';
     html += `                <input type="checkbox" class="task-checkbox" id="task-2-${index}">\n`;
-    html += `                <label class="task-label" for="task-2-${index}">${task}</label>\n`;
+    html += `                <label class="task-label" for="task-2-${index}">${escapeHtml(task)}</label>\n`;
     html += '              </div>\n';
   });
 
@@ -482,28 +576,65 @@ function generateRoadmap(analysisResult, synthesisData) {
   html += '          </div>\n';
   html += '        </div>\n';
 
-  // Phase 3: Strategic Enhancements (Month 2-3)
+  // PHASE 3: Month 2-3 - Medium Priority & Strategic
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">3</div>\n';
   html += '          <div class="phase-content">\n';
   html += '            <div class="phase-header">\n';
-  html += '              <h3 class="phase-title">Strategic Enhancements</h3>\n';
-  html += '              <span class="phase-timeline">📅 Month 2-3</span>\n';
+  html += '              <h3 class="phase-title">Month 2-3: Strategic Enhancements</h3>\n';
+  html += `              <span class="phase-timeline">📅 ${mediumIssues.length} items</span>\n`;
   html += '            </div>\n';
   html += '            <div class="phase-tasks">\n';
 
-  const phase3Tasks = [
-    'Implement advanced SEO strategies',
-    'Develop content marketing plan',
-    'Enhance user engagement features',
-    'Integrate analytics and tracking',
-    'Build social proof elements'
-  ];
+  let phase3Tasks = [];
+  
+  // Add medium priority issues
+  mediumIssues.slice(0, 3).forEach(issue => {
+    phase3Tasks.push(issue.title || issue.description);
+  });
+  
+  // Add content issues
+  (content_issues || []).slice(0, 2).forEach(issue => {
+    if (typeof issue === 'string') {
+      phase3Tasks.push(issue);
+    } else {
+      phase3Tasks.push(issue.title || issue.description || 'Improve content');
+    }
+  });
 
-  phase3Tasks.forEach((task, index) => {
+  // Add industry-specific strategic improvements
+  if (industry) {
+    const industryLower = industry.toLowerCase();
+    if (industryLower.includes('hvac') || industryLower.includes('plumb') || industryLower.includes('electric')) {
+      phase3Tasks.push('Build service area pages for local SEO');
+      phase3Tasks.push('Add customer testimonials and reviews');
+    } else if (industryLower.includes('dental') || industryLower.includes('medical') || industryLower.includes('health')) {
+      phase3Tasks.push('Implement online appointment booking');
+      phase3Tasks.push('Add patient portal integration');
+    } else if (industryLower.includes('restaurant') || industryLower.includes('food')) {
+      phase3Tasks.push('Integrate online ordering system');
+      phase3Tasks.push('Set up reservation system');
+    } else if (industryLower.includes('retail') || industryLower.includes('ecommerce')) {
+      phase3Tasks.push('Enhance product pages with rich media');
+      phase3Tasks.push('Implement abandoned cart recovery');
+    } else {
+      phase3Tasks.push('Develop content marketing strategy');
+      phase3Tasks.push('Implement conversion tracking');
+    }
+  }
+
+  if (phase3Tasks.length === 0) {
+    phase3Tasks = [
+      'Implement advanced SEO strategies',
+      'Develop content marketing plan',
+      'Enhance user engagement features'
+    ];
+  }
+
+  phase3Tasks.slice(0, 6).forEach((task, index) => {
     html += '              <div class="task-item">\n';
     html += `                <input type="checkbox" class="task-checkbox" id="task-3-${index}">\n`;
-    html += `                <label class="task-label" for="task-3-${index}">${task}</label>\n`;
+    html += `                <label class="task-label" for="task-3-${index}">${escapeHtml(task)}</label>\n`;
     html += '              </div>\n';
   });
 
@@ -545,9 +676,32 @@ function generateScreenshotsSection(screenshotData, registry) {
 }
 
 /**
- * Generate technical appendix
+ * Generate technical appendix with REAL detailed data
  */
 function generateTechnicalAppendix(analysisResult, synthesisData) {
+  const {
+    tech_stack,
+    page_load_time,
+    has_https,
+    is_mobile_friendly,
+    has_blog,
+    analysis_cost,
+    analysis_time,
+    crawl_metadata,
+    social_platforms_present,
+    seo_analysis_model,
+    content_analysis_model,
+    desktop_visual_model,
+    mobile_visual_model,
+    social_analysis_model,
+    accessibility_analysis_model,
+    years_in_business,
+    employee_count,
+    pricing_visible,
+    budget_indicator,
+    premium_features
+  } = analysisResult;
+
   let html = '    <!-- Technical Appendix -->\n';
   html += '    <section class="section" id="appendix">\n';
   html += '      <div class="section-header">\n';
@@ -559,38 +713,165 @@ function generateTechnicalAppendix(analysisResult, synthesisData) {
 
   html += '      <div class="grid gap-6" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">\n';
 
-  // Analysis Details
+  // CARD 1: Analysis Metadata
   html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
-  html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">Analysis Details</h3>\n';
+  html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">📊 Analysis Metadata</h3>\n';
   html += '          <table style="width: 100%;">\n';
 
   const analyzedDate = new Date(analysisResult.analyzed_at || Date.now());
   html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Date</td><td style="text-align: right; font-weight: 500;">${analyzedDate.toLocaleDateString()}</td></tr>\n`;
-  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Pages Analyzed</td><td style="text-align: right; font-weight: 500;">${analysisResult.pages_analyzed || 'Multiple'}</td></tr>\n`;
-
-  if (analysisResult.analysis_time) {
-    const minutes = Math.floor(analysisResult.analysis_time / 60);
-    const seconds = Math.round(analysisResult.analysis_time % 60);
-    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Duration</td><td style="text-align: right; font-weight: 500;">${minutes}m ${seconds}s</td></tr>\n`;
+  
+  if (crawl_metadata?.pages_crawled) {
+    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Pages Crawled</td><td style="text-align: right; font-weight: 500;">${crawl_metadata.pages_crawled}</td></tr>\n`;
   }
-
+  
+  if (analysis_time) {
+    const seconds = Math.floor(analysis_time / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Duration</td><td style="text-align: right; font-weight: 500;">${minutes > 0 ? minutes + 'm ' : ''}${remainingSeconds}s</td></tr>\n`;
+  }
+  
+  if (analysis_cost) {
+    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Analysis Cost</td><td style="text-align: right; font-weight: 500;">$${Number(analysis_cost).toFixed(4)}</td></tr>\n`;
+  }
+  
   if (synthesisData.consolidatedIssues) {
     html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">AI Synthesis</td><td style="text-align: right; font-weight: 500;">✓ Enabled</td></tr>\n`;
+    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Issues Found</td><td style="text-align: right; font-weight: 500;">${synthesisData.consolidatedIssues.length}</td></tr>\n`;
   }
 
   html += '          </table>\n';
   html += '        </div>\n';
 
-  // Score Breakdown
+  // CARD 2: Technology Stack
   html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
-  html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">Score Breakdown</h3>\n';
+  html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">⚙️ Technology Stack</h3>\n';
   html += '          <table style="width: 100%;">\n';
-  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Design Score</td><td style="text-align: right; font-weight: 500;">${Math.round(analysisResult.design_score || 0)}/100</td></tr>\n`;
-  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">SEO Score</td><td style="text-align: right; font-weight: 500;">${Math.round(analysisResult.seo_score || 0)}/100</td></tr>\n`;
-  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Content Score</td><td style="text-align: right; font-weight: 500;">${Math.round(analysisResult.content_score || 0)}/100</td></tr>\n`;
-  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Social Score</td><td style="text-align: right; font-weight: 500;">${Math.round(analysisResult.social_score || 0)}/100</td></tr>\n`;
+
+  if (tech_stack) {
+    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Platform</td><td style="text-align: right; font-weight: 500;">${escapeHtml(tech_stack)}</td></tr>\n`;
+  }
+  
+  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">HTTPS</td><td style="text-align: right; font-weight: 500;">${has_https ? '✓ Yes' : '✗ No'}</td></tr>\n`;
+  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Mobile Friendly</td><td style="text-align: right; font-weight: 500;">${is_mobile_friendly ? '✓ Yes' : '✗ No'}</td></tr>\n`;
+  
+  if (page_load_time) {
+    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Page Load Time</td><td style="text-align: right; font-weight: 500;">${(page_load_time / 1000).toFixed(2)}s</td></tr>\n`;
+  }
+  
+  html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Blog/News</td><td style="text-align: right; font-weight: 500;">${has_blog ? '✓ Yes' : '✗ No'}</td></tr>\n`;
+
+  if (social_platforms_present && social_platforms_present.length > 0) {
+    html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Social Media</td><td style="text-align: right; font-weight: 500;">${social_platforms_present.join(', ')}</td></tr>\n`;
+  }
+
   html += '          </table>\n';
   html += '        </div>\n';
+
+  // CARD 3: Score Breakdown
+  html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
+  html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">📈 Score Breakdown</h3>\n';
+  html += '          <table style="width: 100%;">\n';
+  
+  const scores = [
+    { label: 'Design', value: analysisResult.design_score },
+    { label: 'SEO', value: analysisResult.seo_score },
+    { label: 'Content', value: analysisResult.content_score },
+    { label: 'Social', value: analysisResult.social_score }
+  ];
+
+  scores.forEach(({ label, value }) => {
+    if (value !== undefined && value !== null) {
+      const scoreValue = Math.round(value);
+      const color = scoreValue >= 80 ? 'var(--success)' : scoreValue >= 60 ? 'var(--warning)' : 'var(--danger)';
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">${label} Score</td><td style="text-align: right; font-weight: 500; color: ${color};">${scoreValue}/100</td></tr>\n`;
+    }
+  });
+  
+  html += `            <tr style="border-top: 2px solid var(--border-light);"><td style="padding: 12px 0 8px; color: var(--text-primary); font-weight: 600;">Overall</td><td style="text-align: right; font-weight: 700; padding: 12px 0 8px; font-size: 1.125rem;">${Math.round(analysisResult.overall_score || 0)}/100</td></tr>\n`;
+
+  html += '          </table>\n';
+  html += '        </div>\n';
+
+  // CARD 4: Business Intelligence (if available)
+  if (years_in_business || employee_count || pricing_visible || premium_features?.length > 0) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
+    html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">💼 Business Intelligence</h3>\n';
+    html += '          <table style="width: 100%;">\n';
+
+    if (years_in_business) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Years in Business</td><td style="text-align: right; font-weight: 500;">${years_in_business} years</td></tr>\n`;
+    }
+    
+    if (employee_count) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Company Size</td><td style="text-align: right; font-weight: 500;">${employee_count}</td></tr>\n`;
+    }
+    
+    if (pricing_visible !== undefined) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Pricing Visible</td><td style="text-align: right; font-weight: 500;">${pricing_visible ? '✓ Yes' : '✗ No'}</td></tr>\n`;
+    }
+    
+    if (budget_indicator) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Budget Indicator</td><td style="text-align: right; font-weight: 500;">${escapeHtml(budget_indicator)}</td></tr>\n`;
+    }
+    
+    if (premium_features && premium_features.length > 0) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Premium Features</td><td style="text-align: right; font-weight: 500;">${premium_features.length} detected</td></tr>\n`;
+    }
+
+    html += '          </table>\n';
+    html += '        </div>\n';
+  }
+
+  // CARD 5: AI Models Used
+  const models = [];
+  if (seo_analysis_model) models.push({ type: 'SEO', model: seo_analysis_model });
+  if (content_analysis_model) models.push({ type: 'Content', model: content_analysis_model });
+  if (desktop_visual_model) models.push({ type: 'Desktop Visual', model: desktop_visual_model });
+  if (mobile_visual_model) models.push({ type: 'Mobile Visual', model: mobile_visual_model });
+  if (social_analysis_model) models.push({ type: 'Social', model: social_analysis_model });
+  if (accessibility_analysis_model) models.push({ type: 'Accessibility', model: accessibility_analysis_model });
+
+  if (models.length > 0) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
+    html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">🤖 AI Models Used</h3>\n';
+    html += '          <table style="width: 100%;">\n';
+
+    models.forEach(({ type, model }) => {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">${type}</td><td style="text-align: right; font-weight: 500; font-family: monospace; font-size: 0.875rem;">${escapeHtml(model)}</td></tr>\n`;
+    });
+
+    html += '          </table>\n';
+    html += '        </div>\n';
+  }
+
+  // CARD 6: Crawl Statistics (if available)
+  if (crawl_metadata) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
+    html += '          <h3 style="margin-bottom: 16px; font-size: 1.125rem;">🕷️ Crawl Statistics</h3>\n';
+    html += '          <table style="width: 100%;">\n';
+
+    if (crawl_metadata.pages_crawled) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Pages Found</td><td style="text-align: right; font-weight: 500;">${crawl_metadata.pages_crawled}</td></tr>\n`;
+    }
+    
+    if (crawl_metadata.links_found) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Links Found</td><td style="text-align: right; font-weight: 500;">${crawl_metadata.links_found}</td></tr>\n`;
+    }
+    
+    if (crawl_metadata.pages_failed) {
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Pages Failed</td><td style="text-align: right; font-weight: 500;">${crawl_metadata.pages_failed}</td></tr>\n`;
+    }
+    
+    if (crawl_metadata.crawl_time) {
+      const crawlSeconds = Math.floor(crawl_metadata.crawl_time / 1000);
+      html += `            <tr><td style="padding: 8px 0; color: var(--text-tertiary);">Crawl Duration</td><td style="text-align: right; font-weight: 500;">${crawlSeconds}s</td></tr>\n`;
+    }
+
+    html += '          </table>\n';
+    html += '        </div>\n';
+  }
 
   html += '      </div>\n';
   html += '    </section>\n\n';

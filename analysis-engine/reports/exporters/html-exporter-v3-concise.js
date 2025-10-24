@@ -131,7 +131,12 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     seo_score,
     content_score,
     social_score,
-    quick_wins_count = 0
+    quick_wins_count = 0,
+    // Add contact information fields
+    contact_email,
+    contact_phone,
+    contact_name,
+    url
   } = analysisResult;
 
   // Calculate ROI potential
@@ -147,10 +152,46 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
   html += '  <div class="container">\n';
   html += '    <div class="hero-content">\n';
 
-  // Header
+  // Header with contact info
   html += '      <div class="hero-header">\n';
   html += `        <h1 class="company-name">${escapeHtml(company_name)}</h1>\n`;
-  html += `        <p class="company-meta">Website Performance Analysis</p>\n`;
+
+  // Show industry and city if available
+  const metaParts = [];
+  if (industry) metaParts.push(escapeHtml(industry));
+  if (city) metaParts.push(escapeHtml(city));
+  if (metaParts.length > 0) {
+    html += `        <p class="company-meta">${metaParts.join(' • ')}</p>\n`;
+  } else {
+    html += `        <p class="company-meta">Website Performance Analysis</p>\n`;
+  }
+
+  // Add contact information if available - prominent black box
+  if (contact_email || contact_phone || url) {
+    html += '        <div class="contact-info-box" style="margin-top: 24px; padding: 16px 24px; background: rgba(0, 0, 0, 0.4); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 12px; backdrop-filter: blur(10px); display: inline-block;">\n';
+    html += '          <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; justify-content: center;">\n';
+
+    if (contact_email) {
+      html += `            <a href="mailto:${escapeHtml(contact_email)}" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 8px 12px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">`;
+      html += `<span style="font-size: 1.2em;">📧</span><span>${escapeHtml(contact_email)}</span></a>\n`;
+    }
+
+    if (contact_phone) {
+      const cleanPhone = contact_phone.replace(/\D/g, ''); // Remove non-digits
+      html += `            <a href="tel:${cleanPhone}" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 8px 12px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">`;
+      html += `<span style="font-size: 1.2em;">📞</span><span>${escapeHtml(contact_phone)}</span></a>\n`;
+    }
+
+    if (url) {
+      const displayUrl = url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+      html += `            <a href="${escapeHtml(url)}" target="_blank" style="color: white; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 8px 12px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">`;
+      html += `<span style="font-size: 1.2em;">🌐</span><span>${escapeHtml(displayUrl)}</span></a>\n`;
+    }
+
+    html += '          </div>\n';
+    html += '        </div>\n';
+  }
+
   html += '      </div>\n';
 
   // Score Display
@@ -258,7 +299,13 @@ function generateStrategicAssessment(analysisResult, synthesisData) {
 
   // Top Priority Issue (if available)
   if (top_issue || synthesisData.executiveSummary?.topPriority) {
-    const priority = top_issue || synthesisData.executiveSummary.topPriority;
+    let priority = top_issue || synthesisData.executiveSummary.topPriority;
+
+    // Handle if priority is an object (from synthesis)
+    if (typeof priority === 'object' && priority !== null) {
+      priority = priority.title || priority.description || priority.text || JSON.stringify(priority);
+    }
+
     html += '      <div class="alert-box mt-8" style="background: var(--warning-lightest); border-left: 4px solid var(--warning); padding: 20px; border-radius: 8px; margin-top: 32px;">\n';
     html += '        <strong style="display: block; margin-bottom: 8px;">🎯 Top Priority:</strong>\n';
     html += `        ${escapeHtml(priority)}\n`;
@@ -300,14 +347,15 @@ function generateStrategicAssessment(analysisResult, synthesisData) {
  * Generate action plan (consolidated issues without repetition)
  */
 function generateActionPlan(analysisResult, synthesisData) {
-  let html = '    <!-- Action Plan -->\n';
+  let html = '';
+  html += '    <!-- Action Plan -->\n';
   html += '    <section class="section" id="actions">\n';
   html += '      <div class="section-header">\n';
   html += '        <h2 class="section-title">\n';
   html += '          <span class="section-title-icon">📋</span>\n';
-  html += '          Action Plan\n';
+  html += '          Priority Action Plan\n';
   html += '        </h2>\n';
-  html += '        <p class="section-description">Prioritized improvements to maximize impact with minimum effort.</p>\n';
+  html += '        <p class="section-description">Top 5-7 critical improvements ranked by business impact. Focus on these first for maximum ROI.</p>\n';
   html += '      </div>\n';
 
   html += '      <div class="actions-grid">\n';
@@ -370,45 +418,198 @@ function generateActionPlan(analysisResult, synthesisData) {
 }
 
 /**
- * Generate simplified timeline
+ * Generate SPECIFIC timeline based on actual issues
  */
 function generateTimeline(analysisResult, synthesisData) {
+  const {
+    industry,
+    grade,
+    quick_wins = [],
+    design_issues_desktop = [],
+    design_issues_mobile = [],
+    seo_issues = [],
+    content_issues = [],
+    top_issue
+  } = analysisResult;
+
+  // Combine design issues
+  const design_issues = [...(design_issues_desktop || []), ...(design_issues_mobile || [])];
+
+  // Get consolidated issues for better planning
+  const issues = synthesisData.consolidatedIssues || extractTopIssues(analysisResult);
+  const criticalIssues = issues.filter(i => i.severity === 'critical' || i.priority === 'critical');
+  const highIssues = issues.filter(i => i.severity === 'high' || i.priority === 'high');
+
   let html = '    <!-- Implementation Timeline -->\n';
   html += '    <section class="section" id="timeline">\n';
   html += '      <div class="section-header">\n';
   html += '        <h2 class="section-title">\n';
   html += '          <span class="section-title-icon">📅</span>\n';
-  html += '          30-60-90 Day Plan\n';
+  html += '          30-60-90 Day Implementation Plan\n';
   html += '        </h2>\n';
   html += '      </div>\n';
 
   html += '      <div class="roadmap-timeline">\n';
   html += '        <div class="timeline-connector"></div>\n';
 
-  // 30 Days - Quick Impact
+  // 30 Days - Address Critical Issues and Quick Wins
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">30</div>\n';
   html += '          <div class="phase-content">\n';
-  html += '            <h3 class="phase-title">Quick Impact</h3>\n';
-  html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Fix critical issues and capture quick wins</p>\n';
+  html += '            <h3 class="phase-title">First 30 Days: Critical Fixes</h3>\n';
+
+  // Use actual quick wins and critical issues
+  const phase1Items = [];
+  
+  // Add top issue first if exists
+  if (top_issue) {
+    const topIssueText = typeof top_issue === 'string' ? top_issue : (top_issue.title || top_issue.description || '');
+    if (topIssueText) {
+      phase1Items.push(topIssueText);
+    }
+  }
+  
+  // Add critical issues
+  if (criticalIssues.length > 0) {
+    criticalIssues.slice(0, 2).forEach(issue => {
+      const text = issue.title || issue.description;
+      if (text && !phase1Items.includes(text)) {
+        phase1Items.push(text);
+      }
+    });
+  }
+  
+  // Add quick wins
+  if (quick_wins.length > 0) {
+    quick_wins.slice(0, 4).forEach(win => {
+      if (win && !phase1Items.includes(win)) {
+        phase1Items.push(win);
+      }
+    });
+  }
+
+  if (phase1Items.length > 0) {
+    html += '            <ul style="margin: 8px 0; padding-left: 20px; color: var(--text-secondary);">\n';
+    phase1Items.slice(0, 5).forEach(item => {
+      html += `              <li style="margin-bottom: 4px;">${escapeHtml(item)}</li>\n`;
+    });
+    html += '            </ul>\n';
+  } else {
+    html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Address immediate issues and implement quick wins</p>\n';
+  }
+
   html += '          </div>\n';
   html += '        </div>\n';
 
-  // 60 Days - Core Improvements
+  // 60 Days - High Priority Issues
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">60</div>\n';
   html += '          <div class="phase-content">\n';
-  html += '            <h3 class="phase-title">Core Improvements</h3>\n';
-  html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Enhance user experience and conversion paths</p>\n';
+  html += '            <h3 class="phase-title">Days 31-60: Core Improvements</h3>\n';
+
+  // Use actual high priority issues
+  const phase2Items = [];
+  
+  // Add high priority issues
+  if (highIssues.length > 0) {
+    highIssues.slice(0, 2).forEach(issue => {
+      const text = issue.title || issue.description;
+      if (text) phase2Items.push(text);
+    });
+  }
+  
+  // Add design issues
+  if (design_issues.length > 0) {
+    design_issues.slice(0, 2).forEach(issue => {
+      const text = typeof issue === 'string' ? issue : (issue.title || issue.description || '');
+      if (text && !phase2Items.includes(text)) {
+        phase2Items.push(text);
+      }
+    });
+  }
+  
+  // Add SEO issues
+  if (seo_issues.length > 0) {
+    seo_issues.slice(0, 2).forEach(issue => {
+      const text = typeof issue === 'string' ? issue : (issue.title || issue.description || '');
+      if (text && !phase2Items.includes(text)) {
+        phase2Items.push(text);
+      }
+    });
+  }
+
+  if (phase2Items.length > 0) {
+    html += '            <ul style="margin: 8px 0; padding-left: 20px; color: var(--text-secondary);">\n';
+    phase2Items.slice(0, 5).forEach(item => {
+      html += `              <li style="margin-bottom: 4px;">${escapeHtml(item)}</li>\n`;
+    });
+    html += '            </ul>\n';
+  } else {
+    html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Enhance user experience and address high-priority issues</p>\n';
+  }
+
   html += '          </div>\n';
   html += '        </div>\n';
 
-  // 90 Days - Strategic Growth
+  // 90 Days - Long-term Strategy
   html += '        <div class="roadmap-phase">\n';
   html += '          <div class="phase-marker">90</div>\n';
   html += '          <div class="phase-content">\n';
-  html += '            <h3 class="phase-title">Strategic Growth</h3>\n';
-  html += '            <p style="color: var(--text-secondary); margin: 8px 0;">Implement advanced features and optimizations</p>\n';
+  html += '            <h3 class="phase-title">Days 61-90: Strategic Enhancements</h3>\n';
+
+  // Industry-specific recommendations
+  const phase3Items = [];
+  
+  // Add content issues first
+  if (content_issues && content_issues.length > 0) {
+    content_issues.slice(0, 2).forEach(issue => {
+      const text = typeof issue === 'string' ? issue : (issue.title || issue.description || '');
+      if (text) phase3Items.push(text);
+    });
+  }
+
+  // Add industry-specific items
+  if (industry) {
+    const industryLower = industry.toLowerCase();
+    if (industryLower.includes('hvac') || industryLower.includes('plumb') || industryLower.includes('electric')) {
+      phase3Items.push('Build service area pages for local SEO');
+      phase3Items.push('Add customer review integration');
+      phase3Items.push('Create seasonal service campaigns');
+    } else if (industryLower.includes('dental') || industryLower.includes('medical') || industryLower.includes('health')) {
+      phase3Items.push('Implement online appointment booking');
+      phase3Items.push('Add patient portal integration');
+      phase3Items.push('Create procedure-specific landing pages');
+    } else if (industryLower.includes('restaurant') || industryLower.includes('food')) {
+      phase3Items.push('Integrate online ordering system');
+      phase3Items.push('Set up reservation system');
+      phase3Items.push('Add menu with pricing and photos');
+    } else if (industryLower.includes('retail') || industryLower.includes('ecommerce') || industryLower.includes('shop')) {
+      phase3Items.push('Enhance product pages with rich media');
+      phase3Items.push('Implement abandoned cart recovery');
+      phase3Items.push('Add product recommendations');
+    } else if (industryLower.includes('legal') || industryLower.includes('law')) {
+      phase3Items.push('Add case studies and testimonials');
+      phase3Items.push('Implement live chat for consultations');
+      phase3Items.push('Create practice area landing pages');
+    } else {
+      phase3Items.push('Implement conversion tracking & analytics');
+      phase3Items.push('Develop content marketing strategy');
+      phase3Items.push('Set up A/B testing framework');
+    }
+  }
+
+  if (phase3Items.length === 0) {
+    phase3Items.push('Implement advanced SEO strategies');
+    phase3Items.push('Enhance user engagement features');
+    phase3Items.push('Build social proof elements');
+  }
+
+  html += '            <ul style="margin: 8px 0; padding-left: 20px; color: var(--text-secondary);">\n';
+  phase3Items.slice(0, 5).forEach(item => {
+    html += `              <li style="margin-bottom: 4px;">${escapeHtml(item)}</li>\n`;
+  });
+  html += '            </ul>\n';
+
   html += '          </div>\n';
   html += '        </div>\n';
 
@@ -450,16 +651,104 @@ function generateVisualEvidence(screenshotData, registry) {
 }
 
 /**
- * Generate footer
+ * Generate footer with optional business intel summary
  */
 function generateFooter(analysisResult) {
+  const {
+    years_in_business,
+    employee_count,
+    pricing_visible,
+    budget_indicator,
+    premium_features,
+    tech_stack,
+    analysis_cost,
+    analysis_time
+  } = analysisResult;
+
   const today = new Date().toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
   });
 
-  let html = '    <div class="report-footer">\n';
+  let html = '';
+
+  // Add business intelligence summary if we have meaningful data
+  const hasBizIntel = years_in_business || employee_count || premium_features?.length > 0 || 
+                      tech_stack || pricing_visible !== undefined;
+
+  if (hasBizIntel) {
+    html += '    <section class="section" style="margin-top: 48px;">\n';
+    html += '      <div class="section-header">\n';
+    html += '        <h2 class="section-title">\n';
+    html += '          <span class="section-title-icon">💡</span>\n';
+    html += '          Additional Insights\n';
+    html += '        </h2>\n';
+    html += '      </div>\n';
+
+    html += '      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">\n';
+
+    // Business maturity card
+    if (years_in_business || employee_count) {
+      html += '        <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">\n';
+      html += '          <h3 style="margin-bottom: 12px; font-size: 1rem; color: var(--text-primary);">Business Maturity</h3>\n';
+      if (years_in_business) {
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);"><strong>${years_in_business} years</strong> in business</p>\n`;
+      }
+      if (employee_count) {
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);">Team size: <strong>${employee_count}</strong></p>\n`;
+      }
+      html += '        </div>\n';
+    }
+
+    // Technology & Features card
+    if (tech_stack || premium_features?.length > 0) {
+      html += '        <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">\n';
+      html += '          <h3 style="margin-bottom: 12px; font-size: 1rem; color: var(--text-primary);">Technology</h3>\n';
+      if (tech_stack) {
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);">Platform: <strong>${escapeHtml(tech_stack)}</strong></p>\n`;
+      }
+      if (premium_features && premium_features.length > 0) {
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);"><strong>${premium_features.length}</strong> premium features detected</p>\n`;
+      }
+      html += '        </div>\n';
+    }
+
+    // Investment indicators card
+    if (pricing_visible !== undefined || budget_indicator) {
+      html += '        <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">\n';
+      html += '          <h3 style="margin-bottom: 12px; font-size: 1rem; color: var(--text-primary);">Investment Profile</h3>\n';
+      if (pricing_visible !== undefined) {
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);">Pricing visible: <strong>${pricing_visible ? 'Yes' : 'No'}</strong></p>\n`;
+      }
+      if (budget_indicator) {
+        const budgetLabel = budget_indicator === 'premium' ? '💎 Premium' : 
+                           budget_indicator === 'mid-tier' ? '💼 Mid-tier' : '💰 Budget-conscious';
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);">${budgetLabel}</p>\n`;
+      }
+      html += '        </div>\n';
+    }
+
+    // Analysis metadata card
+    if (analysis_cost || analysis_time) {
+      html += '        <div style="background: var(--bg-secondary); padding: 20px; border-radius: 12px;">\n';
+      html += '          <h3 style="margin-bottom: 12px; font-size: 1rem; color: var(--text-primary);">Analysis Details</h3>\n';
+      if (analysis_time) {
+        const seconds = Math.floor(analysis_time / 1000);
+        const minutes = Math.floor(seconds / 60);
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);">Duration: <strong>${minutes > 0 ? minutes + 'm ' : ''}${seconds % 60}s</strong></p>\n`;
+      }
+      if (analysis_cost) {
+        html += `          <p style="margin: 8px 0; color: var(--text-secondary);">AI Analysis Cost: <strong>$${Number(analysis_cost).toFixed(4)}</strong></p>\n`;
+      }
+      html += '        </div>\n';
+    }
+
+    html += '      </div>\n';
+    html += '    </section>\n\n';
+  }
+
+  html += '    <div class="report-footer">\n';
   html += '      <div class="container">\n';
   html += '        <div class="footer-content">\n';
   html += '          <div class="footer-logo">MaxantAgency</div>\n';

@@ -3,8 +3,8 @@
  * Verifies that all synthesis and image compression issues are resolved
  */
 
-import { generateHTMLReportV3 } from './analysis-engine/reports/exporters/html-exporter-v3-concise.js';
-import { runReportSynthesis } from './analysis-engine/reports/synthesis/report-synthesis.js';
+import { generateHTMLReportV3 } from '../analysis-engine/reports/exporters/html-exporter-v3-concise.js';
+import { runReportSynthesis } from '../analysis-engine/reports/synthesis/report-synthesis.js';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import path from 'path';
