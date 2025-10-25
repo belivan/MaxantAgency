@@ -23,12 +23,16 @@ export class AnalysisCoordinator {
    * @param {object} context - Business context
    * @param {string} baseUrl - Base website URL
    * @param {object} customPrompts - Custom AI prompts (optional)
+   * @param {object} benchmark - Industry benchmark for comparison (optional)
+   * @param {object} benchmarkMatchMetadata - Benchmark match metadata (optional)
    * @returns {Promise<object>} Analysis results
    */
-  async runAnalysis(crawlData, pageSelection, discoveryData, context, baseUrl, customPrompts = {}) {
+  async runAnalysis(crawlData, pageSelection, discoveryData, context, baseUrl, customPrompts = {}, benchmark = null, benchmarkMatchMetadata = null) {
     this.onProgress({
       step: 'analyze',
-      message: 'Running multi-page SEO, content, and visual analysis...'
+      message: benchmark
+        ? `Running benchmark-driven analysis (comparing to ${benchmark.company_name})...`
+        : 'Running multi-page SEO, content, and visual analysis...'
     });
 
     const { pages, homepage } = crawlData;
@@ -43,13 +47,36 @@ export class AnalysisCoordinator {
     // Extract metadata from homepage
     const parsedData = parseHTML(homepage.html, baseUrl);
 
-    // Enhanced context (include discovery status for SEO analysis)
+    // Enhanced context (include discovery status for SEO analysis + BENCHMARK)
     const enrichedContext = this.enrichContext(
       {
         ...context,
         baseUrl,
         tech_stack: homepage.metadata?.techStack || 'Unknown',
-        has_blog: parsedData.content.hasBlog
+        has_blog: parsedData.content.hasBlog,
+
+        // NEW: Benchmark context for all analyzers
+        benchmark: benchmark ? {
+          company_name: benchmark.company_name,
+          website_url: benchmark.website_url,
+          industry: benchmark.industry,
+          tier: benchmark.benchmark_tier,
+          scores: {
+            design: benchmark.design_score,
+            seo: benchmark.seo_score,
+            performance: benchmark.performance_score,
+            content: benchmark.content_score,
+            accessibility: benchmark.accessibility_score,
+            social: benchmark.social_score,
+            overall: benchmark.overall_score,
+            grade: benchmark.overall_grade
+          },
+          match_score: benchmarkMatchMetadata?.match_score,
+          comparison_tier: benchmarkMatchMetadata?.comparison_tier,
+          match_reasoning: benchmarkMatchMetadata?.match_reasoning,
+          key_similarities: benchmarkMatchMetadata?.key_similarities,
+          key_differences: benchmarkMatchMetadata?.key_differences
+        } : null
       },
       discoveryData
     );

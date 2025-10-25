@@ -1,0 +1,214 @@
+{
+  "table": "benchmarks",
+  "description": "Industry-leading exemplar websites used for comparative analysis. Benchmarks are discovered via Google Maps, web design awards, and manual curation, then analyzed once and cached for repeated comparison.",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "company_name",
+      "type": "text",
+      "required": true,
+      "description": "Business name"
+    },
+    {
+      "name": "website_url",
+      "type": "text",
+      "required": true,
+      "unique": true,
+      "description": "Website URL (must be unique)"
+    },
+    {
+      "name": "industry",
+      "type": "text",
+      "required": true,
+      "description": "Primary industry category (dentistry, restaurant, fitness, etc.)"
+    },
+    {
+      "name": "industry_subcategory",
+      "type": "text",
+      "description": "More specific category (e.g., 'italian-restaurant', 'cosmetic-dentistry')"
+    },
+    {
+      "name": "location_city",
+      "type": "text",
+      "description": "City location"
+    },
+    {
+      "name": "location_state",
+      "type": "text",
+      "description": "State/province"
+    },
+    {
+      "name": "benchmark_tier",
+      "type": "text",
+      "description": "Tier classification: 'national' (award-winning, aspirational), 'regional' (top local performers), 'local' (direct competitors)"
+    },
+    {
+      "name": "source",
+      "type": "text",
+      "description": "How benchmark was discovered: 'google-maps', 'awwwards', 'css-awards', 'manual', 'prospecting-engine'"
+    },
+    {
+      "name": "google_rating",
+      "type": "decimal",
+      "description": "Google Maps star rating (1.0-5.0)"
+    },
+    {
+      "name": "google_review_count",
+      "type": "integer",
+      "description": "Total Google reviews"
+    },
+    {
+      "name": "awards",
+      "type": "jsonb",
+      "description": "Array of awards/recognition (e.g., [{award: 'Awwwards Site of Day', date: '2024-10-15', url: '...'}])"
+    },
+    {
+      "name": "analysis_results",
+      "type": "jsonb",
+      "description": "Cached full analysis results from Analysis Engine (all 6 analyzers)"
+    },
+    {
+      "name": "design_score",
+      "type": "integer",
+      "description": "Design score (0-100)"
+    },
+    {
+      "name": "seo_score",
+      "type": "integer",
+      "description": "SEO score (0-100)"
+    },
+    {
+      "name": "performance_score",
+      "type": "integer",
+      "description": "Performance score (0-100)"
+    },
+    {
+      "name": "content_score",
+      "type": "integer",
+      "description": "Content score (0-100)"
+    },
+    {
+      "name": "accessibility_score",
+      "type": "integer",
+      "description": "Accessibility score (0-100)"
+    },
+    {
+      "name": "social_score",
+      "type": "integer",
+      "description": "Social media score (0-100)"
+    },
+    {
+      "name": "overall_grade",
+      "type": "text",
+      "description": "Letter grade (A-F)"
+    },
+    {
+      "name": "overall_score",
+      "type": "integer",
+      "description": "Weighted overall score (0-100)"
+    },
+    {
+      "name": "desktop_screenshot_url",
+      "type": "text",
+      "description": "URL to desktop screenshot"
+    },
+    {
+      "name": "mobile_screenshot_url",
+      "type": "text",
+      "description": "URL to mobile screenshot"
+    },
+    {
+      "name": "business_intelligence",
+      "type": "jsonb",
+      "description": "Extracted business data (employee count, pricing, features, etc.)"
+    },
+    {
+      "name": "design_strengths",
+      "type": "jsonb",
+      "description": "Extracted design/UI strengths from visual-strengths-extractor (desktop/mobile strengths, color palette, layout patterns, conversion optimizations)"
+    },
+    {
+      "name": "seo_strengths",
+      "type": "jsonb",
+      "description": "Extracted SEO best practices from technical-strengths-extractor (meta tag patterns, schema markup, keyword strategy, internal linking)"
+    },
+    {
+      "name": "content_strengths",
+      "type": "jsonb",
+      "description": "Extracted content strengths from technical-strengths-extractor (heading hierarchy, readability, CTA placement, content structure)"
+    },
+    {
+      "name": "social_strengths",
+      "type": "jsonb",
+      "description": "Extracted social proof strategies from social-strengths-extractor (review integration, testimonial format, trust signals, platform usage)"
+    },
+    {
+      "name": "accessibility_strengths",
+      "type": "jsonb",
+      "description": "Extracted accessibility best practices from accessibility-strengths-extractor (ARIA usage, contrast ratios, keyboard navigation, WCAG compliance)"
+    },
+    {
+      "name": "analyzed_at",
+      "type": "timestamptz",
+      "description": "When the website was analyzed (for cache invalidation)"
+    },
+    {
+      "name": "is_active",
+      "type": "boolean",
+      "default": true,
+      "description": "Whether this benchmark is currently active/valid"
+    },
+    {
+      "name": "quality_flag",
+      "type": "text",
+      "description": "Quality control flag: 'approved', 'needs-review' (if score outlier), 'rejected'"
+    },
+    {
+      "name": "notes",
+      "type": "text",
+      "description": "Admin notes about why this is a good/bad benchmark"
+    },
+    {
+      "name": "tags",
+      "type": "jsonb",
+      "description": "Searchable tags array (e.g., ['small-business', 'mobile-first', 'e-commerce'])"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_benchmarks_industry",
+      "columns": ["industry"]
+    },
+    {
+      "name": "idx_benchmarks_tier",
+      "columns": ["benchmark_tier"]
+    },
+    {
+      "name": "idx_benchmarks_active",
+      "columns": ["is_active"]
+    },
+    {
+      "name": "idx_benchmarks_location",
+      "columns": ["location_city", "location_state"]
+    },
+    {
+      "name": "idx_benchmarks_quality",
+      "columns": ["quality_flag"]
+    }
+  ]
+}

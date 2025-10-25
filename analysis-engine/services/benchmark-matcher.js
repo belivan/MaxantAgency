@@ -1,0 +1,209 @@
+/**
+ * Benchmark Matcher Service
+ *
+ * Uses AI (GPT-5 Mini) to find the best industry benchmark for comparison.
+ * Considers company profile, business intelligence, and ICP criteria.
+ */
+
+import { loadPrompt } from '../shared/prompt-loader.js';
+import { getBenchmarksByIndustry, getBenchmarks } from '../database/supabase-client.js';
+import { getAIClient } from '../shared/ai-client.js';
+
+/**
+ * Find the best benchmark match for a target business
+ *
+ * @param {object} targetBusiness - Business to find benchmark for
+ * @param {string} targetBusiness.company_name - Company name
+ * @param {string} targetBusiness.industry - Industry category
+ * @param {string} targetBusiness.url - Website URL
+ * @param {string} targetBusiness.city - City
+ * @param {string} targetBusiness.state - State
+ * @param {object} targetBusiness.business_intelligence - Extracted business data
+ * @param {string} targetBusiness.icp_criteria - ICP search criteria (fallback if BI incomplete)
+ * @param {object} options - Matching options
+ * @returns {Promise<object>} Best benchmark match with reasoning
+ */
+export async function findBestBenchmark(targetBusiness, options = {}) {
+  const {
+    includeTiers = ['national', 'regional', 'local'],
+    maxCandidates = 20
+  } = options;
+
+  console.log(`\n🔍 Finding best benchmark for: ${targetBusiness.company_name}`);
+
+  try {
+    // Step 1: Get candidate benchmarks from database
+    console.log(`  └─ Fetching benchmarks for industry: ${targetBusiness.industry}`);
+
+    let candidateBenchmarks = await getBenchmarksByIndustry(targetBusiness.industry, {
+      limit: maxCandidates
+    });
+
+    // If no exact industry match, get broader set
+    if (candidateBenchmarks.length === 0) {
+      console.log(`  └─ No exact industry match, fetching broader set...`);
+      candidateBenchmarks = await getBenchmarks({
+        qualityFlag: 'approved',
+        limit: maxCandidates
+      });
+    }
+
+    // Filter by tiers
+    candidateBenchmarks = candidateBenchmarks.filter(b =>
+      includeTiers.includes(b.benchmark_tier)
+    );
+
+    if (candidateBenchmarks.length === 0) {
+      console.warn(`⚠️ No benchmarks available for matching`);
+      return {
+        success: false,
+        error: 'No benchmarks available',
+        benchmark: null
+      };
+    }
+
+    console.log(`  └─ Found ${candidateBenchmarks.length} candidate benchmarks`);
+
+    // Step 2: Prepare data for AI matching
+    const matchingData = {
+      company_name: targetBusiness.company_name,
+      industry: targetBusiness.industry,
+      url: targetBusiness.url,
+      city: targetBusiness.city || 'Unknown',
+      state: targetBusiness.state || 'Unknown',
+      business_intelligence: targetBusiness.business_intelligence || null,
+      icp_criteria: targetBusiness.icp_criteria || null,
+      benchmarks: candidateBenchmarks.map(b => ({
+        id: b.id,
+        company_name: b.company_name,
+        industry: b.industry,
+        industry_subcategory: b.industry_subcategory,
+        location_city: b.location_city,
+        location_state: b.location_state,
+        benchmark_tier: b.benchmark_tier,
+        google_rating: b.google_rating,
+        google_review_count: b.google_review_count,
+        overall_score: b.overall_score,
+        design_score: b.design_score,
+        seo_score: b.seo_score,
+        performance_score: b.performance_score,
+        awards: b.awards,
+        business_intelligence: b.business_intelligence
+      }))
+    };
+
+    // Step 3: Load prompt and call AI
+    console.log(`  └─ Calling AI matcher (GPT-5 Mini)...`);
+
+    const promptConfig = loadPrompt('benchmark-matching', 'find-best-comparison', matchingData);
+    const aiClient = getAIClient(promptConfig.model);
+
+    const response = await aiClient.chat.completions.create({
+      model: promptConfig.model,
+      temperature: promptConfig.temperature,
+      messages: [
+        { role: 'system', content: promptConfig.systemPrompt },
+        { role: 'user', content: promptConfig.userPrompt }
+      ],
+      response_format: { type: 'json_object' }
+    });
+
+    const result = JSON.parse(response.choices[0].message.content);
+
+    // Step 4: Get full benchmark data
+    const selectedBenchmark = candidateBenchmarks.find(b => b.id === result.benchmark_id);
+
+    if (!selectedBenchmark) {
+      console.error(`❌ AI selected invalid benchmark ID: ${result.benchmark_id}`);
+      return {
+        success: false,
+        error: 'Invalid benchmark selected',
+        benchmark: null
+      };
+    }
+
+    console.log(`  ✅ Matched to: ${selectedBenchmark.company_name} (${result.match_score}% confidence)`);
+    console.log(`     Tier: ${result.comparison_tier}`);
+    console.log(`     Reasoning: ${result.match_reasoning}`);
+
+    return {
+      success: true,
+      benchmark: selectedBenchmark,
+      match_metadata: {
+        match_score: result.match_score,
+        match_reasoning: result.match_reasoning,
+        comparison_tier: result.comparison_tier,
+        key_similarities: result.key_similarities,
+        key_differences: result.key_differences,
+        candidates_considered: candidateBenchmarks.length
+      }
+    };
+
+  } catch (error) {
+    console.error(`❌ Benchmark matching failed:`, error.message);
+    return {
+      success: false,
+      error: error.message,
+      benchmark: null
+    };
+  }
+}
+
+/**
+ * Get multiple benchmark recommendations (aspirational, competitive, baseline)
+ *
+ * @param {object} targetBusiness - Business to find benchmarks for
+ * @param {object} options - Options
+ * @returns {Promise<object>} Multiple benchmark tiers
+ */
+export async function getMultipleBenchmarks(targetBusiness, options = {}) {
+  console.log(`\n🔍 Finding multi-tier benchmarks for: ${targetBusiness.company_name}`);
+
+  try {
+    // Get all approved benchmarks for industry
+    const allBenchmarks = await getBenchmarksByIndustry(targetBusiness.industry, {
+      limit: 50
+    });
+
+    if (allBenchmarks.length < 3) {
+      console.warn(`⚠️ Insufficient benchmarks for multi-tier matching`);
+      // Fall back to single best match
+      const result = await findBestBenchmark(targetBusiness, options);
+      return {
+        success: result.success,
+        aspirational: result.benchmark,
+        competitive: null,
+        baseline: null
+      };
+    }
+
+    // Sort by overall score
+    allBenchmarks.sort((a, b) => b.overall_score - a.overall_score);
+
+    // Select tiers
+    const aspirational = allBenchmarks[0]; // Top performer
+    const competitive = allBenchmarks[Math.floor(allBenchmarks.length / 2)]; // Median
+    const baseline = allBenchmarks[Math.floor(allBenchmarks.length * 0.75)]; // Lower quartile
+
+    console.log(`  ✅ Multi-tier benchmarks selected:`);
+    console.log(`     Aspirational: ${aspirational.company_name} (${aspirational.overall_score})`);
+    console.log(`     Competitive: ${competitive.company_name} (${competitive.overall_score})`);
+    console.log(`     Baseline: ${baseline.company_name} (${baseline.overall_score})`);
+
+    return {
+      success: true,
+      aspirational,
+      competitive,
+      baseline
+    };
+
+  } catch (error) {
+    console.error(`❌ Multi-tier matching failed:`, error.message);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export default { findBestBenchmark, getMultipleBenchmarks };

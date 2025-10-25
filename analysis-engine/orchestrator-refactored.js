@@ -18,6 +18,7 @@ import { CrawlingService } from './services/crawling-service.js';
 import { AnalysisCoordinator } from './services/analysis-coordinator.js';
 import { ResultsAggregator } from './services/results-aggregator.js';
 import { autoGenerateReport } from './reports/auto-report-generator.js';
+import { findBestBenchmark } from './services/benchmark-matcher.js';
 
 /**
  * Run INTELLIGENT multi-page analysis pipeline
@@ -131,10 +132,54 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     }
 
     // ========================================
-    // PHASE 4: ANALYSIS
+    // PHASE 3.5: BENCHMARK MATCHING (OPTIONAL)
     // ========================================
-    const analysisCoordinator = new AnalysisCoordinator({ 
-      onProgress: progress 
+    let benchmark = null;
+    let benchmarkMatchMetadata = null;
+
+    const useBenchmarking = process.env.USE_AI_GRADING === 'true' || process.env.USE_BENCHMARK_CONTEXT === 'true';
+
+    if (useBenchmarking) {
+      console.log(`\n[Orchestrator] Fetching industry benchmark for context-aware analysis...`);
+      progress({ step: 'benchmark-matching', message: 'Finding best industry comparison...' });
+
+      try {
+        const benchmarkResult = await findBestBenchmark({
+          company_name: context.company_name || 'Unknown',
+          industry: context.industry || 'general',
+          url: url,
+          city: context.city,
+          state: context.state,
+          business_intelligence: crawlData.businessIntel || null,
+          icp_criteria: context.icp_criteria || null
+        });
+
+        if (benchmarkResult.success) {
+          benchmark = benchmarkResult.benchmark;
+          benchmarkMatchMetadata = benchmarkResult.match_metadata;
+
+          console.log(`[Orchestrator] ✅ Benchmark matched: ${benchmark.company_name}`);
+          console.log(`[Orchestrator]    Match score: ${benchmarkMatchMetadata.match_score}%`);
+          console.log(`[Orchestrator]    Tier: ${benchmarkMatchMetadata.comparison_tier}`);
+          console.log(`[Orchestrator]    Benchmark score: ${benchmark.overall_score}/100 (Grade ${benchmark.overall_grade})`);
+          console.log(`[Orchestrator]    Reasoning: ${benchmarkMatchMetadata.match_reasoning}`);
+        } else {
+          console.warn(`[Orchestrator] ⚠️ No benchmark found: ${benchmarkResult.error}`);
+          console.warn(`[Orchestrator]    Analysis will proceed without benchmark context`);
+        }
+      } catch (error) {
+        console.error(`[Orchestrator] ❌ Benchmark matching failed:`, error.message);
+        console.log(`[Orchestrator]    Analysis will proceed without benchmark context`);
+      }
+    } else {
+      console.log(`[Orchestrator] Benchmark context disabled (USE_AI_GRADING=${process.env.USE_AI_GRADING}, USE_BENCHMARK_CONTEXT=${process.env.USE_BENCHMARK_CONTEXT})`);
+    }
+
+    // ========================================
+    // PHASE 4: ANALYSIS (with benchmark context)
+    // ========================================
+    const analysisCoordinator = new AnalysisCoordinator({
+      onProgress: progress
     });
 
     const analysisResults = await analysisCoordinator.runAnalysis(
@@ -143,7 +188,9 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       sitemap,
       context,
       url,
-      customPrompts
+      customPrompts,
+      benchmark,  // NEW: Pass benchmark to all analyzers
+      benchmarkMatchMetadata  // NEW: Pass match metadata
     );
     console.log(`[Orchestrator] Analysis:`, analysisCoordinator.getStatistics(analysisResults));
 

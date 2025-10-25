@@ -378,4 +378,376 @@ export async function getLeadStats(filters = {}) {
   }
 }
 
+// ============================================================================
+// BENCHMARKS - Industry-leading exemplar websites for comparative analysis
+// ============================================================================
+
+/**
+ * Save a benchmark website to the database
+ *
+ * @param {object} benchmark - Benchmark data from analysis
+ * @returns {Promise<object>} Saved benchmark with ID
+ */
+export async function saveBenchmark(benchmark) {
+  try {
+    const { data, error } = await supabase
+      .from('benchmarks')
+      .insert(benchmark)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to save benchmark:', error);
+      throw error;
+    }
+
+    console.log(`✅ Benchmark saved: ${data.company_name} (${data.industry})`);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Update a benchmark in the database
+ *
+ * @param {string} id - Benchmark ID
+ * @param {object} updates - Fields to update
+ * @returns {Promise<object>} Updated benchmark
+ */
+export async function updateBenchmark(id, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('benchmarks')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to update benchmark:', error);
+      throw error;
+    }
+
+    console.log(`✅ Benchmark updated: ${id}`);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get benchmarks with filters
+ *
+ * @param {object} filters - Query filters
+ * @returns {Promise<Array>} Array of benchmarks
+ */
+export async function getBenchmarks(filters = {}) {
+  try {
+    let query = supabase.from('benchmarks').select('*');
+
+    // Active filter (default to true)
+    const isActive = filters.isActive !== undefined ? filters.isActive : true;
+    query = query.eq('is_active', isActive);
+
+    // Apply filters
+    if (filters.industry) {
+      query = query.eq('industry', filters.industry);
+    }
+
+    if (filters.industrySubcategory) {
+      query = query.eq('industry_subcategory', filters.industrySubcategory);
+    }
+
+    if (filters.tier) {
+      query = query.eq('benchmark_tier', filters.tier);
+    }
+
+    if (filters.city) {
+      query = query.eq('location_city', filters.city);
+    }
+
+    if (filters.state) {
+      query = query.eq('location_state', filters.state);
+    }
+
+    if (filters.source) {
+      query = query.eq('source', filters.source);
+    }
+
+    if (filters.qualityFlag) {
+      query = query.eq('quality_flag', filters.qualityFlag);
+    }
+
+    if (filters.minGoogleRating) {
+      query = query.gte('google_rating', filters.minGoogleRating);
+    }
+
+    if (filters.minOverallScore) {
+      query = query.gte('overall_score', filters.minOverallScore);
+    }
+
+    // Pagination
+    const limit = filters.limit || 50;
+    const offset = filters.offset || 0;
+    query = query.limit(limit).range(offset, offset + limit - 1);
+
+    // Order by overall score (highest first)
+    query = query.order('overall_score', { ascending: false, nullsFirst: false });
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Failed to fetch benchmarks:', error);
+      throw error;
+    }
+
+    console.log(`✅ Fetched ${data.length} benchmarks`);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get a single benchmark by ID
+ *
+ * @param {string} id - Benchmark ID
+ * @returns {Promise<object>} Benchmark object
+ */
+export async function getBenchmarkById(id) {
+  try {
+    const { data, error } = await supabase
+      .from('benchmarks')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Failed to fetch benchmark:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get benchmarks by industry (sorted by quality)
+ *
+ * @param {string} industry - Industry name
+ * @param {object} options - Additional options
+ * @returns {Promise<Array>} Array of benchmarks
+ */
+export async function getBenchmarksByIndustry(industry, options = {}) {
+  try {
+    const { tier = null, limit = 10, minScore = null } = options;
+
+    let query = supabase
+      .from('benchmarks')
+      .select('*')
+      .eq('industry', industry)
+      .eq('is_active', true)
+      .eq('quality_flag', 'approved');
+
+    if (tier) {
+      query = query.eq('benchmark_tier', tier);
+    }
+
+    if (minScore) {
+      query = query.gte('overall_score', minScore);
+    }
+
+    query = query
+      .order('overall_score', { ascending: false, nullsFirst: false })
+      .limit(limit);
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Failed to fetch benchmarks by industry:', error);
+      throw error;
+    }
+
+    console.log(`✅ Found ${data.length} benchmarks for ${industry}`);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Check if a benchmark already exists by URL
+ *
+ * @param {string} url - Website URL
+ * @returns {Promise<object|null>} Existing benchmark or null
+ */
+export async function getBenchmarkByUrl(url) {
+  try {
+    // Normalize URL
+    const normalizedUrl = url.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    const { data, error } = await supabase
+      .from('benchmarks')
+      .select('*')
+      .or(`website_url.eq.${url},website_url.eq.https://${normalizedUrl},website_url.eq.http://${normalizedUrl}`)
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw error;
+    }
+
+    return data || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Flag a benchmark for quality review
+ *
+ * @param {string} id - Benchmark ID
+ * @param {string} reason - Reason for flagging
+ * @returns {Promise<object>} Updated benchmark
+ */
+export async function flagBenchmarkForReview(id, reason) {
+  try {
+    const { data, error } = await supabase
+      .from('benchmarks')
+      .update({
+        quality_flag: 'needs-review',
+        notes: reason,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to flag benchmark:', error);
+      throw error;
+    }
+
+    console.log(`⚠️ Benchmark flagged for review: ${id}`);
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Delete a benchmark by ID
+ *
+ * @param {string} id - Benchmark ID
+ * @returns {Promise<void>}
+ */
+export async function deleteBenchmark(id) {
+  try {
+    const { error } = await supabase
+      .from('benchmarks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Failed to delete benchmark:', error);
+      throw error;
+    }
+
+    console.log(`✅ Benchmark deleted: ${id}`);
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
+ * Get benchmark statistics
+ *
+ * @param {object} filters - Optional filters
+ * @returns {Promise<object>} Statistics object
+ */
+export async function getBenchmarkStats(filters = {}) {
+  try {
+    let query = supabase.from('benchmarks').select('industry, benchmark_tier, overall_score, quality_flag, source');
+
+    if (filters.industry) {
+      query = query.eq('industry', filters.industry);
+    }
+
+    query = query.eq('is_active', true);
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    // Calculate statistics
+    const stats = {
+      totalBenchmarks: data.length,
+      byIndustry: {},
+      byTier: {
+        national: 0,
+        regional: 0,
+        local: 0
+      },
+      bySource: {
+        'google-maps': 0,
+        'awwwards': 0,
+        'css-awards': 0,
+        'manual': 0,
+        'prospecting-engine': 0
+      },
+      byQualityFlag: {
+        approved: 0,
+        'needs-review': 0,
+        rejected: 0
+      },
+      averageScore: 0
+    };
+
+    let totalScore = 0;
+
+    data.forEach(benchmark => {
+      // Industry distribution
+      if (benchmark.industry) {
+        stats.byIndustry[benchmark.industry] = (stats.byIndustry[benchmark.industry] || 0) + 1;
+      }
+
+      // Tier distribution
+      if (benchmark.benchmark_tier) {
+        stats.byTier[benchmark.benchmark_tier]++;
+      }
+
+      // Source distribution
+      if (benchmark.source) {
+        stats.bySource[benchmark.source]++;
+      }
+
+      // Quality flag distribution
+      if (benchmark.quality_flag) {
+        stats.byQualityFlag[benchmark.quality_flag]++;
+      }
+
+      // Accumulate scores
+      totalScore += benchmark.overall_score || 0;
+    });
+
+    // Calculate average score
+    if (data.length > 0) {
+      stats.averageScore = Math.round(totalScore / data.length);
+    }
+
+    return stats;
+  } catch (error) {
+    console.error('Failed to get benchmark stats:', error);
+    throw error;
+  }
+}
+
 export default supabase;

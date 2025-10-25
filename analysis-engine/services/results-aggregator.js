@@ -20,6 +20,7 @@ import { countCriticalMobileIssues } from '../analyzers/mobile-visual-analyzer.j
 import { calculateTotalCost } from '../analyzers/index.js';
 import { runReportSynthesis } from '../reports/synthesis/report-synthesis.js';
 import { validateReportQuality, generateQAReport } from '../reports/synthesis/qa-validator.js';
+import { gradeWithAI } from '../grading/ai-grader.js';
 
 export class ResultsAggregator {
   constructor(options = {}) {
@@ -48,92 +49,176 @@ export class ResultsAggregator {
     // PHASE 2: Extract Quick Wins
     const quickWins = this.extractQuickWins(analysisResults);
 
-    // PHASE 3: Calculate Grade
-    this.onProgress({ step: 'grade', message: 'Calculating overall grade...' });
+    // PHASE 3: Grading + Lead Scoring (AI or Manual)
+    const useAIGrading = process.env.USE_AI_GRADING === 'true';
+    let gradeResults, leadScoringData;
 
-    const gradeMetadata = {
-      quickWinCount: quickWins.length,
-      isMobileFriendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
-      hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
-      siteAccessible: true,
-      industry: context.industry
-    };
+    if (useAIGrading) {
+      // AI-POWERED GRADING (NEW)
+      this.onProgress({ step: 'ai-grading', message: 'AI grading with benchmark comparison...' });
+      console.log('\n[AI Grading] Using AI comparative grading...');
 
-    const gradeResults = calculateGrade({
-      design: scores.design_score,
-      seo: scores.seo_score,
-      performance: scores.performance_score,
-      content: scores.content_score,
-      accessibility: scores.accessibility_score,
-      social: scores.social_score
-    }, gradeMetadata);
+      const gradeMetadata = {
+        quickWinCount: quickWins.length,
+        isMobileFriendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
+        hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
+        siteAccessible: true,
+        industry: context.industry,
+        company_name: context.company_name,
+        url: homepage.fullUrl,
+        city: context.city,
+        state: context.state,
+        business_intelligence: {
+          employee_count: businessIntel.companySize?.employeeCount,
+          pricing_visible: businessIntel.pricingVisibility?.visible,
+          pricing_range: businessIntel.pricingVisibility?.priceRange,
+          blog_active: businessIntel.contentFreshness?.blogActive,
+          premium_features: businessIntel.premiumFeatures?.detected || [],
+          google_rating: context.google_rating,
+          review_count: context.google_review_count,
+          has_pricing: businessIntel.pricingVisibility?.visible,
+          has_blog: businessIntel.contentFreshness?.blogActive
+        },
+        icp_criteria: context.icp_criteria || null
+      };
+
+      const aiGradingResult = await gradeWithAI(
+        { ...analysisResults, scores },
+        gradeMetadata
+      );
+
+      if (aiGradingResult.success) {
+        // AI grading successful - use AI results
+        gradeResults = {
+          grade: aiGradingResult.grade,
+          overallScore: aiGradingResult.overall_score,
+          weightedScore: aiGradingResult.overall_score,
+          bonuses: [],
+          penalties: [],
+          weights: aiGradingResult.dimension_weights,
+          _meta: {
+            grader: 'ai-comparative-v1',
+            timestamp: new Date().toISOString(),
+            benchmark_id: aiGradingResult.comparison?.benchmark_id,
+            weight_reasoning: aiGradingResult.weight_reasoning
+          }
+        };
+
+        leadScoringData = {
+          lead_score: aiGradingResult.lead_score,
+          lead_priority: aiGradingResult.lead_priority,
+          priority_tier: aiGradingResult.lead_priority === 'high' ? 'A' :
+                         aiGradingResult.lead_priority === 'medium' ? 'B' : 'C',
+          budget_likelihood: aiGradingResult.sales_insights?.estimated_project_value,
+          receptiveness_score: aiGradingResult.sales_insights?.receptiveness_score,
+          key_pain_points: aiGradingResult.sales_insights?.key_pain_points || [],
+          value_proposition: aiGradingResult.sales_insights?.value_proposition,
+          urgency_factors: aiGradingResult.sales_insights?.urgency_factors || [],
+          comparison_summary: aiGradingResult.comparison,
+          business_context: aiGradingResult.business_context,
+          _meta: {
+            scorer: 'ai-comparative-v1',
+            timestamp: new Date().toISOString()
+          }
+        };
+
+        console.log(`[AI Grading] ✅ Grade: ${gradeResults.grade} (${gradeResults.overallScore}/100)`);
+        console.log(`[AI Grading] ✅ Lead Score: ${leadScoringData.lead_score}/100 (${leadScoringData.lead_priority} priority)`);
+      } else {
+        // AI grading failed - fall back to manual
+        console.warn('[AI Grading] ⚠️ AI grading failed, falling back to manual grading');
+        useAIGrading = false; // Trigger fallback below
+      }
+    }
+
+    if (!useAIGrading) {
+      // MANUAL GRADING (LEGACY)
+      this.onProgress({ step: 'grade', message: 'Calculating overall grade...' });
+
+      const gradeMetadata = {
+        quickWinCount: quickWins.length,
+        isMobileFriendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
+        hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
+        siteAccessible: true,
+        industry: context.industry
+      };
+
+      gradeResults = calculateGrade({
+        design: scores.design_score,
+        seo: scores.seo_score,
+        performance: scores.performance_score,
+        content: scores.content_score,
+        accessibility: scores.accessibility_score,
+        social: scores.social_score
+      }, gradeMetadata);
+
+      // Manual lead scoring
+      this.onProgress({ step: 'lead-scoring', message: 'Scoring lead priority and qualification...' });
+
+      leadScoringData = await scoreLeadPriority({
+        company_name: context.company_name,
+        industry: context.industry,
+        url: homepage.fullUrl,
+        city: context.city,
+        state: context.state,
+        website_grade: gradeResults.grade,
+        overall_score: gradeResults.overallScore,
+        design_score: scores.design_score,
+        seo_score: scores.seo_score,
+        content_score: scores.content_score,
+        social_score: scores.social_score,
+        tech_stack: homepage.metadata?.techStack || 'Unknown',
+        page_load_time: homepage.metadata?.loadTime || null,
+        is_mobile_friendly: gradeMetadata.isMobileFriendly,
+        has_https: gradeMetadata.hasHTTPS,
+        design_issues: [...(analysisResults.desktopVisual?.issues || []), ...(analysisResults.mobileVisual?.issues || [])],
+        quick_wins: quickWins,
+        top_issue: getTopIssue(analysisResults),
+        one_liner: generateOneLiner(
+          context.company_name || 'This business',
+          getTopIssue(analysisResults),
+          gradeResults.grade,
+          quickWins.length
+        ),
+        social_platforms_present: parsedData.social.platformsPresent,
+        contact_email: parsedData.content?.contactInfo?.emails?.[0] || context.contact_email || null,
+
+        // Business intelligence data
+        years_in_business: businessIntel.yearsInBusiness?.estimatedYears,
+        founded_year: businessIntel.yearsInBusiness?.foundedYear,
+        employee_count: businessIntel.companySize?.employeeCount,
+        location_count: businessIntel.companySize?.locationCount,
+        pricing_visible: businessIntel.pricingVisibility?.visible,
+        pricing_range: businessIntel.pricingVisibility?.priceRange,
+        blog_active: businessIntel.contentFreshness?.blogActive,
+        content_last_update: businessIntel.contentFreshness?.lastUpdate,
+        decision_maker_email: businessIntel.decisionMakerAccessibility?.hasDirectEmail,
+        decision_maker_phone: businessIntel.decisionMakerAccessibility?.hasDirectPhone,
+        owner_name: businessIntel.decisionMakerAccessibility?.ownerName,
+        premium_features: businessIntel.premiumFeatures?.detected || [],
+        budget_indicator: businessIntel.premiumFeatures?.budgetIndicator,
+        pages_crawled: pages.length,
+
+        // Prospect intelligence data
+        google_rating: context.google_rating || null,
+        google_review_count: context.google_review_count || null,
+        icp_match_score: context.icp_match_score || null,
+        most_recent_review_date: context.most_recent_review_date || null,
+        website_status: context.website_status || null,
+        description: context.description || null,
+        services: context.services || null
+      });
+
+      console.log(`[ResultsAggregator] Lead scoring complete:`, {
+        priority: leadScoringData.lead_priority,
+        tier: leadScoringData.priority_tier,
+        budget: leadScoringData.budget_likelihood
+      });
+    }
 
     // PHASE 4: Generate Critique
     this.onProgress({ step: 'critique', message: 'Generating actionable critique...' });
     const critique = generateCritique(analysisResults, gradeResults, enrichedContext);
-
-    // PHASE 5: Lead Scoring
-    this.onProgress({ step: 'lead-scoring', message: 'Scoring lead priority and qualification...' });
-    
-    const leadScoringData = await scoreLeadPriority({
-      company_name: context.company_name,
-      industry: context.industry,
-      url: homepage.fullUrl,
-      city: context.city,
-      state: context.state,
-      website_grade: gradeResults.grade,
-      overall_score: gradeResults.overallScore,
-      design_score: scores.design_score,
-      seo_score: scores.seo_score,
-      content_score: scores.content_score,
-      social_score: scores.social_score,
-      tech_stack: homepage.metadata?.techStack || 'Unknown',
-      page_load_time: homepage.metadata?.loadTime || null,
-      is_mobile_friendly: gradeMetadata.isMobileFriendly,
-      has_https: gradeMetadata.hasHTTPS,
-      design_issues: [...(analysisResults.desktopVisual?.issues || []), ...(analysisResults.mobileVisual?.issues || [])],
-      quick_wins: quickWins,
-      top_issue: getTopIssue(analysisResults),
-      one_liner: generateOneLiner(
-        context.company_name || 'This business',
-        critique.topIssue,
-        gradeResults.grade,
-        quickWins.length
-      ),
-      social_platforms_present: parsedData.social.platformsPresent,
-      contact_email: parsedData.content?.contactInfo?.emails?.[0] || context.contact_email || null,
-
-      // Business intelligence data
-      years_in_business: businessIntel.yearsInBusiness?.estimatedYears,
-      founded_year: businessIntel.yearsInBusiness?.foundedYear,
-      employee_count: businessIntel.companySize?.employeeCount,
-      location_count: businessIntel.companySize?.locationCount,
-      pricing_visible: businessIntel.pricingVisibility?.visible,
-      pricing_range: businessIntel.pricingVisibility?.priceRange,
-      blog_active: businessIntel.contentFreshness?.blogActive,
-      content_last_update: businessIntel.contentFreshness?.lastUpdate,
-      decision_maker_email: businessIntel.decisionMakerAccessibility?.hasDirectEmail,
-      decision_maker_phone: businessIntel.decisionMakerAccessibility?.hasDirectPhone,
-      owner_name: businessIntel.decisionMakerAccessibility?.ownerName,
-      premium_features: businessIntel.premiumFeatures?.detected || [],
-      budget_indicator: businessIntel.premiumFeatures?.budgetIndicator,
-      pages_crawled: pages.length,
-
-      // Prospect intelligence data (NEW)
-      google_rating: context.google_rating || null,
-      google_review_count: context.google_review_count || null,
-      icp_match_score: context.icp_match_score || null,
-      most_recent_review_date: context.most_recent_review_date || null,
-      website_status: context.website_status || null,
-      description: context.description || null,
-      services: context.services || null
-    });
-
-    console.log(`[ResultsAggregator] Lead scoring complete:`, {
-      priority: leadScoringData.lead_priority,
-      tier: leadScoringData.priority_tier,
-      budget: leadScoringData.budget_likelihood
-    });
 
     // PHASE 6: Save Screenshots
     const screenshotPaths = await this.saveScreenshots(pages, context, baseUrl);
