@@ -543,7 +543,10 @@ export class ResultsAggregator {
         seo_strengths: benchmark.seo_strengths,
         content_strengths: benchmark.content_strengths,
         social_strengths: benchmark.social_strengths,
-        accessibility_strengths: benchmark.accessibility_strengths
+        accessibility_strengths: benchmark.accessibility_strengths,
+        // Screenshot URLs for side-by-side comparison
+        screenshot_desktop_url: benchmark.screenshot_desktop_url || null,
+        screenshot_mobile_url: benchmark.screenshot_mobile_url || null
       } : null,
 
       // Multi-page crawl metadata

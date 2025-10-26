@@ -63,10 +63,10 @@
             --gray-800: #27272A;
             --gray-900: #18181B;
 
-            /* Background Colors */
+            /* Background Colors - Lighter & More Minimal */
             --bg-primary: #FFFFFF;
-            --bg-secondary: #FAFAFA;
-            --bg-tertiary: #F4F4F5;
+            --bg-secondary: #F9FAFB;        /* Ultra-subtle light gray for cards */
+            --bg-tertiary: #FAFAFA;          /* Changed from #F4F4F5 to lighter gray */
             --bg-accent: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
 
             /* Text Colors */
@@ -143,9 +143,10 @@
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
             font-size: var(--text-base);
-            line-height: 1.6;
+            font-weight: 400;             /* Lighter font weight */
+            line-height: 1.7;              /* More line height for breathing room */
             color: var(--text-primary);
-            background-color: var(--bg-secondary);
+            background-color: #FFFFFF;     /* Pure white background */
             min-height: 100vh;
         }
 
@@ -172,22 +173,17 @@
            =============================================== */
 
         .hero-section {
-            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-            color: var(--text-inverse);
+            background: #FFFFFF;                    /* Clean white background */
+            color: var(--text-primary);             /* Dark text instead of white */
             padding: var(--space-12) 0;
             position: relative;
             overflow: hidden;
+            border-bottom: 1px solid var(--border-light);  /* Subtle border */
         }
 
         .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-            opacity: 0.1;
+            /* Remove heavy pattern background */
+            display: none;
         }
 
         .hero-content {
@@ -201,27 +197,29 @@
         }
 
         .company-name {
-            font-size: clamp(var(--text-3xl), 5vw, var(--text-5xl));
-            font-weight: 800;
+            font-size: clamp(var(--text-2xl), 4vw, var(--text-4xl));  /* Smaller */
+            font-weight: 600;                /* Much lighter (was 800) */
             margin-bottom: var(--space-2);
-            letter-spacing: -0.02em;
+            letter-spacing: -0.01em;         /* Less tight */
+            color: var(--text-primary);
         }
 
         .company-meta {
-            font-size: var(--text-lg);
-            opacity: 0.9;
+            font-size: var(--text-base);     /* Smaller (was text-lg) */
+            opacity: 0.6;                     /* Lighter (was 0.9) */
             font-weight: 400;
+            color: var(--text-secondary);
         }
 
         /* Score Display Card */
         .score-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--bg-secondary);          /* Subtle gray background */
+            border: 1px solid var(--border-light);    /* Light border */
             border-radius: var(--radius-2xl);
             padding: var(--space-10);
             margin-bottom: var(--space-8);
             text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);  /* Subtle shadow */
         }
 
         .score-display-wrapper {
@@ -233,36 +231,28 @@
         }
 
         .score-circle {
-            width: 160px;
-            height: 160px;
+            width: 140px;                                    /* Slightly smaller */
+            height: 140px;
             border-radius: var(--radius-full);
             background: var(--bg-primary);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            box-shadow: var(--shadow-xl);
+            border: 2px solid var(--border-light);          /* Subtle border instead of heavy gradient */
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);      /* Very subtle shadow */
             position: relative;
         }
 
         .score-circle::before {
-            content: '';
-            position: absolute;
-            inset: -4px;
-            border-radius: var(--radius-full);
-            padding: 4px;
-            background: linear-gradient(45deg, #4F46E5, #7C3AED, #EC4899);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
+            /* Remove heavy gradient border */
+            display: none;
         }
 
         .grade-letter {
-            font-size: var(--text-5xl);
-            font-weight: 800;
-            background: linear-gradient(135deg, #4F46E5, #7C3AED);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: var(--text-4xl);                     /* Smaller */
+            font-weight: 700;                                /* Lighter (was 800) */
+            color: var(--text-primary);                      /* Solid dark color instead of gradient */
             line-height: 1;
         }
 
@@ -289,7 +279,7 @@
             align-items: center;
             justify-content: space-between;
             padding: var(--space-3) 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid var(--border-light);    /* Dark border for white bg */
         }
 
         .metric-label {
@@ -397,31 +387,27 @@
         }
 
         .section-title {
-            font-size: clamp(var(--text-2xl), 3vw, var(--text-4xl));
-            font-weight: 700;
+            font-size: clamp(var(--text-2xl), 3vw, var(--text-3xl));  /* Slightly smaller */
+            font-weight: 600;                /* Lighter weight (was 700) */
             color: var(--text-primary);
             margin-bottom: var(--space-4);
             display: flex;
             align-items: center;
             gap: var(--space-3);
+            letter-spacing: -0.02em;         /* Tighter spacing for modern look */
         }
 
         .section-title-icon {
-            width: 40px;
-            height: 40px;
-            background: var(--primary-lightest);
+            /* Removed background - minimal icon only */
             color: var(--primary);
-            border-radius: var(--radius-lg);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: var(--text-xl);
+            font-size: var(--text-2xl);      /* Larger but no background */
         }
 
         .section-description {
-            font-size: var(--text-lg);
-            color: var(--text-secondary);
-            line-height: 1.7;
+            font-size: var(--text-base);      /* Smaller, more minimal */
+            font-weight: 400;                 /* Lighter */
+            color: var(--text-tertiary);      /* Lighter color */
+            line-height: 1.8;                 /* More breathing room */
             max-width: 800px;
         }
 
@@ -794,72 +780,154 @@
            RESPONSIVE DESIGN
            =============================================== */
 
+        /* Tablet - 769px to 1024px */
+        @media screen and (max-width: 1024px) and (min-width: 769px) {
+            .container {
+                padding: 0 var(--space-6);
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .score-display-wrapper {
+                gap: var(--space-8);
+            }
+        }
+
+        /* Mobile - up to 768px */
         @media screen and (max-width: 768px) {
-            /* SIGNIFICANTLY increase base font size for mobile readability */
+            /* Mobile-friendly responsive design */
             html {
-                font-size: 22px !important; /* Doubled from base 16px for mobile */
+                font-size: 16px; /* Standard mobile base */
             }
 
-            /* Make all text substantially larger on mobile */
             body {
-                font-size: 1.1rem; /* Even larger base text */
-                line-height: 1.8;
+                font-size: 1rem;
+                line-height: 1.6;
+                padding: 0;
             }
 
-            /* Adjust specific text sizes for mobile */
+            /* Container adjustments */
+            .container {
+                padding: 0 var(--space-3) !important;
+                max-width: 100%;
+            }
+
+            /* Section spacing */
+            .section {
+                padding: var(--space-6) 0;
+            }
+
+            /* Typography adjustments */
+            .section-title {
+                font-size: 1.5rem;
+                line-height: 1.3;
+            }
+
             .section-description {
-                font-size: 1.2rem; /* Much larger body text */
-                line-height: 1.8;
-            }
-
-            .action-description {
-                font-size: 1.1rem;
-                line-height: 1.8;
+                font-size: 0.95rem;
+                line-height: 1.6;
             }
 
             .action-title {
-                font-size: 1.4rem; /* Larger headings */
+                font-size: 1.1rem;
                 font-weight: 600;
             }
 
-            .section-title {
-                font-size: 1.8rem; /* Much bigger section titles */
+            .action-description {
+                font-size: 0.9rem;
+                line-height: 1.6;
             }
 
-            /* Make all paragraph text larger */
             p {
-                font-size: 1.1rem;
-                line-height: 1.8;
+                font-size: 0.95rem;
+                line-height: 1.6;
             }
 
-            /* Increase list text */
             ul li, ol li {
-                font-size: 1.1rem;
-                line-height: 1.8;
-                margin-bottom: 0.5rem;
+                font-size: 0.9rem;
+                line-height: 1.6;
+                margin-bottom: 0.4rem;
             }
 
+            /* Hero section mobile */
             .hero-section {
-                padding: var(--space-8) 0;
+                padding: var(--space-6) 0;
+            }
+
+            .company-name {
+                font-size: 1.75rem;
+                line-height: 1.2;
+                margin-bottom: var(--space-2);
+            }
+
+            .company-meta {
+                font-size: 0.9rem;
+            }
+
+            /* Contact info box - mobile friendly */
+            .contact-info-box {
+                display: block !important;
+                width: 100% !important;
+                margin-top: var(--space-4) !important;
+            }
+
+            .contact-info-box > div {
+                flex-direction: column !important;
+                gap: 12px !important;
+            }
+
+            .contact-info-box a {
+                width: 100%;
+                justify-content: center;
+                padding: 10px 16px !important;
+                font-size: 0.95rem !important;
+            }
+
+            /* Score display */
+            .score-card {
+                padding: var(--space-6);
+                margin-bottom: var(--space-6);
             }
 
             .score-display-wrapper {
                 flex-direction: column;
-                gap: var(--space-6);
+                gap: var(--space-4);
+            }
+
+            .score-circle {
+                width: 120px;
+                height: 120px;
+            }
+
+            .grade-letter {
+                font-size: 2.5rem;
+            }
+
+            .score-value {
+                font-size: 1rem;
             }
 
             .score-details {
                 text-align: center;
             }
 
+            /* Metrics and grids */
             .metrics-grid {
                 grid-template-columns: 1fr;
+                gap: var(--space-3);
             }
 
-            .section {
-                padding: var(--space-8) 0;
+            .metric-card-value {
+                font-size: 1.5rem;
             }
 
+            .metric-card-detail {
+                font-size: 0.85rem;
+            }
+
+            /* Roadmap and timeline */
             .roadmap-phase {
                 flex-direction: column;
                 gap: var(--space-4);
@@ -879,159 +947,149 @@
                 margin: 0 auto var(--space-4);
             }
 
-            /* Much larger table text on mobile */
+            /* Tables - make scrollable */
+            .data-table-container {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
             .data-table td {
-                font-size: 1.1rem;
-                padding: var(--space-4);
-                line-height: 1.8;
+                font-size: 0.85rem;
+                padding: var(--space-2);
+                line-height: 1.5;
             }
 
             .data-table th {
-                font-size: 1rem;
-                padding: var(--space-4);
+                font-size: 0.8rem;
+                padding: var(--space-2);
             }
 
-            /* Much larger touch targets for easier interaction */
+            /* Touch targets - minimum 44px */
             .task-checkbox {
-                width: 28px;
-                height: 28px;
+                width: 24px;
+                height: 24px;
             }
 
             .action-number {
                 width: 44px;
                 height: 44px;
-                font-size: 1.2rem;
+                font-size: 1rem;
                 font-weight: 600;
+                flex-shrink: 0;
             }
 
-            /* Ensure metric values are large enough */
-            .metric-card-value {
-                font-size: 2rem; /* Big numbers */
-            }
-
-            .metric-card-detail {
-                font-size: 1rem; /* Readable detail text */
-            }
-
-            /* Score display adjustments */
-            .grade-letter {
-                font-size: 3.5rem; /* Huge grade letter */
-            }
-
-            .score-value {
-                font-size: 1.5rem; /* Large score number */
-            }
-
-            /* Ensure buttons and badges are readable */
+            /* Badges and labels */
             .action-priority {
-                font-size: 0.9rem;
-                padding: 0.3rem 0.7rem;
+                font-size: 0.75rem;
+                padding: 0.25rem 0.6rem;
             }
 
             .phase-timeline {
-                font-size: 1rem;
-                padding: 0.4rem 0.8rem;
+                font-size: 0.8rem;
+                padding: 0.3rem 0.6rem;
             }
 
-            /* Footer mobile adjustments */
-            .report-footer {
-                padding: var(--space-8) 0;
+            .section-title-icon {
+                font-size: 1.2rem;
             }
 
-            .footer-content {
-                max-width: 100%;
-                padding: 0 var(--space-4);
-            }
-
-            .footer-logo {
-                font-size: 1.5rem;
-                margin-bottom: var(--space-3);
-            }
-
-            .footer-text {
-                font-size: 1.1rem;
-                line-height: 1.8;
-            }
-        }
-
-        @media screen and (max-width: 480px) {
-            /* MUCH larger text for small phones - nearly double */
-            html {
-                font-size: 24px !important; /* Nearly doubled for small screens */
-            }
-
-            /* Ensure all text is very readable on small phones */
-            body {
-                font-size: 1.1rem;
-                line-height: 1.9;
-            }
-
-            .section-description,
-            .action-description,
-            p {
-                font-size: 1.15rem; /* Larger than base for maximum readability */
-                line-height: 1.9;
-            }
-
-            /* Even bigger headings on small phones */
-            .section-title {
-                font-size: 2rem;
-                line-height: 1.3;
-            }
-
-            .action-title {
-                font-size: 1.5rem;
-                line-height: 1.4;
-            }
-
-            /* Larger labels and meta text */
-            .metric-label,
-            .impact-label,
-            .metric-card-title {
-                font-size: 1rem; /* No tiny text */
-            }
-
-            /* Lists need to be readable too */
-            ul li, ol li {
-                font-size: 1.15rem;
-                line-height: 1.9;
-                margin-bottom: 0.75rem;
-            }
-
-            .container {
-                padding: 0 var(--space-4);
-            }
-
-            .screenshots-grid {
-                grid-template-columns: 1fr;
-            }
-
-            /* Increase button/card padding for easier tapping */
-            .action-card {
-                padding: var(--space-6);
-            }
-
-            .metric-card {
-                padding: var(--space-6);
-            }
-
-            /* Footer adjustments for small phones */
+            /* Footer */
             .report-footer {
                 padding: var(--space-6) 0;
             }
 
             .footer-content {
+                max-width: 100%;
                 padding: 0 var(--space-3);
             }
 
             .footer-logo {
-                font-size: 1.6rem;
+                font-size: 1.2rem;
                 margin-bottom: var(--space-2);
             }
 
             .footer-text {
-                font-size: 1.15rem;
-                line-height: 1.9;
+                font-size: 0.85rem;
+                line-height: 1.6;
+            }
+
+            /* Hide desktop-only elements */
+            .desktop-only {
+                display: none !important;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            /* Extra small phones - slightly larger text */
+            html {
+                font-size: 16px;
+            }
+
+            body {
+                font-size: 1rem;
+                line-height: 1.6;
+            }
+
+            /* Slightly larger for readability */
+            .section-description,
+            .action-description,
+            p {
+                font-size: 0.95rem;
+                line-height: 1.6;
+            }
+
+            .section-title {
+                font-size: 1.4rem;
+                line-height: 1.3;
+            }
+
+            .action-title {
+                font-size: 1.05rem;
+                line-height: 1.4;
+            }
+
+            .company-name {
+                font-size: 1.5rem;
+            }
+
+            /* Ensure labels are readable */
+            .metric-label,
+            .impact-label,
+            .metric-card-title {
+                font-size: 0.85rem;
+            }
+
+            /* Smaller score circle on very small screens */
+            .score-circle {
+                width: 100px;
+                height: 100px;
+            }
+
+            .grade-letter {
+                font-size: 2rem;
+            }
+
+            /* Tighter spacing */
+            .container {
+                padding: 0 var(--space-2) !important;
+            }
+
+            .section {
+                padding: var(--space-5) 0;
+            }
+
+            /* Screenshots - stack vertically */
+            .screenshots-grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Cards - good tap targets */
+            .action-card {
+                padding: var(--space-4);
+            }
+
+            .metric-card {
+                padding: var(--space-4);
             }
         }
 

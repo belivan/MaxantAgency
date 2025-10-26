@@ -1,12 +1,14 @@
 /**
- * HTML Report Exporter V3 - Concise Professional Edition
- * ========================================================
- * Generates streamlined, mobile-responsive HTML reports that:
- * - Eliminate redundancy between sections
- * - Focus on actionable insights over raw data
- * - Present information in a clear hierarchy
- * - Optimize for both desktop and mobile viewing
- * - Use a professional light color scheme
+ * HTML Report Exporter V3 - Full Comprehensive Edition
+ * ======================================================
+ * Generates comprehensive, mobile-responsive HTML reports that:
+ * - Include ALL collected data and analysis results
+ * - Show complete issue breakdowns (not just top 5-7)
+ * - Display multi-page screenshot galleries
+ * - Present business intelligence and lead scoring
+ * - Include technical deep dives (PageSpeed, WCAG, tech stack)
+ * - Provide appendix with methodology and QA validation
+ * - Optimize for internal analysis and development handoff
  */
 
 import { readFile } from 'fs/promises';
@@ -21,13 +23,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
- * Generate concise professional HTML report
+ * Generate comprehensive full HTML report
  * @param {Object} analysisResult - Complete analysis data
  * @param {Object} synthesisData - AI synthesis results (optional but recommended)
  * @returns {string} Complete HTML report
  */
-export async function generateHTMLReportV3(analysisResult, synthesisData = {}) {
-  console.log('[HTML Exporter V3] 🎨 Generating concise professional report...');
+export async function generateHTMLReportV3Full(analysisResult, synthesisData = {}) {
+  console.log('[HTML Exporter V3 Full] 📊 Generating comprehensive full report...');
 
   const {
     company_name,
@@ -49,8 +51,8 @@ export async function generateHTMLReportV3(analysisResult, synthesisData = {}) {
   // Process screenshots
   const screenshotData = await processScreenshots(analysisResult, registry);
 
-  // Generate concise content
-  const htmlContent = await generateConciseContent(
+  // Generate comprehensive full content
+  const htmlContent = await generateFullContent(
     analysisResult,
     synthesisData,
     registry,
@@ -76,14 +78,14 @@ export async function generateHTMLReportV3(analysisResult, synthesisData = {}) {
     .replace(/{{URL}}/g, escapeHtml(url || ''))
     .replace(/{{REPORT_CONTENT}}/g, htmlContent);
 
-  console.log('[HTML Exporter V3] ✅ Concise report generation complete!');
+  console.log('[HTML Exporter V3 Full] ✅ Comprehensive full report generation complete!');
   return html;
 }
 
 /**
- * Generate concise report content without repetition
+ * Generate comprehensive full report content with ALL data
  */
-async function generateConciseContent(analysisResult, synthesisData, registry, screenshotData) {
+async function generateFullContent(analysisResult, synthesisData, registry, screenshotData) {
   let content = '';
 
   // 1. Executive Dashboard (Hero Section with Key Metrics Only)
@@ -109,16 +111,38 @@ async function generateConciseContent(analysisResult, synthesisData, registry, s
   // 4. Implementation Timeline (90-Day Action Plan)
   content += generateTimeline(analysisResult, synthesisData);
 
-  // 5. Visual Evidence (Screenshots if Available)
-  if (screenshotData.screenshots.length > 0) {
-    content += generateVisualEvidence(screenshotData, registry);
+  // 5. Business Intelligence Section (NEW - Full Report Only)
+  if (analysisResult.business_intelligence) {
+    content += generateBusinessIntelligenceSection(analysisResult);
   }
+
+  // 6. Technical Deep Dive (NEW - Full Report Only)
+  content += generateTechnicalDeepDive(analysisResult);
+
+  // 7. Complete Issue Breakdown (NEW - Full Report Only)
+  content += generateCompleteIssueBreakdown(analysisResult);
+
+  // 8. WCAG Accessibility Compliance (NEW - Full Report Only)
+  if (analysisResult.accessibility_compliance) {
+    content += generateAccessibilityComplianceSection(analysisResult);
+  }
+
+  // 9. Multi-Page Screenshot Gallery (NEW - Enhanced Visual Evidence)
+  if (screenshotData.screenshots.length > 0 || analysisResult.crawl_metadata?.pages) {
+    content += generateMultiPageScreenshotGallery(analysisResult, screenshotData, registry);
+  }
+
+  // 10. Lead Scoring & Sales Intelligence (NEW - Full Report Only)
+  content += generateLeadScoringSection(analysisResult);
+
+  // 11. Appendix - Methodology & QA Validation (NEW - Full Report Only)
+  content += generateAppendix(analysisResult, synthesisData);
 
   // Close main content
   content += '  </div>\n';
   content += '</div>\n';
 
-  // 6. Footer
+  // 12. Footer
   content += generateFooter(analysisResult);
 
   return content;
@@ -1017,7 +1041,8 @@ function generateFooter(analysisResult) {
 
   let html = '';
 
-  // Additional Insights section removed - redundant for concise preview report
+  // Full report has dedicated sections for all this data, so skip "Additional Insights"
+  // (kept in preview report for quick summary)
 
   html += '    <div class="report-footer">\n';
   html += '      <div class="container">\n';
@@ -1331,6 +1356,603 @@ async function processScreenshots(analysisResult, registry) {
   return { screenshots, benchmarkScreenshots };
 }
 
+/**
+ * Generate Business Intelligence Section
+ */
+function generateBusinessIntelligenceSection(analysisResult) {
+  const { business_intelligence } = analysisResult;
+  if (!business_intelligence) return '';
+
+  let html = '';
+  html += '    <!-- Business Intelligence -->\n';
+  html += '    <section class="section" id="business-intelligence">\n';
+  html += '      <div class="section-header">\n';
+  html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
+  html += '          <span class="section-title-icon">🏢</span>\n';
+  html += '          Business Intelligence\n';
+  html += '        </h2>\n';
+  html += '        <p class="section-description">Insights about company size, operations, and digital presence.</p>\n';
+  html += '      </div>\n\n';
+
+  html += '      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">\n';
+
+  // Company Size
+  if (business_intelligence.companySize) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid var(--primary);">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: var(--primary);">📊 Company Size</h3>\n';
+    if (business_intelligence.companySize.employeeCount) {
+      html += `          <p style="margin-bottom: 8px;"><strong>Estimated Employees:</strong> ${escapeHtml(business_intelligence.companySize.employeeCount)}</p>\n`;
+    }
+    if (business_intelligence.companySize.locationCount) {
+      html += `          <p style="margin-bottom: 8px;"><strong>Locations:</strong> ${escapeHtml(business_intelligence.companySize.locationCount)}</p>\n`;
+    }
+    html += '        </div>\n';
+  }
+
+  // Years in Business
+  if (business_intelligence.yearsInBusiness) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid var(--success);">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: var(--success);">📅 Company History</h3>\n';
+    if (business_intelligence.yearsInBusiness.foundedYear) {
+      html += `          <p style="margin-bottom: 8px;"><strong>Founded:</strong> ${escapeHtml(business_intelligence.yearsInBusiness.foundedYear)}</p>\n`;
+    }
+    if (business_intelligence.yearsInBusiness.estimatedYears) {
+      html += `          <p style="margin-bottom: 8px;"><strong>Years in Business:</strong> ~${escapeHtml(business_intelligence.yearsInBusiness.estimatedYears)} years</p>\n`;
+    }
+    html += '        </div>\n';
+  }
+
+  // Pricing Visibility
+  if (business_intelligence.pricingVisibility) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid #f59e0b;">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: #f59e0b;">💰 Pricing Information</h3>\n';
+    html += `          <p style="margin-bottom: 8px;"><strong>Pricing Visible:</strong> ${business_intelligence.pricingVisibility.visible ? 'Yes' : 'No'}</p>\n`;
+    if (business_intelligence.pricingVisibility.priceRange) {
+      html += `          <p style="margin-bottom: 8px;"><strong>Price Range:</strong> ${escapeHtml(business_intelligence.pricingVisibility.priceRange)}</p>\n`;
+    }
+    html += '        </div>\n';
+  }
+
+  // Content Freshness
+  if (business_intelligence.contentFreshness) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid #8b5cf6;">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: #8b5cf6;">✍️ Content Activity</h3>\n';
+    html += `          <p style="margin-bottom: 8px;"><strong>Blog Active:</strong> ${business_intelligence.contentFreshness.blogActive ? 'Yes' : 'No'}</p>\n`;
+    if (business_intelligence.contentFreshness.lastUpdate) {
+      html += `          <p style="margin-bottom: 8px;"><strong>Last Update:</strong> ${escapeHtml(business_intelligence.contentFreshness.lastUpdate)}</p>\n`;
+    }
+    html += '        </div>\n';
+  }
+
+  // Decision Maker Accessibility
+  if (business_intelligence.decisionMakerAccessibility) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid #ef4444;">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: #ef4444;">👤 Decision Maker Access</h3>\n';
+    html += `          <p style="margin-bottom: 8px;"><strong>Direct Email:</strong> ${business_intelligence.decisionMakerAccessibility.hasDirectEmail ? 'Found' : 'Not Found'}</p>\n`;
+    html += `          <p style="margin-bottom: 8px;"><strong>Direct Phone:</strong> ${business_intelligence.decisionMakerAccessibility.hasDirectPhone ? 'Found' : 'Not Found'}</p>\n`;
+    if (business_intelligence.decisionMakerAccessibility.ownerName) {
+      html += `          <p style="margin-bottom: 8px;"><strong>Owner Name:</strong> ${escapeHtml(business_intelligence.decisionMakerAccessibility.ownerName)}</p>\n`;
+    }
+    html += '        </div>\n';
+  }
+
+  // Premium Features
+  if (business_intelligence.premiumFeatures && business_intelligence.premiumFeatures.detected && business_intelligence.premiumFeatures.detected.length > 0) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid #10b981;">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: #10b981;">⭐ Premium Features Detected</h3>\n';
+    html += '          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">\n';
+    business_intelligence.premiumFeatures.detected.forEach(feature => {
+      html += `            <li>${escapeHtml(feature)}</li>\n`;
+    });
+    html += '          </ul>\n';
+    if (business_intelligence.premiumFeatures.budgetIndicator) {
+      html += `          <p style="margin-top: 12px; font-style: italic; opacity: 0.8;"><strong>Budget Indicator:</strong> ${escapeHtml(business_intelligence.premiumFeatures.budgetIndicator)}</p>\n`;
+    }
+    html += '        </div>\n';
+  }
+
+  html += '      </div>\n';
+  html += '    </section>\n\n';
+  return html;
+}
+
+/**
+ * Generate Technical Deep Dive Section
+ */
+function generateTechnicalDeepDive(analysisResult) {
+  const {
+    performance_metrics_pagespeed,
+    performance_metrics_crux,
+    tech_stack,
+    accessibility_compliance,
+    has_https,
+    is_mobile_friendly,
+    page_load_time
+  } = analysisResult;
+
+  let html = '';
+  html += '    <!-- Technical Deep Dive -->\n';
+  html += '    <section class="section" id="technical-deep-dive">\n';
+  html += '      <div class="section-header">\n';
+  html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
+  html += '          <span class="section-title-icon">⚙️</span>\n';
+  html += '          Technical Deep Dive\n';
+  html += '        </h2>\n';
+  html += '        <p class="section-description">Performance metrics, tech stack, and technical infrastructure analysis.</p>\n';
+  html += '      </div>\n\n';
+
+  // Tech Stack
+  html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
+  html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🛠️ Technology Stack</h3>\n';
+  html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">\n';
+  html += `          <div><strong>Platform:</strong> ${escapeHtml(tech_stack || 'Unknown')}</div>\n`;
+  html += `          <div><strong>HTTPS:</strong> ${has_https ? '✅ Enabled' : '❌ Not Enabled'}</div>\n`;
+  html += `          <div><strong>Mobile Friendly:</strong> ${is_mobile_friendly ? '✅ Yes' : '❌ No'}</div>\n`;
+  if (page_load_time) {
+    html += `          <div><strong>Page Load Time:</strong> ${page_load_time}ms</div>\n`;
+  }
+  html += '        </div>\n';
+  html += '      </div>\n';
+
+  // PageSpeed Insights
+  if (performance_metrics_pagespeed) {
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
+    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">📊 PageSpeed Insights</h3>\n';
+
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">\n';
+
+    // Mobile Performance
+    if (performance_metrics_pagespeed.mobile) {
+      html += '          <div style="border-left: 4px solid var(--primary); padding-left: 16px;">\n';
+      html += '            <h4 style="font-size: 1.1rem; margin-bottom: 12px; color: var(--primary);">📱 Mobile</h4>\n';
+      html += `            <p style="font-size: 2rem; font-weight: bold; margin-bottom: 8px;">${performance_metrics_pagespeed.mobile.performanceScore || 'N/A'}</p>\n`;
+      if (performance_metrics_pagespeed.mobile.metrics) {
+        html += '            <div style="font-size: 0.9rem; opacity: 0.8;">\n';
+        if (performance_metrics_pagespeed.mobile.metrics.firstContentfulPaint) {
+          html += `              <div>FCP: ${performance_metrics_pagespeed.mobile.metrics.firstContentfulPaint}s</div>\n`;
+        }
+        if (performance_metrics_pagespeed.mobile.metrics.largestContentfulPaint) {
+          html += `              <div>LCP: ${performance_metrics_pagespeed.mobile.metrics.largestContentfulPaint}s</div>\n`;
+        }
+        if (performance_metrics_pagespeed.mobile.metrics.totalBlockingTime) {
+          html += `              <div>TBT: ${performance_metrics_pagespeed.mobile.metrics.totalBlockingTime}ms</div>\n`;
+        }
+        if (performance_metrics_pagespeed.mobile.metrics.cumulativeLayoutShift) {
+          html += `              <div>CLS: ${performance_metrics_pagespeed.mobile.metrics.cumulativeLayoutShift}</div>\n`;
+        }
+        html += '            </div>\n';
+      }
+      html += '          </div>\n';
+    }
+
+    // Desktop Performance
+    if (performance_metrics_pagespeed.desktop) {
+      html += '          <div style="border-left: 4px solid var(--success); padding-left: 16px;">\n';
+      html += '            <h4 style="font-size: 1.1rem; margin-bottom: 12px; color: var(--success);">💻 Desktop</h4>\n';
+      html += `            <p style="font-size: 2rem; font-weight: bold; margin-bottom: 8px;">${performance_metrics_pagespeed.desktop.performanceScore || 'N/A'}</p>\n`;
+      if (performance_metrics_pagespeed.desktop.metrics) {
+        html += '            <div style="font-size: 0.9rem; opacity: 0.8;">\n';
+        if (performance_metrics_pagespeed.desktop.metrics.firstContentfulPaint) {
+          html += `              <div>FCP: ${performance_metrics_pagespeed.desktop.metrics.firstContentfulPaint}s</div>\n`;
+        }
+        if (performance_metrics_pagespeed.desktop.metrics.largestContentfulPaint) {
+          html += `              <div>LCP: ${performance_metrics_pagespeed.desktop.metrics.largestContentfulPaint}s</div>\n`;
+        }
+        if (performance_metrics_pagespeed.desktop.metrics.totalBlockingTime) {
+          html += `              <div>TBT: ${performance_metrics_pagespeed.desktop.metrics.totalBlockingTime}ms</div>\n`;
+        }
+        if (performance_metrics_pagespeed.desktop.metrics.cumulativeLayoutShift) {
+          html += `              <div>CLS: ${performance_metrics_pagespeed.desktop.metrics.cumulativeLayoutShift}</div>\n`;
+        }
+        html += '            </div>\n';
+      }
+      html += '          </div>\n';
+    }
+
+    html += '        </div>\n';
+    html += '      </div>\n';
+  }
+
+  // CrUX Data
+  if (performance_metrics_crux) {
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
+    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🌐 Chrome User Experience (CrUX) - Real User Data</h3>\n';
+    html += '        <p style="opacity: 0.8; margin-bottom: 16px;">Performance data from actual Chrome users visiting your website.</p>\n';
+    html += '        <div style="font-family: monospace; background: rgba(0,0,0,0.5); padding: 16px; border-radius: 8px; overflow-x: auto;">\n';
+    html += `          <pre>${JSON.stringify(performance_metrics_crux, null, 2)}</pre>\n`;
+    html += '        </div>\n';
+    html += '      </div>\n';
+  }
+
+  html += '    </section>\n\n';
+  return html;
+}
+
+/**
+ * Generate Complete Issue Breakdown Section
+ */
+function generateCompleteIssueBreakdown(analysisResult) {
+  const {
+    design_issues_desktop = [],
+    design_issues_mobile = [],
+    seo_issues = [],
+    content_issues = [],
+    social_issues = [],
+    accessibility_issues = [],
+    performance_issues = []
+  } = analysisResult;
+
+  let html = '';
+  html += '    <!-- Complete Issue Breakdown -->\n';
+  html += '    <section class="section" id="complete-issues">\n';
+  html += '      <div class="section-header">\n';
+  html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
+  html += '          <span class="section-title-icon">🔍</span>\n';
+  html += '          Complete Issue Breakdown\n';
+  html += '        </h2>\n';
+  html += '        <p class="section-description">All identified issues across all analysis modules (not just top priorities).</p>\n';
+  html += '      </div>\n\n';
+
+  const issueCategories = [
+    { title: 'Desktop Design Issues', icon: '🖥️', issues: design_issues_desktop, color: '#6366f1' },
+    { title: 'Mobile Design Issues', icon: '📱', issues: design_issues_mobile, color: '#8b5cf6' },
+    { title: 'SEO Issues', icon: '🔍', issues: seo_issues, color: '#10b981' },
+    { title: 'Content Issues', icon: '📝', issues: content_issues, color: '#f59e0b' },
+    { title: 'Accessibility Issues', icon: '♿', issues: accessibility_issues, color: '#ef4444' },
+    { title: 'Social Media Issues', icon: '👥', issues: social_issues, color: '#06b6d4' },
+    { title: 'Performance Issues', icon: '⚡', issues: performance_issues, color: '#ec4899' }
+  ];
+
+  issueCategories.forEach(category => {
+    if (category.issues && category.issues.length > 0) {
+      html += `      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid ${category.color};">\n`;
+      html += `        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px; color: ${category.color};">\n`;
+      html += `          ${category.icon} ${escapeHtml(category.title)} (${category.issues.length})\n`;
+      html += '        </h3>\n';
+
+      html += '        <div style="display: grid; gap: 16px;">\n';
+      category.issues.forEach((issue, idx) => {
+        const severity = issue.severity || issue.priority || 'medium';
+        const severityColors = {
+          critical: '#ef4444',
+          high: '#f59e0b',
+          medium: '#3b82f6',
+          low: '#6b7280'
+        };
+        const severityColor = severityColors[severity] || '#6b7280';
+
+        html += '          <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; border-left: 3px solid ' + severityColor + ';">\n';
+        html += '            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">\n';
+        html += `              <h4 style="font-weight: 600; margin: 0; flex: 1;">${idx + 1}. ${escapeHtml(issue.title || issue.description || 'Issue')}</h4>\n`;
+        html += `              <span style="background: ${severityColor}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-left: 12px;">${severity}</span>\n`;
+        html += '            </div>\n';
+
+        if (issue.description && issue.title) {
+          html += `            <p style="opacity: 0.8; margin: 8px 0;">${escapeHtml(issue.description)}</p>\n`;
+        }
+
+        if (issue.recommendation) {
+          html += `            <p style="margin-top: 12px; padding: 12px; background: rgba(99,102,241,0.1); border-radius: 6px; border-left: 3px solid var(--primary);"><strong>💡 Recommendation:</strong> ${escapeHtml(issue.recommendation)}</p>\n`;
+        }
+
+        html += '          </div>\n';
+      });
+      html += '        </div>\n';
+      html += '      </div>\n';
+    }
+  });
+
+  html += '    </section>\n\n';
+  return html;
+}
+
+/**
+ * Generate WCAG Accessibility Compliance Section
+ */
+function generateAccessibilityComplianceSection(analysisResult) {
+  const { accessibility_compliance } = analysisResult;
+  if (!accessibility_compliance) return '';
+
+  let html = '';
+  html += '    <!-- WCAG Accessibility Compliance -->\n';
+  html += '    <section class="section" id="wcag-compliance">\n';
+  html += '      <div class="section-header">\n';
+  html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
+  html += '          <span class="section-title-icon">♿</span>\n';
+  html += '          WCAG Accessibility Compliance\n';
+  html += '        </h2>\n';
+  html += '        <p class="section-description">Web Content Accessibility Guidelines (WCAG) compliance breakdown by level.</p>\n';
+  html += '      </div>\n\n';
+
+  html += '      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">\n';
+
+  // Level A
+  if (accessibility_compliance.levelA) {
+    const passRate = accessibility_compliance.levelA.passRate || 0;
+    const color = passRate >= 80 ? '#10b981' : passRate >= 60 ? '#f59e0b' : '#ef4444';
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid ' + color + ';">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: ' + color + ';">Level A (Basic)</h3>\n';
+    html += `          <p style="font-size: 2rem; font-weight: bold; margin-bottom: 8px;">${Math.round(passRate)}%</p>\n`;
+    html += `          <p style="opacity: 0.8;">Passed: ${accessibility_compliance.levelA.passed || 0} / Failed: ${accessibility_compliance.levelA.failed || 0}</p>\n`;
+    html += '        </div>\n';
+  }
+
+  // Level AA
+  if (accessibility_compliance.levelAA) {
+    const passRate = accessibility_compliance.levelAA.passRate || 0;
+    const color = passRate >= 80 ? '#10b981' : passRate >= 60 ? '#f59e0b' : '#ef4444';
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid ' + color + ';">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: ' + color + ';">Level AA (Standard)</h3>\n';
+    html += `          <p style="font-size: 2rem; font-weight: bold; margin-bottom: 8px;">${Math.round(passRate)}%</p>\n`;
+    html += `          <p style="opacity: 0.8;">Passed: ${accessibility_compliance.levelAA.passed || 0} / Failed: ${accessibility_compliance.levelAA.failed || 0}</p>\n`;
+    html += '        </div>\n';
+  }
+
+  // Level AAA
+  if (accessibility_compliance.levelAAA) {
+    const passRate = accessibility_compliance.levelAAA.passRate || 0;
+    const color = passRate >= 80 ? '#10b981' : passRate >= 60 ? '#f59e0b' : '#ef4444';
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid ' + color + ';">\n';
+    html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: ' + color + ';">Level AAA (Enhanced)</h3>\n';
+    html += `          <p style="font-size: 2rem; font-weight: bold; margin-bottom: 8px;">${Math.round(passRate)}%</p>\n`;
+    html += `          <p style="opacity: 0.8;">Passed: ${accessibility_compliance.levelAAA.passed || 0} / Failed: ${accessibility_compliance.levelAAA.failed || 0}</p>\n`;
+    html += '        </div>\n';
+  }
+
+  html += '      </div>\n';
+  html += '    </section>\n\n';
+  return html;
+}
+
+/**
+ * Generate Multi-Page Screenshot Gallery
+ */
+function generateMultiPageScreenshotGallery(analysisResult, screenshotData, registry) {
+  const { crawl_metadata } = analysisResult;
+  if (!crawl_metadata || !crawl_metadata.pages || crawl_metadata.pages.length === 0) {
+    return '';
+  }
+
+  let html = '';
+  html += '    <!-- Multi-Page Screenshot Gallery -->\n';
+  html += '    <section class="section" id="screenshot-gallery">\n';
+  html += '      <div class="section-header">\n';
+  html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
+  html += '          <span class="section-title-icon">📸</span>\n';
+  html += '          Multi-Page Screenshot Gallery\n';
+  html += '        </h2>\n';
+  html += `        <p class="section-description">Screenshots from all ${crawl_metadata.pages.length} crawled pages (desktop & mobile).</p>\n`;
+  html += '      </div>\n\n';
+
+  crawl_metadata.pages.forEach((page, idx) => {
+    if (!page.screenshot_paths || (!page.screenshot_paths.desktop && !page.screenshot_paths.mobile)) {
+      return;
+    }
+
+    const pageTitle = page.url === '/' || page.url === '' ? 'Homepage' : page.url;
+
+    html += `      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n`;
+    html += `        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px;">${idx + 1}. ${escapeHtml(pageTitle)}</h3>\n`;
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">\n';
+
+    // Desktop screenshot
+    if (page.screenshot_paths.desktop) {
+      html += '          <div>\n';
+      html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">🖥️ Desktop View</h4>\n';
+      html += '            <div style="border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;">\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255,255,255,0.05); opacity: 0.5;">Screenshot available in full report</div>\n';
+      html += '            </div>\n';
+      html += '          </div>\n';
+    }
+
+    // Mobile screenshot
+    if (page.screenshot_paths.mobile) {
+      html += '          <div>\n';
+      html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">📱 Mobile View</h4>\n';
+      html += '            <div style="border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;">\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255,255,255,0.05); opacity: 0.5;">Screenshot available in full report</div>\n';
+      html += '            </div>\n';
+      html += '          </div>\n';
+    }
+
+    html += '        </div>\n';
+    html += '      </div>\n';
+  });
+
+  html += '    </section>\n\n';
+  return html;
+}
+
+/**
+ * Generate Lead Scoring & Sales Intelligence Section
+ */
+function generateLeadScoringSection(analysisResult) {
+  const {
+    lead_score,
+    lead_priority,
+    priority_tier,
+    budget_likelihood,
+    receptiveness_score,
+    key_pain_points = [],
+    value_proposition,
+    urgency_factors = []
+  } = analysisResult;
+
+  let html = '';
+  html += '    <!-- Lead Scoring & Sales Intelligence -->\n';
+  html += '    <section class="section" id="lead-scoring">\n';
+  html += '      <div class="section-header">\n';
+  html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
+  html += '          <span class="section-title-icon">🎯</span>\n';
+  html += '          Lead Scoring & Sales Intelligence\n';
+  html += '        </h2>\n';
+  html += '        <p class="section-description">AI-generated sales insights and lead qualification data.</p>\n';
+  html += '      </div>\n\n';
+
+  // Lead Score Overview
+  html += '      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; margin-bottom: 32px;">\n';
+
+  if (lead_score !== undefined) {
+    const scoreColor = lead_score >= 70 ? '#10b981' : lead_score >= 50 ? '#f59e0b' : '#ef4444';
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; text-align: center; border: 3px solid ' + scoreColor + ';">\n';
+    html += '          <h3 style="font-size: 0.9rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Lead Score</h3>\n';
+    html += `          <p style="font-size: 3rem; font-weight: bold; color: ${scoreColor}; margin: 0;">${lead_score}</p>\n`;
+    html += '        </div>\n';
+  }
+
+  if (lead_priority) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; text-align: center;">\n';
+    html += '          <h3 style="font-size: 0.9rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Priority</h3>\n';
+    html += `          <p style="font-size: 2rem; font-weight: bold; margin: 0;">${escapeHtml(lead_priority).toUpperCase()}</p>\n`;
+    html += '        </div>\n';
+  }
+
+  if (priority_tier) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; text-align: center;">\n';
+    html += '          <h3 style="font-size: 0.9rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Tier</h3>\n';
+    html += `          <p style="font-size: 2rem; font-weight: bold; margin: 0;">${escapeHtml(priority_tier)}</p>\n`;
+    html += '        </div>\n';
+  }
+
+  if (receptiveness_score !== undefined) {
+    html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; text-align: center;">\n';
+    html += '          <h3 style="font-size: 0.9rem; text-transform: uppercase; opacity: 0.7; margin-bottom: 8px;">Receptiveness</h3>\n';
+    html += `          <p style="font-size: 2rem; font-weight: bold; margin: 0;">${receptiveness_score}%</p>\n`;
+    html += '        </div>\n';
+  }
+
+  html += '      </div>\n';
+
+  // Budget Likelihood & Value Prop
+  if (budget_likelihood || value_proposition) {
+    html += '      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 24px;">\n';
+
+    if (budget_likelihood) {
+      html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid #10b981;">\n';
+      html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: #10b981;">💰 Budget Likelihood</h3>\n';
+      html += `          <p style="opacity: 0.9;">${escapeHtml(budget_likelihood)}</p>\n`;
+      html += '        </div>\n';
+    }
+
+    if (value_proposition) {
+      html += '        <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid var(--primary);">\n';
+      html += '          <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: var(--primary);">💡 Value Proposition</h3>\n';
+      html += `          <p style="opacity: 0.9;">${escapeHtml(value_proposition)}</p>\n`;
+      html += '        </div>\n';
+    }
+
+    html += '      </div>\n';
+  }
+
+  // Key Pain Points
+  if (key_pain_points.length > 0) {
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid #ef4444;">\n';
+    html += '        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: #ef4444;">🎯 Key Pain Points</h3>\n';
+    html += '        <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">\n';
+    key_pain_points.forEach(point => {
+      html += `          <li>${escapeHtml(point)}</li>\n`;
+    });
+    html += '        </ul>\n';
+    html += '      </div>\n';
+  }
+
+  // Urgency Factors
+  if (urgency_factors.length > 0) {
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; border-left: 4px solid #f59e0b;">\n';
+    html += '        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: #f59e0b;">⚡ Urgency Factors</h3>\n';
+    html += '        <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">\n';
+    urgency_factors.forEach(factor => {
+      html += `          <li>${escapeHtml(factor)}</li>\n`;
+    });
+    html += '        </ul>\n';
+    html += '      </div>\n';
+  }
+
+  html += '    </section>\n\n';
+  return html;
+}
+
+/**
+ * Generate Appendix Section
+ */
+function generateAppendix(analysisResult, synthesisData) {
+  const {
+    qa_validation,
+    synthesis_errors = [],
+    synthesis_stage_metadata = {},
+    crawl_metadata
+  } = analysisResult;
+
+  let html = '';
+  html += '    <!-- Appendix -->\n';
+  html += '    <section class="section" id="appendix" style="background: rgba(255,255,255,0.02); border-top: 2px solid rgba(255,255,255,0.1);">\n';
+  html += '      <div class="section-header">\n';
+  html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
+  html += '          <span class="section-title-icon">📚</span>\n';
+  html += '          Appendix\n';
+  html += '        </h2>\n';
+  html += '        <p class="section-description">Methodology, quality validation, and technical metadata.</p>\n';
+  html += '      </div>\n\n';
+
+  // QA Validation
+  if (qa_validation && qa_validation.status) {
+    const statusColors = {
+      PASS: '#10b981',
+      WARN: '#f59e0b',
+      FAIL: '#ef4444',
+      NOT_RUN: '#6b7280'
+    };
+    const statusColor = statusColors[qa_validation.status] || '#6b7280';
+
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid ' + statusColor + ';">\n';
+    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px; color: ' + statusColor + ';">✅ QA Validation Report</h3>\n';
+    html += `        <p style="font-size: 1.5rem; font-weight: bold; margin-bottom: 12px;">Status: ${qa_validation.status}</p>\n`;
+    if (qa_validation.qualityScore !== undefined) {
+      html += `        <p style="margin-bottom: 16px;">Quality Score: ${qa_validation.qualityScore}/100</p>\n`;
+    }
+
+    if (qa_validation.recommendations && qa_validation.recommendations.length > 0) {
+      html += '        <div style="margin-top: 16px;">\n';
+      html += '          <h4 style="font-weight: 600; margin-bottom: 12px;">Recommendations:</h4>\n';
+      html += '          <ul style="margin: 0; padding-left: 20px; line-height: 1.8;">\n';
+      qa_validation.recommendations.forEach(rec => {
+        html += `            <li>${escapeHtml(rec)}</li>\n`;
+      });
+      html += '          </ul>\n';
+      html += '        </div>\n';
+    }
+    html += '      </div>\n';
+  }
+
+  // Synthesis Metadata
+  if (Object.keys(synthesis_stage_metadata).length > 0) {
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
+    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🤖 AI Synthesis Metadata</h3>\n';
+    html += '        <div style="font-family: monospace; background: rgba(0,0,0,0.5); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">\n';
+    html += `          <pre>${JSON.stringify(synthesis_stage_metadata, null, 2)}</pre>\n`;
+    html += '        </div>\n';
+    html += '      </div>\n';
+  }
+
+  // Crawl Metadata
+  if (crawl_metadata) {
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
+    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🕷️ Crawl Metadata</h3>\n';
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px;">\n';
+    html += `          <div><strong>Pages Discovered:</strong> ${crawl_metadata.pages_discovered || 0}</div>\n`;
+    html += `          <div><strong>Pages Crawled:</strong> ${crawl_metadata.pages_crawled || 0}</div>\n`;
+    html += `          <div><strong>Pages Analyzed:</strong> ${crawl_metadata.pages_analyzed || 0}</div>\n`;
+    if (crawl_metadata.failed_pages && crawl_metadata.failed_pages.length > 0) {
+      html += `          <div><strong>Failed Pages:</strong> ${crawl_metadata.failed_pages.length}</div>\n`;
+    }
+    html += '        </div>\n';
+    html += '      </div>\n';
+  }
+
+  html += '    </section>\n\n';
+  return html;
+}
+
 function escapeHtml(text) {
   if (!text) return '';
   const map = {
@@ -1343,5 +1965,5 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, m => map[m]);
 }
 
-// Export as default (already exported as named on line 29)
-export default generateHTMLReportV3;
+// Export as default
+export default generateHTMLReportV3Full;

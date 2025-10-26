@@ -62,10 +62,18 @@ export async function generateReport(analysisResult, options = {}) {
     const useV3 = process.env.REPORT_VERSION !== 'v2' && process.env.REPORT_VERSION !== 'v1';
     const useV2 = !useV3 && (synthesisData !== null || process.env.REPORT_STYLE === 'executive');
 
+    // Determine report type: 'preview' (concise) or 'full' (comprehensive)
+    const reportType = options.report_type || process.env.REPORT_TYPE || 'preview';
+
     let htmlContent;
     if (useV3) {
-      const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3-concise.js');
-      htmlContent = await generateHTMLReportV3(analysisResult, synthesisData);
+      if (reportType === 'full') {
+        const { generateHTMLReportV3Full } = await import('./exporters/html-exporter-v3-full.js');
+        htmlContent = await generateHTMLReportV3Full(analysisResult, synthesisData);
+      } else {
+        const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3-concise.js');
+        htmlContent = await generateHTMLReportV3(analysisResult, synthesisData);
+      }
     } else if (useV2) {
       htmlContent = await generateHTMLReportV2(analysisResult, synthesisData);
     } else {
@@ -127,10 +135,18 @@ export async function generateReport(analysisResult, options = {}) {
     const useV3 = process.env.REPORT_VERSION !== 'v2' && process.env.REPORT_VERSION !== 'v1';
     const useV2 = !useV3 && (synthesisData !== null || process.env.REPORT_STYLE === 'executive');
 
+    // Determine report type: 'preview' (concise) or 'full' (comprehensive)
+    const reportType = options.report_type || process.env.REPORT_TYPE || 'preview';
+
     let htmlContent;
     if (useV3) {
-      const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3-concise.js');
-      htmlContent = await generateHTMLReportV3(analysisResult, synthesisData);
+      if (reportType === 'full') {
+        const { generateHTMLReportV3Full } = await import('./exporters/html-exporter-v3-full.js');
+        htmlContent = await generateHTMLReportV3Full(analysisResult, synthesisData);
+      } else {
+        const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3-concise.js');
+        htmlContent = await generateHTMLReportV3(analysisResult, synthesisData);
+      }
     } else if (useV2) {
       htmlContent = await generateHTMLReportV2(analysisResult, synthesisData);
     } else {

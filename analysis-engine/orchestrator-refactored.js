@@ -163,6 +163,33 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
           console.log(`[Orchestrator]    Tier: ${benchmarkMatchMetadata.comparison_tier}`);
           console.log(`[Orchestrator]    Benchmark score: ${benchmark.overall_score}/100 (Grade ${benchmark.overall_grade})`);
           console.log(`[Orchestrator]    Reasoning: ${benchmarkMatchMetadata.match_reasoning}`);
+
+          // Capture benchmark screenshots for side-by-side comparison
+          if (benchmark.website_url) {
+            console.log(`[Orchestrator] 📸 Capturing benchmark screenshots: ${benchmark.website_url}`);
+            progress({ step: 'benchmark-screenshots', message: 'Capturing benchmark website screenshots...' });
+
+            try {
+              const benchmarkCrawler = new CrawlingService({
+                timeout: 30000,
+                concurrency: 1,
+                onProgress: () => {} // Silent progress for benchmark
+              });
+
+              const benchmarkCrawlData = await benchmarkCrawler.crawl(benchmark.website_url, ['/']);
+
+              if (benchmarkCrawlData.homepage) {
+                benchmark.screenshot_desktop_url = benchmarkCrawlData.homepage.screenshotDesktop;
+                benchmark.screenshot_mobile_url = benchmarkCrawlData.homepage.screenshotMobile;
+                console.log(`[Orchestrator] ✅ Benchmark screenshots captured`);
+              } else {
+                console.warn(`[Orchestrator] ⚠️ Benchmark homepage not found in crawl data`);
+              }
+            } catch (error) {
+              console.warn(`[Orchestrator] ⚠️ Failed to capture benchmark screenshots:`, error.message);
+              console.warn(`[Orchestrator]    Side-by-side comparisons will be skipped`);
+            }
+          }
         } else {
           console.warn(`[Orchestrator] ⚠️ No benchmark found: ${benchmarkResult.error}`);
           console.warn(`[Orchestrator]    Analysis will proceed without benchmark context`);

@@ -12,22 +12,44 @@ import { Buffer } from 'buffer';
  * @param {string} imagePath - Path to image file
  * @param {object} options - Compression options
  * @param {number} options.maxWidth - Maximum width (default: 1200)
+ * @param {number} options.maxHeight - Maximum height to crop (default: null, full height)
  * @param {number} options.quality - JPEG quality 1-100 (default: 75)
+ * @param {boolean} options.cropToViewport - Crop to viewport height (default: false)
  * @returns {Promise<string>} Base64 data URI
  */
 export async function compressImageFromFile(imagePath, options = {}) {
   const {
     maxWidth = 1200,
-    quality = 75
+    maxHeight = null,
+    quality = 75,
+    cropToViewport = false
   } = options;
 
   try {
-    // Read and process the image
-    const buffer = await sharp(imagePath)
-      .resize(maxWidth, null, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
+    let pipeline = sharp(imagePath);
+
+    // Get image metadata to check dimensions
+    const metadata = await pipeline.metadata();
+
+    // If cropToViewport is true and maxHeight is set, crop from top
+    if (cropToViewport && maxHeight && metadata.height > maxHeight) {
+      pipeline = pipeline.extract({
+        left: 0,
+        top: 0,
+        width: metadata.width,
+        height: Math.min(maxHeight, metadata.height)
+      });
+    }
+
+    // Resize width (maintaining aspect ratio if not cropped)
+    pipeline = pipeline.resize(maxWidth, maxHeight && !cropToViewport ? maxHeight : null, {
+      fit: cropToViewport || maxHeight ? 'cover' : 'inside',
+      withoutEnlargement: true,
+      position: 'top' // When cropping, keep the top of the image
+    });
+
+    // Compress to JPEG
+    const buffer = await pipeline
       .jpeg({ quality, progressive: true })
       .toBuffer();
 
