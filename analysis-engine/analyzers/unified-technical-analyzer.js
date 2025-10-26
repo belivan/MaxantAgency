@@ -122,7 +122,7 @@ export async function analyzeUnifiedTechnical(pages, context = {}, customPrompt 
         model: customPrompt.model,
         temperature: customPrompt.temperature,
         systemPrompt: customPrompt.systemPrompt,
-        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
+        userPrompt: await substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
         outputFormat: customPrompt.outputFormat
       };
     } else {

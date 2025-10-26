@@ -12,8 +12,9 @@
  */
 
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { getAIClient } from '../shared/ai-client.js';
+import { callAI } from '../shared/ai-client.js';
 import { findBestBenchmark } from '../services/benchmark-matcher.js';
+import { calculateGrade } from './grader.js';
 
 /**
  * Grade a website using AI comparative analysis
@@ -100,62 +101,62 @@ export async function gradeWithAI(analysisResults, metadata) {
     // Step 3: Load prompt and call AI
     console.log(`  ├─ Calling AI grader (GPT-5)...`);
 
-    const promptConfig = loadPrompt('grading', 'ai-comparative-grader', gradingData);
-    const aiClient = getAIClient(promptConfig.model);
+    const promptConfig = await loadPrompt('grading/ai-comparative-grader', gradingData);
 
-    const response = await aiClient.chat.completions.create({
+    const gradingResult = await callAI({
       model: promptConfig.model,
       temperature: promptConfig.temperature,
-      messages: [
-        { role: 'system', content: promptConfig.systemPrompt },
-        { role: 'user', content: promptConfig.userPrompt }
-      ],
-      response_format: { type: 'json_object' }
+      systemPrompt: promptConfig.systemPrompt,
+      userPrompt: promptConfig.userPrompt,
+      responseFormat: 'json'
     });
 
-    const gradingResult = JSON.parse(response.choices[0].message.content);
+    // Parse JSON response from content field
+    const parsedGrading = typeof gradingResult.content === 'string'
+      ? JSON.parse(gradingResult.content)
+      : gradingResult;
 
-    console.log(`  ├─ Grade: ${gradingResult.overall_grade} (${gradingResult.overall_score}/100)`);
-    console.log(`  ├─ Lead Score: ${gradingResult.lead_score}/100 (${gradingResult.lead_priority} priority)`);
-    console.log(`  ├─ Gap vs Benchmark: ${gradingResult.comparison_summary.gap} points`);
-    console.log(`  └─ Weights Used: Design ${gradingResult.dimension_weights_used.design * 100}%, SEO ${gradingResult.dimension_weights_used.seo * 100}%, Perf ${gradingResult.dimension_weights_used.performance * 100}%`);
+    console.log(`  ├─ Grade: ${parsedGrading.overall_grade} (${parsedGrading.overall_score}/100)`);
+    console.log(`  ├─ Lead Score: ${parsedGrading.lead_score}/100 (${parsedGrading.lead_priority} priority)`);
+    console.log(`  ├─ Gap vs Benchmark: ${parsedGrading.comparison_summary.gap} points`);
+    console.log(`  └─ Weights Used: Design ${parsedGrading.dimension_weights_used.design * 100}%, SEO ${parsedGrading.dimension_weights_used.seo * 100}%, Perf ${parsedGrading.dimension_weights_used.performance * 100}%`);
 
     // Step 4: Return comprehensive grading result
     return {
       success: true,
 
       // Core grading
-      grade: gradingResult.overall_grade,
-      overall_score: Math.round(gradingResult.overall_score),
+      grade: parsedGrading.overall_grade,
+      overall_score: Math.round(parsedGrading.overall_score),
 
       // Lead scoring
-      lead_score: Math.round(gradingResult.lead_score),
-      lead_priority: gradingResult.lead_priority,
+      lead_score: Math.round(parsedGrading.lead_score),
+      lead_priority: parsedGrading.lead_priority,
 
       // Weights used (for transparency/debugging)
-      dimension_weights: gradingResult.dimension_weights_used,
-      weight_reasoning: gradingResult.weight_reasoning,
+      dimension_weights: parsedGrading.dimension_weights_used,
+      weight_reasoning: parsedGrading.weight_reasoning,
 
       // Comparison insights
       comparison: {
         benchmark_id: benchmark.id,
-        benchmark_name: gradingResult.comparison_summary.benchmark_name,
-        benchmark_score: gradingResult.comparison_summary.benchmark_score,
-        gap: gradingResult.comparison_summary.gap,
-        gap_assessment: gradingResult.comparison_summary.gap_assessment,
-        strongest_areas: gradingResult.comparison_summary.strongest_areas,
-        weakest_areas: gradingResult.comparison_summary.weakest_areas,
-        quick_wins: gradingResult.comparison_summary.quick_wins
+        benchmark_name: parsedGrading.comparison_summary.benchmark_name,
+        benchmark_score: parsedGrading.comparison_summary.benchmark_score,
+        gap: parsedGrading.comparison_summary.gap,
+        gap_assessment: parsedGrading.comparison_summary.gap_assessment,
+        strongest_areas: parsedGrading.comparison_summary.strongest_areas,
+        weakest_areas: parsedGrading.comparison_summary.weakest_areas,
+        quick_wins: parsedGrading.comparison_summary.quick_wins
       },
 
       // Business context
-      business_context: gradingResult.business_context,
+      business_context: parsedGrading.business_context,
 
       // Sales insights
-      sales_insights: gradingResult.sales_insights,
+      sales_insights: parsedGrading.sales_insights,
 
       // Rationale
-      grading_rationale: gradingResult.grading_rationale,
+      grading_rationale: parsedGrading.grading_rationale,
 
       // Metadata
       graded_at: new Date().toISOString(),
@@ -178,9 +179,7 @@ export async function gradeWithAI(analysisResults, metadata) {
  * @returns {object} Manual grade
  */
 function fallbackGrading(analysisResults, metadata) {
-  // Import manual grader (legacy)
-  const { calculateGrade } = require('./grader.js');
-
+  // Use manual grader (imported at top of file)
   const scores = {
     design: analysisResults.scores?.design_score || 50,
     seo: analysisResults.scores?.seo_score || 50,

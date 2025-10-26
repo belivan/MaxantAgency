@@ -29,7 +29,7 @@ export class ResultsAggregator {
 
   /**
    * Aggregate all analysis results into final output
-   * 
+   *
    * @param {object} analysisResults - Results from AnalysisCoordinator
    * @param {object} crawlData - Data from CrawlingService
    * @param {object} pageSelection - Selection from PageSelectionService
@@ -37,9 +37,11 @@ export class ResultsAggregator {
    * @param {object} context - Business context
    * @param {string} baseUrl - Base website URL
    * @param {number} startTime - Analysis start timestamp
+   * @param {object} benchmark - Matched benchmark data (optional)
+   * @param {object} benchmarkMatchMetadata - Benchmark match metadata (optional)
    * @returns {Promise<object>} Complete analysis results
    */
-  async aggregate(analysisResults, crawlData, pageSelection, discoveryData, context, baseUrl, startTime) {
+  async aggregate(analysisResults, crawlData, pageSelection, discoveryData, context, baseUrl, startTime, benchmark = null, benchmarkMatchMetadata = null) {
     const { pages, homepage, businessIntel } = crawlData;
     const { parsedData, enrichedContext } = analysisResults.metadata;
 
@@ -53,12 +55,23 @@ export class ResultsAggregator {
     const useAIGrading = process.env.USE_AI_GRADING === 'true';
     let gradeResults, leadScoringData;
 
+    // Initialize gradeMetadata (used in both AI and manual paths, and later for synthesis)
+    let gradeMetadata = {
+      quickWinCount: quickWins.length,
+      isMobileFriendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
+      hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
+      siteAccessible: true,
+      industry: context.industry
+    };
+
     if (useAIGrading) {
       // AI-POWERED GRADING (NEW)
       this.onProgress({ step: 'ai-grading', message: 'AI grading with benchmark comparison...' });
       console.log('\n[AI Grading] Using AI comparative grading...');
 
-      const gradeMetadata = {
+      // Extend gradeMetadata with AI-specific fields
+      gradeMetadata = {
+        ...gradeMetadata,
         quickWinCount: quickWins.length,
         isMobileFriendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
         hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
@@ -134,14 +147,7 @@ export class ResultsAggregator {
     if (!useAIGrading) {
       // MANUAL GRADING (LEGACY)
       this.onProgress({ step: 'grade', message: 'Calculating overall grade...' });
-
-      const gradeMetadata = {
-        quickWinCount: quickWins.length,
-        isMobileFriendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
-        hasHTTPS: homepage.fullUrl?.startsWith('https://') || false,
-        siteAccessible: true,
-        industry: context.industry
-      };
+      // gradeMetadata already initialized above
 
       gradeResults = calculateGrade({
         design: scores.design_score,
@@ -302,7 +308,9 @@ export class ResultsAggregator {
       context,
       homepage,
       analysisTime,
-      analysisCost
+      analysisCost,
+      benchmark,  // NEW: Pass benchmark data
+      benchmarkMatchMetadata  // NEW: Pass benchmark match metadata
     });
   }
 
@@ -402,7 +410,9 @@ export class ResultsAggregator {
       context,
       homepage,
       analysisTime,
-      analysisCost
+      analysisCost,
+      benchmark,  // NEW: Benchmark data
+      benchmarkMatchMetadata  // NEW: Benchmark match metadata
     } = data;
 
     return {
@@ -506,6 +516,35 @@ export class ResultsAggregator {
 
       // Business intelligence
       business_intelligence: businessIntel,
+
+      // Benchmark comparison data (if available)
+      matched_benchmark: benchmark ? {
+        id: benchmark.id,
+        company_name: benchmark.company_name,
+        website_url: benchmark.website_url,
+        industry: benchmark.industry,
+        tier: benchmark.benchmark_tier,
+        comparison_tier: benchmarkMatchMetadata?.comparison_tier,
+        match_score: benchmarkMatchMetadata?.match_score,
+        match_reasoning: benchmarkMatchMetadata?.match_reasoning,
+        key_similarities: benchmarkMatchMetadata?.key_similarities || [],
+        key_differences: benchmarkMatchMetadata?.key_differences || [],
+        scores: {
+          overall: benchmark.overall_score,
+          grade: benchmark.overall_grade,
+          design: benchmark.design_score,
+          seo: benchmark.seo_score,
+          content: benchmark.content_score,
+          performance: benchmark.performance_score,
+          social: benchmark.social_score,
+          accessibility: benchmark.accessibility_score
+        },
+        design_strengths: benchmark.design_strengths,
+        seo_strengths: benchmark.seo_strengths,
+        content_strengths: benchmark.content_strengths,
+        social_strengths: benchmark.social_strengths,
+        accessibility_strengths: benchmark.accessibility_strengths
+      } : null,
 
       // Multi-page crawl metadata
       crawl_metadata: {

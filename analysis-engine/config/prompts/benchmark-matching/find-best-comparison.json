@@ -1,41 +1,45 @@
 {
+  "version": "1.0.0",
   "name": "find-best-comparison",
   "description": "Fast AI agent that finds the best industry benchmark to compare against a target website. Uses company profile, business intelligence, and ICP to match with the most relevant exemplar.",
   "model": "gpt-5-mini",
   "temperature": 0.3,
   "systemPrompt": "You are a business categorization expert. Your job is to match a target business with the most relevant benchmark website for comparison.\n\nYou will receive:\n1. Target business profile (industry, location, size, pricing, features)\n2. Business intelligence data (if available)\n3. ICP criteria (if business intelligence incomplete)\n4. List of available benchmarks with their characteristics\n\nYour task: Select the single best benchmark that provides the most valuable comparison for this business.\n\nConsider:\n- Industry match (exact > similar)\n- Business size (employee count, revenue indicators)\n- Geographic market (local > regional > national)\n- Business model (pricing, service offerings)\n- Quality tier (aspirational vs competitive vs baseline)\n\nIMPORTANT: Return valid JSON in this EXACT format:\n{\n  \"benchmark_id\": \"uuid-of-selected-benchmark\",\n  \"match_score\": 85,\n  \"match_reasoning\": \"Brief explanation of why this benchmark is the best comparison\",\n  \"comparison_tier\": \"aspirational\" | \"competitive\" | \"baseline\",\n  \"key_similarities\": [\"industry match\", \"similar pricing\", \"same market size\"],\n  \"key_differences\": [\"benchmark has mobile app\", \"benchmark is multi-location\"]\n}\n\nDo NOT change field names. Do NOT return anything other than valid JSON.",
-  "userPrompt": "Find the best benchmark comparison for this business:\n\n**Target Business:**\nCompany: {{company_name}}\nIndustry: {{industry}}\nWebsite: {{url}}\nLocation: {{city}}, {{state}}\n\n{{#if business_intelligence}}\n**Business Intelligence:**\n- Employee Count: {{business_intelligence.employee_count}}\n- Has Pricing Page: {{business_intelligence.has_pricing}}\n- Has Blog: {{business_intelligence.has_blog}}\n- Premium Features: {{business_intelligence.premium_features}}\n- Contact Methods: {{business_intelligence.contact_methods}}\n{{/if}}\n\n{{#if icp_criteria}}\n**ICP Criteria (Original Search):**\n{{icp_criteria}}\n{{/if}}\n\n**Available Benchmarks:**\n{{#each benchmarks}}\n- ID: {{this.id}}\n  Company: {{this.company_name}}\n  Industry: {{this.industry}} {{#if this.industry_subcategory}}({{this.industry_subcategory}}){{/if}}\n  Location: {{this.location_city}}, {{this.location_state}}\n  Tier: {{this.benchmark_tier}}\n  Google Rating: {{this.google_rating}} ({{this.google_review_count}} reviews)\n  Overall Score: {{this.overall_score}}/100\n  Scores: Design {{this.design_score}}, SEO {{this.seo_score}}, Performance {{this.performance_score}}\n{{#if this.awards}}\n  Awards: {{#each this.awards}}{{this.award}}{{#unless @last}}, {{/unless}}{{/each}}\n{{/if}}\n{{#if this.business_intelligence}}\n  Employee Count: {{this.business_intelligence.employee_count}}\n{{/if}}\n\n{{/each}}\n\n**Instructions:**\n1. Analyze the target business profile\n2. Compare against all available benchmarks\n3. Select the ONE benchmark that provides the most valuable comparison\n4. Prefer exact industry matches, but consider similar industries if more relevant\n5. Match business size/sophistication (don't compare a 2-person bakery to Apple)\n6. Return the benchmark_id and detailed reasoning\n\nReturn your selection as JSON.",
-  "schema": {
-    "type": "object",
-    "properties": {
-      "benchmark_id": {
-        "type": "string",
-        "description": "UUID of selected benchmark"
+  "userPromptTemplate": "Find the best benchmark comparison for this business:\n\n**Target Business:**\nCompany: {{company_name}}\nIndustry: {{industry}}\nWebsite: {{url}}\nLocation: {{city}}, {{state}}\n\n{{#if business_intelligence}}\n**Business Intelligence:**\n- Employee Count: {{business_intelligence.employee_count}}\n- Has Pricing Page: {{business_intelligence.has_pricing}}\n- Has Blog: {{business_intelligence.has_blog}}\n- Premium Features: {{business_intelligence.premium_features}}\n- Contact Methods: {{business_intelligence.contact_methods}}\n{{/if}}\n\n{{#if icp_criteria}}\n**ICP Criteria (Original Search):**\n{{icp_criteria}}\n{{/if}}\n\n**Available Benchmarks:**\n{{#each benchmarks}}\n- ID: {{this.id}}\n  Company: {{this.company_name}}\n  Industry: {{this.industry}} {{#if this.industry_subcategory}}({{this.industry_subcategory}}){{/if}}\n  Location: {{this.location_city}}, {{this.location_state}}\n  Tier: {{this.benchmark_tier}}\n  Google Rating: {{this.google_rating}} ({{this.google_review_count}} reviews)\n  Overall Score: {{this.overall_score}}/100\n  Scores: Design {{this.design_score}}, SEO {{this.seo_score}}, Performance {{this.performance_score}}\n{{#if this.awards}}\n  Awards: {{#each this.awards}}{{this.award}}{{#unless @last}}, {{/unless}}{{/each}}\n{{/if}}\n{{#if this.business_intelligence}}\n  Employee Count: {{this.business_intelligence.employee_count}}\n{{/if}}\n\n{{/each}}\n\n**Instructions:**\n1. Analyze the target business profile\n2. Compare against all available benchmarks\n3. Select the ONE benchmark that provides the most valuable comparison\n4. Prefer exact industry matches, but consider similar industries if more relevant\n5. Match business size/sophistication (don't compare a 2-person bakery to Apple)\n6. Return the benchmark_id and detailed reasoning\n\nReturn your selection as JSON.",
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "benchmark_id": {
+          "type": "string",
+          "description": "UUID of selected benchmark"
+        },
+        "match_score": {
+          "type": "number",
+          "description": "Confidence in match quality (0-100)"
+        },
+        "match_reasoning": {
+          "type": "string",
+          "description": "Why this benchmark was selected"
+        },
+        "comparison_tier": {
+          "type": "string",
+          "enum": ["aspirational", "competitive", "baseline"],
+          "description": "Type of comparison: aspirational (best-in-class goal), competitive (direct competitor), baseline (minimum standard)"
+        },
+        "key_similarities": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Key similarities between target and benchmark"
+        },
+        "key_differences": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Key differences to highlight in comparison"
+        }
       },
-      "match_score": {
-        "type": "number",
-        "description": "Confidence in match quality (0-100)"
-      },
-      "match_reasoning": {
-        "type": "string",
-        "description": "Why this benchmark was selected"
-      },
-      "comparison_tier": {
-        "type": "string",
-        "enum": ["aspirational", "competitive", "baseline"],
-        "description": "Type of comparison: aspirational (best-in-class goal), competitive (direct competitor), baseline (minimum standard)"
-      },
-      "key_similarities": {
-        "type": "array",
-        "items": {"type": "string"},
-        "description": "Key similarities between target and benchmark"
-      },
-      "key_differences": {
-        "type": "array",
-        "items": {"type": "string"},
-        "description": "Key differences to highlight in comparison"
-      }
-    },
-    "required": ["benchmark_id", "match_score", "match_reasoning", "comparison_tier", "key_similarities", "key_differences"]
+      "required": ["benchmark_id", "match_score", "match_reasoning", "comparison_tier", "key_similarities", "key_differences"]
+    }
   }
 }

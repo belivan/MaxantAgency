@@ -248,6 +248,10 @@ async function callOpenAICompatible({
   maxTokens,
   provider
 }) {
+  if (!model) {
+    throw new Error('[AI Client] Model parameter is required but was undefined');
+  }
+
   const client = provider === 'grok' ? getGrokClient() : getOpenAIClient();
 
   try {
@@ -480,6 +484,11 @@ async function callClaude({
  * Get provider from model ID
  */
 function getProvider(modelId) {
+  if (!modelId || typeof modelId !== 'string') {
+    console.warn('[AI Client] Model ID is undefined or invalid, defaulting to OpenAI');
+    return 'openai';
+  }
+
   if (modelId.includes('grok')) return 'grok';
   if (modelId.includes('gpt')) return 'openai';
   if (modelId.includes('claude')) return 'anthropic';

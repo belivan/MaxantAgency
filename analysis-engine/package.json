@@ -29,6 +29,7 @@
     "dotenv": "^16.3.1",
     "eventsource": "^4.0.0",
     "express": "^4.18.2",
+    "handlebars": "^4.7.8",
     "jsdom": "^27.0.1",
     "openai": "^4.75.0",
     "playwright": "^1.40.0",

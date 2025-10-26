@@ -75,7 +75,13 @@ export class AnalysisCoordinator {
           comparison_tier: benchmarkMatchMetadata?.comparison_tier,
           match_reasoning: benchmarkMatchMetadata?.match_reasoning,
           key_similarities: benchmarkMatchMetadata?.key_similarities,
-          key_differences: benchmarkMatchMetadata?.key_differences
+          key_differences: benchmarkMatchMetadata?.key_differences,
+          // NEW: Include strength data for concrete comparisons
+          design_strengths: benchmark.design_strengths || null,
+          seo_strengths: benchmark.seo_strengths || null,
+          content_strengths: benchmark.content_strengths || null,
+          social_strengths: benchmark.social_strengths || null,
+          accessibility_strengths: benchmark.accessibility_strengths || null
         } : null
       },
       discoveryData

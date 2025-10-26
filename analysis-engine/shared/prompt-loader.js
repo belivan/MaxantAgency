@@ -63,7 +63,7 @@ export async function loadPrompt(promptPath, variables = {}) {
   }
 
   // Substitute variables in user prompt template
-  const userPrompt = substituteVariables(
+  const userPrompt = await substituteVariables(
     promptConfig.userPromptTemplate,
     variables,
     promptConfig.variables
@@ -92,34 +92,26 @@ export async function loadPrompt(promptPath, variables = {}) {
 }
 
 /**
- * Substitute variables in template string
+ * Substitute variables in template string using Handlebars
  *
- * @param {string} template - Template with {{variable}} placeholders
+ * @param {string} template - Template with {{variable}} placeholders and Handlebars syntax
  * @param {object} variables - Values to substitute
  * @param {array} requiredVars - List of required variable names
- * @returns {string} Template with variables substituted
+ * @returns {Promise<string>} Template with variables substituted
  */
-export function substituteVariables(template, variables, requiredVars = []) {
+export async function substituteVariables(template, variables, requiredVars = []) {
   // Check all required variables are provided
   const missingVars = requiredVars.filter(varName => !(varName in variables));
   if (missingVars.length > 0) {
     throw new Error(`Missing required variables: ${missingVars.join(', ')}`);
   }
 
-  // Replace {{variable}} with actual values
-  let result = template;
+  // Use Handlebars for template processing
+  const Handlebars = (await import('handlebars')).default;
 
-  for (const [key, value] of Object.entries(variables)) {
-    const placeholder = `{{${key}}}`;
-    const replacement = value !== null && value !== undefined ? String(value) : '';
-    result = result.replaceAll(placeholder, replacement);
-  }
-
-  // Check for any remaining unreplaced placeholders
-  const remainingPlaceholders = result.match(/\{\{([^}]+)\}\}/g);
-  if (remainingPlaceholders) {
-    console.warn(`Warning: Unreplaced placeholders found: ${remainingPlaceholders.join(', ')}`);
-  }
+  // Compile and execute template
+  const compiledTemplate = Handlebars.compile(template);
+  const result = compiledTemplate(variables);
 
   return result;
 }

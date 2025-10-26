@@ -241,7 +241,9 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       sitemap,
       context,
       url,
-      startTime
+      startTime,
+      benchmark,  // NEW: Pass benchmark data
+      benchmarkMatchMetadata  // NEW: Pass benchmark match metadata
     );
 
     const totalTime = Date.now() - startTime;

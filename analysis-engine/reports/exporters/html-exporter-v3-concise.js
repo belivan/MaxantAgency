@@ -133,7 +133,9 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     contact_email,
     contact_phone,
     contact_name,
-    url
+    url,
+    // Benchmark data
+    matched_benchmark
   } = analysisResult;
 
   // Calculate ROI potential
@@ -227,6 +229,46 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
   html += '            </div>\n';
   html += '          </div>\n';
   html += '        </div>\n';
+
+  // Benchmark Comparison (if available)
+  if (matched_benchmark) {
+    html += '        <div class="benchmark-comparison-card" style="margin-top: 24px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 16px;">vs. Industry Leader</h3>\n';
+    html += '          <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;">\n';
+
+    // Your side
+    html += '            <div style="text-align: center;">\n';
+    html += `              <div style="font-size: 12px; opacity: 0.7; margin-bottom: 4px;">Your Website</div>\n`;
+    html += `              <div style="font-size: 24px; font-weight: bold;">${grade} (${Math.round(overall_score)})</div>\n`;
+    html += '            </div>\n';
+
+    // VS separator
+    html += '            <div style="font-size: 16px; opacity: 0.5; font-weight: 300;">vs</div>\n';
+
+    // Benchmark side
+    html += '            <div style="text-align: center;">\n';
+    html += `              <div style="font-size: 12px; opacity: 0.7; margin-bottom: 4px;">${escapeHtml(matched_benchmark.company_name)}</div>\n`;
+    html += `              <div style="font-size: 24px; font-weight: bold;">${matched_benchmark.scores.grade} (${Math.round(matched_benchmark.scores.overall)})</div>\n`;
+    html += '            </div>\n';
+
+    html += '          </div>\n';
+
+    // Gap indicator
+    const gap = matched_benchmark.scores.overall - overall_score;
+    const gapText = gap > 0 ? `${Math.round(gap)} points to close` : gap < 0 ? `${Math.round(Math.abs(gap))} points ahead!` : 'Matched!';
+    const gapColor = gap > 0 ? 'rgba(251, 191, 36, 0.8)' : gap < 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.8)';
+
+    html += `          <div style="text-align: center; margin-top: 12px; font-size: 13px; color: ${gapColor};">\n`;
+    html += `            ${gap > 0 ? '↑' : gap < 0 ? '✓' : '✓'} ${gapText}\n`;
+    html += '          </div>\n';
+
+    // Match info
+    html += `          <div style="text-align: center; margin-top: 8px; font-size: 11px; opacity: 0.6;">\n`;
+    html += `            ${Math.round(matched_benchmark.match_score)}% match • ${matched_benchmark.comparison_tier}\n`;
+    html += '          </div>\n';
+
+    html += '        </div>\n';
+  }
 
   // Three Key Metrics Only
   html += '        <div class="metrics-grid">\n';

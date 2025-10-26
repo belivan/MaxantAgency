@@ -95,7 +95,7 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
         model: customPrompt.model,
         temperature: customPrompt.temperature,
         systemPrompt: customPrompt.systemPrompt,
-        userPrompt: substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
+        userPrompt: await substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
         outputFormat: customPrompt.outputFormat
       };
     } else {

@@ -10,7 +10,7 @@
  *   node scripts/populate-benchmarks.js --single https://example.com --industry dentistry
  */
 
-import { analyzeWebsite } from '../orchestrator-refactored.js';
+import { analyzeWebsiteIntelligent } from '../orchestrator-refactored.js';
 import { saveBenchmark, getBenchmarkByUrl } from '../database/supabase-client.js';
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI } from '../shared/ai-client.js';
@@ -281,7 +281,7 @@ async function analyzeBenchmark(benchmarkData) {
     const originalGradingFlag = process.env.USE_AI_GRADING;
     process.env.USE_AI_GRADING = 'false'; // Force manual grading for benchmarks
 
-    const analysisResult = await analyzeWebsite(benchmarkData.website_url, {
+    const analysisResult = await analyzeWebsiteIntelligent(benchmarkData.website_url, {
       company_name: benchmarkData.company_name,
       industry: benchmarkData.industry,
       city: benchmarkData.location_city,
@@ -290,13 +290,8 @@ async function analyzeBenchmark(benchmarkData) {
 
     process.env.USE_AI_GRADING = originalGradingFlag; // Restore original flag
 
-    if (!analysisResult.success) {
-      console.error(`❌ Analysis failed: ${analysisResult.error}`);
-      return { success: false, error: analysisResult.error };
-    }
-
-    // Extract scores and metadata
-    const result = analysisResult.result;
+    // analysisResult is the final result object directly (not wrapped in .result)
+    const result = analysisResult;
 
     // === BENCHMARK-SPECIFIC STRENGTH EXTRACTION ===
     console.log(`\n🔍 Extracting strengths using benchmark-specific prompts...`);
@@ -307,14 +302,27 @@ async function analyzeBenchmark(benchmarkData) {
     let socialStrengths = null;
     let accessibilityStrengths = null;
 
+    // Helper function to parse AI JSON responses
+    function parseAIResponse(aiResult) {
+      let jsonContent = aiResult.content || aiResult;
+      if (typeof jsonContent === 'string') {
+        // Remove markdown code blocks if present
+        jsonContent = jsonContent.replace(/^```json\s*\n?/i, '').replace(/\n?```\s*$/i, '');
+        return JSON.parse(jsonContent);
+      }
+      return jsonContent;
+    }
+
     try {
       // 1. Visual Strengths (Design/UI)
       console.log(`   - Running visual-strengths-extractor...`);
-      const visualPrompt = loadPrompt('benchmarking', 'visual-strengths-extractor', {
+      const visualPrompt = await loadPrompt('benchmarking/visual-strengths-extractor', {
         company_name: benchmarkData.company_name,
         industry: benchmarkData.industry,
         url: benchmarkData.website_url,
-        tech_stack: result.businessIntel?.techStack || 'Unknown'
+        google_rating: benchmarkData.google_rating || 'N/A',
+        google_review_count: benchmarkData.google_review_count || 'N/A',
+        awards: [] // Will be populated if we have awards data
       });
 
       const visualResult = await callAI({
@@ -323,34 +331,37 @@ async function analyzeBenchmark(benchmarkData) {
         systemPrompt: visualPrompt.systemPrompt,
         userPrompt: visualPrompt.userPrompt,
         images: [
-          result.screenshotPaths?.desktop,
-          result.screenshotPaths?.mobile
+          result.screenshot_desktop_url,
+          result.screenshot_mobile_url
         ].filter(Boolean),
         responseFormat: 'json'
       });
-      designStrengths = visualResult;
+
+      designStrengths = parseAIResponse(visualResult);
 
       // 2. Technical Strengths (SEO + Content)
       console.log(`   - Running technical-strengths-extractor...`);
-      const technicalPrompt = loadPrompt('benchmarking', 'technical-strengths-extractor', {
+      const technicalPrompt = await loadPrompt('benchmarking/technical-strengths-extractor', {
         company_name: benchmarkData.company_name,
         industry: benchmarkData.industry,
         url: benchmarkData.website_url,
         google_rating: benchmarkData.google_rating,
         google_review_count: benchmarkData.google_review_count,
-        html_content: result.htmlContent || result.crawlData?.html || 'N/A',
-        meta_title: result.seo?.metaTitle || '',
-        meta_description: result.seo?.metaDescription || '',
-        sitemap_urls: result.sitemap?.urls?.slice(0, 10).join('\n') || 'N/A'
+        html_content: 'N/A', // Raw HTML not available in final results
+        meta_title: result.page_title || '',
+        meta_description: result.meta_description || '',
+        sitemap_urls: 'N/A' // Sitemap data not in final results
       });
 
-      const technicalResult = await callAI({
+      const technicalRawResult = await callAI({
         model: technicalPrompt.model,
         temperature: technicalPrompt.temperature,
         systemPrompt: technicalPrompt.systemPrompt,
         userPrompt: technicalPrompt.userPrompt,
         responseFormat: 'json'
       });
+
+      const technicalResult = parseAIResponse(technicalRawResult);
 
       // Split technical strengths into SEO and Content
       seoStrengths = {
@@ -372,42 +383,44 @@ async function analyzeBenchmark(benchmarkData) {
 
       // 3. Social Strengths
       console.log(`   - Running social-strengths-extractor...`);
-      const socialPrompt = loadPrompt('benchmarking', 'social-strengths-extractor', {
+      const socialPrompt = await loadPrompt('benchmarking/social-strengths-extractor', {
         company_name: benchmarkData.company_name,
         industry: benchmarkData.industry,
         url: benchmarkData.website_url,
         google_rating: benchmarkData.google_rating,
         google_review_count: benchmarkData.google_review_count,
-        html_content: result.htmlContent || result.crawlData?.html || 'N/A',
-        social_links: result.social?.platformsFound?.join(', ') || 'N/A'
+        html_content: 'N/A', // Raw HTML not available
+        social_links: result.social_platforms_present?.join(', ') || 'N/A'
       });
 
-      socialStrengths = await callAI({
+      const socialRawResult = await callAI({
         model: socialPrompt.model,
         temperature: socialPrompt.temperature,
         systemPrompt: socialPrompt.systemPrompt,
         userPrompt: socialPrompt.userPrompt,
         responseFormat: 'json'
       });
+      socialStrengths = parseAIResponse(socialRawResult);
 
       // 4. Accessibility Strengths
       console.log(`   - Running accessibility-strengths-extractor...`);
-      const accessibilityPrompt = loadPrompt('benchmarking', 'accessibility-strengths-extractor', {
+      const accessibilityPrompt = await loadPrompt('benchmarking/accessibility-strengths-extractor', {
         company_name: benchmarkData.company_name,
         industry: benchmarkData.industry,
         url: benchmarkData.website_url,
-        html_content: result.htmlContent || result.crawlData?.html || 'N/A',
-        aria_attributes: result.accessibility?.ariaAttributes || 'N/A',
-        color_palette: result.desktopVisual?.colorPalette || 'N/A'
+        html_content: 'N/A', // Raw HTML not available
+        aria_attributes: 'N/A', // Detailed ARIA not in final results
+        color_palette: 'N/A' // Color palette not in final results
       });
 
-      accessibilityStrengths = await callAI({
+      const accessibilityRawResult = await callAI({
         model: accessibilityPrompt.model,
         temperature: accessibilityPrompt.temperature,
         systemPrompt: accessibilityPrompt.systemPrompt,
         userPrompt: accessibilityPrompt.userPrompt,
         responseFormat: 'json'
       });
+      accessibilityStrengths = parseAIResponse(accessibilityRawResult);
 
       console.log(`✅ Strength extraction complete`);
 
@@ -430,33 +443,25 @@ async function analyzeBenchmark(benchmarkData) {
       google_review_count: benchmarkData.google_review_count,
       awards: benchmarkData.awards || null,
 
-      // Analysis results
-      analysis_results: {
-        desktopVisual: result.desktopVisual,
-        mobileVisual: result.mobileVisual,
-        seo: result.seo,
-        content: result.content,
-        accessibility: result.accessibility,
-        social: result.social,
-        performance: result.performance
-      },
+      // Analysis results (store complete analysis data)
+      analysis_results: result,
 
-      // Scores
-      design_score: result.design_score,
-      seo_score: result.seo_score,
-      performance_score: result.performance_score,
-      content_score: result.content_score,
-      accessibility_score: result.accessibility_score,
-      social_score: result.social_score,
-      overall_grade: result.grade,
-      overall_score: result.overall_score,
+      // Scores (round to integers for database storage)
+      design_score: Math.round(result.design_score),
+      seo_score: Math.round(result.seo_score),
+      performance_score: Math.round(result.performance_score),
+      content_score: Math.round(result.content_score),
+      accessibility_score: Math.round(result.accessibility_score),
+      social_score: Math.round(result.social_score),
+      overall_grade: result.grade || result.website_grade,
+      overall_score: Math.round(result.overall_score),
 
       // Screenshots
-      desktop_screenshot_url: result.screenshotPaths?.desktop || null,
-      mobile_screenshot_url: result.screenshotPaths?.mobile || null,
+      desktop_screenshot_url: result.screenshot_desktop_url || null,
+      mobile_screenshot_url: result.screenshot_mobile_url || null,
 
       // Business intelligence
-      business_intelligence: result.businessIntel || null,
+      business_intelligence: result.business_intelligence || null,
 
       // Extracted strengths (from benchmark-specific prompts)
       design_strengths: designStrengths,

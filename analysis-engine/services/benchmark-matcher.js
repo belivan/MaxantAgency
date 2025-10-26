@@ -7,7 +7,7 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { getBenchmarksByIndustry, getBenchmarks } from '../database/supabase-client.js';
-import { getAIClient } from '../shared/ai-client.js';
+import { callAI } from '../shared/ai-client.js';
 
 /**
  * Find the best benchmark match for a target business
@@ -25,7 +25,7 @@ import { getAIClient } from '../shared/ai-client.js';
  */
 export async function findBestBenchmark(targetBusiness, options = {}) {
   const {
-    includeTiers = ['national', 'regional', 'local'],
+    includeTiers = ['national', 'regional', 'local', 'manual'],  // Include 'manual' tier for manually added benchmarks
     maxCandidates = 20
   } = options;
 
@@ -95,23 +95,21 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
     // Step 3: Load prompt and call AI
     console.log(`  └─ Calling AI matcher (GPT-5 Mini)...`);
 
-    const promptConfig = loadPrompt('benchmark-matching', 'find-best-comparison', matchingData);
-    const aiClient = getAIClient(promptConfig.model);
+    const promptConfig = await loadPrompt('benchmark-matching/find-best-comparison', matchingData);
 
-    const response = await aiClient.chat.completions.create({
+    const result = await callAI({
       model: promptConfig.model,
       temperature: promptConfig.temperature,
-      messages: [
-        { role: 'system', content: promptConfig.systemPrompt },
-        { role: 'user', content: promptConfig.userPrompt }
-      ],
-      response_format: { type: 'json_object' }
+      systemPrompt: promptConfig.systemPrompt,
+      userPrompt: promptConfig.userPrompt,
+      responseFormat: 'json'
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    // Parse the JSON response from the content field
+    const matchResult = typeof result.content === 'string' ? JSON.parse(result.content) : result;
 
     // Step 4: Get full benchmark data
-    const selectedBenchmark = candidateBenchmarks.find(b => b.id === result.benchmark_id);
+    const selectedBenchmark = candidateBenchmarks.find(b => b.id === matchResult.benchmark_id);
 
     if (!selectedBenchmark) {
       console.error(`❌ AI selected invalid benchmark ID: ${result.benchmark_id}`);
@@ -122,19 +120,19 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
       };
     }
 
-    console.log(`  ✅ Matched to: ${selectedBenchmark.company_name} (${result.match_score}% confidence)`);
-    console.log(`     Tier: ${result.comparison_tier}`);
-    console.log(`     Reasoning: ${result.match_reasoning}`);
+    console.log(`  ✅ Matched to: ${selectedBenchmark.company_name} (${matchResult.match_score}% confidence)`);
+    console.log(`     Tier: ${matchResult.comparison_tier}`);
+    console.log(`     Reasoning: ${matchResult.match_reasoning}`);
 
     return {
       success: true,
       benchmark: selectedBenchmark,
       match_metadata: {
-        match_score: result.match_score,
-        match_reasoning: result.match_reasoning,
-        comparison_tier: result.comparison_tier,
-        key_similarities: result.key_similarities,
-        key_differences: result.key_differences,
+        match_score: matchResult.match_score,
+        match_reasoning: matchResult.match_reasoning,
+        comparison_tier: matchResult.comparison_tier,
+        key_similarities: matchResult.key_similarities,
+        key_differences: matchResult.key_differences,
         candidates_considered: candidateBenchmarks.length
       }
     };
