@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "name": "facebook-free-value",
+  "description": "Facebook message - Friendly value delivery, community-focused",
+  "platforms": ["facebook"],
+  "variation_type": "free_value",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.8",
+
+  "systemPrompt": "You are writing a friendly Facebook message delivering a free website analysis.\n\nPHILOSOPHY: Facebook is social and community-oriented. Sound like a friendly local, not a business.\n\nRULES:\n1. FRIENDLY-BRIEF: 3-5 sentences, 120-200 characters\n2. COMMUNITY TONE: 'Love what you're doing in [city]' vibe\n3. CASUAL-PROFESSIONAL: More formal than Instagram, less than LinkedIn\n4. VALUE DELIVERY: Report link included\n5. SPECIFIC INSIGHT: Grade or key finding\n6. LOCAL FOCUS: Mention location/community\n7. LIGHT EMOJI: 1-2 max\n8. NO PRESSURE: 'Thought it might help' approach\n\nSTRUCTURE:\n- Sentence 1: Friendly opener + community compliment\n- Sentence 2: What you did (analyzed their website)\n- Sentence 3: Value delivery + report link\n- Sentence 4: Quick summary (Grade + insight)\n- Sentence 5: No pressure close\n\nDO NOT:\n- Sound corporate or formal\n- Make hard sales pitch\n- Use business jargon\n- Sound pushy\n- Ignore the local/community angle\n\nTONE: Friendly neighbor offering help.\n\nREMEMBER: Facebook is community-first. Lead with appreciation for what they do locally.",
+
+  "userPromptTemplate": "Write a Facebook message for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nANALYSIS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nKey Finding: {{one_liner}} OR {{top_issue}}\nQuick Wins: {{quick_wins_count}}\n\nRecipient: {{contact_name}}\n\nYour Name: {{sender_name}}\nCompany: {{sender_company}}\n\nWrite a FRIENDLY, COMMUNITY-FOCUSED Facebook message delivering value. Include [REPORT_LINK] placeholder.\n\nReturn ONLY the message text.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "website_grade",
+    "website_score",
+    "one_liner",
+    "top_issue",
+    "quick_wins_count",
+    "contact_name",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "platformSpecs": {
+    "facebook": {
+      "maxChars": 5000,
+      "optimalLength": "120-200 chars",
+      "tone": "friendly-community",
+      "emojiUsage": "light",
+      "bannedWords": ["buy now", "act fast", "limited offer"],
+      "bestPractices": [
+        "Community-focused",
+        "Appreciate their local presence",
+        "Friendly but professional",
+        "Low pressure"
+      ]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Bella's Italian Kitchen",
+        "industry": "Restaurant",
+        "location": "San Diego, CA",
+        "website_grade": "C",
+        "website_score": 69,
+        "one_liner": "Great menu photos but mobile ordering flow has friction",
+        "quick_wins_count": 5,
+        "contact_name": "Bella",
+        "sender_name": "Anton",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hey Bella! Love what you're doing with Bella's Italian Kitchen - San Diego needed authentic Italian like this 🍝\n\nI'm Anton, a web designer, and I analyzed your website for a project.\n\nHere's the full report: [REPORT_LINK]\n\nYou scored C grade (69/100) - found 5 quick improvements. Main thing: great menu photos, but the mobile ordering flow could be smoother to boost online orders.\n\nNo charge, just thought it might be helpful!\n\nBest,\nAnton"
+      }
+    }
+  ],
+
+  "constraints": {
+    "maxChars": 200,
+    "maxSentences": 6,
+    "minSentences": 4,
+    "tone": "friendly-helpful",
+    "required_elements": ["community_appreciation", "value_delivery", "specific_finding", "no_pressure_close"],
+    "forbidden_elements": ["corporate_tone", "hard_pitch", "buzzwords"]
+  }
+}

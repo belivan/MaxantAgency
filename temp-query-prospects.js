@@ -7,29 +7,20 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-async function getProspects() {
-  const { data, error } = await supabase
-    .from('prospects')
-    .select('id, company_name, website, industry, city, state, google_rating, icp_match_score')
-    .not('website', 'is', null)
-    .order('created_at', { ascending: false })
-    .limit(15);
+const { data, error } = await supabase
+  .from('prospects')
+  .select('id, company_name, website, industry, city, state, website_status, project_id')
+  .order('created_at', { ascending: false })
+  .limit(20);
 
-  if (error) {
-    console.error('Error:', error);
-    return;
-  }
-
-  console.log('\n📋 Available Prospects (Most Recent):\n');
-
-  data.forEach((p, idx) => {
-    console.log(`${idx + 1}. ${p.company_name}`);
-    console.log(`   Website: ${p.website}`);
-    console.log(`   Industry: ${p.industry || 'N/A'}`);
-    console.log(`   Location: ${p.city || 'N/A'}, ${p.state || 'N/A'}`);
-    console.log(`   ID: ${p.id}`);
-    console.log('');
+if (error) {
+  console.error('Error:', error);
+} else {
+  console.log(`Found ${data.length} prospects:\n`);
+  data.forEach((p, i) => {
+    console.log(`${i+1}. ${p.company_name} - ${p.website || 'no website'}`);
+    console.log(`   Industry: ${p.industry || 'unknown'} | Location: ${p.city}, ${p.state}`);
+    console.log(`   Status: ${p.website_status} | Project ID: ${p.project_id || 'NONE'}`);
+    console.log(`   ID: ${p.id}\n`);
   });
 }
-
-getProspects();

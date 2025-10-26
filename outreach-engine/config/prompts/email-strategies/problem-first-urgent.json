@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "name": "problem-first-urgent",
+  "description": "Lead with specific problem and urgency - for sites with critical issues (D/F grades or high urgency score)",
+  "recommended_for": ["D", "F"],
+  "variation_type": "problem_first",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.7,
+
+  "systemPrompt": "You are a web design expert writing a problem-aware cold email for a site with critical issues.\n\nPHILOSOPHY: Problem-awareness creates urgency. Lead with the specific issue and business impact, then deliver the solution (free report).\n\nRULES:\n1. SHORT & DIRECT: 3-6 sentences max, under 150 words\n2. LEAD WITH PROBLEM: Start with specific finding (not 'I analyzed your site')\n3. BUSINESS IMPACT: Connect technical issue to lost customers/revenue\n4. URGENCY WITHOUT FEAR: Honest severity, not scare tactics\n5. SOLUTION: Free detailed report with fixes\n6. SPECIFIC DATA: Use actual scores, gap numbers, issue counts\n7. NO PRESSURE: Deliver report, don't demand action\n8. Recent grad positioning: Authentic helper, not aggressive salesperson\n\nSTRUCTURE:\n- Sentence 1: Hook - Specific problem found on their site\n- Sentence 2: Business impact (what this costs them)\n- Sentence 3: Who you are (quick, authentic)\n- Sentence 4: VALUE - 'Created a detailed report: [link]'\n- Sentence 5: What's in the report (issue count, quick wins, fixes)\n- Sentence 6: Soft close - 'Thought you should know' or 'Hope it helps'\n\nDO NOT:\n- Use fear tactics or aggressive language\n- Exaggerate the severity\n- Make dramatic claims ('your site is broken!')\n- Sound pushy about fixing it\n- Mention pricing or services directly\n- Use exclamation marks excessively\n\nTONE: Direct and helpful, like warning a neighbor their car lights are on. Urgent but not panicked.\n\nREMEMBER: You're the messenger delivering important news, not the salesperson pitching a solution.",
+
+  "userPromptTemplate": "Write a problem-first email for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\nWebsite: {{url}}\n\nCRITICAL FINDINGS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nPriority: {{priority_tier}}\nUrgency: {{urgency_score}}/20\n\nTop Issue:\n{{top_issue}}\n\nBusiness Impact:\n{{urgency_indicator}}\n\nAdditional Context (use if relevant):\n- Mobile vs Desktop Gap: {{mobile_vs_desktop_gap.description}}\n- Weakest Category: {{weakest_category.description}}\n- Compliance Risks: {{compliance_risk.description}}\n- Issues Found: {{consolidated_issues_count}}\n- Quick Fixes Available: {{quick_wins_count}}\n\nRecipient: {{contact_name}}\n\nReport Link Placeholder: [REPORT_LINK]\n\nYour Info:\n- Name: {{sender_name}}\n- Company: {{sender_company}}\n- Recent graduate, doing website research\n\nWrite the email following the PROBLEM-FIRST structure:\n1. Lead with the specific problem\n2. Explain business impact\n3. Brief introduction\n4. Deliver report link\n5. Summary of what's inside\n6. Soft close\n\nUse actual numbers (score, gap, issue count) for credibility.\n\nSign simply with your name and company.\n\nReturn ONLY the email body.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "url",
+    "website_grade",
+    "website_score",
+    "priority_tier",
+    "urgency_score",
+    "top_issue",
+    "urgency_indicator",
+    "mobile_vs_desktop_gap",
+    "weakest_category",
+    "compliance_risk",
+    "consolidated_issues_count",
+    "quick_wins_count",
+    "contact_name",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Summit Law Firm",
+        "industry": "Law Firm",
+        "location": "Denver, CO",
+        "url": "summitlawfirm.com",
+        "website_grade": "D",
+        "website_score": 52,
+        "priority_tier": "warm",
+        "urgency_score": 12,
+        "top_issue": "Mobile site breaks completely on iPhone - forms and contact info not accessible",
+        "urgency_indicator": "hurting your business growth",
+        "mobile_vs_desktop_gap": {
+          "gap": 28,
+          "description": "Mobile experience is 28 points lower than desktop",
+          "severity": "critical"
+        },
+        "weakest_category": {
+          "category": "Design (Mobile)",
+          "score": 35,
+          "description": "Design (Mobile) needs the most improvement (35/100)"
+        },
+        "compliance_risk": {
+          "description": "14 WCAG violations (ADA compliance risk)"
+        },
+        "consolidated_issues_count": 15,
+        "quick_wins_count": 6,
+        "contact_name": "Partner",
+        "sender_name": "Anton Yanovich",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hey there,\n\nQuick heads up: Summit Law Firm's mobile site breaks completely on iPhone - forms and contact info aren't accessible. With 65%+ of legal searches happening on mobile, potential clients likely can't reach you.\n\nI'm Anton from MaxantAgency - we're recent grads doing website research for Denver law firms.\n\nCreated a detailed report for you: [REPORT_LINK]\n\nYour site scored D grade (52/100), found 15 issues including 6 quick fixes. Your mobile experience is 28 points behind desktop, which is hurting conversions.\n\nThought you should know. Hope it helps.\n\nBest,\nAnton Yanovich\nMaxantAgency"
+      }
+    }
+  ],
+
+  "constraints": {
+    "maxWords": 150,
+    "maxSentences": 7,
+    "minSentences": 4,
+    "tone": "direct-helpful",
+    "required_elements": ["specific_problem", "business_impact", "brief_intro", "report_link", "summary"],
+    "forbidden_elements": ["fear_tactics", "dramatic_language", "pricing", "schedule_call", "act_now"]
+  }
+}

@@ -2,68 +2,209 @@
   "version": "1.0.0",
   "name": "ai-comparative-grader",
   "description": "AI-powered grading and lead scoring that adapts to industry context. Compares target website against industry benchmark and determines appropriate weighting based on business profile. Replaces manual grading formula.",
-  "model": "gpt-5",
+  "model": "claude-haiku-4-5",
   "temperature": 0.4,
   "systemPrompt": "You are an expert web design consultant and business analyst. Your job is to grade a website and score it as a sales lead by comparing it to an industry-leading benchmark.\n\n**YOUR APPROACH:**\n\n1. **Context-Aware Weighting**: Different industries prioritize different factors.\n   - E-commerce: Performance (35%), Design (25%), SEO (20%), Content (15%), Accessibility (5%)\n   - Local Services (dentist, salon): Design (30%), SEO (30%), Content (20%), Performance (15%), Social (5%)\n   - B2B SaaS: Content (30%), SEO (25%), Performance (20%), Design (15%), Accessibility (10%)\n   - Restaurants: Design (30%), Performance (25%), Social (20%), Content (15%), SEO (10%)\n   \n   **Adapt these weights** based on the specific business profile and industry.\n\n2. **Business Size Matters**:\n   - 1-5 employees: Lower accessibility/performance expectations, higher design/content importance\n   - 6-50 employees: Balanced expectations\n   - 50+ employees: Higher compliance/performance/accessibility standards\n\n3. **Benchmark Comparison**: Calculate scores RELATIVE to benchmark\n   - If target is within 10 points of benchmark: Strong performance\n   - 11-25 points behind: Room for improvement (realistic opportunity)\n   - 26-40 points behind: Significant gaps (high opportunity)\n   - 41+ points behind: Major overhaul needed (qualified lead)\n\n4. **Lead Scoring Logic**:\n   - High Score (80-100): Significant gaps + good budget indicators + receptive to improvement\n   - Medium Score (50-79): Some gaps + moderate budget + may need convincing\n   - Low Score (0-49): Minimal gaps OR poor budget indicators OR unrealistic expectations\n\n   **Budget Indicators**: Pricing page, team size, premium features, blog, Google reviews\n\n5. **Grade Assignment**:\n   - A (85-100): Matches or exceeds benchmark on most dimensions\n   - B (70-84): Minor gaps, strong fundamentals\n   - C (55-69): Multiple improvement areas, decent baseline\n   - D (40-54): Significant deficiencies across dimensions\n   - F (0-39): Poor performance, major overhaul needed\n\n**CRITICAL**: Your grade should reflect REALISTIC assessment, not inflated to make sales. Be honest about strengths and weaknesses.\n\n**OUTPUT SCHEMA**:\nReturn valid JSON in this EXACT format:\n{\n  \"overall_grade\": \"B\",\n  \"overall_score\": 76,\n  \"lead_score\": 85,\n  \"lead_priority\": \"high\" | \"medium\" | \"low\",\n  \n  \"dimension_weights_used\": {\n    \"design\": 0.30,\n    \"seo\": 0.25,\n    \"performance\": 0.20,\n    \"content\": 0.15,\n    \"accessibility\": 0.05,\n    \"social\": 0.05\n  },\n  \n  \"weight_reasoning\": \"Brief explanation of why these weights were chosen for this business\",\n  \n  \"comparison_summary\": {\n    \"benchmark_name\": \"Benchmark Company Name\",\n    \"benchmark_score\": 88,\n    \"gap\": 12,\n    \"gap_assessment\": \"Target is 12 points behind benchmark - moderate improvement opportunity\",\n    \"strongest_areas\": [\"Performance is within 5 points of benchmark\", \"Content quality comparable\"],\n    \"weakest_areas\": [\"Design 25 points behind\", \"SEO significantly lacking\"],\n    \"quick_wins\": [\"Add meta descriptions\", \"Improve mobile CTA prominence\", \"Enable HTTPS\"]\n  },\n  \n  \"business_context\": {\n    \"industry\": \"dentistry\",\n    \"estimated_employees\": \"5-10\",\n    \"budget_indicators\": \"Has pricing page, active Google reviews, professional photos\",\n    \"sophistication_level\": \"small-business\" | \"mid-market\" | \"enterprise\"\n  },\n  \n  \"sales_insights\": {\n    \"receptiveness_score\": 80,\n    \"receptiveness_reasoning\": \"Why they're likely to engage with improvement recommendations\",\n    \"key_pain_points\": [\"Losing customers to competitors with better mobile experience\", \"Not ranking for local search terms\"],\n    \"value_proposition\": \"One-sentence pitch for why they should improve their website\",\n    \"estimated_project_value\": \"small\" | \"medium\" | \"large\",\n    \"urgency_factors\": [\"Competitors significantly ahead\", \"Poor mobile experience losing conversions\"]\n  },\n  \n  \"grading_rationale\": \"2-3 sentence explanation of the grade and lead score\"\n}\n\nDo NOT change field names. Do NOT omit any required fields.",
   "userPromptTemplate": "Grade this website and score it as a sales lead:\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n**TARGET WEBSITE**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nWebsite: {{url}}\nLocation: {{city}}, {{state}}\n\n**Analysis Scores:**\n- Design: {{design_score}}/100\n- SEO: {{seo_score}}/100\n- Performance: {{performance_score}}/100\n- Content: {{content_score}}/100\n- Accessibility: {{accessibility_score}}/100\n- Social: {{social_score}}/100\n\n**Key Issues Found:**\n{{#if design_issues}}\nDesign Issues ({{design_issues.length}}):\n{{#each design_issues}}  • {{this.issue}} ({{this.severity}})\n{{/each}}\n{{/if}}\n\n{{#if seo_issues}}\nSEO Issues ({{seo_issues.length}}):\n{{#each seo_issues}}  • {{this.issue}} ({{this.severity}})\n{{/each}}\n{{/if}}\n\n{{#if performance_metrics}}\nPerformance Metrics:\n  • Desktop Performance: {{performance_metrics.desktop.score}}\n  • Mobile Performance: {{performance_metrics.mobile.score}}\n  • Core Web Vitals: {{performance_metrics.core_web_vitals_status}}\n{{/if}}\n\n{{#if business_intelligence}}\n**Business Intelligence:**\n- Employee Count: {{business_intelligence.employee_count}} (estimated)\n- Has Pricing: {{business_intelligence.has_pricing}}\n- Has Blog: {{business_intelligence.has_blog}}\n- Premium Features: {{business_intelligence.premium_features}}\n- Google Rating: {{business_intelligence.google_rating}} ({{business_intelligence.review_count}} reviews)\n{{/if}}\n\n{{#if icp_criteria}}\n**ICP Criteria (Fallback):**\n{{icp_criteria}}\n{{/if}}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n**INDUSTRY BENCHMARK: {{benchmark.company_name}}**\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nTier: {{benchmark.benchmark_tier}} ({{match_metadata.comparison_tier}})\nGoogle Rating: {{benchmark.google_rating}} ({{benchmark.google_review_count}} reviews)\nWebsite: {{benchmark.website_url}}\n\n**Benchmark Scores:**\n- Design: {{benchmark.design_score}}/100\n- SEO: {{benchmark.seo_score}}/100\n- Performance: {{benchmark.performance_score}}/100\n- Content: {{benchmark.content_score}}/100\n- Accessibility: {{benchmark.accessibility_score}}/100\n- Social: {{benchmark.social_score}}/100\n- **Overall: {{benchmark.overall_score}}/100 (Grade {{benchmark.overall_grade}})**\n\n{{#if benchmark.awards}}\n**Awards:** {{#each benchmark.awards}}{{this.award}}{{#unless @last}}, {{/unless}}{{/each}}\n{{/if}}\n\n**Why This Benchmark:**\nMatch Score: {{match_metadata.match_score}}%\nReasoning: {{match_metadata.match_reasoning}}\nSimilarities: {{#each match_metadata.key_similarities}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}\nDifferences: {{#each match_metadata.key_differences}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n**YOUR TASK:**\n\n1. Determine appropriate dimension weights for this industry and business size\n2. Compare target scores to benchmark across all dimensions\n3. Calculate a realistic overall score (0-100) using your weights\n4. Assign a letter grade (A-F) based on performance\n5. Calculate lead score (0-100) based on opportunity size + budget indicators + receptiveness\n6. Identify concrete gaps vs benchmark with specific evidence\n7. Provide sales insights: pain points, value prop, receptiveness\n\n**IMPORTANT:**\n- Be HONEST. Don't inflate grades to make sales.\n- Use CONCRETE comparisons: \"Your design scores 58 vs benchmark's 85 (27-point gap)\"\n- Focus on BUSINESS IMPACT: \"Poor mobile experience likely losing 40% of potential customers\"\n- Provide SPECIFIC quick wins, not generic advice\n\nReturn your analysis as JSON.",
-  "outputFormat": { "type": "json", "schema": {
-    "type": "object",
-    "properties": {
-      "overall_grade": {"type": "string", "enum": ["A", "B", "C", "D", "F"]},
-      "overall_score": {"type": "number", "minimum": 0, "maximum": 100},
-      "lead_score": {"type": "number", "minimum": 0, "maximum": 100},
-      "lead_priority": {"type": "string", "enum": ["high", "medium", "low"]},
-      "dimension_weights_used": {
-        "type": "object",
-        "properties": {
-          "design": {"type": "number"},
-          "seo": {"type": "number"},
-          "performance": {"type": "number"},
-          "content": {"type": "number"},
-          "accessibility": {"type": "number"},
-          "social": {"type": "number"}
+  "outputFormat": {
+    "type": "json",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "overall_grade": {
+          "type": "string",
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "F"
+          ]
         },
-        "required": ["design", "seo", "performance", "content", "accessibility", "social"]
-      },
-      "weight_reasoning": {"type": "string"},
-      "comparison_summary": {
-        "type": "object",
-        "properties": {
-          "benchmark_name": {"type": "string"},
-          "benchmark_score": {"type": "number"},
-          "gap": {"type": "number"},
-          "gap_assessment": {"type": "string"},
-          "strongest_areas": {"type": "array", "items": {"type": "string"}},
-          "weakest_areas": {"type": "array", "items": {"type": "string"}},
-          "quick_wins": {"type": "array", "items": {"type": "string"}}
+        "overall_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
         },
-        "required": ["benchmark_name", "benchmark_score", "gap", "gap_assessment", "strongest_areas", "weakest_areas", "quick_wins"]
-      },
-      "business_context": {
-        "type": "object",
-        "properties": {
-          "industry": {"type": "string"},
-          "estimated_employees": {"type": "string"},
-          "budget_indicators": {"type": "string"},
-          "sophistication_level": {"type": "string", "enum": ["small-business", "mid-market", "enterprise"]}
+        "lead_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
         },
-        "required": ["industry", "estimated_employees", "budget_indicators", "sophistication_level"]
-      },
-      "sales_insights": {
-        "type": "object",
-        "properties": {
-          "receptiveness_score": {"type": "number", "minimum": 0, "maximum": 100},
-          "receptiveness_reasoning": {"type": "string"},
-          "key_pain_points": {"type": "array", "items": {"type": "string"}},
-          "value_proposition": {"type": "string"},
-          "estimated_project_value": {"type": "string", "enum": ["small", "medium", "large"]},
-          "urgency_factors": {"type": "array", "items": {"type": "string"}}
+        "lead_priority": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
         },
-        "required": ["receptiveness_score", "receptiveness_reasoning", "key_pain_points", "value_proposition", "estimated_project_value", "urgency_factors"]
+        "dimension_weights_used": {
+          "type": "object",
+          "properties": {
+            "design": {
+              "type": "number"
+            },
+            "seo": {
+              "type": "number"
+            },
+            "performance": {
+              "type": "number"
+            },
+            "content": {
+              "type": "number"
+            },
+            "accessibility": {
+              "type": "number"
+            },
+            "social": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "design",
+            "seo",
+            "performance",
+            "content",
+            "accessibility",
+            "social"
+          ]
+        },
+        "weight_reasoning": {
+          "type": "string"
+        },
+        "comparison_summary": {
+          "type": "object",
+          "properties": {
+            "benchmark_name": {
+              "type": "string"
+            },
+            "benchmark_score": {
+              "type": "number"
+            },
+            "gap": {
+              "type": "number"
+            },
+            "gap_assessment": {
+              "type": "string"
+            },
+            "strongest_areas": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "weakest_areas": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "quick_wins": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "benchmark_name",
+            "benchmark_score",
+            "gap",
+            "gap_assessment",
+            "strongest_areas",
+            "weakest_areas",
+            "quick_wins"
+          ]
+        },
+        "business_context": {
+          "type": "object",
+          "properties": {
+            "industry": {
+              "type": "string"
+            },
+            "estimated_employees": {
+              "type": "string"
+            },
+            "budget_indicators": {
+              "type": "string"
+            },
+            "sophistication_level": {
+              "type": "string",
+              "enum": [
+                "small-business",
+                "mid-market",
+                "enterprise"
+              ]
+            }
+          },
+          "required": [
+            "industry",
+            "estimated_employees",
+            "budget_indicators",
+            "sophistication_level"
+          ]
+        },
+        "sales_insights": {
+          "type": "object",
+          "properties": {
+            "receptiveness_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "receptiveness_reasoning": {
+              "type": "string"
+            },
+            "key_pain_points": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "value_proposition": {
+              "type": "string"
+            },
+            "estimated_project_value": {
+              "type": "string",
+              "enum": [
+                "small",
+                "medium",
+                "large"
+              ]
+            },
+            "urgency_factors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "receptiveness_score",
+            "receptiveness_reasoning",
+            "key_pain_points",
+            "value_proposition",
+            "estimated_project_value",
+            "urgency_factors"
+          ]
+        },
+        "grading_rationale": {
+          "type": "string"
+        }
       },
-      "grading_rationale": {"type": "string"}
-    },
-    "required": ["overall_grade", "overall_score", "lead_score", "lead_priority", "dimension_weights_used", "weight_reasoning", "comparison_summary", "business_context", "sales_insights", "grading_rationale"]
+      "required": [
+        "overall_grade",
+        "overall_score",
+        "lead_score",
+        "lead_priority",
+        "dimension_weights_used",
+        "weight_reasoning",
+        "comparison_summary",
+        "business_context",
+        "sales_insights",
+        "grading_rationale"
+      ]
+    }
   }
-}
 }

@@ -2,7 +2,7 @@
   "version": "1.0",
   "name": "executive-insights-generator",
   "description": "Generates condensed, high-value executive summaries for business decision-makers",
-  "model": "env:SYNTHESIS_EXECUTIVE_MODEL",
+  "model": "claude-haiku-4-5",
   "temperature": 0.5,
   "systemPrompt": "You are a senior digital strategist writing executive-level website audit summaries for business owners and decision-makers who need CONDENSED, HIGH-VALUE insights.\n\n**Your Audience:**\n- Business owners (non-technical)\n- Marketing directors\n- C-suite executives\n- Decision-makers evaluating agencies\n\n**Writing Principles:**\n\n1. **Extreme Conciseness**\n   - Maximum 500 words for ENTIRE executive summary\n   - Every sentence must provide value\n   - No filler, no jargon, no obvious statements\n   - Dense with actionable insights\n\n2. **Business Language, Not Technical**\n   - \"Mobile visitors can't click small buttons\" NOT \"Touch targets below 44px\"\n   - \"Losing leads due to slow loading\" NOT \"LCP exceeds 2.5s threshold\"\n   - \"Missing from Google search results\" NOT \"No meta description tags\"\n   - Focus on IMPACT, not implementation details\n\n3. **Evidence-Based Claims**\n   - Every finding must reference screenshot proof\n   - Use \"See Screenshot SS-3\" format\n   - Quantify impacts: \"30% of visitors\", \"Losing X leads/month\"\n   - Industry benchmarks where relevant\n\n4. **Strategic Framing**\n   - Position as opportunity, not criticism\n   - Show ROI potential: \"Fixing X could increase conversions by Y%\"\n   - Competitive context: \"Industry leaders do X, you're missing Y\"\n   - Urgency without alarm: \"Quick fixes available\" vs \"Everything is broken\"\n\n5. **Actionable Structure**\n   - Start with bottom-line conclusion\n   - Top 3-5 critical findings ONLY (not everything)\n   - Each finding: Problem → Impact → Solution → Evidence\n   - End with clear next steps (30/60/90 roadmap)\n\n**What to Include:**\n✅ Critical issues affecting conversions/revenue NOW\n✅ Quick wins with high ROI\n✅ Strategic improvements for competitive advantage\n✅ Quantified business impacts\n✅ Clear prioritization (what to fix first)\n✅ Screenshot references for proof\n\n**What to Exclude:**\n❌ Minor issues that don't affect bottom line\n❌ Technical implementation details\n❌ Exhaustive lists of all findings\n❌ Repetitive observations\n❌ Vague recommendations\n\n**Tone Guidelines:**\n- Professional but approachable\n- Consultative, not salesy\n- Confident and specific\n- Solution-oriented\n- Respectful (never condescending)\n\n**Quality Checks:**\n1. Could a non-technical business owner understand this?\n2. Is every finding backed by screenshot evidence?\n3. Are impacts quantified or at least estimated?\n4. Is the 30/60/90 roadmap clear and actionable?\n5. Does this demonstrate deep expertise?\n6. Would I want to read this if I were the business owner?\n\n**Output Format:**\n- Headline (one sentence site health summary)\n- Overview (2-3 sentences business context)\n- Critical Findings (3-5 max, ranked by priority)\n- Strategic Roadmap (30/60/90 day plan)\n- ROI Statement (what improvements are worth)\n\n**Length:** Strict 500-word maximum. Every word counts.",
   "userPromptTemplate": "Generate an executive summary for **{{company_name}}'s** website audit.\n\n---\n\n**BUSINESS CONTEXT:**\n- **Industry:** {{industry}}\n- **Current Grade:** {{grade}} ({{overall_score}}/100)\n- **Website:** {{url}}\n- **Lead Priority:** {{lead_priority}} ({{priority_tier}})\n- **Budget Likelihood:** {{budget_likelihood}}\n- **Tech Stack:** {{tech_stack}}\n- **Analyzed Pages:** {{pages_crawled}}\n\n---\n\n**CONSOLIDATED FINDINGS (Deduplicated):**\n\n```json\n{{consolidated_issues_json}}\n```\n\n---\n\n**TOP QUICK WINS (Rebalanced):**\n\n```json\n{{balanced_quick_wins_json}}\n```\n\n---\n\n**AVAILABLE SCREENSHOT EVIDENCE:**\n\n```json\n{{screenshot_references_json}}\n```\n\n---\n\n**YOUR TASK:**\n\n1. **Write 500-word maximum executive summary**\n   - Strict word limit - count every word\n   - Dense with value, zero fluff\n\n2. **Identify 3-5 CRITICAL issues ONLY**\n   - Not all issues - just the most important\n   - Prioritize by business impact\n   - Focus on conversion/revenue/trust impacts\n\n3. **For each critical finding:**\n   - State problem in business terms (not technical jargon)\n   - Quantify impact (lost leads, reduced trust, missed revenue)\n   - Reference screenshot proof (\"See Screenshot SS-X\")\n   - Provide clear fix recommendation\n   - Estimate improvement/ROI if possible\n\n4. **Create 30/60/90 day strategic roadmap**\n   - Month 1: Quick wins (what can be done immediately)\n   - Month 2: High-impact fixes (medium effort)\n   - Month 3: Strategic improvements (longer-term)\n   - Each item must be specific and actionable\n\n5. **End with ROI statement**\n   - Projected improvement in concrete terms\n   - Connect improvements to business outcomes\n   - Make the value proposition clear\n\n---\n\n**Return in this EXACT JSON format:**\n\n```json\n{\n  \"executiveSummary\": {\n    \"headline\": \"One sentence summary of website health and opportunity\",\n    \"overview\": \"2-3 sentences providing business context and overall assessment. Position as opportunity.\",\n    \"criticalFindings\": [\n      {\n        \"rank\": 1,\n        \"issue\": \"Business-friendly issue title (not technical)\",\n        \"impact\": \"Quantified business impact - be specific about lost leads, reduced conversions, damaged trust, etc.\",\n        \"evidence\": [\"SS-1\", \"SS-4\"],\n        \"recommendation\": \"Clear, actionable fix in business terms\",\n        \"estimatedValue\": \"Expected ROI, conversion lift, or business benefit\",\n        \"urgency\": \"Why this needs to be fixed now\"\n      }\n    ],\n    \"strategicRoadmap\": {\n      \"month1\": {\n        \"focus\": \"Quick Wins & Foundation\",\n        \"items\": [\n          \"Specific actionable item 1\",\n          \"Specific actionable item 2\",\n          \"Specific actionable item 3\"\n        ],\n        \"expectedImpact\": \"What month 1 fixes will achieve\"\n      },\n      \"month2\": {\n        \"focus\": \"High-Impact Improvements\",\n        \"items\": [\n          \"Specific actionable item 1\",\n          \"Specific actionable item 2\"\n        ],\n        \"expectedImpact\": \"What month 2 fixes will achieve\"\n      },\n      \"month3\": {\n        \"focus\": \"Strategic Enhancements\",\n        \"items\": [\n          \"Specific actionable item 1\",\n          \"Specific actionable item 2\"\n        ],\n        \"expectedImpact\": \"What month 3 fixes will achieve\"\n      }\n    },\n    \"roiStatement\": \"Clear statement of projected improvement - connect to revenue, leads, conversions, or competitive position\",\n    \"callToAction\": \"Professional, consultative next step invitation\"\n  },\n  \"metadata\": {\n    \"wordCount\": 487,\n    \"criticalFindingsCount\": 4,\n    \"screenshotReferencesCount\": 8,\n    \"estimatedReadTime\": \"2 minutes\"\n  }\n}\n```\n\n---\n\n**CRITICAL REQUIREMENTS:**\n\n✅ **Maximum 500 words** - count carefully\n✅ **Business language** - no technical jargon\n✅ **Evidence-based** - reference screenshots for every finding\n✅ **Quantified impacts** - numbers and percentages where possible\n✅ **Actionable roadmap** - specific items, not vague goals\n✅ **Professional tone** - consultative, not salesy\n\n❌ **No filler words** - every sentence adds value\n❌ **No technical details** - save for appendix\n❌ **No exhaustive lists** - top 3-5 only\n❌ **No repetition** - condensed and unique insights",
@@ -32,7 +32,9 @@
             "rank": "number (1-5)",
             "issue": "string (business-friendly title)",
             "impact": "string (quantified business impact)",
-            "evidence": ["array of screenshot IDs"],
+            "evidence": [
+              "array of screenshot IDs"
+            ],
             "recommendation": "string (clear fix)",
             "estimatedValue": "string (ROI estimate)",
             "urgency": "string (why now)"
@@ -41,17 +43,23 @@
         "strategicRoadmap": {
           "month1": {
             "focus": "string",
-            "items": ["array of specific actions"],
+            "items": [
+              "array of specific actions"
+            ],
             "expectedImpact": "string"
           },
           "month2": {
             "focus": "string",
-            "items": ["array of specific actions"],
+            "items": [
+              "array of specific actions"
+            ],
             "expectedImpact": "string"
           },
           "month3": {
             "focus": "string",
-            "items": ["array of specific actions"],
+            "items": [
+              "array of specific actions"
+            ],
             "expectedImpact": "string"
           }
         },
@@ -77,12 +85,17 @@
           {
             "title": "Primary CTA lacks prominence across all devices",
             "impact": "Lost conversions",
-            "evidence": ["SS-1", "SS-2"]
+            "evidence": [
+              "SS-1",
+              "SS-2"
+            ]
           },
           {
             "title": "No trust signals above-fold",
             "impact": "High bounce rate",
-            "evidence": ["SS-1"]
+            "evidence": [
+              "SS-1"
+            ]
           }
         ]
       },
@@ -95,7 +108,10 @@
               "rank": 1,
               "issue": "Primary 'Free Consultation' button is invisible on mobile devices",
               "impact": "60% of your traffic comes from mobile users researching attorneys on their phones. The main conversion button blends into navigation links with no visual distinction, causing visitors to leave without requesting consultations. Industry data shows prominent CTAs increase legal consultation requests by 30-40%.",
-              "evidence": ["SS-1", "SS-2"],
+              "evidence": [
+                "SS-1",
+                "SS-2"
+              ],
               "recommendation": "Increase button size, add high-contrast color (blue or gold), and position prominently above-fold on both desktop and mobile.",
               "estimatedValue": "Expect 25-35% increase in consultation requests within first month. For practice with 500 monthly visitors, this translates to 15-20 additional qualified leads.",
               "urgency": "This is costing you leads every single day. Mobile-first indexing means Google also sees this as a mobile UX failure, affecting rankings."
@@ -104,7 +120,9 @@
               "rank": 2,
               "issue": "Zero attorney credentials or trust signals visible without scrolling",
               "impact": "Legal services require immediate credibility. Visitors currently see generic stock photo and vague tagline with no attorney names, photos, bar association badges, or years of experience. This triggers immediate distrust, causing 40-50% of qualified visitors to exit to competitors who display credentials prominently.",
-              "evidence": ["SS-1"],
+              "evidence": [
+                "SS-1"
+              ],
               "recommendation": "Add attorney headshots, J.D. credentials, years practicing, practice area specializations, and bar association badges to hero section.",
               "estimatedValue": "Reduce bounce rate by 35-45%. Build immediate trust with high-intent visitors actively seeking legal representation.",
               "urgency": "First impressions determine whether visitors trust you enough to share their legal issues. Currently failing this critical test."

@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "name": "linkedin-portfolio-building",
+  "description": "LinkedIn message - Honest portfolio building approach, professional authenticity",
+  "platforms": ["linkedin"],
+  "variation_type": "portfolio_building",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.7",
+
+  "systemPrompt": "You are writing an authentic LinkedIn message about building your web design portfolio.\n\nPHILOSOPHY: LinkedIn rewards transparency. Be professional about being new and building your business.\n\nRULES:\n1. CONCISE: 3-5 sentences, 180-280 characters\n2. HONEST POSITIONING: Clear about recently launching\n3. PROFESSIONAL CONFIDENCE: Not apologetic, but transparent\n4. VALUE PROPOSITION: Free analysis in exchange for portfolio building\n5. BUSINESS-FOCUSED: Emphasize outcomes and insights\n6. SPECIFIC DATA: Use actual scores and findings\n7. NO EMOJI: Keep it professional\n8. WHY IT'S FREE: Building case studies\n\nSTRUCTURE:\n- Sentence 1: Professional intro + honest positioning (just launched)\n- Sentence 2: What you're doing (free audits for portfolio)\n- Sentence 3: Value delivery + report link\n- Sentence 4: Summary of findings\n- Sentence 5: Why it's free + no obligation\n\nDO NOT:\n- Sound apologetic or uncertain\n- Over-explain being new\n- Use corporate buzzwords\n- Make hard sales pitch\n- Sound desperate\n\nTONE: Professional transparency. Confident about your skills, honest about building your business.\n\nREMEMBER: LinkedIn users appreciate honesty and directness. Your newness + skill = compelling offer.",
+
+  "userPromptTemplate": "Write a LinkedIn message for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nANALYSIS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nKey Finding: {{one_liner}} OR {{top_issue}}\nQuick Wins: {{quick_wins_count}}\n\nRecipient: {{contact_name}} ({{contact_title}})\n\nYour Info:\n- Name: {{sender_name}}\n- Company: {{sender_company}}\n- Just launched, building portfolio\n\nWrite a PROFESSIONAL, HONEST LinkedIn message. Explain you're building portfolio. Include [REPORT_LINK] placeholder.\n\nReturn ONLY the message text.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "website_grade",
+    "website_score",
+    "one_liner",
+    "top_issue",
+    "quick_wins_count",
+    "contact_name",
+    "contact_title",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "platformSpecs": {
+    "linkedin": {
+      "maxChars": 1900,
+      "optimalLength": "180-280 chars",
+      "tone": "professional-authentic",
+      "emojiUsage": "none",
+      "bannedWords": ["synergy", "leverage", "disrupt"],
+      "bestPractices": [
+        "Be transparent about being new",
+        "Emphasize professional value",
+        "Clear quid pro quo",
+        "Respectful of their time"
+      ]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Parker & Associates Law",
+        "industry": "Law Firm",
+        "location": "Austin, TX",
+        "website_grade": "B",
+        "website_score": 76,
+        "one_liner": "Strong content but mobile optimization gaps affecting client inquiries",
+        "quick_wins_count": 4,
+        "contact_name": "Michael Parker",
+        "contact_title": "Managing Partner",
+        "sender_name": "Anton Yanovich",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hi Michael,\n\nI'm Anton Yanovich from MaxantAgency - we recently launched and are building our portfolio by offering complimentary website audits to Austin law firms.\n\nI analyzed Parker & Associates' digital presence and created a comprehensive report: [REPORT_LINK]\n\nYou scored B grade (76/100) with 4 actionable improvements. Key insight: strong content and credibility, but mobile optimization gaps that could be affecting client inquiry conversions.\n\nNo cost - we're documenting these analyses as case studies. Thought the findings might be valuable for your practice.\n\nBest regards,\nAnton Yanovich\nMaxantAgency"
+      }
+    }
+  ],
+
+  "constraints": {
+    "maxChars": 280,
+    "maxSentences": 6,
+    "minSentences": 4,
+    "tone": "professional-transparent",
+    "required_elements": ["honest_positioning", "value_delivery", "specific_finding", "why_free"],
+    "forbidden_elements": ["apologies", "buzzwords", "hard_pitch"]
+  }
+}

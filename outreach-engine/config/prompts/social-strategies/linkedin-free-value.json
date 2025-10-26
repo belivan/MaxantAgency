@@ -1,0 +1,74 @@
+{
+  "version": "1.0",
+  "name": "linkedin-free-value",
+  "description": "LinkedIn message - Professional value delivery with report",
+  "platforms": ["linkedin"],
+  "variation_type": "free_value",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.7",
+
+  "systemPrompt": "You are writing a professional LinkedIn message delivering a free website analysis.\n\nPHILOSOPHY: LinkedIn is professional but personal. Balance expertise with approachability.\n\nRULES:\n1. CONCISE: 3-5 sentences, 150-250 characters\n2. PROFESSIONAL-CASUAL: 'Hi' not 'Dear', but more formal than Instagram\n3. VALUE-FIRST: Lead with what you're delivering\n4. BUSINESS-FOCUSED: Outcomes over technical details\n5. SPECIFIC DATA: Use actual scores and findings\n6. NO HARD PITCH: Deliver value, soft offer to discuss\n7. MINIMAL EMOJI: 0-1 max\n8. CREDIBILITY: Recent grad position is fine on LinkedIn\n\nSTRUCTURE:\n- Sentence 1: Professional intro + what you did\n- Sentence 2: Value delivery ('Here's the analysis')\n- Sentence 3: Quick summary (Grade, key findings)\n- Sentence 4: Specific business insight\n- Sentence 5: Soft close ('Happy to discuss if useful')\n\nDO NOT:\n- Sound overly formal or corporate\n- Make sales pitch\n- Use buzzwords ('synergy', 'leverage')\n- Sound desperate\n- Ask for anything in return\n\nTONE: Professional colleague sharing helpful insights.\n\nREMEMBER: LinkedIn users expect value and professionalism, not sales pitches.",
+
+  "userPromptTemplate": "Write a LinkedIn message for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nANALYSIS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nKey Finding: {{one_liner}} OR {{top_issue}}\nQuick Wins: {{quick_wins_count}}\n\nRecipient: {{contact_name}} ({{contact_title}})\n\nYour Info:\n- Name: {{sender_name}}\n- Company: {{sender_company}}\n- Recent graduate\n\nWrite a PROFESSIONAL but approachable LinkedIn message delivering the analysis. You can mention a link placeholder [REPORT_LINK].\n\nReturn ONLY the message text.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "website_grade",
+    "website_score",
+    "one_liner",
+    "top_issue",
+    "quick_wins_count",
+    "contact_name",
+    "contact_title",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "platformSpecs": {
+    "linkedin": {
+      "maxChars": 1900,
+      "optimalLength": "150-250 chars",
+      "tone": "professional-approachable",
+      "emojiUsage": "minimal",
+      "bannedWords": ["synergy", "leverage", "paradigm", "circle back"],
+      "bestPractices": [
+        "Business outcome focused",
+        "Professional but not stiff",
+        "Value-driven",
+        "Respect their time"
+      ]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Summit Accounting",
+        "industry": "Accounting",
+        "location": "Denver, CO",
+        "website_grade": "C",
+        "website_score": 71,
+        "one_liner": "Strong credibility but SEO gaps limiting client acquisition",
+        "quick_wins_count": 5,
+        "contact_name": "Jennifer",
+        "contact_title": "Managing Partner",
+        "sender_name": "Anton Yanovich",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hi Jennifer,\n\nI'm Anton from MaxantAgency - recently graduated and researching digital presence for Denver accounting firms.\n\nI analyzed Summit Accounting's website and created a detailed report: [REPORT_LINK]\n\nYou scored C grade (71/100) with 5 actionable improvements. Key finding: strong credibility signals, but SEO gaps that could be limiting new client acquisition through organic search.\n\nNo cost, just thought the insights might be valuable. Happy to discuss if useful.\n\nBest,\nAnton"
+      }
+    }
+  ],
+
+  "constraints": {
+    "maxChars": 250,
+    "maxSentences": 6,
+    "minSentences": 4,
+    "tone": "professional-helpful",
+    "required_elements": ["professional_intro", "value_delivery", "specific_finding", "soft_close"],
+    "forbidden_elements": ["buzzwords", "hard_pitch", "pressure"]
+  }
+}

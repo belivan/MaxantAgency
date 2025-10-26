@@ -1,0 +1,85 @@
+{
+  "version": "1.0",
+  "name": "linkedin-problem-first",
+  "description": "LinkedIn message - Lead with business problem, professional and direct",
+  "platforms": ["linkedin"],
+  "variation_type": "problem_first",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.7",
+
+  "systemPrompt": "You are writing a professional LinkedIn message that leads with a specific business problem.\n\nPHILOSOPHY: LinkedIn users appreciate directness when it's respectful. Lead with value (identifying their problem).\n\nRULES:\n1. CONCISE: 3-5 sentences, 170-260 characters\n2. LEAD WITH PROBLEM: First sentence = specific finding\n3. BUSINESS IMPACT: Connect issue to revenue/customers/growth\n4. PROFESSIONAL TONE: Direct but respectful\n5. BRIEF INTRO: Who you are (quick)\n6. SOLUTION OFFERED: Detailed analysis available\n7. NO FEAR TACTICS: Helpful information, not alarm\n8. NO EMOJI: Professional communication\n\nSTRUCTURE:\n- Sentence 1: Specific problem found\n- Sentence 2: Business impact (what this costs)\n- Sentence 3: Brief intro + what you did\n- Sentence 4: Offer detailed report\n- Sentence 5: Soft close\n\nDO NOT:\n- Sound alarmist or pushy\n- Use fear language\n- Exaggerate severity\n- Make sales pitch\n- Use overly technical jargon\n\nTONE: Professional colleague surfacing important information.\n\nREMEMBER: You're doing them a favor by identifying an issue. Be confident and helpful, not apologetic.",
+
+  "userPromptTemplate": "Write a LinkedIn message for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nCRITICAL FINDING:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nTop Problem: {{top_issue}}\nBusiness Impact: {{urgency_indicator}}\nMobile vs Desktop: {{mobile_vs_desktop_gap.description}}\nWeakest Area: {{weakest_category.description}}\nCompliance Risk: {{compliance_risk.description}}\n\nRecipient: {{contact_name}} ({{contact_title}})\n\nYour Info:\n- Name: {{sender_name}}\n- Company: {{sender_company}}\n\nWrite a PROFESSIONAL, DIRECT LinkedIn message leading with the problem. Include [REPORT_LINK] placeholder.\n\nReturn ONLY the message text.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "website_grade",
+    "website_score",
+    "top_issue",
+    "urgency_indicator",
+    "mobile_vs_desktop_gap",
+    "weakest_category",
+    "compliance_risk",
+    "contact_name",
+    "contact_title",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "platformSpecs": {
+    "linkedin": {
+      "maxChars": 1900,
+      "optimalLength": "170-260 chars",
+      "tone": "professional-direct",
+      "emojiUsage": "none",
+      "bannedWords": ["urgent", "act now", "limited time", "disaster"],
+      "bestPractices": [
+        "Lead with specific problem",
+        "Business outcome focus",
+        "Professional directness",
+        "No fear tactics"
+      ]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Riverside Medical Group",
+        "industry": "Healthcare",
+        "location": "Portland, OR",
+        "website_grade": "D",
+        "website_score": 54,
+        "top_issue": "Online appointment booking breaks on mobile devices - forms not submitting",
+        "urgency_indicator": "hurting your business growth",
+        "mobile_vs_desktop_gap": {
+          "description": "Mobile experience is 29 points lower than desktop"
+        },
+        "weakest_category": {
+          "description": "Design (Mobile) needs the most improvement (38/100)"
+        },
+        "compliance_risk": {
+          "description": "18 WCAG violations (ADA compliance risk)"
+        },
+        "contact_name": "Dr. Chen",
+        "contact_title": "Practice Administrator",
+        "sender_name": "Anton Yanovich",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hi Dr. Chen,\n\nI noticed Riverside Medical Group's online appointment booking breaks on mobile devices - forms aren't submitting. Given that 70%+ of healthcare searches happen on mobile, this could be significantly affecting new patient acquisition.\n\nI'm Anton from MaxantAgency - we specialize in healthcare digital presence. I conducted a comprehensive analysis of your site.\n\nDetailed report here: [REPORT_LINK]\n\nYou scored D grade (54/100) with critical mobile experience gaps and 18 WCAG accessibility violations. Your mobile performance is 29 points behind desktop.\n\nThought you should be aware. Happy to discuss the findings if useful.\n\nBest regards,\nAnton Yanovich\nMaxantAgency"
+      }
+    }
+  ],
+
+  "constraints": {
+    "maxChars": 260,
+    "maxSentences": 7,
+    "minSentences": 4,
+    "tone": "professional-informative",
+    "required_elements": ["specific_problem", "business_impact", "brief_intro", "report_offer"],
+    "forbidden_elements": ["fear_language", "pressure", "buzzwords", "emoji"]
+  }
+}

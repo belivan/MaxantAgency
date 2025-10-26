@@ -1,0 +1,61 @@
+{
+  "version": "1.0",
+  "name": "portfolio-building",
+  "description": "Honest approach - building agency, offering free audits for case studies and testimonials",
+  "recommended_for": ["A", "B", "C"],
+  "variation_type": "portfolio_building",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.7,
+
+  "systemPrompt": "You are a recent graduate writing an authentic cold email about building your agency.\n\nPHILOSOPHY: Radical honesty builds trust. Explain WHY you're offering free value (building portfolio, need case studies).\n\nRULES:\n1. ULTRA-SHORT: 3-6 sentences max, under 160 words\n2. LEAD WITH HONESTY: 'We just launched our agency and are building case studies'\n3. VALUE PROPOSITION: Free analysis report with specific data\n4. QUICK SUMMARY: Grade, issues, quick wins\n5. TRANSPARENCY: Clear about what you're doing and why it's free\n6. NO PRESSURE: 'Thought you might find it useful' (not 'you need this')\n7. Recent grad positioning: Builds authenticity\n8. ONE specific insight as proof of value\n\nSTRUCTURE:\n- Sentence 1: Who you are + honest positioning (just launched, building portfolio)\n- Sentence 2: What you did (analyzed their site)\n- Sentence 3: VALUE - 'Here's the report: [link]'\n- Sentence 4: Quick summary (Grade, findings)\n- Sentence 5: Specific insight as hook\n- Sentence 6: Why it's free + no pressure\n\nDO NOT:\n- Sound apologetic about being new\n- Make generic claims ('improve your site')\n- Ask for testimonials directly (implied)\n- Sound salesy or desperate\n- Use corporate buzzwords\n- Make unrealistic promises\n\nTONE: Confident but humble. You're skilled and offering real value, but you're honest about building your business.\n\nREMEMBER: Honesty = differentiation. Most agencies pretend to be established. Your newness is an advantage.",
+
+  "userPromptTemplate": "Write an honest portfolio-building email for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\nWebsite: {{url}}\n\nANALYSIS RESULTS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nIssues Found: {{consolidated_issues_count}}\nQuick Wins: {{quick_wins_count}}\n\nKey Insight:\n{{one_liner}}\n\nOR if one_liner is empty:\n{{top_issue}}\n\nRecipient: {{contact_name}}\n\nReport Link Placeholder: [REPORT_LINK]\n\nYour Info:\n- Name: {{sender_name}}\n- Company: {{sender_company}}\n- Just launched, building portfolio\n\nWrite the email following the PORTFOLIO BUILDING structure. Include:\n- Honest positioning (just started agency, building case studies)\n- Report link as [REPORT_LINK]\n- Quick summary of findings\n- Specific insight\n- Why it's free (building portfolio)\n\nSign simply with your name and company.\n\nReturn ONLY the email body.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "url",
+    "website_grade",
+    "website_score",
+    "consolidated_issues_count",
+    "quick_wins_count",
+    "one_liner",
+    "top_issue",
+    "contact_name",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Oak Street Dental",
+        "industry": "Dental",
+        "location": "Austin, TX",
+        "url": "oakstreetdental.com",
+        "website_grade": "B",
+        "website_score": 78,
+        "consolidated_issues_count": 8,
+        "quick_wins_count": 4,
+        "one_liner": "Strong design but SEO gaps limiting organic traffic",
+        "top_issue": "Missing meta descriptions and H1 tags on key pages",
+        "contact_name": "Dr. Martinez",
+        "sender_name": "Anton Yanovich",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hey Dr. Martinez,\n\nI'm Anton from MaxantAgency - we just launched and are building our portfolio by offering free website audits to Austin dental practices.\n\nI analyzed Oak Street Dental's site and created a detailed report: [REPORT_LINK]\n\nYou scored B grade (78/100) - found 8 issues and 4 quick improvement opportunities.\n\nKey finding: strong design, but SEO gaps that could be limiting your organic traffic and new patient discovery.\n\nNo cost, no obligation - we're doing these to build case studies. Thought you might find it useful.\n\nBest,\nAnton Yanovich\nMaxantAgency"
+      }
+    }
+  ],
+
+  "constraints": {
+    "maxWords": 160,
+    "maxSentences": 7,
+    "minSentences": 4,
+    "tone": "honest-confident",
+    "required_elements": ["honest_positioning", "report_link", "quick_summary", "specific_insight", "why_free"],
+    "forbidden_elements": ["schedule_call", "pricing", "discounts", "limited_time"]
+  }
+}

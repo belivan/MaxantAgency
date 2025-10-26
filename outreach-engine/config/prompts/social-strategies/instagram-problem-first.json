@@ -1,0 +1,71 @@
+{
+  "version": "1.0",
+  "name": "instagram-problem-first",
+  "description": "Instagram DM - Lead with specific problem, casual but direct",
+  "platforms": ["instagram"],
+  "variation_type": "problem_first",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.8",
+
+  "systemPrompt": "You are writing a casual Instagram DM that leads with a specific problem you found.\n\nPHILOSOPHY: Instagram DMs can be direct without being pushy. Lead with helpful info, like warning a neighbor.\n\nRULES:\n1. ULTRA-BRIEF: 2-4 sentences max, 90-170 characters\n2. LEAD WITH PROBLEM: Start with specific finding\n3. CASUAL TONE: 'Hey!' and 'heads up' vibe, not formal\n4. NO URLS: Instagram blocks links in DMs\n5. BUSINESS IMPACT: Mention what it costs them (lost customers, mobile traffic, etc.)\n6. LIGHT EMOJI: 1 max\n7. OFFER HELP: 'I can send you details' (not pushy)\n8. NO FEAR TACTICS: Direct but friendly\n\nSTRUCTURE:\n- Sentence 1: Casual opener + specific problem\n- Sentence 2: Business impact (what this costs)\n- Sentence 3: Brief intro (who you are)\n- Sentence 4: Offer full analysis\n\nDO NOT:\n- Include URLs\n- Sound aggressive or alarmist\n- Use formal language\n- Make sales pitch\n- Exaggerate severity\n\nTONE: Helpful friend giving a heads-up, not panic alarm.\n\nREMEMBER: Be specific and casual. Instagram users appreciate direct help that doesn't sound corporate.",
+
+  "userPromptTemplate": "Write a problem-first Instagram DM for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nCRITICAL FINDING:\nGrade: {{website_grade}}\nTop Problem: {{top_issue}}\nBusiness Impact: {{urgency_indicator}}\nMobile vs Desktop Gap: {{mobile_vs_desktop_gap.description}}\nCompliance Risk: {{compliance_risk.description}}\n\nTheir Instagram:\nUsername: {{social_username}}\n\nYour Name: {{sender_name}}\n\nWrite a CASUAL, DIRECT DM that leads with the problem. DO NOT include URLs. Keep it brief and helpful.\n\nReturn ONLY the DM text.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "website_grade",
+    "top_issue",
+    "urgency_indicator",
+    "mobile_vs_desktop_gap",
+    "compliance_risk",
+    "social_username",
+    "sender_name"
+  ],
+
+  "platformSpecs": {
+    "instagram": {
+      "maxChars": 1000,
+      "optimalLength": "90-170 chars",
+      "tone": "helpful-direct",
+      "emojiUsage": "minimal",
+      "bannedWords": ["website", "click", "urgent", "act now", "limited time"],
+      "bestPractices": [
+        "Be specific about the problem",
+        "No fear tactics",
+        "Brief and actionable",
+        "No URLs"
+      ]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Peak Fitness",
+        "industry": "Gym",
+        "location": "Boulder",
+        "website_grade": "D",
+        "top_issue": "Mobile site completely breaks on iPhone - class schedule not viewable",
+        "urgency_indicator": "hurting your business growth",
+        "mobile_vs_desktop_gap": {
+          "description": "Mobile experience is 32 points lower than desktop"
+        },
+        "social_username": "@peakfitness",
+        "sender_name": "Anton"
+      },
+      "output": "Hey! Quick heads up - Peak's mobile site breaks on iPhone and the class schedule doesn't load. 70%+ of gym searches are mobile so that's prob costing signups. I'm a web designer and did a full analysis. Can send you the details if helpful 👍"
+    }
+  ],
+
+  "constraints": {
+    "maxChars": 170,
+    "maxSentences": 4,
+    "minSentences": 2,
+    "tone": "helpful-heads-up",
+    "required_elements": ["specific_problem", "business_impact", "brief_intro", "offer_details"],
+    "forbidden_elements": ["urls", "fear_language", "aggressive_tone", "sales_pitch"]
+  }
+}

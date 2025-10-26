@@ -1,0 +1,72 @@
+{
+  "version": "1.0",
+  "name": "facebook-portfolio-building",
+  "description": "Facebook message - Honest portfolio approach, friendly and community-oriented",
+  "platforms": ["facebook"],
+  "variation_type": "portfolio_building",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.8",
+
+  "systemPrompt": "You are writing a friendly, authentic Facebook message about building your portfolio.\n\nPHILOSOPHY: Facebook communities value honesty and local support. Be transparent about building your business.\n\nRULES:\n1. FRIENDLY-BRIEF: 3-5 sentences, 150-230 characters\n2. HONEST POSITIONING: Clear about building portfolio\n3. COMMUNITY ANGLE: Support local businesses theme\n4. VALUE DELIVERY: Report link included\n5. SPECIFIC DATA: Grade and findings\n6. WHY IT'S FREE: Building case studies\n7. LIGHT EMOJI: 1-2 max\n8. LOCAL FOCUS: Mention city/area\n\nSTRUCTURE:\n- Sentence 1: Friendly intro + local/community connection\n- Sentence 2: Honest positioning (building portfolio, supporting local)\n- Sentence 3: Value delivery + report link\n- Sentence 4: Summary of findings\n- Sentence 5: Why it's free + helpful close\n\nDO NOT:\n- Sound corporate\n- Apologize for being new\n- Make sales pitch\n- Ignore community angle\n- Sound desperate\n\nTONE: Friendly local supporter offering help while building their business.\n\nREMEMBER: Facebook values community support stories. Frame as 'helping local businesses while building portfolio'.",
+
+  "userPromptTemplate": "Write a Facebook message for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nANALYSIS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nKey Finding: {{one_liner}} OR {{top_issue}}\nQuick Wins: {{quick_wins_count}}\n\nRecipient: {{contact_name}}\n\nYour Name: {{sender_name}}\nCompany: {{sender_company}}\n\nWrite a FRIENDLY, HONEST Facebook message. Mention building portfolio and supporting local businesses. Include [REPORT_LINK].\n\nReturn ONLY the message text.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "website_grade",
+    "website_score",
+    "one_liner",
+    "top_issue",
+    "quick_wins_count",
+    "contact_name",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "platformSpecs": {
+    "facebook": {
+      "maxChars": 5000,
+      "optimalLength": "150-230 chars",
+      "tone": "friendly-authentic",
+      "emojiUsage": "light",
+      "bannedWords": ["synergy", "buy now", "limited time"],
+      "bestPractices": [
+        "Local community angle",
+        "Authentic story",
+        "Support local theme",
+        "Friendly transparency"
+      ]
+    }
+  },
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Maplewood Dental Care",
+        "industry": "Dental",
+        "location": "Nashville, TN",
+        "website_grade": "B",
+        "website_score": 77,
+        "one_liner": "Strong patient reviews but appointment booking could be easier",
+        "quick_wins_count": 4,
+        "contact_name": "Dr. Williams",
+        "sender_name": "Anton",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hey Dr. Williams!\n\nI'm Anton from MaxantAgency - we just launched and are building our portfolio by helping Nashville local businesses with free website audits.\n\nI analyzed Maplewood Dental's site: [REPORT_LINK]\n\nYou scored B grade (77/100) with 4 improvement opportunities. Key thing: strong patient reviews and credibility, but appointment booking flow could be easier to boost new patient conversions.\n\nDoing these for free to build case studies and support local businesses. Hope you find it useful 😊\n\nBest,\nAnton"
+      }
+    }
+  ],
+
+  "constraints": {
+    "maxChars": 230,
+    "maxSentences": 6,
+    "minSentences": 4,
+    "tone": "friendly-supportive",
+    "required_elements": ["local_connection", "honest_positioning", "value_delivery", "why_free"],
+    "forbidden_elements": ["corporate_language", "apologies", "hard_pitch"]
+  }
+}

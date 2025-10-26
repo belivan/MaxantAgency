@@ -27,10 +27,51 @@ if (!process.env.SUPABASE_SERVICE_KEY) {
 }
 
 // Initialize Supabase client
-const supabase = createClient(
+export const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
+
+/**
+ * Get leads with flexible filtering (generic function)
+ * @param {object} filters - Optional filters
+ * @returns {Promise<Array>} Leads
+ */
+export async function getLeads(filters = {}) {
+  const {
+    limit = 100,
+    status = null,
+    project_id = null,
+    priority_tier = null,
+    website_grade = null,
+    requires_social_outreach = null
+  } = filters;
+
+  try {
+    let query = supabase
+      .from('leads')
+      .select('*')
+      .order('analyzed_at', { ascending: false });
+
+    if (status) query = query.eq('status', status);
+    if (project_id) query = query.eq('project_id', project_id);
+    if (priority_tier) query = query.eq('priority_tier', priority_tier);
+    if (website_grade) query = query.eq('website_grade', website_grade);
+    if (requires_social_outreach !== null) query = query.eq('requires_social_outreach', requires_social_outreach);
+    if (limit) query = query.limit(limit);
+
+    const { data, error } = await query;
+
+    if (error) {
+      throw new Error(`Failed to fetch leads: ${error.message}`);
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error(`Error in getLeads: ${error.message}`);
+    throw error;
+  }
+}
 
 /**
  * Get all regular leads (for email outreach)
