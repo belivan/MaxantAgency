@@ -1,236 +1,245 @@
 /**
- * PDF Report Generator
- * Converts HTML reports to PDF format
- * 
- * Two modes:
- * 1. Automated: Uses Puppeteer (requires `npm install puppeteer`)
- * 2. Manual: Generates instructions for browser/CLI conversion
+ * PDF Report Generator using Playwright
+ * Converts HTML reports to professional PDF format with headers, footers, and page numbers
+ *
+ * Features:
+ * - Custom headers with branding
+ * - Footers with page numbers (Page X of Y)
+ * - Optimized for US Letter, Portrait
+ * - Preserves colors, shadows, and backgrounds
+ * - Supports both Preview and Full report types
  */
 
-import { writeFile, readFile } from 'fs/promises';
-import { join } from 'path';
-import { pathToFileURL } from 'url';
+import { chromium } from 'playwright';
+import { writeFile } from 'fs/promises';
 
 /**
- * Generate a README with PDF conversion instructions
- */
-export async function generatePDFInstructions(htmlPath) {
-  const instructions = `
-# PDF Report Generation
-
-## Your HTML Report
-Location: ${htmlPath}
-
-## How to Convert to PDF
-
-### Method 1: Browser (Easiest)
-1. Open the HTML file in Chrome or Edge
-2. Press Ctrl+P (or Cmd+P on Mac)
-3. Select "Save as PDF" as the destination
-4. Click "Save"
-
-**Recommended Settings:**
-- Layout: Portrait
-- Paper size: A4 or Letter
-- Margins: Default
-- Background graphics: ON (to show colors/styling)
-
-### Method 2: Command Line (wkhtmltopdf)
-Install: https://wkhtmltopdf.org/downloads.html
-
-Then run:
-\`\`\`bash
-wkhtmltopdf "${htmlPath}" "report.pdf"
-\`\`\`
-
-### Method 3: Online Converter
-Upload your HTML file to:
-- https://www.html2pdf.com/
-- https://pdfcrowd.com/
-- https://cloudconvert.com/html-to-pdf
-
-## Why Not Automated?
-PDF generation requires either:
-1. A headless browser (Puppeteer - 300MB+ Chrome download)
-2. External CLI tools (wkhtmltopdf - requires installation)
-3. Online APIs (costs money per conversion)
-
-For occasional PDF needs, browser printing is fastest and works perfectly!
-
-## Tips for Best PDF Output
-- The HTML is already optimized for print
-- All images are embedded (base64)
-- Styling is print-friendly
-- No external dependencies needed
-`;
-
-  const readmePath = join(htmlPath, '..', 'HOW-TO-GENERATE-PDF.md');
-  await writeFile(readmePath, instructions, 'utf8');
-  
-  return readmePath;
-}
-
-/**
- * Check if wkhtmltopdf is available
- */
-export async function checkPDFTools() {
-  // This would check for wkhtmltopdf installation
-  // For now, return instructions
-  return {
-    available: false,
-    message: 'Use browser Print to PDF for best results. See HOW-TO-GENERATE-PDF.md'
-  };
-}
-
-/**
- * Generate PDF from HTML using Puppeteer (if available)
- * 
- * @param {string} htmlPath - Path to the HTML file
+ * Generate PDF from HTML content using Playwright
+ *
+ * @param {string} htmlContent - Complete HTML content as string
+ * @param {string} outputPath - Where to save the PDF file
  * @param {object} options - PDF generation options
- * @returns {Promise<object>} Result with success status and PDF path
- */
-export async function generatePDF(htmlPath, options = {}) {
-  const {
-    outputPath = htmlPath.replace('.html', '.pdf'),
-    format = 'A4',
-    printBackground = true,
-    margin = { top: '20px', right: '20px', bottom: '20px', left: '20px' }
-  } = options;
-
-  try {
-    // Try to import Puppeteer (lazy loading)
-    let puppeteer;
-    try {
-      puppeteer = await import('puppeteer');
-    } catch (error) {
-      return {
-        success: false,
-        method: 'manual',
-        message: 'Puppeteer not installed. Use browser Print to PDF instead.',
-        instructions_path: await generatePDFInstructions(htmlPath)
-      };
-    }
-
-    console.log('🚀 Launching headless browser for PDF generation...');
-    
-    const browser = await puppeteer.default.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
-    
-    // Convert file path to file:// URL
-    const fileUrl = pathToFileURL(htmlPath).href;
-    console.log(`📄 Loading HTML: ${fileUrl}`);
-    
-    await page.goto(fileUrl, {
-      waitUntil: 'networkidle0'
-    });
-
-    console.log('📸 Generating PDF...');
-    
-    await page.pdf({
-      path: outputPath,
-      format,
-      printBackground,
-      margin
-    });
-
-    await browser.close();
-
-    console.log(`✅ PDF generated: ${outputPath}`);
-
-    return {
-      success: true,
-      method: 'automated',
-      path: outputPath,
-      message: 'PDF generated successfully with embedded images'
-    };
-
-  } catch (error) {
-    console.error('❌ PDF generation failed:', error.message);
-    
-    // Fallback to instructions
-    return {
-      success: false,
-      method: 'manual',
-      message: `Automated PDF failed: ${error.message}. Use browser Print to PDF instead.`,
-      instructions_path: await generatePDFInstructions(htmlPath),
-      error: error.message
-    };
-  }
-}
-
-/**
- * Generate PDF from HTML content (not a file)
- * 
- * @param {string} htmlContent - HTML content as string
- * @param {string} outputPath - Where to save the PDF
- * @param {object} options - PDF generation options
- * @returns {Promise<object>} Result with success status and PDF path
+ * @returns {Promise<object>} Result with success status, path, and metadata
  */
 export async function generatePDFFromContent(htmlContent, outputPath, options = {}) {
   const {
-    format = 'A4',
-    printBackground = true,
-    margin = { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+    format = 'Letter',  // US Letter size
+    landscape = false,  // Portrait orientation
+    printBackground = true,  // Preserve colors and shadows
+    displayHeaderFooter = true,  // Show headers and footers
+    reportType = 'preview',  // 'preview' or 'full'
+    companyName = 'Unknown Company',
+    margin = {
+      top: '0.8in',     // Space for header
+      bottom: '0.8in',  // Space for footer
+      left: '0.4in',
+      right: '0.4in'
+    }
   } = options;
 
-  try {
-    let puppeteer;
-    try {
-      puppeteer = await import('puppeteer');
-    } catch (error) {
-      return {
-        success: false,
-        method: 'manual',
-        message: 'Puppeteer not installed. Save HTML first, then use browser Print to PDF.'
-      };
-    }
+  const startTime = Date.now();
+  let browser;
 
-    console.log('🚀 Launching headless browser for PDF generation...');
-    
-    const browser = await puppeteer.default.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+  try {
+    console.log('🚀 Launching Chromium browser for PDF generation...');
+
+    browser = await chromium.launch({
+      headless: true
     });
 
-    const page = await browser.newPage();
-    
+    const context = await browser.newContext();
+    const page = await context.newPage();
+
     console.log('📄 Setting HTML content...');
     await page.setContent(htmlContent, {
-      waitUntil: 'networkidle0'
+      waitUntil: 'networkidle'
     });
 
-    console.log('📸 Generating PDF...');
-    
+    // Emulate screen media to ensure proper CSS rendering
+    await page.emulateMedia({ media: 'print' });
+
+    console.log('📸 Generating PDF with headers and footers...');
+
+    // Generate current date string
+    const now = new Date();
+    const dateString = now.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+
+    // Header template with branding
+    const headerTemplate = `
+      <html>
+        <head>
+          <style>
+            .pdf-header {
+              width: 100%;
+              font-size: 9pt;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              color: #6B7280;
+              padding: 8px 24px;
+              border-bottom: 1px solid #E5E7EB;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              -webkit-print-color-adjust: exact;
+            }
+            .pdf-header-brand {
+              font-weight: 600;
+              color: #111827;
+            }
+            .pdf-header-type {
+              font-style: italic;
+              color: #9CA3AF;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="pdf-header">
+            <span class="pdf-header-brand">MaxantAgency</span>
+            <span class="pdf-header-type">Website Analysis Report</span>
+          </div>
+        </body>
+      </html>
+    `;
+
+    // Footer template with page numbers and generation date
+    const footerTemplate = `
+      <html>
+        <head>
+          <style>
+            .pdf-footer {
+              width: 100%;
+              font-size: 8pt;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              color: #9CA3AF;
+              padding: 8px 24px;
+              border-top: 1px solid #E5E7EB;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              -webkit-print-color-adjust: exact;
+            }
+            .pdf-footer-left {
+              text-align: left;
+            }
+            .pdf-footer-right {
+              text-align: right;
+            }
+            .pdf-footer-company {
+              font-weight: 500;
+              color: #6B7280;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="pdf-footer">
+            <div class="pdf-footer-left">
+              <span class="pdf-footer-company">${companyName}</span> • Generated: ${dateString}
+            </div>
+            <div class="pdf-footer-right">
+              Page <span class="pageNumber"></span> of <span class="totalPages"></span>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
     await page.pdf({
       path: outputPath,
       format,
+      landscape,
       printBackground,
-      margin
+      displayHeaderFooter,
+      headerTemplate,
+      footerTemplate,
+      margin,
+      preferCSSPageSize: false
     });
+
+    const generationTime = Date.now() - startTime;
 
     await browser.close();
 
-    console.log(`✅ PDF generated: ${outputPath}`);
+    console.log(`✅ PDF generated successfully: ${outputPath}`);
+    console.log(`⏱️  Generation time: ${generationTime}ms`);
 
     return {
       success: true,
-      method: 'automated',
+      method: 'playwright',
       path: outputPath,
-      message: 'PDF generated successfully with embedded images'
+      metadata: {
+        format,
+        landscape,
+        reportType,
+        companyName,
+        generationTime,
+        generatedAt: now.toISOString(),
+        fileSize: null  // Could add fs.stat to get file size
+      },
+      message: `PDF generated successfully in ${generationTime}ms`
     };
 
   } catch (error) {
     console.error('❌ PDF generation failed:', error.message);
-    
+
+    if (browser) {
+      await browser.close();
+    }
+
     return {
       success: false,
-      method: 'manual',
-      message: `Automated PDF failed: ${error.message}`,
+      method: 'playwright',
+      message: `PDF generation failed: ${error.message}`,
+      error: error.message,
+      stack: error.stack
+    };
+  }
+}
+
+/**
+ * Generate PDF from an HTML file (reads file first)
+ *
+ * @param {string} htmlPath - Path to HTML file
+ * @param {object} options - PDF generation options
+ * @returns {Promise<object>} Result with success status and path
+ */
+export async function generatePDF(htmlPath, options = {}) {
+  try {
+    const { readFile } = await import('fs/promises');
+    const htmlContent = await readFile(htmlPath, 'utf-8');
+
+    const outputPath = options.outputPath || htmlPath.replace('.html', '.pdf');
+
+    return await generatePDFFromContent(htmlContent, outputPath, options);
+
+  } catch (error) {
+    console.error('❌ Failed to read HTML file:', error.message);
+
+    return {
+      success: false,
+      method: 'playwright',
+      message: `Failed to read HTML file: ${error.message}`,
       error: error.message
     };
   }
+}
+
+/**
+ * Quick PDF generation with defaults
+ *
+ * @param {string} htmlContent - HTML content
+ * @param {string} companyName - Company name for footer
+ * @param {string} reportType - 'preview' or 'full'
+ * @returns {Promise<object>} Result with success and path
+ */
+export async function quickPDF(htmlContent, companyName, reportType = 'preview') {
+  const timestamp = Date.now();
+  const outputPath = `report-${companyName.replace(/\s+/g, '-').toLowerCase()}-${reportType}-${timestamp}.pdf`;
+
+  return await generatePDFFromContent(htmlContent, outputPath, {
+    companyName,
+    reportType
+  });
 }

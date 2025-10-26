@@ -1094,41 +1094,242 @@
         }
 
         /* ===============================================
-           PRINT STYLES
+           PRINT/PDF STYLES - Optimized for PDF Export
            =============================================== */
 
         @media print {
+            /* Base settings */
             html {
-                font-size: 11pt;
+                font-size: 12pt; /* Increased from 11pt for better readability */
             }
 
             body {
-                background: white;
-                color: black;
+                background: white !important;
+                color: black !important;
+                margin: 0;
+                padding: 0;
             }
 
+            /* Force color printing - critical for backgrounds and shadows */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                color-adjust: exact !important;
+            }
+
+            /* Container - reduce horizontal padding for print */
+            .container {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+                max-width: 100%;
+            }
+
+            /* Hero section - NO page break after, reduce padding */
             .hero-section {
-                background: none;
-                color: black;
-                page-break-after: always;
+                background: white !important;
+                color: black !important;
+                page-break-after: auto !important; /* Changed from 'always' to reduce white space */
+                padding: 24px 0 !important; /* Reduced from 48px */
+                border-bottom: 2px solid #E5E7EB;
+                margin-bottom: 16px;
             }
 
+            .company-name {
+                color: #111827 !important;
+                margin-bottom: 8px !important;
+            }
+
+            .company-meta {
+                color: #6B7280 !important;
+            }
+
+            /* Contact info box - optimize for print */
+            .contact-info-box {
+                background: #F9FAFB !important;
+                border: 1px solid #E5E7EB !important;
+                padding: 8px 16px !important;
+                margin-top: 12px !important;
+            }
+
+            /* Score card - reduce padding */
+            .score-card {
+                padding: 16px !important;
+                margin-bottom: 16px !important;
+                background: white !important;
+                border: 1px solid #E5E7EB !important;
+                box-shadow: none !important;
+            }
+
+            .score-circle {
+                border: 2px solid #D1D5DB !important;
+                background: white !important;
+            }
+
+            /* Sections - MUCH reduced padding to fix white space issue */
             .section {
-                page-break-inside: avoid;
+                padding: 12px 0 !important; /* Reduced from 48px - this fixes the white space! */
+                margin-bottom: 0 !important;
+                border-bottom: 1px solid #E5E7EB;
+                page-break-inside: auto; /* Changed from 'avoid' to allow natural breaks */
             }
 
+            .section:last-child {
+                border-bottom: none;
+            }
+
+            /* Section headers - reduce spacing */
+            .section-header {
+                margin-bottom: 12px !important; /* Reduced from 32px */
+            }
+
+            .section-title {
+                font-size: 16pt !important;
+                margin-bottom: 6px !important;
+                color: #111827 !important;
+            }
+
+            .section-description {
+                font-size: 10pt !important;
+                color: #6B7280 !important;
+                line-height: 1.4 !important;
+            }
+
+            /* Cards - prevent awkward breaks, but allow if necessary */
             .action-card,
+            .metric-card {
+                page-break-inside: avoid;
+                padding: 12px !important; /* Reduced padding */
+                margin-bottom: 8px !important;
+                background: white !important;
+                border: 1px solid #E5E7EB !important;
+                box-shadow: none !important;
+            }
+
             .roadmap-phase {
                 page-break-inside: avoid;
+                padding: 12px !important;
+                margin-bottom: 8px !important;
             }
 
-            .metric-card {
-                background: white;
-                border: 1px solid #ddd;
+            /* Action items - reduce spacing */
+            .action-number {
+                background: #F3F4F6 !important;
+                color: #111827 !important;
+                border: 1px solid #D1D5DB !important;
             }
 
+            .action-title {
+                font-size: 11pt !important;
+                color: #111827 !important;
+            }
+
+            .action-description {
+                font-size: 10pt !important;
+                color: #4B5563 !important;
+                line-height: 1.4 !important;
+            }
+
+            /* Metrics - optimize for print */
+            .metrics-grid {
+                gap: 8px !important;
+            }
+
+            .metric-card-value {
+                color: #111827 !important;
+            }
+
+            .metric-card-title {
+                color: #6B7280 !important;
+                font-size: 9pt !important;
+            }
+
+            /* Tables - ensure they don't overflow */
+            .data-table-container {
+                overflow: visible !important;
+            }
+
+            .data-table {
+                width: 100%;
+                font-size: 9pt !important;
+            }
+
+            .data-table th {
+                background: #F3F4F6 !important;
+                color: #111827 !important;
+                padding: 6px !important;
+                border: 1px solid #D1D5DB !important;
+            }
+
+            .data-table td {
+                padding: 6px !important;
+                border: 1px solid #E5E7EB !important;
+                color: #374151 !important;
+            }
+
+            /* Screenshots - ensure they fit on page */
+            .screenshots-grid {
+                gap: 8px !important;
+            }
+
+            .screenshot-item {
+                page-break-inside: avoid;
+                margin-bottom: 8px !important;
+            }
+
+            .screenshot-item img {
+                max-width: 100% !important;
+                height: auto !important;
+                border: 1px solid #D1D5DB !important;
+            }
+
+            /* Badges and labels - ensure visibility */
+            .action-priority,
+            .phase-timeline {
+                border: 1px solid #D1D5DB !important;
+                background: #F9FAFB !important;
+                color: #374151 !important;
+                font-size: 8pt !important;
+            }
+
+            /* Footer - reduce spacing */
+            .report-footer {
+                padding: 16px 0 !important;
+                margin-top: 16px !important;
+                border-top: 2px solid #E5E7EB;
+            }
+
+            .footer-logo {
+                font-size: 12pt !important;
+                color: #111827 !important;
+            }
+
+            .footer-text {
+                font-size: 9pt !important;
+                color: #6B7280 !important;
+            }
+
+            /* Hide elements that shouldn't print */
             .no-print {
                 display: none !important;
+            }
+
+            /* Ensure links are visible in print */
+            a {
+                color: #2563EB !important;
+                text-decoration: underline !important;
+            }
+
+            /* Paragraph spacing - reduce for print */
+            p {
+                margin-bottom: 6px !important;
+            }
+
+            ul, ol {
+                margin-bottom: 8px !important;
+            }
+
+            li {
+                margin-bottom: 3px !important;
             }
         }
 

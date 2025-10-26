@@ -307,37 +307,9 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     html += '        </div>\n';
   }
 
-  // Three Key Metrics Only
-  html += '        <div class="metrics-grid">\n';
+  // Metrics removed - let the analysis speak for itself
+  // (Priority, ROI Potential, Quick Wins were too sales-focused)
 
-  // Priority
-  html += '          <div class="metric-card">\n';
-  html += '            <div class="metric-card-header">\n';
-  html += `              <div class="metric-card-icon">${priorityIcon}</div>\n`;
-  html += '              <div class="metric-card-title">Priority</div>\n';
-  html += '            </div>\n';
-  html += `            <div class="metric-card-value">${priorityLevel}</div>\n`;
-  html += '          </div>\n';
-
-  // ROI
-  html += '          <div class="metric-card">\n';
-  html += '            <div class="metric-card-header">\n';
-  html += '              <div class="metric-card-icon">💰</div>\n';
-  html += '              <div class="metric-card-title">ROI Potential</div>\n';
-  html += '            </div>\n';
-  html += `            <div class="metric-card-value">${roiData.multiplier}x</div>\n`;
-  html += '          </div>\n';
-
-  // Quick Wins
-  html += '          <div class="metric-card">\n';
-  html += '            <div class="metric-card-header">\n';
-  html += '              <div class="metric-card-icon">⚡</div>\n';
-  html += '              <div class="metric-card-title">Quick Wins</div>\n';
-  html += '            </div>\n';
-  html += `            <div class="metric-card-value">${quick_wins_count}</div>\n`;
-  html += '          </div>\n';
-
-  html += '        </div>\n';
   html += '      </div>\n';
   html += '    </div>\n';
   html += '  </div>\n';

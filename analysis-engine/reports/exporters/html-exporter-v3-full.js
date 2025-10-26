@@ -132,11 +132,11 @@ async function generateFullContent(analysisResult, synthesisData, registry, scre
     content += generateMultiPageScreenshotGallery(analysisResult, screenshotData, registry);
   }
 
-  // 10. Lead Scoring & Sales Intelligence (NEW - Full Report Only)
-  content += generateLeadScoringSection(analysisResult);
+  // 10. Lead Scoring & Sales Intelligence (COMMENTED OUT - Not for client-facing reports)
+  // content += generateLeadScoringSection(analysisResult);
 
-  // 11. Appendix - Methodology & QA Validation (NEW - Full Report Only)
-  content += generateAppendix(analysisResult, synthesisData);
+  // 11. Appendix - Methodology & QA Validation (COMMENTED OUT - Internal technical info)
+  // content += generateAppendix(analysisResult, synthesisData);
 
   // Close main content
   content += '  </div>\n';
@@ -331,37 +331,9 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     html += '        </div>\n';
   }
 
-  // Three Key Metrics Only
-  html += '        <div class="metrics-grid">\n';
+  // Metrics removed - let the analysis speak for itself
+  // (Priority, ROI Potential, Quick Wins were too sales-focused)
 
-  // Priority
-  html += '          <div class="metric-card">\n';
-  html += '            <div class="metric-card-header">\n';
-  html += `              <div class="metric-card-icon">${priorityIcon}</div>\n`;
-  html += '              <div class="metric-card-title">Priority</div>\n';
-  html += '            </div>\n';
-  html += `            <div class="metric-card-value">${priorityLevel}</div>\n`;
-  html += '          </div>\n';
-
-  // ROI
-  html += '          <div class="metric-card">\n';
-  html += '            <div class="metric-card-header">\n';
-  html += '              <div class="metric-card-icon">💰</div>\n';
-  html += '              <div class="metric-card-title">ROI Potential</div>\n';
-  html += '            </div>\n';
-  html += `            <div class="metric-card-value">${roiData.multiplier}x</div>\n`;
-  html += '          </div>\n';
-
-  // Quick Wins
-  html += '          <div class="metric-card">\n';
-  html += '            <div class="metric-card-header">\n';
-  html += '              <div class="metric-card-icon">⚡</div>\n';
-  html += '              <div class="metric-card-title">Quick Wins</div>\n';
-  html += '            </div>\n';
-  html += `            <div class="metric-card-value">${quick_wins_count}</div>\n`;
-  html += '          </div>\n';
-
-  html += '        </div>\n';
   html += '      </div>\n';
   html += '    </div>\n';
   html += '  </div>\n';
@@ -1497,70 +1469,230 @@ function generateTechnicalDeepDive(analysisResult) {
   // PageSpeed Insights
   if (performance_metrics_pagespeed) {
     html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
-    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">📊 PageSpeed Insights</h3>\n';
+    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 8px;">📊 PageSpeed Insights</h3>\n';
+    html += '        <p style="opacity: 0.7; margin-bottom: 16px; font-size: 0.95rem;">Lab data from simulated tests in controlled environments.</p>\n';
 
-    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">\n';
+    // Helper function to generate visual metric card with bar
+    const generateMetricCard = (label, value, unit, thresholds) => {
+      const numValue = parseFloat(value);
+      let status = 'poor';
+      let color = 'rgba(239, 68, 68, 0.8)'; // Red
+      let percentage = 100;
 
-    // Mobile Performance
-    if (performance_metrics_pagespeed.mobile) {
-      html += '          <div style="border-left: 4px solid var(--primary); padding-left: 16px;">\n';
-      html += '            <h4 style="font-size: 1.1rem; margin-bottom: 12px; color: var(--primary);">📱 Mobile</h4>\n';
-      html += `            <p style="font-size: 2rem; font-weight: bold; margin-bottom: 8px;">${performance_metrics_pagespeed.mobile.performanceScore || 'N/A'}</p>\n`;
-      if (performance_metrics_pagespeed.mobile.metrics) {
-        html += '            <div style="font-size: 0.9rem; opacity: 0.8;">\n';
-        if (performance_metrics_pagespeed.mobile.metrics.firstContentfulPaint) {
-          html += `              <div>FCP: ${performance_metrics_pagespeed.mobile.metrics.firstContentfulPaint}s</div>\n`;
-        }
-        if (performance_metrics_pagespeed.mobile.metrics.largestContentfulPaint) {
-          html += `              <div>LCP: ${performance_metrics_pagespeed.mobile.metrics.largestContentfulPaint}s</div>\n`;
-        }
-        if (performance_metrics_pagespeed.mobile.metrics.totalBlockingTime) {
-          html += `              <div>TBT: ${performance_metrics_pagespeed.mobile.metrics.totalBlockingTime}ms</div>\n`;
-        }
-        if (performance_metrics_pagespeed.mobile.metrics.cumulativeLayoutShift) {
-          html += `              <div>CLS: ${performance_metrics_pagespeed.mobile.metrics.cumulativeLayoutShift}</div>\n`;
-        }
-        html += '            </div>\n';
+      if (numValue <= thresholds.good) {
+        status = 'good';
+        color = 'rgba(16, 185, 129, 0.8)'; // Green
+        percentage = (numValue / thresholds.good) * 50; // First half is good range
+      } else if (numValue <= thresholds.needsImprovement) {
+        status = 'needs-improvement';
+        color = 'rgba(245, 158, 11, 0.8)'; // Orange
+        const range = thresholds.needsImprovement - thresholds.good;
+        const position = numValue - thresholds.good;
+        percentage = 50 + (position / range) * 30; // Middle 30% is needs improvement
+      } else {
+        percentage = Math.min(80 + (numValue / thresholds.needsImprovement) * 20, 100);
       }
-      html += '          </div>\n';
+
+      return `
+        <div style="margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-primary);">${label}</span>
+            <span style="font-size: 0.9rem; font-weight: 600; color: ${color};">${numValue.toFixed(label === 'CLS' ? 3 : 2)}${unit}</span>
+          </div>
+          <div style="position: relative; width: 100%; height: 24px; background: var(--bg-tertiary); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-light);">
+            <div style="position: absolute; width: ${percentage}%; height: 100%; background: ${color}; transition: width 0.3s;"></div>
+            <div style="position: absolute; left: 50%; width: 2px; height: 100%; background: rgba(0,0,0,0.2);"></div>
+            <div style="position: absolute; left: 80%; width: 2px; height: 100%; background: rgba(0,0,0,0.2);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
+            <span>Good: &lt;${thresholds.good}${unit}</span>
+            <span>Needs Improvement: ${thresholds.good}-${thresholds.needsImprovement}${unit}</span>
+            <span>Poor: &gt;${thresholds.needsImprovement}${unit}</span>
+          </div>
+        </div>
+      `;
+    };
+
+    // Helper function to generate performance score gauge
+    const generateScoreGauge = (score, label, icon) => {
+      const numScore = parseInt(score) || 0;
+      let color = 'rgba(239, 68, 68, 0.8)'; // Red
+      let status = 'Poor';
+
+      if (numScore >= 90) {
+        color = 'rgba(16, 185, 129, 0.8)'; // Green
+        status = 'Good';
+      } else if (numScore >= 50) {
+        color = 'rgba(245, 158, 11, 0.8)'; // Orange
+        status = 'Needs Improvement';
+      }
+
+      const circumference = 2 * Math.PI * 45; // radius = 45
+      const offset = circumference - (numScore / 100) * circumference;
+
+      return `
+        <div style="text-align: center; padding: 20px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border-light);">
+          <svg width="120" height="120" viewBox="0 0 120 120" style="margin: 0 auto 16px;">
+            <circle cx="60" cy="60" r="45" fill="none" stroke="#E5E7EB" stroke-width="10"/>
+            <circle
+              cx="60" cy="60" r="45" fill="none"
+              stroke="${color}"
+              stroke-width="10"
+              stroke-dasharray="${circumference}"
+              stroke-dashoffset="${offset}"
+              stroke-linecap="round"
+              transform="rotate(-90 60 60)"
+              style="transition: stroke-dashoffset 0.5s;"
+            />
+            <text x="60" y="60" text-anchor="middle" dominant-baseline="middle" font-size="32" font-weight="bold" fill="${color}">${numScore}</text>
+          </svg>
+          <h4 style="font-size: 1.1rem; margin-bottom: 4px; color: var(--text-primary); font-weight: 600;">${icon} ${label}</h4>
+          <p style="font-size: 0.9rem; color: ${color}; font-weight: 500; margin: 0;">${status}</p>
+        </div>
+      `;
+    };
+
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px;">\n';
+
+    // Mobile Performance Score
+    if (performance_metrics_pagespeed.mobile) {
+      html += generateScoreGauge(performance_metrics_pagespeed.mobile.performanceScore, 'Mobile', '📱');
     }
 
-    // Desktop Performance
+    // Desktop Performance Score
     if (performance_metrics_pagespeed.desktop) {
-      html += '          <div style="border-left: 4px solid var(--success); padding-left: 16px;">\n';
-      html += '            <h4 style="font-size: 1.1rem; margin-bottom: 12px; color: var(--success);">💻 Desktop</h4>\n';
-      html += `            <p style="font-size: 2rem; font-weight: bold; margin-bottom: 8px;">${performance_metrics_pagespeed.desktop.performanceScore || 'N/A'}</p>\n`;
-      if (performance_metrics_pagespeed.desktop.metrics) {
-        html += '            <div style="font-size: 0.9rem; opacity: 0.8;">\n';
-        if (performance_metrics_pagespeed.desktop.metrics.firstContentfulPaint) {
-          html += `              <div>FCP: ${performance_metrics_pagespeed.desktop.metrics.firstContentfulPaint}s</div>\n`;
-        }
-        if (performance_metrics_pagespeed.desktop.metrics.largestContentfulPaint) {
-          html += `              <div>LCP: ${performance_metrics_pagespeed.desktop.metrics.largestContentfulPaint}s</div>\n`;
-        }
-        if (performance_metrics_pagespeed.desktop.metrics.totalBlockingTime) {
-          html += `              <div>TBT: ${performance_metrics_pagespeed.desktop.metrics.totalBlockingTime}ms</div>\n`;
-        }
-        if (performance_metrics_pagespeed.desktop.metrics.cumulativeLayoutShift) {
-          html += `              <div>CLS: ${performance_metrics_pagespeed.desktop.metrics.cumulativeLayoutShift}</div>\n`;
-        }
-        html += '            </div>\n';
-      }
-      html += '          </div>\n';
+      html += generateScoreGauge(performance_metrics_pagespeed.desktop.performanceScore, 'Desktop', '💻');
     }
 
     html += '        </div>\n';
+
+    // Core Web Vitals thresholds
+    const thresholds = {
+      fcp: { good: 1.8, needsImprovement: 3.0 },
+      lcp: { good: 2.5, needsImprovement: 4.0 },
+      tbt: { good: 200, needsImprovement: 600 },
+      cls: { good: 0.1, needsImprovement: 0.25 }
+    };
+
+    // Mobile Metrics
+    if (performance_metrics_pagespeed.mobile?.metrics) {
+      html += '        <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border-light);">\n';
+      html += '          <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">📱 Mobile Metrics</h4>\n';
+
+      const m = performance_metrics_pagespeed.mobile.metrics;
+      if (m.firstContentfulPaint) {
+        html += generateMetricCard('First Contentful Paint (FCP)', m.firstContentfulPaint, 's', thresholds.fcp);
+      }
+      if (m.largestContentfulPaint) {
+        html += generateMetricCard('Largest Contentful Paint (LCP)', m.largestContentfulPaint, 's', thresholds.lcp);
+      }
+      if (m.totalBlockingTime) {
+        html += generateMetricCard('Total Blocking Time (TBT)', m.totalBlockingTime, 'ms', thresholds.tbt);
+      }
+      if (m.cumulativeLayoutShift) {
+        html += generateMetricCard('Cumulative Layout Shift (CLS)', m.cumulativeLayoutShift, '', thresholds.cls);
+      }
+
+      html += '        </div>\n';
+    }
+
+    // Desktop Metrics
+    if (performance_metrics_pagespeed.desktop?.metrics) {
+      html += '        <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">\n';
+      html += '          <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">💻 Desktop Metrics</h4>\n';
+
+      const d = performance_metrics_pagespeed.desktop.metrics;
+      if (d.firstContentfulPaint) {
+        html += generateMetricCard('First Contentful Paint (FCP)', d.firstContentfulPaint, 's', thresholds.fcp);
+      }
+      if (d.largestContentfulPaint) {
+        html += generateMetricCard('Largest Contentful Paint (LCP)', d.largestContentfulPaint, 's', thresholds.lcp);
+      }
+      if (d.totalBlockingTime) {
+        html += generateMetricCard('Total Blocking Time (TBT)', d.totalBlockingTime, 'ms', thresholds.tbt);
+      }
+      if (d.cumulativeLayoutShift) {
+        html += generateMetricCard('Cumulative Layout Shift (CLS)', d.cumulativeLayoutShift, '', thresholds.cls);
+      }
+
+      html += '        </div>\n';
+    }
+
     html += '      </div>\n';
   }
 
-  // CrUX Data
+  // CrUX Data - Real User Performance Metrics
   if (performance_metrics_crux) {
-    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
-    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🌐 Chrome User Experience (CrUX) - Real User Data</h3>\n';
-    html += '        <p style="opacity: 0.8; margin-bottom: 16px;">Performance data from actual Chrome users visiting your website.</p>\n';
-    html += '        <div style="font-family: monospace; background: rgba(0,0,0,0.5); padding: 16px; border-radius: 8px; overflow-x: auto;">\n';
-    html += `          <pre>${JSON.stringify(performance_metrics_crux, null, 2)}</pre>\n`;
-    html += '        </div>\n';
+    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-top: 16px;">\n';
+    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 8px;">🌐 Chrome User Experience (CrUX) - Real User Data</h3>\n';
+    html += '        <p style="opacity: 0.7; margin-bottom: 16px; font-size: 0.95rem;">Performance data from actual Chrome users visiting your website over the past 28 days.</p>\n';
+
+    const metrics = performance_metrics_crux.metrics || {};
+
+    // Helper function to get metric display name
+    const getMetricName = (key) => {
+      const names = {
+        'largestContentfulPaint': 'Largest Contentful Paint (LCP)',
+        'firstInputDelay': 'First Input Delay (FID)',
+        'cumulativeLayoutShift': 'Cumulative Layout Shift (CLS)',
+        'firstContentfulPaint': 'First Contentful Paint (FCP)',
+        'interactionToNextPaint': 'Interaction to Next Paint (INP)'
+      };
+      return names[key] || key;
+    };
+
+    // Helper function to format metric value
+    const formatMetricValue = (key, value) => {
+      if (key.includes('Shift')) return value.toFixed(3); // CLS
+      if (value > 1000) return (value / 1000).toFixed(2) + 's'; // Convert ms to seconds
+      return value + 'ms';
+    };
+
+    // Display each metric
+    Object.entries(metrics).forEach(([metricKey, metricData]) => {
+      const good = Math.round((metricData.good || 0) * 100);
+      const needsImprovement = Math.round((metricData.needsImprovement || 0) * 100);
+      const poor = Math.round((metricData.poor || 0) * 100);
+      const p75Value = metricData.percentiles?.p75;
+
+      html += '        <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-light);">\n';
+      html += `          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">\n`;
+      html += `            <h4 style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin: 0;">${getMetricName(metricKey)}</h4>\n`;
+      if (p75Value !== undefined) {
+        html += `            <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); background: var(--bg-tertiary); padding: 4px 12px; border-radius: 6px;">75th: ${formatMetricValue(metricKey, p75Value)}</span>\n`;
+      }
+      html += `          </div>\n`;
+
+      // Stacked bar chart showing good/needs improvement/poor distribution
+      html += '          <div style="display: flex; width: 100%; height: 32px; border-radius: 6px; overflow: hidden; margin-bottom: 8px; border: 1px solid var(--border-light);">\n';
+
+      if (good > 0) {
+        html += `            <div style="width: ${good}%; background: rgba(16, 185, 129, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${good > 10 ? good + '%' : ''}</div>\n`;
+      }
+      if (needsImprovement > 0) {
+        html += `            <div style="width: ${needsImprovement}%; background: rgba(245, 158, 11, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${needsImprovement > 10 ? needsImprovement + '%' : ''}</div>\n`;
+      }
+      if (poor > 0) {
+        html += `            <div style="width: ${poor}%; background: rgba(239, 68, 68, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${poor > 10 ? poor + '%' : ''}</div>\n`;
+      }
+
+      html += '          </div>\n';
+
+      // Legend
+      html += '          <div style="display: flex; gap: 16px; font-size: 0.85rem;">\n';
+      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: rgba(16, 185, 129, 0.8); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Good: ${good}%</span></div>\n`;
+      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: rgba(245, 158, 11, 0.8); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Needs Improvement: ${needsImprovement}%</span></div>\n`;
+      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: rgba(239, 68, 68, 0.8); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Poor: ${poor}%</span></div>\n`;
+      html += '          </div>\n';
+
+      html += '        </div>\n';
+    });
+
+    // Data source info
+    if (performance_metrics_crux.origin) {
+      html += `        <p style="font-size: 0.85rem; color: var(--text-secondary); opacity: 0.7; margin-top: 12px;">Data source: ${escapeHtml(performance_metrics_crux.origin)} • Form factor: ${performance_metrics_crux.formFactor || 'All devices'}</p>\n`;
+    }
+
     html += '      </div>\n';
   }
 
@@ -1594,45 +1726,50 @@ function generateCompleteIssueBreakdown(analysisResult) {
   html += '      </div>\n\n';
 
   const issueCategories = [
-    { title: 'Desktop Design Issues', icon: '🖥️', issues: design_issues_desktop, color: '#6366f1' },
-    { title: 'Mobile Design Issues', icon: '📱', issues: design_issues_mobile, color: '#8b5cf6' },
-    { title: 'SEO Issues', icon: '🔍', issues: seo_issues, color: '#10b981' },
-    { title: 'Content Issues', icon: '📝', issues: content_issues, color: '#f59e0b' },
-    { title: 'Accessibility Issues', icon: '♿', issues: accessibility_issues, color: '#ef4444' },
-    { title: 'Social Media Issues', icon: '👥', issues: social_issues, color: '#06b6d4' },
-    { title: 'Performance Issues', icon: '⚡', issues: performance_issues, color: '#ec4899' }
+    { title: 'Desktop Design Issues', icon: '🖥️', issues: design_issues_desktop },
+    { title: 'Mobile Design Issues', icon: '📱', issues: design_issues_mobile },
+    { title: 'SEO Issues', icon: '🔍', issues: seo_issues },
+    { title: 'Content Issues', icon: '📝', issues: content_issues },
+    { title: 'Accessibility Issues', icon: '♿', issues: accessibility_issues },
+    { title: 'Social Media Issues', icon: '👥', issues: social_issues },
+    { title: 'Performance Issues', icon: '⚡', issues: performance_issues }
   ];
 
   issueCategories.forEach(category => {
     if (category.issues && category.issues.length > 0) {
-      html += `      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid ${category.color};">\n`;
-      html += `        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px; color: ${category.color};">\n`;
+      // Minimal styling - subtle gray border
+      html += `      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--border-light);">\n`;
+      html += `        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">\n`;
       html += `          ${category.icon} ${escapeHtml(category.title)} (${category.issues.length})\n`;
       html += '        </h3>\n';
 
-      html += '        <div style="display: grid; gap: 16px;">\n';
+      html += '        <div style="display: grid; gap: 12px;">\n';
       category.issues.forEach((issue, idx) => {
         const severity = issue.severity || issue.priority || 'medium';
-        const severityColors = {
-          critical: '#ef4444',
-          high: '#f59e0b',
-          medium: '#3b82f6',
-          low: '#6b7280'
-        };
-        const severityColor = severityColors[severity] || '#6b7280';
 
-        html += '          <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 8px; border-left: 3px solid ' + severityColor + ';">\n';
+        // Only show colored badge for high/critical severity
+        const showColoredBadge = (severity === 'high' || severity === 'critical');
+        const severityColor = severity === 'critical' ? '#ef4444' : '#f59e0b';
+
+        // Clean minimal card with subtle gray border
+        html += '          <div style="background: var(--bg-primary); padding: 16px; border-radius: 8px; border: 1px solid var(--border-light);">\n';
         html += '            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">\n';
-        html += `              <h4 style="font-weight: 600; margin: 0; flex: 1;">${idx + 1}. ${escapeHtml(issue.title || issue.description || 'Issue')}</h4>\n`;
-        html += `              <span style="background: ${severityColor}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-left: 12px;">${severity}</span>\n`;
+        html += `              <h4 style="font-weight: 600; margin: 0; flex: 1; color: var(--text-primary);">${idx + 1}. ${escapeHtml(issue.title || issue.description || 'Issue')}</h4>\n`;
+
+        // Only show badge for high/critical issues
+        if (showColoredBadge) {
+          html += `              <span style="background: ${severityColor}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-left: 12px;">${severity}</span>\n`;
+        }
+
         html += '            </div>\n';
 
         if (issue.description && issue.title) {
-          html += `            <p style="opacity: 0.8; margin: 8px 0;">${escapeHtml(issue.description)}</p>\n`;
+          html += `            <p style="opacity: 0.7; margin: 8px 0; font-size: 0.95rem; color: var(--text-secondary);">${escapeHtml(issue.description)}</p>\n`;
         }
 
         if (issue.recommendation) {
-          html += `            <p style="margin-top: 12px; padding: 12px; background: rgba(99,102,241,0.1); border-radius: 6px; border-left: 3px solid var(--primary);"><strong>💡 Recommendation:</strong> ${escapeHtml(issue.recommendation)}</p>\n`;
+          // Minimal recommendation styling - just subtle background, no colored border
+          html += `            <p style="margin-top: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 6px; font-size: 0.95rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">💡 Recommendation:</strong> ${escapeHtml(issue.recommendation)}</p>\n`;
         }
 
         html += '          </div>\n';

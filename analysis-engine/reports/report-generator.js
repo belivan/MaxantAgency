@@ -81,8 +81,12 @@ export async function generateReport(analysisResult, options = {}) {
     }
     
     const outputPath = pdfOutputPath || `report-${Date.now()}.pdf`;
-    
-    const pdfResult = await generatePDFFromContent(htmlContent, outputPath);
+
+    // Pass company name and report type to PDF generator for footer
+    const pdfResult = await generatePDFFromContent(htmlContent, outputPath, {
+      companyName: analysisResult.company_name || 'Unknown Company',
+      reportType
+    });
     const generationTime = Date.now() - startTime;
 
     if (pdfResult.success) {
