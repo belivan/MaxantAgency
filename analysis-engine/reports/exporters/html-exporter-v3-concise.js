@@ -96,23 +96,23 @@ async function generateConciseContent(analysisResult, synthesisData, registry, s
   // 2. Executive Summary (with benchmark context)
   content += generateStrategicAssessment(analysisResult, synthesisData);
 
-  // 3. Benchmark Comparison Chart (if benchmark available)
+  // 3. Current State Screenshots (Visual Evidence - MOVED UP)
+  if (screenshotData.screenshots.length > 0) {
+    content += generateVisualEvidence(screenshotData, registry);
+  }
+
+  // 4. Benchmark Comparison Chart (if benchmark available)
   if (analysisResult.matched_benchmark) {
     content += generateBenchmarkComparisonChart(analysisResult, synthesisData);
 
-    // 3.5 Side-by-Side Screenshot Comparison (if screenshots available)
+    // 4.5 Side-by-Side Screenshot Comparison (if screenshots available)
     if (analysisResult.matched_benchmark.screenshot_desktop_url && analysisResult.screenshot_desktop_url) {
       content += generateSideBySideComparison(analysisResult, screenshotData);
     }
   }
 
-  // 4. Implementation Timeline (90-Day Action Plan)
+  // 5. Implementation Timeline (90-Day Action Plan)
   content += generateTimeline(analysisResult, synthesisData);
-
-  // 5. Visual Evidence (Screenshots if Available)
-  if (screenshotData.screenshots.length > 0) {
-    content += generateVisualEvidence(screenshotData, registry);
-  }
 
   // Close main content
   content += '  </div>\n';
@@ -949,13 +949,14 @@ function generateVisualEvidence(screenshotData, registry) {
 
   html += '      <div class="screenshots-grid">\n';
 
-  // Show only desktop and mobile views (not every page)
+  // Show desktop and mobile homepage views
   const mainScreenshots = screenshotData.screenshots.filter(s =>
-    s.title === 'Desktop View' || s.title === 'Mobile View'
+    s.device === 'desktop' || s.device === 'mobile'
   ).slice(0, 2);
 
   mainScreenshots.forEach(screenshot => {
-    html += '        <div class="screenshot-card">\n';
+    const deviceClass = screenshot.device === 'mobile' ? 'screenshot-card-mobile' : 'screenshot-card-desktop';
+    html += `        <div class="screenshot-card ${deviceClass}">\n`;
     html += `          <img src="${screenshot.dataUri}" alt="${escapeHtml(screenshot.title)}" class="screenshot-image">\n`;
     html += `          <div class="screenshot-caption">${escapeHtml(screenshot.title)}</div>\n`;
     html += '        </div>\n';

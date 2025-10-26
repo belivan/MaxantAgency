@@ -69,6 +69,11 @@ secrets.json
 *.sqlite
 *.db
 
+# Database exports
+*.csv
+exports/
+**/exports/
+
 # Screenshots and images
 screenshots/
 **/screenshots/

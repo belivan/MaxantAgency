@@ -101,21 +101,21 @@
       "name": "generated_at",
       "type": "timestamptz",
       "nullable": false,
-      "default": "CURRENT_TIMESTAMP",
+      "default": "now()",
       "description": "When the report was generated"
     },
     {
       "name": "created_at",
       "type": "timestamptz",
       "nullable": false,
-      "default": "CURRENT_TIMESTAMP",
+      "default": "now()",
       "description": "Record creation timestamp"
     },
     {
       "name": "updated_at",
       "type": "timestamptz",
       "nullable": false,
-      "default": "CURRENT_TIMESTAMP",
+      "default": "now()",
       "description": "Record last update timestamp"
     }
   ],

@@ -59,11 +59,91 @@ export function buildPersonalizationContext(lead) {
     load_time: formatLoadTime(lead.load_time || lead.page_load_time),
 
     // ============================================
-    // ANALYSIS FINDINGS
+    // ANALYSIS FINDINGS (Basic)
     // ============================================
     top_issue: extractTopIssue(lead),
     quick_win: extractQuickWin(lead),
     analysis_summary: lead.analysis_summary || '',
+
+    // ============================================
+    // RICH ANALYSIS DATA (From AI Synthesis)
+    // ============================================
+    // Consolidated Issues (AI-deduplicated, 40-70% cleaner)
+    consolidated_issues: lead.consolidated_issues || [],
+    consolidated_issues_count: (lead.consolidated_issues || []).length,
+
+    // Quick Wins (Full array)
+    quick_wins: lead.quick_wins || [],
+    quick_wins_count: (lead.quick_wins || []).length,
+    quick_wins_formatted: formatQuickWins(lead.quick_wins),
+
+    // Executive Summary (AI-generated strategic insights)
+    executive_summary: lead.executive_summary || null,
+    executive_summary_headline: lead.executive_summary?.headline || '',
+    executive_summary_overview: lead.executive_summary?.overview || '',
+    executive_summary_critical_findings: lead.executive_summary?.critical_findings || [],
+    executive_summary_roadmap: lead.executive_summary?.strategic_roadmap || null,
+    has_executive_summary: !!lead.executive_summary,
+
+    // Strategic Fields
+    one_liner: lead.one_liner || '',
+    call_to_action: lead.call_to_action || '',
+    outreach_angle: lead.outreach_angle || '',
+
+    // ============================================
+    // DETAILED SCORES
+    // ============================================
+    design_score_desktop: lead.design_score_desktop || lead.design_score || 0,
+    design_score_mobile: lead.design_score_mobile || lead.design_score || 0,
+    seo_score: lead.seo_score || 0,
+    content_score: lead.content_score || 0,
+    social_score: lead.social_score || 0,
+    accessibility_score: lead.accessibility_score || 0,
+    performance_score_mobile: lead.performance_score_mobile || 0,
+    performance_score_desktop: lead.performance_score_desktop || 0,
+
+    // Score Comparisons
+    mobile_vs_desktop_gap: calculateScoreGap(
+      lead.design_score_mobile || lead.design_score || 0,
+      lead.design_score_desktop || lead.design_score || 0
+    ),
+    weakest_category: findWeakestCategory(lead),
+    strongest_category: findStrongestCategory(lead),
+
+    // ============================================
+    // DETAILED ISSUES BY CATEGORY
+    // ============================================
+    design_issues_desktop: lead.design_issues_desktop || [],
+    design_issues_mobile: lead.design_issues_mobile || [],
+    seo_issues: lead.seo_issues || [],
+    content_issues: lead.content_issues || [],
+    social_issues: lead.social_issues || [],
+    accessibility_issues: lead.accessibility_issues || [],
+    performance_issues: lead.performance_issues || [],
+
+    // Critical Issue Counts
+    mobile_critical_issues: lead.mobile_critical_issues || 0,
+    desktop_critical_issues: lead.desktop_critical_issues || 0,
+
+    // ============================================
+    // PRIORITY & STRATEGIC SCORING
+    // ============================================
+    priority_tier: lead.priority_tier || 'cold',
+    lead_priority: lead.lead_priority || 0,
+    urgency_score: lead.urgency_score || 0,
+    budget_likelihood: lead.budget_likelihood || 'low',
+    fit_score: lead.fit_score || 0,
+
+    // Urgency Indicator
+    urgency_indicator: buildUrgencyIndicator(lead),
+
+    // ============================================
+    // COMPLIANCE & RISK
+    // ============================================
+    has_https: lead.has_https || false,
+    is_mobile_friendly: lead.is_mobile_friendly || false,
+    accessibility_wcag_level: lead.accessibility_wcag_level || 'unknown',
+    compliance_risk: assessComplianceRisk(lead),
 
     // ============================================
     // BUSINESS CONTEXT
@@ -438,4 +518,164 @@ function extractSocialUsername(lead, platform) {
     console.error('Error extracting social username:', error.message);
     return '';
   }
+}
+
+/**
+ * Format quick wins as bullet list
+ * @param {array} quickWins - Array of quick wins
+ * @returns {string} Formatted bullet list
+ */
+function formatQuickWins(quickWins) {
+  if (!quickWins || !Array.isArray(quickWins) || quickWins.length === 0) {
+    return 'Multiple improvement opportunities identified';
+  }
+
+  try {
+    return quickWins
+      .slice(0, 5) // Limit to top 5
+      .map((win, idx) => `${idx + 1}. ${win}`)
+      .join('\n');
+  } catch (error) {
+    console.error('Error formatting quick wins:', error.message);
+    return 'Multiple improvement opportunities identified';
+  }
+}
+
+/**
+ * Calculate score gap between mobile and desktop
+ * @param {number} mobileScore - Mobile score
+ * @param {number} desktopScore - Desktop score
+ * @returns {object} Gap analysis
+ */
+function calculateScoreGap(mobileScore, desktopScore) {
+  const gap = desktopScore - mobileScore;
+
+  if (Math.abs(gap) < 5) {
+    return {
+      gap: 0,
+      description: 'Mobile and desktop performance are similar',
+      severity: 'none'
+    };
+  }
+
+  if (gap > 0) {
+    return {
+      gap: Math.round(gap),
+      description: `Mobile experience is ${Math.round(gap)} points lower than desktop`,
+      severity: gap > 20 ? 'critical' : gap > 10 ? 'high' : 'medium',
+      weaker_platform: 'mobile'
+    };
+  } else {
+    return {
+      gap: Math.round(Math.abs(gap)),
+      description: `Desktop experience is ${Math.round(Math.abs(gap))} points lower than mobile`,
+      severity: Math.abs(gap) > 20 ? 'critical' : Math.abs(gap) > 10 ? 'high' : 'medium',
+      weaker_platform: 'desktop'
+    };
+  }
+}
+
+/**
+ * Find weakest scoring category
+ * @param {object} lead - Lead data
+ * @returns {object} Weakest category info
+ */
+function findWeakestCategory(lead) {
+  const categories = [
+    { name: 'Design (Desktop)', score: lead.design_score_desktop || lead.design_score || 0, key: 'design' },
+    { name: 'Design (Mobile)', score: lead.design_score_mobile || lead.design_score || 0, key: 'design_mobile' },
+    { name: 'SEO', score: lead.seo_score || 0, key: 'seo' },
+    { name: 'Content', score: lead.content_score || 0, key: 'content' },
+    { name: 'Social Media', score: lead.social_score || 0, key: 'social' },
+    { name: 'Accessibility', score: lead.accessibility_score || 0, key: 'accessibility' },
+    { name: 'Performance (Mobile)', score: lead.performance_score_mobile || 0, key: 'performance_mobile' },
+    { name: 'Performance (Desktop)', score: lead.performance_score_desktop || 0, key: 'performance_desktop' }
+  ];
+
+  const weakest = categories.reduce((min, cat) => cat.score < min.score ? cat : min);
+
+  return {
+    category: weakest.name,
+    key: weakest.key,
+    score: weakest.score,
+    description: `${weakest.name} needs the most improvement (${weakest.score}/100)`
+  };
+}
+
+/**
+ * Find strongest scoring category
+ * @param {object} lead - Lead data
+ * @returns {object} Strongest category info
+ */
+function findStrongestCategory(lead) {
+  const categories = [
+    { name: 'Design (Desktop)', score: lead.design_score_desktop || lead.design_score || 0, key: 'design' },
+    { name: 'Design (Mobile)', score: lead.design_score_mobile || lead.design_score || 0, key: 'design_mobile' },
+    { name: 'SEO', score: lead.seo_score || 0, key: 'seo' },
+    { name: 'Content', score: lead.content_score || 0, key: 'content' },
+    { name: 'Social Media', score: lead.social_score || 0, key: 'social' },
+    { name: 'Accessibility', score: lead.accessibility_score || 0, key: 'accessibility' }
+  ];
+
+  const strongest = categories.reduce((max, cat) => cat.score > max.score ? cat : max);
+
+  return {
+    category: strongest.name,
+    key: strongest.key,
+    score: strongest.score,
+    description: `${strongest.name} is performing well (${strongest.score}/100)`
+  };
+}
+
+/**
+ * Build urgency indicator based on scores and issues
+ * @param {object} lead - Lead data
+ * @returns {string} Urgency description
+ */
+function buildUrgencyIndicator(lead) {
+  const urgency = lead.urgency_score || 0;
+  const grade = lead.website_grade || lead.lead_grade || 'C';
+
+  if (grade === 'F' || urgency >= 15) {
+    return 'costing you customers daily';
+  }
+
+  if (grade === 'D' || urgency >= 10) {
+    return 'hurting your business growth';
+  }
+
+  if (grade === 'C' || urgency >= 5) {
+    return 'leaving money on the table';
+  }
+
+  return 'worth addressing to stay competitive';
+}
+
+/**
+ * Assess compliance risk based on accessibility and security
+ * @param {object} lead - Lead data
+ * @returns {object} Compliance risk assessment
+ */
+function assessComplianceRisk(lead) {
+  const risks = [];
+
+  if (!lead.has_https) {
+    risks.push('No HTTPS (security risk)');
+  }
+
+  if (lead.accessibility_issues && lead.accessibility_issues.length > 0) {
+    risks.push(`${lead.accessibility_issues.length} WCAG violations (ADA compliance risk)`);
+  }
+
+  if (!lead.is_mobile_friendly) {
+    risks.push('Not mobile-friendly (60%+ of traffic affected)');
+  }
+
+  return {
+    has_risks: risks.length > 0,
+    risk_count: risks.length,
+    risks: risks,
+    severity: risks.length >= 2 ? 'high' : risks.length === 1 ? 'medium' : 'low',
+    description: risks.length > 0 ? risks.join(', ') : 'No major compliance risks detected'
+  };
 }

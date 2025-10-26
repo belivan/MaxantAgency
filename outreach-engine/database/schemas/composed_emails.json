@@ -68,6 +68,18 @@
       "description": "Strategy used (compliment-sandwich, problem-first, etc.)"
     },
     {
+      "name": "variation_type",
+      "type": "text",
+      "enum": ["free_value", "portfolio_building", "problem_first"],
+      "index": true,
+      "description": "Positioning approach variation (for A/B testing different angles)"
+    },
+    {
+      "name": "data_sources_used",
+      "type": "jsonb",
+      "description": "Which analysis data fields were used in generation (executive_summary, consolidated_issues, quick_wins, etc.)"
+    },
+    {
       "name": "platform",
       "type": "text",
       "enum": ["email", "instagram", "facebook", "linkedin", "twitter"],
@@ -252,6 +264,10 @@
     {
       "name": "idx_composed_emails_sent_at",
       "columns": ["sent_at"]
+    },
+    {
+      "name": "idx_composed_emails_variation_platform",
+      "columns": ["variation_type", "platform"]
     }
   ],
 

@@ -13,6 +13,8 @@
     "db:seed": "node cli.js seed",
     "db:validate": "node cli.js validate",
     "db:generate": "node cli.js generate",
+    "export:all": "node scripts/export-tables.js --all",
+    "export:tables": "node scripts/export-tables.js --tables",
     "backup:stats": "node scripts/backup-stats.js",
     "backup:stats:watch": "node scripts/backup-stats.js --watch",
     "backup:stats:json": "node scripts/backup-stats.js --json",

@@ -658,10 +658,12 @@
 
         /* Screenshots Section */
         .screenshots-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            display: flex;
             gap: var(--space-6);
             margin-top: var(--space-8);
+            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
         .screenshot-card {
@@ -671,6 +673,27 @@
             overflow: hidden;
             box-shadow: var(--shadow-sm);
             transition: all var(--transition-base);
+        }
+
+        /* Desktop screenshots - wider */
+        .screenshot-card-desktop {
+            flex: 1 1 auto;
+            min-width: 500px;
+            max-width: 650px;
+        }
+
+        /* Mobile screenshots - narrower to look like a phone */
+        .screenshot-card-mobile {
+            flex: 0 0 auto;
+            width: 280px;
+            max-width: 280px;
+        }
+
+        .screenshot-card-mobile .screenshot-image {
+            height: 400px;
+            width: 100%;
+            object-fit: cover;
+            object-position: top;
         }
 
         .screenshot-card:hover {

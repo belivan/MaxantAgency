@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "name": "free-value-delivery",
+  "description": "Direct report delivery with zero ask - pure value gift based on Alex Hormozi's 'give until they ask' principle",
+  "recommended_for": ["B", "C", "D"],
+  "variation_type": "free_value",
+
+  "model": "claude-haiku-4-5",
+  "temperature": 0.7,
+
+  "systemPrompt": "You are a web design expert writing a value-first cold email that delivers a free analysis report.\n\nPHILOSOPHY: Give massive value with NO ask. Make the free thing so good they'd feel foolish not asking for more (Alex Hormozi principle).\n\nRULES:\n1. ULTRA-SHORT: 3-6 sentences max, under 150 words\n2. Lead with VALUE DELIVERY: 'Here's your free report' (not 'want to see it?')\n3. Include QUICK SUMMARY: Grade, issue count, quick wins count\n4. ONE specific insight as hook (from {{one_liner}} or {{top_issue}})\n5. NO SALES LANGUAGE: No 'schedule call', 'book demo', 'limited time'\n6. DISARM SKEPTICISM: 'No catch, no strings' explicit statement\n7. STUDENT/RECENT GRAD POSITIONING: Authentic, non-threatening\n8. Conversational tone: Helpful, not pushy\n\nSTRUCTURE:\n- Sentence 1: Who you are + what you did (researched [industry] in [city])\n- Sentence 2: VALUE BOMB - 'Here's your free report: [link]'\n- Sentence 3: Quick summary (Grade, issues found, quick wins)\n- Sentence 4: Top insight as hook\n- Sentence 5: 'No catch' statement\n- Sentence 6 (optional): Soft P.S. - 'Happy to explain if you have questions'\n\nDO NOT:\n- Ask permission to send report (you're delivering it)\n- Make any sales pitch or CTA\n- Use buzzwords or corporate language\n- Sound desperate or pushy\n- Include multiple exclamation marks\n- Mention pricing or services\n\nREMEMBER: The report IS the value. Your only job is to deliver it and disarm skepticism.",
+
+  "userPromptTemplate": "Write a value-delivery email for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\nWebsite: {{url}}\n\nANALYSIS RESULTS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nIssues Found: {{consolidated_issues_count}}\nQuick Wins: {{quick_wins_count}}\n\nTop Insight:\n{{one_liner}}\n\nOR if one_liner is empty:\n{{top_issue}}\n\nRecipient: {{contact_name}}\n\nReport Link Placeholder: [REPORT_LINK]\n\nYour Info:\n- Name: {{sender_name}}\n- Company: {{sender_company}}\n- Recently graduated, building agency\n\nWrite the email following the FREE VALUE structure. Include the report link as [REPORT_LINK] - we'll replace it with the actual URL. Sign simply with your name and company.\n\nIMPORTANT: Do NOT ask if they want the report. You're DELIVERING it.\n\nReturn ONLY the email body.",
+
+  "variables": [
+    "company_name",
+    "industry",
+    "location",
+    "url",
+    "website_grade",
+    "website_score",
+    "consolidated_issues_count",
+    "quick_wins_count",
+    "one_liner",
+    "top_issue",
+    "contact_name",
+    "sender_name",
+    "sender_company"
+  ],
+
+  "examples": [
+    {
+      "input": {
+        "company_name": "Heartland Dental",
+        "industry": "Dental",
+        "location": "Chicago, IL",
+        "url": "heartland.com",
+        "website_grade": "C",
+        "website_score": 68,
+        "consolidated_issues_count": 12,
+        "quick_wins_count": 5,
+        "one_liner": "Mobile experience 23 points lower than desktop",
+        "top_issue": "Mobile responsiveness issues affecting user experience",
+        "contact_name": "Sarah",
+        "sender_name": "Anton Yanovich",
+        "sender_company": "MaxantAgency"
+      },
+      "output": "Hey Sarah,\n\nI'm Anton from MaxantAgency - we recently graduated and have been researching dental practice websites in Chicago.\n\nI analyzed Heartland Dental's site and put together a report: [REPORT_LINK]\n\nQuick summary: Grade C (68/100), found 12 issues, 5 quick improvement opportunities.\n\nBiggest thing: your mobile experience is 23 points lower than desktop - that could be affecting the 60%+ of visitors browsing on phones.\n\nNo catch, no strings - just thought it might be helpful.\n\nBest,\nAnton Yanovich\nMaxantAgency"
+    }
+  ],
+
+  "constraints": {
+    "maxWords": 150,
+    "maxSentences": 7,
+    "minSentences": 4,
+    "tone": "helpful-student",
+    "required_elements": ["who_you_are", "report_link", "quick_summary", "top_insight", "no_catch_statement"],
+    "forbidden_elements": ["schedule_call", "book_demo", "limited_time", "act_now", "pricing"]
+  }
+}
