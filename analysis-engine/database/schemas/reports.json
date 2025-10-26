@@ -6,7 +6,7 @@
       "name": "id",
       "type": "uuid",
       "primaryKey": true,
-      "defaultValue": "gen_random_uuid()",
+      "default": "gen_random_uuid()",
       "description": "Unique identifier for the report"
     },
     {
@@ -25,7 +25,7 @@
       "name": "report_type",
       "type": "text",
       "nullable": false,
-      "defaultValue": "'website_audit'",
+      "default": "website_audit",
       "description": "Type of report (e.g., website_audit, competitor_analysis)"
     },
     {
@@ -44,7 +44,7 @@
       "name": "storage_bucket",
       "type": "text",
       "nullable": false,
-      "defaultValue": "'reports'",
+      "default": "reports",
       "description": "Storage bucket name"
     },
     {
@@ -87,35 +87,35 @@
       "name": "status",
       "type": "text",
       "nullable": false,
-      "defaultValue": "'completed'",
+      "default": "completed",
       "description": "Report generation status (pending, processing, completed, failed)"
     },
     {
       "name": "download_count",
       "type": "integer",
       "nullable": false,
-      "defaultValue": "0",
+      "default": "0",
       "description": "Number of times the report has been downloaded"
     },
     {
       "name": "generated_at",
       "type": "timestamptz",
       "nullable": false,
-      "defaultValue": "CURRENT_TIMESTAMP",
+      "default": "CURRENT_TIMESTAMP",
       "description": "When the report was generated"
     },
     {
       "name": "created_at",
       "type": "timestamptz",
       "nullable": false,
-      "defaultValue": "CURRENT_TIMESTAMP",
+      "default": "CURRENT_TIMESTAMP",
       "description": "Record creation timestamp"
     },
     {
       "name": "updated_at",
       "type": "timestamptz",
       "nullable": false,
-      "defaultValue": "CURRENT_TIMESTAMP",
+      "default": "CURRENT_TIMESTAMP",
       "description": "Record last update timestamp"
     }
   ],
