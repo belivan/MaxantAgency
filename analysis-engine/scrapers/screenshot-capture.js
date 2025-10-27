@@ -67,11 +67,20 @@ export async function captureWebsite(url, options = {}) {
     // Wait a moment for animations/dynamic content
     await page.waitForTimeout(1000);
 
-    // Capture screenshot
+    // Capture screenshot with JPEG compression to stay under Claude's 5MB limit
     const screenshot = await page.screenshot({
       fullPage,
-      type: 'png'
+      type: 'jpeg',
+      quality: 80  // Compress to ~1-2MB while maintaining visual quality
     });
+
+    // Check screenshot size (Claude has 5MB limit for images)
+    const screenshotSizeMB = (screenshot.length / 1024 / 1024).toFixed(2);
+    console.log(`[Screenshot] Size: ${screenshotSizeMB} MB (${viewport.width}x${viewport.height})`);
+
+    if (screenshot.length > 5 * 1024 * 1024) {
+      console.warn(`⚠️  Screenshot exceeds 5MB limit (${screenshotSizeMB} MB) - may fail Claude API calls`);
+    }
 
     // Get HTML content
     const html = await page.content();

@@ -1,29 +1,39 @@
 'use client';
 
 /**
- * Analysis Page - SIMPLIFIED VERSION
- * Removed auto-forking system - just saves to current project
- * Analyze prospects and convert to leads
+ * Analysis Page - REDESIGNED with Notion-Style Showcase
+ * Beautiful feature showcase + analysis workflow
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Brain, Sparkles } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ProspectSelector, AnalysisConfig } from '@/components/analysis';
+import {
+  ProspectSelector,
+  AnalysisConfig,
+  StatsOverview,
+  FeaturesShowcase,
+  AnalysisResults,
+  BenchmarkManager
+} from '@/components/analysis';
 import { type AnalysisPrompts, type PromptConfig } from '@/components/analysis/prompt-editor';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { updateProject, getProject } from '@/lib/api';
 import type { AnalysisOptionsFormData, SSEMessage } from '@/lib/types';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui/tabs';
 
 const DEFAULT_ANALYSIS_MODEL = 'gpt-5';
 
 const buildDefaultModelSelections = (): Record<string, string> => ({
-  desktopVisual: DEFAULT_ANALYSIS_MODEL,
-  mobileVisual: DEFAULT_ANALYSIS_MODEL,
-  seo: DEFAULT_ANALYSIS_MODEL,
-  content: DEFAULT_ANALYSIS_MODEL,
+  unifiedVisual: DEFAULT_ANALYSIS_MODEL,
+  unifiedTechnical: DEFAULT_ANALYSIS_MODEL,
   social: DEFAULT_ANALYSIS_MODEL,
   accessibility: DEFAULT_ANALYSIS_MODEL,
   leadScorer: DEFAULT_ANALYSIS_MODEL
@@ -85,7 +95,7 @@ export default function AnalysisPage() {
   // Use refs to store stable references for useEffect dependencies
   const defaultPromptsRef = useRef<AnalysisPrompts | null>(null);
   const defaultModelSelectionsRef = useRef<Record<string, string>>(buildDefaultModelSelections());
-  
+
   // Track if we're loading prompts to prevent loops
   const isLoadingPromptsRef = useRef(false);
 
@@ -150,7 +160,6 @@ export default function AnalysisPage() {
         console.error('Failed to load default prompts:', error);
       } finally {
         setPromptsLoading(false);
-        // Delay clearing the loading flag to let child components stabilize
         setTimeout(() => {
           isLoadingPromptsRef.current = false;
         }, 100);
@@ -163,7 +172,6 @@ export default function AnalysisPage() {
   // Load project-specific prompts and leads count when project changes
   useEffect(() => {
     async function loadProjectData() {
-      // Use refs to get current values without causing re-renders
       const currentDefaultPrompts = defaultPromptsRef.current;
       const currentDefaultModelSelections = defaultModelSelectionsRef.current;
 
@@ -235,10 +243,9 @@ export default function AnalysisPage() {
     if (defaultPromptsRef.current) {
       loadProjectData();
     }
-  }, [selectedProjectId]); // Only depend on selectedProjectId to prevent infinite loop
+  }, [selectedProjectId]);
 
   const handleModelSelectionsChange = useCallback((selection: Record<string, string>) => {
-    // Prevent updates during initial load
     if (isLoadingPromptsRef.current) {
       return;
     }
@@ -252,7 +259,7 @@ export default function AnalysisPage() {
     }
 
     if (!selectedProjectId) {
-      alert('?? Project Required\n\nPlease select a project from the "Select Project (Required)" card at the top of the page.\n\nAll analyzed leads will automatically belong to the project you select.');
+      alert('⚠ Project Required\n\nPlease select a project from the "Select Project (Required)" card at the top of the page.\n\nAll analyzed leads will automatically belong to the project you select.');
       return;
     }
 
@@ -265,7 +272,7 @@ export default function AnalysisPage() {
           analysis_prompts: ensureDefaultModels(currentPrompts, true),
           analysis_model_selections: currentModelSelections
         } as any);
-        console.log('? Saved analysis prompts to project:', selectedProjectId);
+        console.log('✓ Saved analysis prompts to project:', selectedProjectId);
       } catch (error: any) {
         console.error('Failed to save analysis prompts:', error);
       }
@@ -329,11 +336,11 @@ export default function AnalysisPage() {
                 } else if (data.success === false && data.company) {
                   analyzed++;
                   updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
-                  addLog(taskId, `? ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
+                  addLog(taskId, `❌ ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
                 } else if (data.grade && data.company) {
                   analyzed++;
                   updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
-                  addLog(taskId, `? ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
+                  addLog(taskId, `✅ ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
                 } else if (data.successful !== undefined && data.failed !== undefined) {
                   addLog(taskId, `Analysis complete: ${data.successful}/${data.total} successful`, 'success');
                   completeTask(taskId);
@@ -352,9 +359,9 @@ export default function AnalysisPage() {
             updateTask(taskId, i + 1, `Completed ${i + 1}/${result.data.total}`);
 
             if (r.success) {
-              addLog(taskId, `? ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
+              addLog(taskId, `✅ ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
             } else {
-              addLog(taskId, `? ${r.company_name}: ${r.error}`, 'error');
+              addLog(taskId, `❌ ${r.company_name}: ${r.error}`, 'error');
             }
           });
 
@@ -377,58 +384,93 @@ export default function AnalysisPage() {
   const isAnalysisEngineOffline = engineStatus.analysis === 'offline';
 
   return (
-    <>
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Analysis</h1>
-          <p className="text-muted-foreground">
-            Complete website analysis using all 6 AI modules  Automatic page discovery  Lead scoring & prioritization
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto p-6 space-y-8">
+        {/* Hero Section */}
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/5 border border-primary/10 rounded-full mb-4">
+            <Brain className="w-4 h-4 text-primary" />
+            <span className="text-sm font-medium text-primary">AI-Powered Intelligence Engine</span>
+          </div>
+          <h1 className="text-4xl font-bold text-foreground">Intelligent Website Analysis</h1>
+          <p className="text-lg text-muted-foreground max-w-3xl leading-relaxed">
+            6 AI analyzers • Context-aware grading • Industry benchmarking • Lead priority scoring • Multi-format reports
           </p>
         </div>
 
-        {isAnalysisEngineOffline && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Analysis Engine Offline</AlertTitle>
-            <AlertDescription>
-              The analysis engine is not responding. Please start the analysis-engine service (port 3001) to analyze prospects.
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Stats Overview */}
+        <StatsOverview projectId={selectedProjectId} />
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <ProspectSelector
-              selectedIds={selectedIds}
-              onSelectionChange={setSelectedIds}
-              preSelectedIds={preSelectedIds}
-              projectId={selectedProjectId}
-              onProjectChange={setSelectedProjectId}
-            />
-          </div>
-
-          <div>
-            <AnalysisConfig
-              prospectCount={selectedIds.length}
-              onSubmit={handleAnalyze}
-              isLoading={isAnalyzing}
-              disabled={isAnalysisEngineOffline}
-              customPrompts={currentPrompts || undefined}
-              defaultPrompts={defaultPrompts || undefined}
-              onPromptsChange={handlePromptsChange}
-              promptsLocked={false}
-              leadsCount={leadsCount}
-              modelSelections={currentModelSelections}
-              defaultModelSelections={defaultModelSelections}
-              onModelSelectionsChange={handleModelSelectionsChange}
-            />
-          </div>
+        {/* Feature Showcase */}
+        <div className="space-y-4">
+          <h2 className="text-2xl font-semibold text-foreground">Powered by Advanced AI Features</h2>
+          <FeaturesShowcase />
         </div>
 
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="analyze" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="analyze">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Analyze Prospects
+            </TabsTrigger>
+            <TabsTrigger value="results">Recent Results</TabsTrigger>
+            <TabsTrigger value="benchmarks">Benchmarks</TabsTrigger>
+          </TabsList>
+
+          {/* Analyze Tab */}
+          <TabsContent value="analyze" className="space-y-6">
+            {isAnalysisEngineOffline && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Analysis Engine Offline</AlertTitle>
+                <AlertDescription>
+                  The analysis engine is not responding. Please start the analysis-engine service (port 3001) to analyze prospects.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <ProspectSelector
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  preSelectedIds={preSelectedIds}
+                  projectId={selectedProjectId}
+                  onProjectChange={setSelectedProjectId}
+                />
+              </div>
+
+              <div>
+                <AnalysisConfig
+                  prospectCount={selectedIds.length}
+                  onSubmit={handleAnalyze}
+                  isLoading={isAnalyzing}
+                  disabled={isAnalysisEngineOffline}
+                  customPrompts={currentPrompts || undefined}
+                  defaultPrompts={defaultPrompts || undefined}
+                  onPromptsChange={handlePromptsChange}
+                  promptsLocked={false}
+                  leadsCount={leadsCount}
+                  modelSelections={currentModelSelections}
+                  defaultModelSelections={defaultModelSelections}
+                  onModelSelectionsChange={handleModelSelectionsChange}
+                />
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Results Tab */}
+          <TabsContent value="results" className="space-y-6">
+            <AnalysisResults projectId={selectedProjectId} limit={20} />
+          </TabsContent>
+
+          {/* Benchmarks Tab */}
+          <TabsContent value="benchmarks" className="space-y-6">
+            <BenchmarkManager />
+          </TabsContent>
+        </Tabs>
       </div>
-    </>
+    </div>
   );
 }
-
-
-

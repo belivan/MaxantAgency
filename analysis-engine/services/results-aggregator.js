@@ -103,25 +103,25 @@ export class ResultsAggregator {
       if (aiGradingResult.success) {
         // AI grading successful - use AI results
         gradeResults = {
-          grade: aiGradingResult.grade,
+          grade: aiGradingResult.overall_grade || aiGradingResult.grade,  // Support both field names
           overallScore: aiGradingResult.overall_score,
           weightedScore: aiGradingResult.overall_score,
           bonuses: [],
           penalties: [],
-          weights: aiGradingResult.dimension_weights,
+          weights: aiGradingResult.dimension_weights_used,  // Fixed: was dimension_weights
+          weight_reasoning: aiGradingResult.weight_reasoning,  // Moved to top level for report display
           _meta: {
             grader: 'ai-comparative-v1',
             timestamp: new Date().toISOString(),
-            benchmark_id: aiGradingResult.comparison?.benchmark_id,
-            weight_reasoning: aiGradingResult.weight_reasoning
+            benchmark_id: aiGradingResult.comparison?.benchmark_id
           }
         };
 
         leadScoringData = {
           lead_score: aiGradingResult.lead_score,
-          lead_priority: aiGradingResult.lead_priority,
-          priority_tier: aiGradingResult.lead_priority === 'high' ? 'A' :
-                         aiGradingResult.lead_priority === 'medium' ? 'B' : 'C',
+          lead_priority: aiGradingResult.lead_score,  // Use numeric score (0-100), not string
+          priority_tier: aiGradingResult.lead_score >= 75 ? 'hot' :
+                         aiGradingResult.lead_score >= 50 ? 'warm' : 'cold',
           budget_likelihood: aiGradingResult.sales_insights?.estimated_project_value,
           receptiveness_score: aiGradingResult.sales_insights?.receptiveness_score,
           key_pain_points: aiGradingResult.sales_insights?.key_pain_points || [],

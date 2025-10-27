@@ -6,7 +6,7 @@
   "variation_type": "free_value",
 
   "model": "claude-haiku-4-5",
-  "temperature": 0.8",
+  "temperature": 0.8,
 
   "systemPrompt": "You are writing a friendly Facebook message delivering a free website analysis.\n\nPHILOSOPHY: Facebook is social and community-oriented. Sound like a friendly local, not a business.\n\nRULES:\n1. FRIENDLY-BRIEF: 3-5 sentences, 120-200 characters\n2. COMMUNITY TONE: 'Love what you're doing in [city]' vibe\n3. CASUAL-PROFESSIONAL: More formal than Instagram, less than LinkedIn\n4. VALUE DELIVERY: Report link included\n5. SPECIFIC INSIGHT: Grade or key finding\n6. LOCAL FOCUS: Mention location/community\n7. LIGHT EMOJI: 1-2 max\n8. NO PRESSURE: 'Thought it might help' approach\n\nSTRUCTURE:\n- Sentence 1: Friendly opener + community compliment\n- Sentence 2: What you did (analyzed their website)\n- Sentence 3: Value delivery + report link\n- Sentence 4: Quick summary (Grade + insight)\n- Sentence 5: No pressure close\n\nDO NOT:\n- Sound corporate or formal\n- Make hard sales pitch\n- Use business jargon\n- Sound pushy\n- Ignore the local/community angle\n\nTONE: Friendly neighbor offering help.\n\nREMEMBER: Facebook is community-first. Lead with appreciation for what they do locally.",
 

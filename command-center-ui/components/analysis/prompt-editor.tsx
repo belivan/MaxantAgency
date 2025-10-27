@@ -38,11 +38,8 @@ export interface PromptConfig {
 }
 
 export interface AnalysisPrompts {
-  design?: PromptConfig;
-  desktopVisual?: PromptConfig;
-  mobileVisual?: PromptConfig;
-  seo?: PromptConfig;
-  content?: PromptConfig;
+  unifiedVisual?: PromptConfig;
+  unifiedTechnical?: PromptConfig;
   social?: PromptConfig;
   accessibility?: PromptConfig;
   industry?: PromptConfig;
@@ -76,10 +73,8 @@ export function PromptEditor({
   const [editingPrompt, setEditingPrompt] = useState<string | null>(null);
 
   const MULTI_PAGE_PROMPT_ORDER: Array<keyof AnalysisPrompts> = [
-    'desktopVisual',
-    'mobileVisual',
-    'seo',
-    'content',
+    'unifiedVisual',
+    'unifiedTechnical',
     'social',
     'accessibility',
     'leadScorer',
@@ -88,21 +83,13 @@ export function PromptEditor({
   ];
 
   const PROMPT_LABELS: Record<string, { title: string; description: string }> = {
-    desktopVisual: {
-      title: 'Desktop Visual Analysis',
-      description: 'Vision-based desktop review'
+    unifiedVisual: {
+      title: 'Visual Analysis (Unified)',
+      description: 'Desktop + Mobile design analysis in one call'
     },
-    mobileVisual: {
-      title: 'Mobile Visual Analysis',
-      description: 'Vision-based mobile review'
-    },
-    seo: {
-      title: 'SEO Analysis',
-      description: 'Technical & metadata audit'
-    },
-    content: {
-      title: 'Content Analysis',
-      description: 'Messaging, tone, and conversion copy'
+    unifiedTechnical: {
+      title: 'Technical Analysis (Unified)',
+      description: 'SEO + Content quality in one call'
     },
     social: {
       title: 'Social Media Analysis',
@@ -111,6 +98,10 @@ export function PromptEditor({
     accessibility: {
       title: 'Accessibility Analysis',
       description: 'WCAG 2.1 compliance review'
+    },
+    industry: {
+      title: 'Industry Analysis',
+      description: 'Industry-specific best practices critique'
     },
     leadScorer: {
       title: 'Lead Priority Scorer',

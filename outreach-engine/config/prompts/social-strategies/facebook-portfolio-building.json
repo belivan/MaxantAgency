@@ -6,7 +6,7 @@
   "variation_type": "portfolio_building",
 
   "model": "claude-haiku-4-5",
-  "temperature": 0.8",
+  "temperature": 0.8,
 
   "systemPrompt": "You are writing a friendly, authentic Facebook message about building your portfolio.\n\nPHILOSOPHY: Facebook communities value honesty and local support. Be transparent about building your business.\n\nRULES:\n1. FRIENDLY-BRIEF: 3-5 sentences, 150-230 characters\n2. HONEST POSITIONING: Clear about building portfolio\n3. COMMUNITY ANGLE: Support local businesses theme\n4. VALUE DELIVERY: Report link included\n5. SPECIFIC DATA: Grade and findings\n6. WHY IT'S FREE: Building case studies\n7. LIGHT EMOJI: 1-2 max\n8. LOCAL FOCUS: Mention city/area\n\nSTRUCTURE:\n- Sentence 1: Friendly intro + local/community connection\n- Sentence 2: Honest positioning (building portfolio, supporting local)\n- Sentence 3: Value delivery + report link\n- Sentence 4: Summary of findings\n- Sentence 5: Why it's free + helpful close\n\nDO NOT:\n- Sound corporate\n- Apologize for being new\n- Make sales pitch\n- Ignore community angle\n- Sound desperate\n\nTONE: Friendly local supporter offering help while building their business.\n\nREMEMBER: Facebook values community support stories. Frame as 'helping local businesses while building portfolio'.",
 

@@ -152,7 +152,10 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     // Social media profiles
     social_profiles,
     // Benchmark data
-    matched_benchmark
+    matched_benchmark,
+    // AI Grading weights and reasoning
+    weight_reasoning,
+    weights
   } = analysisResult;
 
   // Use website_grade from database if grade is not provided
@@ -236,9 +239,19 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
       pinterest: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.162-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.741.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.401.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.354-.629-2.758-1.379l-.749 2.848c-.269 1.045-1.004 2.352-1.498 3.146 1.123.345 2.306.535 3.55.535 6.607 0 11.985-5.365 11.985-11.987C23.97 5.39 18.592.026 11.985.026L12.017 0z"/></svg>',
     };
 
+    // Filter out share buttons - only show real profiles
+    const isShareButton = (url) => {
+      if (!url) return true;
+      const sharePatterns = [
+        '/share', '/sharer', 'share?url=', '/pin/create',
+        'shareArticle', 'shareURL', 'share.php'
+      ];
+      return sharePatterns.some(pattern => url.includes(pattern));
+    };
+
     const socialLinks = [];
     for (const [platform, url] of Object.entries(social_profiles)) {
-      if (url) {
+      if (url && !isShareButton(url)) {
         socialLinks.push({ platform, url, icon: socialIcons[platform] || '' });
       }
     }
@@ -344,9 +357,45 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
 
     // Match info
     html += `          <div style="text-align: center; margin-top: 8px; font-size: 11px; opacity: 0.6;">\n`;
-    html += `            ${Math.round(matched_benchmark.match_score)}% match • ${matched_benchmark.comparison_tier}\n`;
+    html += `            ${Math.round(matched_benchmark.match_score || 0)}% match • ${matched_benchmark.comparison_tier || 'regional'}\n`;
     html += '          </div>\n';
 
+    html += '        </div>\n';
+  }
+
+  // Scoring Methodology (if AI grading was used)
+  if (weight_reasoning && weights) {
+    html += '        <div class="scoring-methodology-card" style="margin-top: 24px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><span>⚖️</span> How We Calculated Your Score</h3>\n';
+    html += `          <p style="font-size: 13px; opacity: 0.8; line-height: 1.6; margin-bottom: 16px;">${escapeHtml(weight_reasoning)}</p>\n`;
+
+    // Display weights as horizontal bars
+    html += '          <div style="display: grid; gap: 10px;">\n';
+
+    const weightEntries = Object.entries(weights).filter(([_, value]) => value > 0);
+    const weightLabels = {
+      design: { label: 'Design', icon: '🎨' },
+      seo: { label: 'SEO', icon: '🔍' },
+      content: { label: 'Content', icon: '✍️' },
+      performance: { label: 'Performance', icon: '⚡' },
+      social: { label: 'Social', icon: '📱' },
+      accessibility: { label: 'Accessibility', icon: '♿' }
+    };
+
+    weightEntries.forEach(([dimension, weight]) => {
+      const weightPercent = Math.round(weight * 100);
+      const dimInfo = weightLabels[dimension] || { label: dimension, icon: '📊' };
+
+      html += '            <div style="display: grid; grid-template-columns: 120px 1fr 60px; gap: 12px; align-items: center;">\n';
+      html += `              <div style="font-size: 13px; display: flex; align-items: center; gap: 6px;"><span>${dimInfo.icon}</span><span>${dimInfo.label}</span></div>\n`;
+      html += `              <div style="background: var(--bg-tertiary); border-radius: 6px; height: 16px; position: relative; overflow: hidden;">\n`;
+      html += `                <div style="background: linear-gradient(90deg, rgba(59, 130, 246, 0.8), rgba(147, 51, 234, 0.8)); height: 100%; width: ${weightPercent}%; border-radius: 4px;"></div>\n`;
+      html += '              </div>\n';
+      html += `              <div style="text-align: right; font-size: 13px; font-weight: 600;">${weightPercent}%</div>\n`;
+      html += '            </div>\n';
+    });
+
+    html += '          </div>\n';
     html += '        </div>\n';
   }
 
@@ -495,8 +544,8 @@ function generateBenchmarkComparisonChart(analysisResult, synthesisData) {
   }
 
   html += `        </div>\n`;
-  html += `        <div style="font-size: 14px; opacity: 0.8; line-height: 1.6;">${escapeHtml(matched_benchmark.match_reasoning || `${Math.round(matched_benchmark.match_score)}% match based on industry, business model, and digital capabilities.`)}</div>\n`;
-  html += `        <div style="margin-top: 12px; font-size: 13px;"><strong>Comparison Tier:</strong> ${matched_benchmark.comparison_tier}</div>\n`;
+  html += `        <div style="font-size: 14px; opacity: 0.8; line-height: 1.6;">${escapeHtml(matched_benchmark.match_reasoning || `${Math.round(matched_benchmark.match_score || 0)}% match based on industry, business model, and digital capabilities.`)}</div>\n`;
+  html += `        <div style="margin-top: 12px; font-size: 13px;"><strong>Comparison Tier:</strong> ${matched_benchmark.comparison_tier || 'regional'}</div>\n`;
   html += '      </div>\n';
 
   // Score comparison bars
@@ -548,6 +597,48 @@ function generateBenchmarkComparisonChart(analysisResult, synthesisData) {
 
   html += '      </div>\n';
 
+  // Helper function to extract readable strength descriptions
+  function extractStrengthDescriptions(strengthData, maxCount = 4) {
+    if (!strengthData) return [];
+
+    const descriptions = [];
+
+    // Handle Design strengths (complex object with nested arrays)
+    if (strengthData.desktopStrengths || strengthData.mobileStrengths || strengthData.overallPatterns) {
+      // Extract desktop strengths
+      if (Array.isArray(strengthData.desktopStrengths)) {
+        strengthData.desktopStrengths.slice(0, 2).forEach(s => {
+          if (s.technique && s.specifics) {
+            descriptions.push(`${s.technique}: ${s.specifics}`);
+          }
+        });
+      }
+
+      // Extract overall patterns
+      if (Array.isArray(strengthData.overallPatterns)) {
+        strengthData.overallPatterns.slice(0, 2).forEach(pattern => {
+          if (typeof pattern === 'string') {
+            descriptions.push(pattern);
+          }
+        });
+      }
+    }
+    // Handle SEO/Content strengths (array of objects)
+    else if (Array.isArray(strengthData)) {
+      strengthData.slice(0, maxCount).forEach(s => {
+        if (typeof s === 'string') {
+          descriptions.push(s);
+        } else if (s.technique) {
+          // For SEO/Content strength objects
+          const desc = s.specifics || s.why_it_works || s.impact || '';
+          descriptions.push(`${s.technique}${desc ? ': ' + desc : ''}`);
+        }
+      });
+    }
+
+    return descriptions.slice(0, maxCount);
+  }
+
   // "What they do well" section - Grid layout
   html += '      <div>\n';
   html += `        <h3 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;">What ${escapeHtml(matched_benchmark.company_name)} Does Well</h3>\n`;
@@ -561,8 +652,13 @@ function generateBenchmarkComparisonChart(analysisResult, synthesisData) {
     { label: 'Accessibility', strengths: matched_benchmark.accessibility_strengths, icon: '♿' }
   ];
 
-  // Filter categories with strengths
-  const categoriesWithStrengths = strengthCategories.filter(c => c.strengths && c.strengths.length > 0);
+  // Filter categories with strengths and extract descriptions
+  const categoriesWithStrengths = strengthCategories
+    .map(c => ({
+      ...c,
+      descriptions: extractStrengthDescriptions(c.strengths)
+    }))
+    .filter(c => c.descriptions.length > 0);
 
   if (categoriesWithStrengths.length > 0) {
     // Grid layout - 2 columns on desktop, 1 on mobile
@@ -575,8 +671,8 @@ function generateBenchmarkComparisonChart(analysisResult, synthesisData) {
       html += `              <span>${category.label}</span>\n`;
       html += '            </div>\n';
       html += '            <ul style="margin: 0; padding-left: 20px; opacity: 0.9; line-height: 1.6;">\n';
-      category.strengths.slice(0, 4).forEach(strength => {
-        html += `              <li style="margin-bottom: 6px; font-size: 14px;">${escapeHtml(strength)}</li>\n`;
+      category.descriptions.forEach(description => {
+        html += `              <li style="margin-bottom: 6px; font-size: 14px;">${escapeHtml(description)}</li>\n`;
       });
       html += '            </ul>\n';
       html += '          </div>\n';
@@ -618,7 +714,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
   if (matched_benchmark.screenshot_desktop_url && screenshot_desktop_url) {
     html += '      <div style="margin-bottom: 48px;">\n';
     html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary);">Desktop View</h3>\n';
-    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">\n';
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; justify-content: center; margin: 0 auto; max-width: 1200px;">\n';
 
     // Your Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';
@@ -665,7 +761,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
   if (matched_benchmark.screenshot_mobile_url && screenshot_mobile_url) {
     html += '      <div>\n';
     html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary);">Mobile View</h3>\n';
-    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; max-width: 800px;">\n';
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; max-width: 500px; justify-content: center; margin: 0 auto;">\n';
 
     // Your Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';

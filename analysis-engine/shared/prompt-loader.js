@@ -237,11 +237,8 @@ export async function getRawPromptConfig(promptPath) {
 export async function collectAnalysisPrompts() {
   try {
     const [
-      designPrompt,
-      desktopVisualPrompt,
-      mobileVisualPrompt,
-      seoPrompt,
-      contentPrompt,
+      unifiedVisualPrompt,
+      unifiedTechnicalPrompt,
       socialPrompt,
       accessibilityPrompt,
       industryPrompt,
@@ -249,11 +246,8 @@ export async function collectAnalysisPrompts() {
       issueDeduplicationPrompt,
       executiveInsightsPrompt
     ] = await Promise.all([
-      getRawPromptConfig('web-design/design-critique'),
-      getRawPromptConfig('web-design/desktop-visual-analysis'),
-      getRawPromptConfig('web-design/mobile-visual-analysis'),
-      getRawPromptConfig('web-design/seo-analysis'),
-      getRawPromptConfig('web-design/content-analysis'),
+      getRawPromptConfig('web-design/unified-visual-analysis'),
+      getRawPromptConfig('web-design/unified-technical-analysis'),
       getRawPromptConfig('web-design/social-analysis'),
       getRawPromptConfig('web-design/accessibility-analysis'),
       getRawPromptConfig('web-design/industry-critique'),
@@ -263,11 +257,8 @@ export async function collectAnalysisPrompts() {
     ]);
 
     return {
-      design: designPrompt,
-      desktopVisual: desktopVisualPrompt,
-      mobileVisual: mobileVisualPrompt,
-      seo: seoPrompt,
-      content: contentPrompt,
+      unifiedVisual: unifiedVisualPrompt,
+      unifiedTechnical: unifiedTechnicalPrompt,
       social: socialPrompt,
       accessibility: accessibilityPrompt,
       industry: industryPrompt,
@@ -276,7 +267,7 @@ export async function collectAnalysisPrompts() {
       executiveInsights: executiveInsightsPrompt,
       _meta: {
         collectedAt: new Date().toISOString(),
-        version: '1.0'
+        version: '2.0'  // Updated version to reflect unified analyzers
       }
     };
   } catch (error) {

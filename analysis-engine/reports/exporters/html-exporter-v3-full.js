@@ -599,7 +599,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
   if (matched_benchmark.screenshot_desktop_url && screenshot_desktop_url) {
     html += '      <div style="margin-bottom: 48px;">\n';
     html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary);">Desktop View</h3>\n';
-    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">\n';
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; justify-content: center; margin: 0 auto; max-width: 1200px;">\n';
 
     // Your Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';
@@ -646,7 +646,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
   if (matched_benchmark.screenshot_mobile_url && screenshot_mobile_url) {
     html += '      <div>\n';
     html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 20px; color: var(--text-primary);">Mobile View</h3>\n';
-    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; max-width: 800px;">\n';
+    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; max-width: 500px; justify-content: center; margin: 0 auto;">\n';
 
     // Your Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';

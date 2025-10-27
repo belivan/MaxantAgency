@@ -36,10 +36,8 @@ interface AnalysisConfigProps {
 }
 
 const CORE_MODULES = [
-  { value: 'desktopVisual', label: 'Desktop Design', description: 'Vision analysis of desktop screenshots', defaultModel: 'gpt-5' },
-  { value: 'mobileVisual', label: 'Mobile Design', description: 'Vision analysis of mobile screenshots', defaultModel: 'gpt-5' },
-  { value: 'seo', label: 'SEO Analysis', description: 'Technical SEO + keywords', defaultModel: 'gpt-5' },
-  { value: 'content', label: 'Content Analysis', description: 'Copy quality + messaging', defaultModel: 'gpt-5' },
+  { value: 'unifiedVisual', label: 'Visual Analysis', description: 'Desktop + Mobile design (unified)', defaultModel: 'gpt-5', unified: true },
+  { value: 'unifiedTechnical', label: 'Technical Analysis', description: 'SEO + Content quality (unified)', defaultModel: 'gpt-5', unified: true },
   { value: 'social', label: 'Social Media', description: 'Social profiles + presence', defaultModel: 'gpt-5' },
   { value: 'accessibility', label: 'Accessibility', description: 'WCAG 2.1 Level AA compliance', defaultModel: 'gpt-5' },
   { value: 'leadScorer', label: 'Lead Priority Scorer', description: 'AI qualification scoring', defaultModel: 'gpt-5' }
@@ -80,19 +78,11 @@ const AI_MODELS: readonly AIModel[] = [
   },
   {
     value: 'claude-sonnet-4-5',
-    label: 'Claude 3.5 Sonnet',
+    label: 'Claude Sonnet 4.5',
     provider: 'Anthropic',
     description: 'Strong writing + structured output',
     cost: '$$',
     speed: 'Fast'
-  },
-  {
-    value: 'claude-haiku-4-5',
-    label: 'Claude 3.5 Haiku',
-    provider: 'Anthropic',
-    description: 'Low-cost quick insights',
-    cost: '$',
-    speed: 'Very Fast'
   },
   {
     value: 'grok-4-fast',

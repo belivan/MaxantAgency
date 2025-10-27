@@ -467,8 +467,11 @@ function extractContentFreshness(pages) {
           const text = $(el).text().trim();
 
           if (datetime) {
-            detectedDates.push(new Date(datetime));
-            postCount++;
+            const date = parseDate(datetime);
+            if (date) {
+              detectedDates.push(date);
+              postCount++;
+            }
           } else if (text) {
             // Try to parse date from text
             const date = parseDate(text);
@@ -518,15 +521,20 @@ function extractContentFreshness(pages) {
 
   // Find most recent date
   if (detectedDates.length > 0) {
-    detectedDates.sort((a, b) => b - a); // Sort descending
-    lastUpdate = detectedDates[0].toISOString().split('T')[0];
+    // Filter out any invalid dates before processing
+    const validDates = detectedDates.filter(d => !isNaN(d.getTime()));
 
-    const daysSinceUpdate = Math.floor((new Date() - detectedDates[0]) / (1000 * 60 * 60 * 24));
+    if (validDates.length > 0) {
+      validDates.sort((a, b) => b - a); // Sort descending
+      lastUpdate = validDates[0].toISOString().split('T')[0];
+
+      const daysSinceUpdate = Math.floor((new Date() - validDates[0]) / (1000 * 60 * 60 * 24));
     if (daysSinceUpdate < 30) {
       signals.push(`Most recent content: ${daysSinceUpdate} days ago`);
     } else if (daysSinceUpdate < 365) {
       const monthsSince = Math.floor(daysSinceUpdate / 30);
       signals.push(`Most recent content: ${monthsSince} month${monthsSince > 1 ? 's' : ''} ago`);
+    }
     }
   }
 

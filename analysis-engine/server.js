@@ -21,6 +21,7 @@ import { createClient } from '@supabase/supabase-js';
 import { analyzeWebsiteIntelligent } from './orchestrator-refactored.js';
 import { collectAnalysisPrompts } from './shared/prompt-loader.js';
 import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
+import { analyzeBenchmark } from './services/benchmark-analyzer.js';
 
 // Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
@@ -69,6 +70,91 @@ app.get('/api/prompts/default', async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to load default prompts'
+    });
+  }
+});
+
+/**
+ * POST /api/analyze-benchmark
+ *
+ * Analyze a website as a benchmark (extracts SUCCESS PATTERNS, not problems)
+ *
+ * Body: {
+ *   "url": "https://heartland.com",
+ *   "company_name": "Heartland Dental",
+ *   "industry": "dental",
+ *   "benchmark_tier": "national" | "regional" | "local",
+ *   "google_rating": 4.7,
+ *   "google_review_count": 500,
+ *   "location_city": "Effingham",
+ *   "location_state": "IL",
+ *   "awards": [{award: "Best Dental Support Organization 2024"}],
+ *   "notes": "Largest DSO in the US",
+ *   "force": false
+ * }
+ */
+app.post('/api/analyze-benchmark', async (req, res) => {
+  try {
+    const {
+      url,
+      company_name,
+      industry,
+      benchmark_tier,
+      google_rating,
+      google_review_count,
+      location_city,
+      location_state,
+      awards,
+      notes,
+      force
+    } = req.body;
+
+    // Validation
+    if (!url) {
+      return res.status(400).json({ error: 'url is required' });
+    }
+    if (!company_name) {
+      return res.status(400).json({ error: 'company_name is required' });
+    }
+    if (!industry) {
+      return res.status(400).json({ error: 'industry is required' });
+    }
+
+    console.log(`[Benchmark Analysis] Analyzing ${company_name} as benchmark...`);
+
+    const result = await analyzeBenchmark({
+      company_name,
+      website_url: url,
+      industry,
+      benchmark_tier: benchmark_tier || 'regional',
+      google_rating,
+      google_review_count,
+      location_city,
+      location_state,
+      awards,
+      notes,
+      source: 'api'
+    }, {
+      force: force || false
+    });
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        benchmark: result.benchmark
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('[Benchmark Analysis] Error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });

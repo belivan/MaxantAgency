@@ -81,73 +81,58 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
         prompt = await loadPrompt('web-design/unified-visual-analysis', variables);
       }
 
-      // For multiple images, we need to call OpenAI API directly
-      // The unified ai-client doesn't support multiple images yet
-      const desktopBase64 = page.screenshots.desktop.toString('base64');
-      const mobileBase64 = page.screenshots.mobile.toString('base64');
+      // Call centralized AI client with both desktop and mobile screenshots
+      // Prepare images with smart split support
+      // Import compression function to handle sections
+      const { compressImageIfNeeded } = await import('../shared/ai-client.js');
 
-      // Import OpenAI client
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const desktopProcessed = await compressImageIfNeeded(page.screenshots.desktop);
+      const mobileProcessed = await compressImageIfNeeded(page.screenshots.mobile);
 
-      // Build messages with both images
-      const startTime = Date.now();
-      const apiResponse = await openai.chat.completions.create({
+      // Build images array and description
+      const images = [];
+      const imageDescriptions = [];
+      let imageCounter = 1;
+
+      // Handle desktop (single image or sections)
+      if (Array.isArray(desktopProcessed)) {
+        desktopProcessed.forEach((section) => {
+          images.push(section.buffer);
+          imageDescriptions.push(`Screenshot ${imageCounter}: DESKTOP - ${section.label} SECTION`);
+          imageCounter++;
+        });
+      } else {
+        images.push(desktopProcessed);
+        imageDescriptions.push(`Screenshot ${imageCounter}: DESKTOP viewport`);
+        imageCounter++;
+      }
+
+      // Handle mobile (single image or sections)
+      if (Array.isArray(mobileProcessed)) {
+        mobileProcessed.forEach((section) => {
+          images.push(section.buffer);
+          imageDescriptions.push(`Screenshot ${imageCounter}: MOBILE - ${section.label} SECTION`);
+          imageCounter++;
+        });
+      } else {
+        images.push(mobileProcessed);
+        imageDescriptions.push(`Screenshot ${imageCounter}: MOBILE viewport`);
+        imageCounter++;
+      }
+
+      const imageContext = '\n\n**' + imageDescriptions.join(' | ') + '**';
+
+      // Call centralized AI client with processed images
+      const response = await callAI({
         model: prompt.model,
-        messages: [
-          {
-            role: 'system',
-            content: prompt.systemPrompt
-          },
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: prompt.userPrompt + '\n\n**Screenshot 1: DESKTOP viewport | Screenshot 2: MOBILE viewport**'
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/png;base64,${desktopBase64}`,
-                  detail: 'high'
-                }
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/png;base64,${mobileBase64}`,
-                  detail: 'high'
-                }
-              }
-            ]
-          }
-        ],
+        systemPrompt: prompt.systemPrompt,
+        userPrompt: prompt.userPrompt + imageContext,
         temperature: prompt.temperature,
-        max_tokens: 16384,
-        response_format: { type: 'json_object' }
+        images: images,
+        jsonMode: true
       });
 
-      const duration = Date.now() - startTime;
-
-      // Calculate cost (GPT-4o Vision pricing: $5/1M input, $15/1M output)
-      const inputCost = (apiResponse.usage.prompt_tokens / 1_000_000) * 5;
-      const outputCost = (apiResponse.usage.completion_tokens / 1_000_000) * 15;
-      const cost = inputCost + outputCost;
-
-      // Build response object compatible with callAI
-      const response = {
-        content: apiResponse.choices[0]?.message?.content,
-        usage: {
-          prompt_tokens: apiResponse.usage.prompt_tokens,
-          completion_tokens: apiResponse.usage.completion_tokens,
-          total_tokens: apiResponse.usage.total_tokens
-        },
-        cost,
-        model: prompt.model
-      };
-
-      console.log(`[Unified Visual Analyzer] AI response (${duration}ms, ${response.usage.total_tokens} tokens, $${cost.toFixed(4)})`);
+      console.log(`[Unified Visual Analyzer] AI response (${response.usage?.total_tokens || 0} tokens, $${response.cost?.toFixed(4) || '0.0000'})`);
 
       const modelUsed = response.model || prompt.model;
       lastPromptModel = modelUsed;
