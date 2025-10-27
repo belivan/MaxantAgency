@@ -18,6 +18,7 @@ import {
   BarChart3,
   Info
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 interface NavItem {
   label: string;
@@ -118,6 +119,11 @@ export function Navbar() {
                 )}
               </Link>
             ))}
+
+            {/* Theme Toggle */}
+            <div className="ml-2 pl-2 border-l border-border">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </div>

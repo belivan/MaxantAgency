@@ -207,19 +207,19 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     html += '          <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: center;">\n';
 
     if (contact_email) {
-      html += `            <a href="mailto:${escapeHtml(contact_email)}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">`;
+      html += `            <a href="mailto:${escapeHtml(contact_email)}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">`;
       html += `<span style="font-size: 1.1em; opacity: 0.7;">📧</span><span>${escapeHtml(contact_email)}</span></a>\n`;
     }
 
     if (contact_phone) {
       const cleanPhone = contact_phone.replace(/\D/g, ''); // Remove non-digits
-      html += `            <a href="tel:${cleanPhone}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">`;
+      html += `            <a href="tel:${cleanPhone}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">`;
       html += `<span style="font-size: 1.1em; opacity: 0.7;">📞</span><span>${escapeHtml(contact_phone)}</span></a>\n`;
     }
 
     if (url) {
       const displayUrl = url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
-      html += `            <a href="${escapeHtml(url)}" target="_blank" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">`;
+      html += `            <a href="${escapeHtml(url)}" target="_blank" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">`;
       html += `<span style="font-size: 1.1em; opacity: 0.7;">🌐</span><span>${escapeHtml(displayUrl)}</span></a>\n`;
     }
 
@@ -261,7 +261,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
 
       socialLinks.forEach(({ platform, url, icon }) => {
         const capitalizedPlatform = platform.charAt(0).toUpperCase() + platform.slice(1);
-        html += `          <a href="${escapeHtml(url)}" target="_blank" title="${capitalizedPlatform}" style="color: var(--text-secondary); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 50%; transition: all 0.2s;" onmouseover="this.style.background='var(--primary-lightest)'; this.style.borderColor='var(--primary-light)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'" onmouseout="this.style.background='var(--bg-secondary)'; this.style.borderColor='var(--border-light)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">\n`;
+        html += `          <a href="${escapeHtml(url)}" target="_blank" title="${capitalizedPlatform}" style="color: var(--text-secondary); text-decoration: none; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 50%; transition: all 0.2s;" onmouseover="this.style.background='var(--primary-lightest)'; this.style.borderColor='var(--primary-light)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='var(--shadow-md)'" onmouseout="this.style.background='var(--bg-secondary)'; this.style.borderColor='var(--border-light)'; this.style.transform='translateY(0)'; this.style.boxShadow='none'">\n`;
         html += `            ${icon}\n`;
         html += '          </a>\n';
       });
@@ -296,8 +296,8 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
   scores.forEach(score => {
     if (score.value !== undefined && score.value !== null) {
       const scoreValue = Math.round(score.value || 0);
-      // Lighter, more transparent colors
-      const barColor = scoreValue >= 80 ? 'rgba(16, 185, 129, 0.7)' : scoreValue >= 60 ? 'rgba(245, 158, 11, 0.7)' : 'rgba(239, 68, 68, 0.7)';
+      // Use CSS variables for colors that adapt to theme
+      const barColor = scoreValue >= 80 ? 'var(--success)' : scoreValue >= 60 ? 'var(--warning)' : 'var(--danger)';
 
       html += '              <div style="display: grid; grid-template-columns: 100px 1fr 50px; gap: 12px; align-items: center;">\n';
 
@@ -309,7 +309,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
 
       // Bar graph with lighter background
       html += '                <div style="background: var(--bg-tertiary); border-radius: 8px; height: 20px; position: relative; overflow: hidden; border: 1px solid var(--border-light);">\n';
-      html += `                  <div style="background: ${barColor}; height: 100%; width: ${scoreValue}%; border-radius: 6px; transition: width 0.3s;"></div>\n`;
+      html += `                  <div style="background: ${barColor}; height: 100%; width: ${scoreValue}%; border-radius: 6px; transition: width 0.3s; opacity: 0.8;"></div>\n`;
       html += '                </div>\n';
 
       // Score number with /100
@@ -325,7 +325,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
 
   // Benchmark Comparison (if available)
   if (matched_benchmark) {
-    html += '        <div class="benchmark-comparison-card" style="margin-top: 24px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '        <div class="benchmark-comparison-card" style="margin-top: 24px; padding: 20px; background: var(--bg-tertiary); border-radius: 12px; border: 1px solid var(--border-light);">\n';
     html += '          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 16px;">vs. Industry Leader</h3>\n';
     html += '          <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;">\n';
 
@@ -349,7 +349,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     // Gap indicator
     const gap = (matched_benchmark.overall_score || matched_benchmark.scores?.overall || 0) - overall_score;
     const gapText = gap > 0 ? `${Math.round(gap)} points to close` : gap < 0 ? `${Math.round(Math.abs(gap))} points ahead!` : 'Matched!';
-    const gapColor = gap > 0 ? 'rgba(251, 191, 36, 0.8)' : gap < 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.8)';
+    const gapColor = gap > 0 ? 'var(--warning)' : gap < 0 ? 'var(--success)' : 'var(--success)';
 
     html += `          <div style="text-align: center; margin-top: 12px; font-size: 13px; color: ${gapColor};">\n`;
     html += `            ${gap > 0 ? '↑' : gap < 0 ? '✓' : '✓'} ${gapText}\n`;
@@ -365,7 +365,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
 
   // Scoring Methodology (if AI grading was used)
   if (weight_reasoning && weights) {
-    html += '        <div class="scoring-methodology-card" style="margin-top: 24px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '        <div class="scoring-methodology-card" style="margin-top: 24px; padding: 20px; background: var(--bg-tertiary); border-radius: 12px; border: 1px solid var(--border-light);">\n';
     html += '          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><span>⚖️</span> How We Calculated Your Score</h3>\n';
     html += `          <p style="font-size: 13px; opacity: 0.8; line-height: 1.6; margin-bottom: 16px;">${escapeHtml(weight_reasoning)}</p>\n`;
 
@@ -389,7 +389,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
       html += '            <div style="display: grid; grid-template-columns: 120px 1fr 60px; gap: 12px; align-items: center;">\n';
       html += `              <div style="font-size: 13px; display: flex; align-items: center; gap: 6px;"><span>${dimInfo.icon}</span><span>${dimInfo.label}</span></div>\n`;
       html += `              <div style="background: var(--bg-tertiary); border-radius: 6px; height: 16px; position: relative; overflow: hidden;">\n`;
-      html += `                <div style="background: linear-gradient(90deg, rgba(59, 130, 246, 0.8), rgba(147, 51, 234, 0.8)); height: 100%; width: ${weightPercent}%; border-radius: 4px;"></div>\n`;
+      html += `                <div style="background: var(--primary); height: 100%; width: ${weightPercent}%; border-radius: 4px; opacity: 0.8;"></div>\n`;
       html += '              </div>\n';
       html += `              <div style="text-align: right; font-size: 13px; font-weight: 600;">${weightPercent}%</div>\n`;
       html += '            </div>\n';
@@ -717,8 +717,8 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; justify-content: center; margin: 0 auto; max-width: 1200px;">\n';
 
     // Your Website
-    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';
-    html += '            <div style="padding: 16px; background: rgba(255, 255, 255, 0.05); border-bottom: 2px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--border-default);">\n';
+    html += '            <div style="padding: 16px; background: var(--bg-tertiary); border-bottom: 2px solid var(--border-default);">\n';
     html += '              <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">Your Website</div>\n';
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -726,10 +726,10 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed desktop screenshot from screenshotData
     const yourDesktopScreenshot = screenshotData.screenshots.find(s => s.device === 'desktop');
     if (yourDesktopScreenshot?.dataUri) {
-      html += `              <img src="${yourDesktopScreenshot.dataUri}" alt="Your Website - Desktop" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${yourDesktopScreenshot.dataUri}" alt="Your Website - Desktop" style="width: 100%; height: 600px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
       // Fallback to path-based loading
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5;">Screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5;">Screenshot not available</div>\n';
     }
 
     html += '            </div>\n';
@@ -737,7 +737,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
 
     // Benchmark Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--primary);">\n';
-    html += '            <div style="padding: 16px; background: rgba(99, 102, 241, 0.1); border-bottom: 2px solid var(--primary);">\n';
+    html += '            <div style="padding: 16px; background: var(--primary-lightest); border-bottom: 2px solid var(--primary);">\n';
     html += `              <div style="font-weight: 600; font-size: 1rem; color: var(--primary);">${escapeHtml(matched_benchmark.company_name)} (Benchmark)</div>\n`;
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -745,9 +745,9 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed benchmark desktop screenshot
     const benchmarkDesktopScreenshot = screenshotData.benchmarkScreenshots?.find(s => s.device === 'desktop');
     if (benchmarkDesktopScreenshot?.dataUri) {
-      html += `              <img src="${benchmarkDesktopScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Desktop" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${benchmarkDesktopScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Desktop" style="width: 100%; height: 600px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
     }
 
     html += '            </div>\n';
@@ -764,8 +764,8 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; max-width: 500px; justify-content: center; margin: 0 auto;">\n';
 
     // Your Website
-    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';
-    html += '            <div style="padding: 16px; background: rgba(255, 255, 255, 0.05); border-bottom: 2px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--border-default);">\n';
+    html += '            <div style="padding: 16px; background: var(--bg-tertiary); border-bottom: 2px solid var(--border-default);">\n';
     html += '              <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">Your Website</div>\n';
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -773,10 +773,10 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed mobile screenshot from screenshotData
     const yourMobileScreenshot = screenshotData.screenshots.find(s => s.device === 'mobile');
     if (yourMobileScreenshot?.dataUri) {
-      html += `              <img src="${yourMobileScreenshot.dataUri}" alt="Your Website - Mobile" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${yourMobileScreenshot.dataUri}" alt="Your Website - Mobile" style="width: 100%; height: 800px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
       // Fallback
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5;">Screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5;">Screenshot not available</div>\n';
     }
 
     html += '            </div>\n';
@@ -784,7 +784,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
 
     // Benchmark Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--primary);">\n';
-    html += '            <div style="padding: 16px; background: rgba(99, 102, 241, 0.1); border-bottom: 2px solid var(--primary);">\n';
+    html += '            <div style="padding: 16px; background: var(--primary-lightest); border-bottom: 2px solid var(--primary);">\n';
     html += `              <div style="font-weight: 600; font-size: 1rem; color: var(--primary);">${escapeHtml(matched_benchmark.company_name)} (Benchmark)</div>\n`;
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -792,9 +792,9 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed benchmark mobile screenshot
     const benchmarkMobileScreenshot = screenshotData.benchmarkScreenshots?.find(s => s.device === 'mobile');
     if (benchmarkMobileScreenshot?.dataUri) {
-      html += `              <img src="${benchmarkMobileScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Mobile" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${benchmarkMobileScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Mobile" style="width: 100%; height: 800px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
     }
 
     html += '            </div>\n';

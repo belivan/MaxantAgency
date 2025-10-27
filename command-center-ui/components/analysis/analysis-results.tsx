@@ -25,12 +25,11 @@ interface AnalysisResult {
   id: string;
   company_name: string;
   url: string;
-  grade: string;
+  website_grade: string;
   overall_score: number;
   lead_priority: number;
   industry: string;
   analyzed_at: string;
-  has_report: boolean;
 }
 
 export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string | null; limit?: number }) {
@@ -89,10 +88,10 @@ export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string 
               Recent Analyses
             </CardTitle>
             <CardDescription className="mt-1">
-              {total > 0 ? `${total} total analyses` : 'No analyses yet'}
+              {results.length > 0 ? `${total} total analyses` : 'No analyses yet'}
             </CardDescription>
           </div>
-          {total > limit && (
+          {results.length > 0 && total > limit && (
             <Button variant="outline" size="sm" asChild>
               <a href="/leads">View All</a>
             </Button>
@@ -110,7 +109,7 @@ export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string 
             <p className="text-sm">No analyses yet. Start analyzing prospects to see results here.</p>
           </div>
         ) : (
-          <div className="rounded-lg border">
+          <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -124,10 +123,14 @@ export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string 
               </TableHeader>
               <TableBody>
                 {results.map((result) => (
-                  <TableRow key={result.id}>
+                  <TableRow
+                    key={result.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => window.location.href = `/leads/${result.id}`}
+                  >
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-medium text-foreground">
+                        <span className="font-medium">
                           {result.company_name}
                         </span>
                         <a
@@ -135,6 +138,7 @@ export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string 
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {new URL(result.url).hostname}
                           <ExternalLink className="w-3 h-3" />
@@ -143,7 +147,7 @@ export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string 
                     </TableCell>
                     <TableCell>
                       <GradeBadge
-                        grade={result.grade}
+                        grade={result.website_grade}
                         score={result.overall_score}
                         size="sm"
                         showScore
@@ -168,7 +172,7 @@ export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string 
                         {formatDate(result.analyzed_at)}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="sm" asChild>
                         <a href={`/leads/${result.id}`}>
                           View Details

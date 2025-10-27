@@ -148,7 +148,7 @@ export function FloatingTaskIndicator() {
                     key={task.id}
                     className={`border-b last:border-b-0 ${
                       isRunning
-                        ? 'bg-blue-50/50 dark:bg-blue-950/20'
+                        ? 'bg-primary/5 dark:bg-primary/10'
                         : isCompleted
                         ? 'bg-green-50/50 dark:bg-green-950/20'
                         : isCancelled
@@ -162,7 +162,7 @@ export function FloatingTaskIndicator() {
                         {/* Icon */}
                         <div className="flex-shrink-0 mt-0.5">
                           {isRunning ? (
-                            <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                            <Loader2 className="w-4 h-4 text-primary animate-spin" />
                           ) : isCompleted ? (
                             <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
                           ) : isCancelled ? (
@@ -331,7 +331,7 @@ export function FloatingTaskIndicator() {
           size="lg"
           className={`rounded-full h-14 w-14 shadow-lg transition-all ${
             hasActiveTasks
-              ? 'bg-blue-600 hover:bg-blue-700 animate-pulse'
+              ? 'bg-primary hover:bg-primary/90 animate-pulse'
               : 'bg-primary hover:bg-primary/90'
           }`}
         >

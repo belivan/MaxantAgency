@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "name": "facebook-free-value",
+  "name": "instagram-free-value",
   "description": "Instagram DM - Direct report delivery, ultra-casual, no ask",
-  "platforms": ["facebook"],
+  "platforms": ["instagram"],
   "variation_type": "free_value",
 
   "model": "claude-haiku-4-5",

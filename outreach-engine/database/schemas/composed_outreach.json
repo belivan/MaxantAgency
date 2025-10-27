@@ -1,0 +1,211 @@
+{
+  "table": "composed_outreach",
+  "description": "All outreach variations for a lead consolidated into one row (12 variations per lead)",
+
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier"
+    },
+    {
+      "name": "lead_id",
+      "type": "uuid",
+      "required": true,
+      "unique": true,
+      "index": true,
+      "description": "Reference to the lead - ONE ROW PER LEAD"
+    },
+    {
+      "name": "url",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Website URL"
+    },
+    {
+      "name": "company_name",
+      "type": "text",
+      "required": true,
+      "index": true,
+      "description": "Company name"
+    },
+    {
+      "name": "industry",
+      "type": "text",
+      "index": true,
+      "description": "Industry"
+    },
+    {
+      "name": "contact_email",
+      "type": "text",
+      "description": "Contact email"
+    },
+    {
+      "name": "contact_name",
+      "type": "text",
+      "description": "Contact name"
+    },
+    {
+      "name": "contact_title",
+      "type": "text",
+      "description": "Contact title"
+    },
+
+    {
+      "name": "email_free_value",
+      "type": "jsonb",
+      "description": "Free value delivery email: { subject: string, body: string }"
+    },
+    {
+      "name": "email_portfolio_building",
+      "type": "jsonb",
+      "description": "Portfolio building email: { subject: string, body: string }"
+    },
+    {
+      "name": "email_problem_first",
+      "type": "jsonb",
+      "description": "Problem-first email: { subject: string, body: string }"
+    },
+
+    {
+      "name": "instagram_free_value",
+      "type": "text",
+      "description": "Instagram free value DM (80-150 chars, no URLs)"
+    },
+    {
+      "name": "instagram_portfolio_building",
+      "type": "text",
+      "description": "Instagram portfolio building DM"
+    },
+    {
+      "name": "instagram_problem_first",
+      "type": "text",
+      "description": "Instagram problem-first DM"
+    },
+
+    {
+      "name": "linkedin_free_value",
+      "type": "text",
+      "description": "LinkedIn free value DM (150-250 chars, professional)"
+    },
+    {
+      "name": "linkedin_portfolio_building",
+      "type": "text",
+      "description": "LinkedIn portfolio building DM"
+    },
+    {
+      "name": "linkedin_problem_first",
+      "type": "text",
+      "description": "LinkedIn problem-first DM"
+    },
+
+    {
+      "name": "facebook_free_value",
+      "type": "text",
+      "description": "Facebook free value DM (120-200 chars, community-focused)"
+    },
+    {
+      "name": "facebook_portfolio_building",
+      "type": "text",
+      "description": "Facebook portfolio building DM"
+    },
+    {
+      "name": "facebook_problem_first",
+      "type": "text",
+      "description": "Facebook problem-first DM"
+    },
+
+    {
+      "name": "instagram_profile_url",
+      "type": "text",
+      "description": "Instagram profile URL"
+    },
+    {
+      "name": "linkedin_profile_url",
+      "type": "text",
+      "description": "LinkedIn profile URL"
+    },
+    {
+      "name": "facebook_profile_url",
+      "type": "text",
+      "description": "Facebook profile URL"
+    },
+
+    {
+      "name": "data_sources_used",
+      "type": "jsonb",
+      "description": "Which analysis fields were used (executive_summary, consolidated_issues, quick_wins, etc.)"
+    },
+
+    {
+      "name": "generation_metadata",
+      "type": "jsonb",
+      "description": "AI model, costs, tokens, timing for all 12 generations: { total_cost, total_time_ms, total_tokens, per_variation: {...} }"
+    },
+
+    {
+      "name": "status",
+      "type": "text",
+      "enum": ["pending", "ready", "approved", "rejected", "in_use"],
+      "default": "ready",
+      "index": true,
+      "description": "Overall status"
+    },
+
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Reference to parent project"
+    },
+
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When generated"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "Last updated"
+    }
+  ],
+
+  "indexes": [
+    {
+      "name": "idx_composed_outreach_lead_id",
+      "columns": ["lead_id"],
+      "unique": true
+    },
+    {
+      "name": "idx_composed_outreach_company",
+      "columns": ["company_name"]
+    },
+    {
+      "name": "idx_composed_outreach_status",
+      "columns": ["status", "created_at"]
+    },
+    {
+      "name": "idx_composed_outreach_project",
+      "columns": ["project_id", "status"]
+    }
+  ],
+
+  "foreignKeys": [
+    {
+      "column": "lead_id",
+      "references": "leads.id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "CASCADE"
+    }
+  ]
+}

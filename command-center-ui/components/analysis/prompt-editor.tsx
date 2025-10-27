@@ -77,6 +77,7 @@ export function PromptEditor({
     'unifiedTechnical',
     'social',
     'accessibility',
+    'industry',
     'leadScorer',
     'issueDeduplication',
     'executiveInsights'

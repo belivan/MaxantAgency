@@ -125,11 +125,45 @@
             --transition-slow: 350ms ease;
         }
 
-        /* Dark mode support (optional) */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                /* Override with dark theme colors if needed */
-            }
+        /* Dark Mode Variables */
+        body.dark-mode {
+            --primary: #818CF8;
+            --primary-light: #A5B4FC;
+            --primary-lighter: #C7D2FE;
+            --primary-lightest: #312E81;
+            --primary-dark: #6366F1;
+
+            --bg-primary: #18181B;
+            --bg-secondary: #27272A;
+            --bg-tertiary: #3F3F46;
+
+            --text-primary: #F4F4F5;
+            --text-secondary: #D4D4D8;
+            --text-tertiary: #A1A1AA;
+            --text-inverse: #18181B;
+
+            --border-light: #3F3F46;
+            --border-default: #52525B;
+            --border-dark: #71717A;
+
+            --gray-50: #18181B;
+            --gray-100: #27272A;
+            --gray-200: #3F3F46;
+            --gray-300: #52525B;
+            --gray-400: #71717A;
+            --gray-500: #A1A1AA;
+            --gray-600: #D4D4D8;
+            --gray-700: #E4E4E7;
+            --gray-800: #F4F4F5;
+            --gray-900: #FAFAFA;
+
+            --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.6);
+            --shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.6), 0 2px 4px -2px rgba(0, 0, 0, 0.6);
+            --shadow-xl: 0 10px 15px -3px rgba(0, 0, 0, 0.7), 0 4px 6px -4px rgba(0, 0, 0, 0.7);
+
+            background-color: #18181B;
         }
 
         /* Base Typography */
@@ -1472,14 +1506,112 @@
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
         }
+
+        /* Dark Mode Toggle Button */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-full);
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all var(--transition-base);
+            z-index: 1000;
+        }
+
+        .dark-mode-toggle:hover {
+            background-color: var(--bg-tertiary);
+            box-shadow: var(--shadow-lg);
+            transform: scale(1.05);
+        }
+
+        .dark-mode-toggle svg {
+            width: 20px;
+            height: 20px;
+            color: var(--text-primary);
+        }
+
+        /* Hide toggle in print mode */
+        @media print {
+            .dark-mode-toggle {
+                display: none !important;
+            }
+
+            /* Force light mode for PDF */
+            body.dark-mode {
+                --primary: #4F46E5;
+                --bg-primary: #FFFFFF;
+                --bg-secondary: #F9FAFB;
+                --bg-tertiary: #FAFAFA;
+                --text-primary: #18181B;
+                --text-secondary: #52525B;
+                --text-tertiary: #71717A;
+                --text-inverse: #FFFFFF;
+                --border-light: #E4E4E7;
+                --border-default: #D4D4D8;
+                --border-dark: #A1A1AA;
+                background-color: #FFFFFF;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Dark Mode Toggle Button -->
+    <button class="dark-mode-toggle" id="darkModeToggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+        <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <svg id="moonIcon" style="display: none;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+    </button>
+
     <div class="report-wrapper">
         {{REPORT_CONTENT}}
     </div>
 
     <script>
+        // Dark Mode Toggle
+        (function() {
+            const toggle = document.getElementById('darkModeToggle');
+            const sunIcon = document.getElementById('sunIcon');
+            const moonIcon = document.getElementById('moonIcon');
+            const body = document.body;
+
+            // Check localStorage and initialize dark mode
+            const savedTheme = localStorage.getItem('report-theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+                body.classList.add('dark-mode');
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+
+            // Toggle dark mode
+            toggle.addEventListener('click', function() {
+                body.classList.toggle('dark-mode');
+                const isDark = body.classList.contains('dark-mode');
+
+                if (isDark) {
+                    sunIcon.style.display = 'none';
+                    moonIcon.style.display = 'block';
+                    localStorage.setItem('report-theme', 'dark');
+                } else {
+                    sunIcon.style.display = 'block';
+                    moonIcon.style.display = 'none';
+                    localStorage.setItem('report-theme', 'light');
+                }
+            });
+        })();
+
         // Interactive Features
         document.addEventListener('DOMContentLoaded', function() {
             // Smooth scrolling for anchor links

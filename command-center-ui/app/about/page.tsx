@@ -5,7 +5,7 @@ import { Zap, Brain, Target, TrendingUp, Sparkles, Bot, Search, FileText, Mail, 
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-6 py-20">
         {/* Hero Section */}
         <div className="text-center mb-24">

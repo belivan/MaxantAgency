@@ -391,6 +391,13 @@
       "type": "integer",
       "description": "How well the prospect fits the Ideal Customer Profile (0-100)"
     },
+    {
+      "name": "benchmark_tier",
+      "type": "text",
+      "enum": ["aspirational", "competitive", "baseline"],
+      "index": true,
+      "description": "Benchmark tier classification - aspirational: top performers (A+), competitive: solid performers (A-B), baseline: average performers (C+)"
+    },
 
     {
       "name": "quality_gap_score",

@@ -384,7 +384,7 @@ export default function AnalysisPage() {
   const isAnalysisEngineOffline = engineStatus.analysis === 'offline';
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6 space-y-8">
         {/* Hero Section */}
         <div className="space-y-4">

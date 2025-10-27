@@ -46,19 +46,19 @@ const priorityConfig = {
 
 const sizeConfig = {
   sm: {
-    container: 'h-6 px-2 gap-1',
-    icon: 'w-3 h-3',
+    container: 'px-2 py-1.5 gap-1.5',
+    icon: 'w-3.5 h-3.5',
     text: 'text-xs',
     score: 'text-xs'
   },
   md: {
-    container: 'h-7 px-2.5 gap-1.5',
+    container: 'px-3 py-2 gap-2',
     icon: 'w-4 h-4',
     text: 'text-sm',
     score: 'text-xs'
   },
   lg: {
-    container: 'h-9 px-3 gap-2',
+    container: 'px-4 py-2.5 gap-2',
     icon: 'w-5 h-5',
     text: 'text-base',
     score: 'text-sm'
@@ -97,10 +97,13 @@ export function PriorityBadge({
   const sizes = sizeConfig[size];
   const Icon = config.icon;
 
+  // Split label into two lines (e.g., "Hot" and "Lead")
+  const [firstWord, secondWord] = config.label.split(' ');
+
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-full border font-medium',
+        'inline-flex items-center rounded-lg border font-semibold',
         config.bg,
         config.border,
         config.text,
@@ -110,7 +113,10 @@ export function PriorityBadge({
     >
       <Icon className={sizes.icon} />
       {showLabel && (
-        <span className={sizes.text}>{config.label}</span>
+        <div className="flex flex-col leading-none text-center -space-y-0.5">
+          <span className={sizes.text}>{firstWord}</span>
+          <span className={sizes.text}>{secondWord}</span>
+        </div>
       )}
       {showScore && score !== undefined && (
         <span className={cn('opacity-70', sizes.score)}>

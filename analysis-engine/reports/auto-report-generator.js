@@ -7,13 +7,80 @@ import { generateReport, generateStoragePath, generateReportFilename, validateAn
 import { uploadReport, saveReportMetadata } from './storage/supabase-storage.js';
 import { runReportSynthesis } from './synthesis/report-synthesis.js';
 import { generateHTMLReportV3 } from './exporters/html-exporter-v3-concise.js';
-import { writeFile, mkdir } from 'fs/promises';
+import { writeFile, mkdir, readFile } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+/**
+ * Prepare screenshot data for HTML report embedding
+ * Loads screenshots as base64 dataURIs
+ */
+async function prepareScreenshotData(reportData) {
+  const screenshotData = {
+    screenshots: [],
+    benchmarkScreenshots: []
+  };
+
+  // Load target website screenshots
+  if (reportData.screenshot_desktop_path && existsSync(reportData.screenshot_desktop_path)) {
+    try {
+      const buffer = await readFile(reportData.screenshot_desktop_path);
+      screenshotData.screenshots.push({
+        device: 'desktop',
+        dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not load desktop screenshot: ${err.message}`);
+    }
+  }
+
+  if (reportData.screenshot_mobile_path && existsSync(reportData.screenshot_mobile_path)) {
+    try {
+      const buffer = await readFile(reportData.screenshot_mobile_path);
+      screenshotData.screenshots.push({
+        device: 'mobile',
+        dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+      });
+    } catch (err) {
+      console.warn(`⚠️ Could not load mobile screenshot: ${err.message}`);
+    }
+  }
+
+  // Load benchmark screenshots if available
+  const benchmark = reportData.matched_benchmark;
+  if (benchmark) {
+    if (benchmark.screenshot_desktop_path && existsSync(benchmark.screenshot_desktop_path)) {
+      try {
+        const buffer = await readFile(benchmark.screenshot_desktop_path);
+        screenshotData.benchmarkScreenshots.push({
+          device: 'desktop',
+          dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+        });
+      } catch (err) {
+        console.warn(`⚠️ Could not load benchmark desktop screenshot: ${err.message}`);
+      }
+    }
+
+    if (benchmark.screenshot_mobile_path && existsSync(benchmark.screenshot_mobile_path)) {
+      try {
+        const buffer = await readFile(benchmark.screenshot_mobile_path);
+        screenshotData.benchmarkScreenshots.push({
+          device: 'mobile',
+          dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+        });
+      } catch (err) {
+        console.warn(`⚠️ Could not load benchmark mobile screenshot: ${err.message}`);
+      }
+    }
+  }
+
+  return screenshotData;
+}
 
 /**
  * Automatically generate and upload a report after analysis
@@ -121,6 +188,32 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     const localFilename = generateReportFilename(reportData, format);
     const localReportPath = join(reportsDir, localFilename);
 
+    // If format is HTML, also generate both preview AND full versions
+    let previewPath = null;
+    let fullPath = null;
+    if (format === 'html') {
+      console.log('📊 Generating BOTH preview and full HTML reports...');
+
+      // Load screenshots as base64 dataURIs for embedding
+      const screenshotData = await prepareScreenshotData(reportData);
+
+      // Generate preview (concise) report
+      const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3-concise.js');
+      const previewContent = await generateHTMLReportV3(reportData, synthesisData, screenshotData);
+      const previewFilename = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-PREVIEW.html`;
+      previewPath = join(reportsDir, previewFilename);
+      await writeFile(previewPath, previewContent, 'utf8');
+      console.log(`📄 Preview report saved: ${previewFilename}`);
+
+      // Generate full (comprehensive) report
+      const { generateHTMLReportV3Full } = await import('./exporters/html-exporter-v3-full.js');
+      const fullContent = await generateHTMLReportV3Full(reportData, synthesisData, screenshotData);
+      const fullFilename = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-FULL.html`;
+      fullPath = join(reportsDir, fullFilename);
+      await writeFile(fullPath, fullContent, 'utf8');
+      console.log(`📄 Full report saved: ${fullFilename}`);
+    }
+
     let localPath = localReportPath;
     let contentForUpload = report.content;
 
@@ -216,6 +309,8 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       storage_path: uploadResult.path,
       full_path: uploadResult.fullPath,
       local_path: localPath,
+      preview_path: previewPath, // Preview report path (HTML only)
+      full_report_path: fullPath, // Full report path (HTML only)
       format,
       file_size: fileSize,
       metadata: report.metadata,

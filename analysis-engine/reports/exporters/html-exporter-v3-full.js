@@ -123,9 +123,11 @@ async function generateFullContent(analysisResult, synthesisData, registry, scre
   content += generateCompleteIssueBreakdown(analysisResult);
 
   // 8. WCAG Accessibility Compliance (NEW - Full Report Only)
-  if (analysisResult.accessibility_compliance) {
-    content += generateAccessibilityComplianceSection(analysisResult);
-  }
+  // REMOVED: Duplicate section - accessibility data is already displayed in "Accessibility Issues" section
+  // The data structure (accessibility_issues array) doesn't match what this function expects (levelA/AA/AAA objects)
+  // if (analysisResult.accessibility_compliance) {
+  //   content += generateAccessibilityComplianceSection(analysisResult);
+  // }
 
   // 9. Multi-Page Screenshot Gallery (NEW - Enhanced Visual Evidence)
   if (screenshotData.screenshots.length > 0 || analysisResult.crawl_metadata?.pages) {
@@ -218,19 +220,19 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     html += '          <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: center;">\n';
 
     if (contact_email) {
-      html += `            <a href="mailto:${escapeHtml(contact_email)}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">`;
+      html += `            <a href="mailto:${escapeHtml(contact_email)}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">`;
       html += `<span style="font-size: 1.1em; opacity: 0.7;">📧</span><span>${escapeHtml(contact_email)}</span></a>\n`;
     }
 
     if (contact_phone) {
       const cleanPhone = contact_phone.replace(/\D/g, ''); // Remove non-digits
-      html += `            <a href="tel:${cleanPhone}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">`;
+      html += `            <a href="tel:${cleanPhone}" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">`;
       html += `<span style="font-size: 1.1em; opacity: 0.7;">📞</span><span>${escapeHtml(contact_phone)}</span></a>\n`;
     }
 
     if (url) {
       const displayUrl = url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
-      html += `            <a href="${escapeHtml(url)}" target="_blank" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='rgba(0,0,0,0.05)'" onmouseout="this.style.background='transparent'">`;
+      html += `            <a href="${escapeHtml(url)}" target="_blank" style="color: var(--text-primary); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; padding: 6px 12px; background: transparent; border-radius: 8px; transition: all 0.2s;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='transparent'">`;
       html += `<span style="font-size: 1.1em; opacity: 0.7;">🌐</span><span>${escapeHtml(displayUrl)}</span></a>\n`;
     }
 
@@ -264,8 +266,8 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
   scores.forEach(score => {
     if (score.value !== undefined && score.value !== null) {
       const scoreValue = Math.round(score.value || 0);
-      // Lighter, more transparent colors
-      const barColor = scoreValue >= 80 ? 'rgba(16, 185, 129, 0.7)' : scoreValue >= 60 ? 'rgba(245, 158, 11, 0.7)' : 'rgba(239, 68, 68, 0.7)';
+      // Use CSS variables for colors that adapt to theme
+      const barColor = scoreValue >= 80 ? 'var(--success)' : scoreValue >= 60 ? 'var(--warning)' : 'var(--danger)';
 
       html += '              <div style="display: grid; grid-template-columns: 100px 1fr 50px; gap: 12px; align-items: center;">\n';
 
@@ -277,7 +279,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
 
       // Bar graph with lighter background
       html += '                <div style="background: var(--bg-tertiary); border-radius: 8px; height: 20px; position: relative; overflow: hidden; border: 1px solid var(--border-light);">\n';
-      html += `                  <div style="background: ${barColor}; height: 100%; width: ${scoreValue}%; border-radius: 6px; transition: width 0.3s;"></div>\n`;
+      html += `                  <div style="background: ${barColor}; height: 100%; width: ${scoreValue}%; border-radius: 6px; transition: width 0.3s; opacity: 0.8;"></div>\n`;
       html += '                </div>\n';
 
       // Score number with /100
@@ -293,7 +295,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
 
   // Benchmark Comparison (if available)
   if (matched_benchmark) {
-    html += '        <div class="benchmark-comparison-card" style="margin-top: 24px; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '        <div class="benchmark-comparison-card" style="margin-top: 24px; padding: 20px; background: var(--bg-tertiary); border-radius: 12px; border: 1px solid var(--border-light);">\n';
     html += '          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 16px;">vs. Industry Leader</h3>\n';
     html += '          <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;">\n';
 
@@ -317,7 +319,7 @@ function generateExecutiveDashboard(analysisResult, synthesisData) {
     // Gap indicator
     const gap = matched_benchmark.scores.overall - overall_score;
     const gapText = gap > 0 ? `${Math.round(gap)} points to close` : gap < 0 ? `${Math.round(Math.abs(gap))} points ahead!` : 'Matched!';
-    const gapColor = gap > 0 ? 'rgba(251, 191, 36, 0.8)' : gap < 0 ? 'rgba(34, 197, 94, 0.8)' : 'rgba(34, 197, 94, 0.8)';
+    const gapColor = gap > 0 ? 'var(--warning)' : gap < 0 ? 'var(--success)' : 'var(--success)';
 
     html += `          <div style="text-align: center; margin-top: 12px; font-size: 13px; color: ${gapColor};">\n`;
     html += `            ${gap > 0 ? '↑' : gap < 0 ? '✓' : '✓'} ${gapText}\n`;
@@ -534,12 +536,45 @@ function generateBenchmarkComparisonChart(analysisResult, synthesisData) {
   html += `        <h3 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;">What ${escapeHtml(matched_benchmark.company_name)} Does Well</h3>\n`;
   html += '        <p style="opacity: 0.8; margin-bottom: 20px; font-size: 14px;">Learn from their approach to these areas:</p>\n';
 
+  // Helper to extract string array from strength objects
+  const extractStrengthStrings = (strengthObj) => {
+    if (!strengthObj) return [];
+
+    // If it's already an array of strings, return as-is
+    if (Array.isArray(strengthObj) && strengthObj.every(s => typeof s === 'string')) {
+      return strengthObj;
+    }
+
+    // Extract from object structure (e.g., {overallPatterns: [...], desktopStrengths: [...]})
+    let strings = [];
+
+    // Check for overallPatterns (array of strings)
+    if (strengthObj.overallPatterns && Array.isArray(strengthObj.overallPatterns)) {
+      strings.push(...strengthObj.overallPatterns);
+    }
+
+    // Extract technique strings from desktop/mobile strength objects
+    if (strengthObj.desktopStrengths && Array.isArray(strengthObj.desktopStrengths)) {
+      strengthObj.desktopStrengths.slice(0, 2).forEach(s => {
+        if (s.technique) strings.push(`Desktop: ${s.technique}`);
+      });
+    }
+
+    if (strengthObj.mobileStrengths && Array.isArray(strengthObj.mobileStrengths)) {
+      strengthObj.mobileStrengths.slice(0, 2).forEach(s => {
+        if (s.technique) strings.push(`Mobile: ${s.technique}`);
+      });
+    }
+
+    return strings;
+  };
+
   const strengthCategories = [
-    { label: 'Design', strengths: matched_benchmark.design_strengths, icon: '🎨' },
-    { label: 'SEO', strengths: matched_benchmark.seo_strengths, icon: '🔍' },
-    { label: 'Content', strengths: matched_benchmark.content_strengths, icon: '✍️' },
-    { label: 'Social', strengths: matched_benchmark.social_strengths, icon: '📱' },
-    { label: 'Accessibility', strengths: matched_benchmark.accessibility_strengths, icon: '♿' }
+    { label: 'Design', strengths: extractStrengthStrings(matched_benchmark.design_strengths), icon: '🎨' },
+    { label: 'SEO', strengths: extractStrengthStrings(matched_benchmark.seo_strengths), icon: '🔍' },
+    { label: 'Content', strengths: extractStrengthStrings(matched_benchmark.content_strengths), icon: '✍️' },
+    { label: 'Social', strengths: extractStrengthStrings(matched_benchmark.social_strengths), icon: '📱' },
+    { label: 'Accessibility', strengths: extractStrengthStrings(matched_benchmark.accessibility_strengths), icon: '♿' }
   ];
 
   // Filter categories with strengths
@@ -602,8 +637,8 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; justify-content: center; margin: 0 auto; max-width: 1200px;">\n';
 
     // Your Website
-    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';
-    html += '            <div style="padding: 16px; background: rgba(255, 255, 255, 0.05); border-bottom: 2px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--border-default);">\n';
+    html += '            <div style="padding: 16px; background: var(--bg-tertiary); border-bottom: 2px solid rgba(255, 255, 255, 0.1);">\n';
     html += '              <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">Your Website</div>\n';
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -611,10 +646,10 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed desktop screenshot from screenshotData
     const yourDesktopScreenshot = screenshotData.screenshots.find(s => s.device === 'desktop');
     if (yourDesktopScreenshot?.dataUri) {
-      html += `              <img src="${yourDesktopScreenshot.dataUri}" alt="Your Website - Desktop" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${yourDesktopScreenshot.dataUri}" alt="Your Website - Desktop" style="width: 100%; height: 600px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
       // Fallback to path-based loading
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5;">Screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5;">Screenshot not available</div>\n';
     }
 
     html += '            </div>\n';
@@ -622,7 +657,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
 
     // Benchmark Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--primary);">\n';
-    html += '            <div style="padding: 16px; background: rgba(99, 102, 241, 0.1); border-bottom: 2px solid var(--primary);">\n';
+    html += '            <div style="padding: 16px; background: var(--primary-lightest); border-bottom: 2px solid var(--primary);">\n';
     html += `              <div style="font-weight: 600; font-size: 1rem; color: var(--primary);">${escapeHtml(matched_benchmark.company_name)} (Benchmark)</div>\n`;
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -630,9 +665,9 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed benchmark desktop screenshot
     const benchmarkDesktopScreenshot = screenshotData.benchmarkScreenshots?.find(s => s.device === 'desktop');
     if (benchmarkDesktopScreenshot?.dataUri) {
-      html += `              <img src="${benchmarkDesktopScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Desktop" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${benchmarkDesktopScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Desktop" style="width: 100%; height: 600px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
     }
 
     html += '            </div>\n';
@@ -649,8 +684,8 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 24px; max-width: 500px; justify-content: center; margin: 0 auto;">\n';
 
     // Your Website
-    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.1);">\n';
-    html += '            <div style="padding: 16px; background: rgba(255, 255, 255, 0.05); border-bottom: 2px solid rgba(255, 255, 255, 0.1);">\n';
+    html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--border-default);">\n';
+    html += '            <div style="padding: 16px; background: var(--bg-tertiary); border-bottom: 2px solid rgba(255, 255, 255, 0.1);">\n';
     html += '              <div style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">Your Website</div>\n';
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -658,10 +693,10 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed mobile screenshot from screenshotData
     const yourMobileScreenshot = screenshotData.screenshots.find(s => s.device === 'mobile');
     if (yourMobileScreenshot?.dataUri) {
-      html += `              <img src="${yourMobileScreenshot.dataUri}" alt="Your Website - Mobile" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${yourMobileScreenshot.dataUri}" alt="Your Website - Mobile" style="width: 100%; height: 800px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
       // Fallback
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5;">Screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5;">Screenshot not available</div>\n';
     }
 
     html += '            </div>\n';
@@ -669,7 +704,7 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
 
     // Benchmark Website
     html += '          <div style="background: var(--bg-secondary); border-radius: 12px; overflow: hidden; border: 2px solid var(--primary);">\n';
-    html += '            <div style="padding: 16px; background: rgba(99, 102, 241, 0.1); border-bottom: 2px solid var(--primary);">\n';
+    html += '            <div style="padding: 16px; background: var(--primary-lightest); border-bottom: 2px solid var(--primary);">\n';
     html += `              <div style="font-weight: 600; font-size: 1rem; color: var(--primary);">${escapeHtml(matched_benchmark.company_name)} (Benchmark)</div>\n`;
     html += '            </div>\n';
     html += '            <div style="padding: 0;">\n';
@@ -677,9 +712,9 @@ function generateSideBySideComparison(analysisResult, screenshotData) {
     // Find the processed benchmark mobile screenshot
     const benchmarkMobileScreenshot = screenshotData.benchmarkScreenshots?.find(s => s.device === 'mobile');
     if (benchmarkMobileScreenshot?.dataUri) {
-      html += `              <img src="${benchmarkMobileScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Mobile" style="width: 100%; height: auto; display: block;" />\n`;
+      html += `              <img src="${benchmarkMobileScreenshot.dataUri}" alt="${escapeHtml(matched_benchmark.company_name)} - Mobile" style="width: 100%; height: 800px; object-fit: cover; object-position: top; display: block;" />\n`;
     } else {
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255, 255, 255, 0.05); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
+      html += '              <div style="padding: 60px 20px; text-align: center; background: var(--bg-tertiary); opacity: 0.5; font-style: italic;">Benchmark screenshot not available</div>\n';
     }
 
     html += '            </div>\n';
@@ -1417,9 +1452,7 @@ function generateBusinessIntelligenceSection(analysisResult) {
       html += `            <li>${escapeHtml(feature)}</li>\n`;
     });
     html += '          </ul>\n';
-    if (business_intelligence.premiumFeatures.budgetIndicator) {
-      html += `          <p style="margin-top: 12px; font-style: italic; opacity: 0.8;"><strong>Budget Indicator:</strong> ${escapeHtml(business_intelligence.premiumFeatures.budgetIndicator)}</p>\n`;
-    }
+    // Budget Indicator removed - not shown in client-facing reports
     html += '        </div>\n';
   }
 
@@ -1476,16 +1509,16 @@ function generateTechnicalDeepDive(analysisResult) {
     const generateMetricCard = (label, value, unit, thresholds) => {
       const numValue = parseFloat(value);
       let status = 'poor';
-      let color = 'rgba(239, 68, 68, 0.8)'; // Red
+      let color = 'var(--danger)'; // Red
       let percentage = 100;
 
       if (numValue <= thresholds.good) {
         status = 'good';
-        color = 'rgba(16, 185, 129, 0.8)'; // Green
+        color = 'var(--success)'; // Green
         percentage = (numValue / thresholds.good) * 50; // First half is good range
       } else if (numValue <= thresholds.needsImprovement) {
         status = 'needs-improvement';
-        color = 'rgba(245, 158, 11, 0.8)'; // Orange
+        color = 'var(--warning)'; // Orange
         const range = thresholds.needsImprovement - thresholds.good;
         const position = numValue - thresholds.good;
         percentage = 50 + (position / range) * 30; // Middle 30% is needs improvement
@@ -1501,8 +1534,8 @@ function generateTechnicalDeepDive(analysisResult) {
           </div>
           <div style="position: relative; width: 100%; height: 24px; background: var(--bg-tertiary); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-light);">
             <div style="position: absolute; width: ${percentage}%; height: 100%; background: ${color}; transition: width 0.3s;"></div>
-            <div style="position: absolute; left: 50%; width: 2px; height: 100%; background: rgba(0,0,0,0.2);"></div>
-            <div style="position: absolute; left: 80%; width: 2px; height: 100%; background: rgba(0,0,0,0.2);"></div>
+            <div style="position: absolute; left: 50%; width: 2px; height: 100%; background: var(--border-default);"></div>
+            <div style="position: absolute; left: 80%; width: 2px; height: 100%; background: var(--border-default);"></div>
           </div>
           <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">
             <span>Good: &lt;${thresholds.good}${unit}</span>
@@ -1516,14 +1549,14 @@ function generateTechnicalDeepDive(analysisResult) {
     // Helper function to generate performance score gauge
     const generateScoreGauge = (score, label, icon) => {
       const numScore = parseInt(score) || 0;
-      let color = 'rgba(239, 68, 68, 0.8)'; // Red
+      let color = 'var(--danger)'; // Red
       let status = 'Poor';
 
       if (numScore >= 90) {
-        color = 'rgba(16, 185, 129, 0.8)'; // Green
+        color = 'var(--success)'; // Green
         status = 'Good';
       } else if (numScore >= 50) {
-        color = 'rgba(245, 158, 11, 0.8)'; // Orange
+        color = 'var(--warning)'; // Orange
         status = 'Needs Improvement';
       }
 
@@ -1628,6 +1661,13 @@ function generateTechnicalDeepDive(analysisResult) {
     html += '        <p style="opacity: 0.7; margin-bottom: 16px; font-size: 0.95rem;">Performance data from actual Chrome users visiting your website over the past 28 days.</p>\n';
 
     const metrics = performance_metrics_crux.metrics || {};
+    const hasMetrics = Object.keys(metrics).length > 0;
+
+    if (!hasMetrics) {
+      html += '        <p style="font-style: italic; opacity: 0.7; padding: 16px; background: var(--bg-primary); border-radius: 8px; border-left: 4px solid var(--warning);">CrUX data is not available for this website. This usually means the site doesn\'t have enough Chrome user traffic yet to generate meaningful statistics. Google\'s Chrome User Experience Report (CrUX) requires a minimum threshold of users before publishing data.</p>\n';
+      html += '      </div>\n';
+      return html; // Exit early if no metrics
+    }
 
     // Helper function to get metric display name
     const getMetricName = (key) => {
@@ -1667,22 +1707,22 @@ function generateTechnicalDeepDive(analysisResult) {
       html += '          <div style="display: flex; width: 100%; height: 32px; border-radius: 6px; overflow: hidden; margin-bottom: 8px; border: 1px solid var(--border-light);">\n';
 
       if (good > 0) {
-        html += `            <div style="width: ${good}%; background: rgba(16, 185, 129, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${good > 10 ? good + '%' : ''}</div>\n`;
+        html += `            <div style="width: ${good}%; background: var(--success); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${good > 10 ? good + '%' : ''}</div>\n`;
       }
       if (needsImprovement > 0) {
-        html += `            <div style="width: ${needsImprovement}%; background: rgba(245, 158, 11, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${needsImprovement > 10 ? needsImprovement + '%' : ''}</div>\n`;
+        html += `            <div style="width: ${needsImprovement}%; background: var(--warning); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${needsImprovement > 10 ? needsImprovement + '%' : ''}</div>\n`;
       }
       if (poor > 0) {
-        html += `            <div style="width: ${poor}%; background: rgba(239, 68, 68, 0.8); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${poor > 10 ? poor + '%' : ''}</div>\n`;
+        html += `            <div style="width: ${poor}%; background: var(--danger); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">${poor > 10 ? poor + '%' : ''}</div>\n`;
       }
 
       html += '          </div>\n';
 
       // Legend
       html += '          <div style="display: flex; gap: 16px; font-size: 0.85rem;">\n';
-      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: rgba(16, 185, 129, 0.8); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Good: ${good}%</span></div>\n`;
-      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: rgba(245, 158, 11, 0.8); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Needs Improvement: ${needsImprovement}%</span></div>\n`;
-      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: rgba(239, 68, 68, 0.8); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Poor: ${poor}%</span></div>\n`;
+      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: var(--success); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Good: ${good}%</span></div>\n`;
+      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: var(--warning); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Needs Improvement: ${needsImprovement}%</span></div>\n`;
+      html += `            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 12px; height: 12px; background: var(--danger); border-radius: 2px;"></div><span style="color: var(--text-secondary);">Poor: ${poor}%</span></div>\n`;
       html += '          </div>\n';
 
       html += '        </div>\n';
@@ -1874,20 +1914,22 @@ function generateMultiPageScreenshotGallery(analysisResult, screenshotData, regi
 
     // Desktop screenshot
     if (page.screenshot_paths.desktop) {
+      const desktopUrl = (registry && registry.get) ? (registry.get(page.screenshot_paths.desktop) || page.screenshot_paths.desktop) : page.screenshot_paths.desktop;
       html += '          <div>\n';
       html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">🖥️ Desktop View</h4>\n';
-      html += '            <div style="border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;">\n';
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255,255,255,0.05); opacity: 0.5;">Screenshot available in full report</div>\n';
+      html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary);">\n';
+      html += `              <img src="${escapeHtml(desktopUrl)}" alt="Desktop screenshot" style="width: 100%; height: auto; display: block;" loading="lazy" />\n`;
       html += '            </div>\n';
       html += '          </div>\n';
     }
 
     // Mobile screenshot
     if (page.screenshot_paths.mobile) {
+      const mobileUrl = (registry && registry.get) ? (registry.get(page.screenshot_paths.mobile) || page.screenshot_paths.mobile) : page.screenshot_paths.mobile;
       html += '          <div>\n';
       html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">📱 Mobile View</h4>\n';
-      html += '            <div style="border: 2px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;">\n';
-      html += '              <div style="padding: 60px 20px; text-align: center; background: rgba(255,255,255,0.05); opacity: 0.5;">Screenshot available in full report</div>\n';
+      html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary); max-width: 400px;">\n';
+      html += `              <img src="${escapeHtml(mobileUrl)}" alt="Mobile screenshot" style="width: 100%; height: auto; display: block;" loading="lazy" />\n`;
       html += '            </div>\n';
       html += '          </div>\n';
     }
@@ -2022,7 +2064,7 @@ function generateAppendix(analysisResult, synthesisData) {
 
   let html = '';
   html += '    <!-- Appendix -->\n';
-  html += '    <section class="section" id="appendix" style="background: rgba(255,255,255,0.02); border-top: 2px solid rgba(255,255,255,0.1);">\n';
+  html += '    <section class="section" id="appendix" style="background: var(--bg-secondary); border-top: 2px solid var(--border-default);">\n';
   html += '      <div class="section-header">\n';
   html += '        <h2 class="section-title" style="font-size: 1.5rem; font-weight: bold;">\n';
   html += '          <span class="section-title-icon">📚</span>\n';
@@ -2065,7 +2107,7 @@ function generateAppendix(analysisResult, synthesisData) {
   if (Object.keys(synthesis_stage_metadata).length > 0) {
     html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
     html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🤖 AI Synthesis Metadata</h3>\n';
-    html += '        <div style="font-family: monospace; background: rgba(0,0,0,0.5); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">\n';
+    html += '        <div style="font-family: monospace; background: var(--bg-tertiary); padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 0.85rem;">\n';
     html += `          <pre>${JSON.stringify(synthesis_stage_metadata, null, 2)}</pre>\n`;
     html += '        </div>\n';
     html += '      </div>\n';

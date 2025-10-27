@@ -1,44 +1,42 @@
 {
   "version": "1.0",
   "name": "facebook-problem-first",
-  "description": "Facebook message - Lead with helpful problem identification, friendly but direct",
+  "description": "Facebook DM - Lead with specific problem, casual but direct",
   "platforms": ["facebook"],
   "variation_type": "problem_first",
 
   "model": "claude-haiku-4-5",
   "temperature": 0.8,
 
-  "systemPrompt": "You are writing a friendly Facebook message that leads with a problem you identified.\n\nPHILOSOPHY: Facebook is social, so even direct messages should feel helpful and friendly, not corporate.\n\nRULES:\n1. FRIENDLY-BRIEF: 3-5 sentences, 140-220 characters\n2. LEAD WITH PROBLEM: But frame it helpfully\n3. BUSINESS IMPACT: Explain what it costs them\n4. COMMUNITY TONE: 'Thought you should know' not 'urgent action required'\n5. BRIEF INTRO: Who you are\n6. VALUE DELIVERY: Report link\n7. LIGHT EMOJI: 1 max\n8. NO ALARM: Helpful heads-up, not panic\n\nSTRUCTURE:\n- Sentence 1: Friendly opener + specific problem\n- Sentence 2: Business impact (lost customers, mobile traffic)\n- Sentence 3: Brief intro (who you are)\n- Sentence 4: Value delivery + report link\n- Sentence 5: Summary + helpful close\n\nDO NOT:\n- Sound alarmist or pushy\n- Use fear tactics\n- Sound corporate\n- Exaggerate\n- Make hard sales pitch\n\nTONE: Friendly neighbor giving a helpful heads-up.\n\nREMEMBER: Facebook messages work best when they feel personal and helpful, not sales-y.",
+  "systemPrompt": "You are writing a casual Facebook DM that leads with a specific problem you found.\n\nPHILOSOPHY: Facebook DMs can be direct without being pushy. Lead with helpful info, like warning a neighbor.\n\nRULES:\n1. ULTRA-BRIEF: 2-4 sentences max, 140-220 characters\n2. LEAD WITH PROBLEM: Start with specific finding\n3. CASUAL TONE: 'Hey!' and 'heads up' vibe, not formal\n4. NO URLS: Facebook blocks links in DMs\n5. BUSINESS IMPACT: Mention what it costs them (lost customers, mobile traffic, etc.)\n6. LIGHT EMOJI: 1 max\n7. OFFER HELP: 'I can send you details' (not pushy)\n8. NO FEAR TACTICS: Direct but friendly\n\nSTRUCTURE:\n- Sentence 1: Casual opener + specific problem\n- Sentence 2: Business impact (what this costs)\n- Sentence 3: Brief intro (who you are)\n- Sentence 4: Offer full analysis\n\nDO NOT:\n- Include URLs\n- Sound aggressive or alarmist\n- Use formal language\n- Make sales pitch\n- Exaggerate severity\n\nTONE: Helpful friend giving a heads-up, not panic alarm.\n\nREMEMBER: Be specific and casual. Facebook users appreciate direct help that doesn't sound corporate.",
 
-  "userPromptTemplate": "Write a Facebook message for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nCRITICAL FINDING:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nTop Problem: {{top_issue}}\nBusiness Impact: {{urgency_indicator}}\nMobile vs Desktop: {{mobile_vs_desktop_gap.description}}\nCompliance: {{compliance_risk.description}}\n\nRecipient: {{contact_name}}\n\nYour Name: {{sender_name}}\nCompany: {{sender_company}}\n\nWrite a FRIENDLY, DIRECT Facebook message leading with the problem. Keep it helpful, not alarming. Include [REPORT_LINK].\n\nReturn ONLY the message text.",
+  "userPromptTemplate": "Write a problem-first Facebook DM for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nCRITICAL FINDING:\nGrade: {{website_grade}}\nTop Problem: {{top_issue}}\nBusiness Impact: {{urgency_indicator}}\nMobile vs Desktop Gap: {{mobile_vs_desktop_gap.description}}\nCompliance Risk: {{compliance_risk.description}}\n\nTheir Facebook:\nUsername: {{social_username}}\n\nYour Name: {{sender_name}}\n\nWrite a CASUAL, DIRECT DM that leads with the problem. DO NOT include URLs. Keep it brief and helpful.\n\nReturn ONLY the DM text.",
 
   "variables": [
     "company_name",
     "industry",
     "location",
     "website_grade",
-    "website_score",
     "top_issue",
     "urgency_indicator",
     "mobile_vs_desktop_gap",
     "compliance_risk",
-    "contact_name",
-    "sender_name",
-    "sender_company"
+    "social_username",
+    "sender_name"
   ],
 
   "platformSpecs": {
     "facebook": {
-      "maxChars": 5000,
+      "maxChars": 1000,
       "optimalLength": "140-220 chars",
-      "tone": "friendly-helpful",
+      "tone": "helpful-direct",
       "emojiUsage": "minimal",
-      "bannedWords": ["urgent", "act now", "disaster", "crisis"],
+      "bannedWords": ["website", "click", "urgent", "act now", "limited time"],
       "bestPractices": [
-        "Helpful, not alarming",
-        "Specific problem",
-        "Community-friendly tone",
-        "No pressure"
+        "Be specific about the problem",
+        "No fear tactics",
+        "Brief and actionable",
+        "No URLs"
       ]
     }
   },
@@ -46,34 +44,28 @@
   "examples": [
     {
       "input": {
-        "company_name": "Harbor Auto Repair",
-        "industry": "Auto Repair",
-        "location": "Tampa, FL",
+        "company_name": "Peak Fitness",
+        "industry": "Gym",
+        "location": "Boulder",
         "website_grade": "D",
-        "website_score": 51,
-        "top_issue": "Mobile site breaks on phones - appointment scheduler not working",
+        "top_issue": "Mobile site completely breaks on iPhone - class schedule not viewable",
         "urgency_indicator": "hurting your business growth",
         "mobile_vs_desktop_gap": {
-          "description": "Mobile experience is 31 points lower than desktop"
+          "description": "Mobile experience is 32 points lower than desktop"
         },
-        "compliance_risk": {
-          "description": "Not mobile-friendly (60%+ of traffic affected)"
-        },
-        "contact_name": "Mike",
-        "sender_name": "Anton",
-        "sender_company": "MaxantAgency"
+        "social_username": "@peakfitness",
+        "sender_name": "Anton"
       },
-      "output": "Hey Mike!\n\nQuick heads up - Harbor Auto's mobile site isn't working on phones and the appointment scheduler breaks. Since most people search for auto repair on mobile, that's probably affecting bookings.\n\nI'm Anton, a web designer - I did a full analysis of local Tampa auto shops.\n\nHere's your report: [REPORT_LINK]\n\nYou scored D grade (51/100), mobile experience is 31 points behind desktop. Found several fixes that could help boost appointments.\n\nThought you should know!\n\nBest,\nAnton"
-      }
+      "output": "Hey! Quick heads up - Peak's mobile site breaks on iPhone and the class schedule doesn't load. 70%+ of gym searches are mobile so that's prob costing signups. I'm a web designer and did a full analysis. Can send you the details if helpful 👍"
     }
   ],
 
   "constraints": {
-    "maxChars": 220,
-    "maxSentences": 6,
-    "minSentences": 4,
-    "tone": "helpful-friendly",
-    "required_elements": ["specific_problem", "business_impact", "brief_intro", "value_delivery"],
-    "forbidden_elements": ["fear_language", "corporate_tone", "hard_pitch", "alarm"]
+    "maxChars": 170,
+    "maxSentences": 4,
+    "minSentences": 2,
+    "tone": "helpful-heads-up",
+    "required_elements": ["specific_problem", "business_impact", "brief_intro", "offer_details"],
+    "forbidden_elements": ["urls", "fear_language", "aggressive_tone", "sales_pitch"]
   }
 }

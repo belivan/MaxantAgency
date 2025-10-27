@@ -250,19 +250,21 @@ async function generateAndSaveEmail(lead, context, variation) {
     contact_name: lead.contact_name,
     contact_title: lead.contact_title,
 
-    email_subject: subjectLine,
-    email_body: emailBody,
-    email_strategy: name,
+    subject: subjectLine,
+    body: emailBody,
+    strategy: name,
     variation_type: type,
     platform: 'email',
 
     data_sources_used: dataSources,
 
-    ai_model: prompt.model || 'claude-haiku-4-5',
-    generation_cost: cost,
+    model_used: prompt.model || 'claude-haiku-4-5',
+    cost: cost,
     generation_time_ms: duration,
-    usage_input_tokens: response.usage.input_tokens,
-    usage_output_tokens: response.usage.output_tokens,
+    usage: {
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens
+    },
 
     status: 'ready',
     project_id: lead.project_id
@@ -329,8 +331,8 @@ async function generateAndSaveSocialDM(lead, baseContext, platform, variation) {
     industry: lead.industry,
     contact_name: lead.contact_name,
 
-    email_body: dmBody, // Using email_body field for DM content
-    email_strategy: name,
+    body: dmBody,
+    strategy: name,
     variation_type: type,
     platform,
 
@@ -339,11 +341,13 @@ async function generateAndSaveSocialDM(lead, baseContext, platform, variation) {
 
     data_sources_used: dataSources,
 
-    ai_model: prompt.model || 'claude-haiku-4-5',
-    generation_cost: cost,
+    model_used: prompt.model || 'claude-haiku-4-5',
+    cost: cost,
     generation_time_ms: duration,
-    usage_input_tokens: response.usage.input_tokens,
-    usage_output_tokens: response.usage.output_tokens,
+    usage: {
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens
+    },
 
     status: 'ready',
     project_id: lead.project_id

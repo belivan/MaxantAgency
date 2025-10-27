@@ -8,7 +8,7 @@ export const reportConfig = {
   autoGenerateReports: process.env.AUTO_GENERATE_REPORTS === 'true' || false,
 
   // Default format for auto-generated reports
-  defaultFormat: process.env.REPORT_FORMAT || 'markdown',
+  defaultFormat: process.env.REPORT_FORMAT || 'html',
 
   // Which sections to include by default
   defaultSections: ['all'],

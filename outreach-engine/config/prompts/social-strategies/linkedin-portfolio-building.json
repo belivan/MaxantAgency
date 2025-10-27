@@ -1,44 +1,41 @@
 {
   "version": "1.0",
   "name": "linkedin-portfolio-building",
-  "description": "LinkedIn message - Honest portfolio building approach, professional authenticity",
+  "description": "LinkedIn DM - Honest 'building portfolio' approach, professional and authentic",
   "platforms": ["linkedin"],
   "variation_type": "portfolio_building",
 
   "model": "claude-haiku-4-5",
   "temperature": 0.8,
 
-  "systemPrompt": "You are writing an authentic LinkedIn message about building your web design portfolio.\n\nPHILOSOPHY: LinkedIn rewards transparency. Be professional about being new and building your business.\n\nRULES:\n1. CONCISE: 3-5 sentences, 180-280 characters\n2. HONEST POSITIONING: Clear about recently launching\n3. PROFESSIONAL CONFIDENCE: Not apologetic, but transparent\n4. VALUE PROPOSITION: Free analysis in exchange for portfolio building\n5. BUSINESS-FOCUSED: Emphasize outcomes and insights\n6. SPECIFIC DATA: Use actual scores and findings\n7. NO EMOJI: Keep it professional\n8. WHY IT'S FREE: Building case studies\n\nSTRUCTURE:\n- Sentence 1: Professional intro + honest positioning (just launched)\n- Sentence 2: What you're doing (free audits for portfolio)\n- Sentence 3: Value delivery + report link\n- Sentence 4: Summary of findings\n- Sentence 5: Why it's free + no obligation\n\nDO NOT:\n- Sound apologetic or uncertain\n- Over-explain being new\n- Use corporate buzzwords\n- Make hard sales pitch\n- Sound desperate\n\nTONE: Professional transparency. Confident about your skills, honest about building your business.\n\nREMEMBER: LinkedIn users appreciate honesty and directness. Your newness + skill = compelling offer.",
+  "systemPrompt": "You are writing an authentic LinkedIn DM about building your web design portfolio.\n\nPHILOSOPHY: Radical honesty works on LinkedIn. Be real about being new and building your portfolio.\n\nRULES:\n1. ULTRA-BRIEF: 2-4 sentences max, 180-280 characters\n2. HONEST POSITIONING: 'Just started' or 'building portfolio'\n3. SUPER CASUAL: LinkedIn-native language\n4. NO URLS: Say 'I can send you the full analysis'\n5. SPECIFIC VALUE: Mention grade or key finding\n6. WHY IT'S FREE: Building case studies\n7. LIGHT EMOJI: 1-2 max\n8. NO PRESSURE: 'If you're interested' vibe\n\nSTRUCTURE:\n- Sentence 1: Who you are + honest positioning (just started, building portfolio)\n- Sentence 2: What you did (analyzed their online stuff)\n- Sentence 3: Quick finding (Grade + insight)\n- Sentence 4: Offer + why it's free\n\nDO NOT:\n- Include URLs\n- Sound apologetic\n- Use formal language\n- Make it sound like charity\n- Over-explain\n\nTONE: Confident beginner. You're skilled and offering real value, but honest about starting out.\n\nREMEMBER: LinkedIn appreciates authenticity over polish.",
 
-  "userPromptTemplate": "Write a LinkedIn message for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nANALYSIS:\nGrade: {{website_grade}}\nScore: {{website_score}}/100\nKey Finding: {{one_liner}} OR {{top_issue}}\nQuick Wins: {{quick_wins_count}}\n\nRecipient: {{contact_name}} ({{contact_title}})\n\nYour Info:\n- Name: {{sender_name}}\n- Company: {{sender_company}}\n- Just launched, building portfolio\n\nWrite a PROFESSIONAL, HONEST LinkedIn message. Explain you're building portfolio. Include [REPORT_LINK] placeholder.\n\nReturn ONLY the message text.",
+  "userPromptTemplate": "Write an honest LinkedIn DM for:\n\nCompany: {{company_name}}\nIndustry: {{industry}}\nLocation: {{location}}\n\nANALYSIS:\nGrade: {{website_grade}}\nKey Finding: {{one_liner}} OR {{top_issue}}\nQuick Wins: {{quick_wins_count}}\n\nTheir LinkedIn:\nUsername: {{social_username}}\n\nYour Name: {{sender_name}}\n\nWrite a CASUAL, HONEST DM. Mention you're building your portfolio. DO NOT include URLs.\n\nReturn ONLY the DM text.",
 
   "variables": [
     "company_name",
     "industry",
     "location",
     "website_grade",
-    "website_score",
     "one_liner",
     "top_issue",
     "quick_wins_count",
-    "contact_name",
-    "contact_title",
-    "sender_name",
-    "sender_company"
+    "social_username",
+    "sender_name"
   ],
 
   "platformSpecs": {
     "linkedin": {
-      "maxChars": 1900,
+      "maxChars": 1000,
       "optimalLength": "180-280 chars",
-      "tone": "professional-authentic",
-      "emojiUsage": "none",
-      "bannedWords": ["synergy", "leverage", "disrupt"],
+      "tone": "honest-professional",
+      "emojiUsage": "light",
+      "bannedWords": ["website", "click", "link", "schedule", "book now"],
       "bestPractices": [
-        "Be transparent about being new",
-        "Emphasize professional value",
-        "Clear quid pro quo",
-        "Respectful of their time"
+        "Be authentic about being new",
+        "No URLs",
+        "Brief and genuine",
+        "Offer help, don't beg"
       ]
     }
   },
@@ -46,29 +43,25 @@
   "examples": [
     {
       "input": {
-        "company_name": "Parker & Associates Law",
-        "industry": "Law Firm",
-        "location": "Austin, TX",
+        "company_name": "Green Leaf Cafe",
+        "industry": "Restaurant",
+        "location": "Seattle",
         "website_grade": "B",
-        "website_score": 76,
-        "one_liner": "Strong content but mobile optimization gaps affecting client inquiries",
+        "one_liner": "Great photos but SEO could bring way more foot traffic",
         "quick_wins_count": 4,
-        "contact_name": "Michael Parker",
-        "contact_title": "Managing Partner",
-        "sender_name": "Anton Yanovich",
-        "sender_company": "MaxantAgency"
+        "social_username": "@greenleafcafe",
+        "sender_name": "Anton"
       },
-      "output": "Hi Michael,\n\nI'm Anton Yanovich from MaxantAgency - we recently launched and are building our portfolio by offering complimentary website audits to Austin law firms.\n\nI analyzed Parker & Associates' digital presence and created a comprehensive report: [REPORT_LINK]\n\nYou scored B grade (76/100) with 4 actionable improvements. Key insight: strong content and credibility, but mobile optimization gaps that could be affecting client inquiry conversions.\n\nNo cost - we're documenting these analyses as case studies. Thought the findings might be valuable for your practice.\n\nBest regards,\nAnton Yanovich\nMaxantAgency"
-      }
+      "output": "Hey! I'm Anton - just started a web design agency and doing free analyses for Seattle restaurants to build my portfolio. Checked out Green Leaf and you scored B grade. Main thing: great photos but SEO tweaks could bring way more foot traffic. Can send you the full breakdown if you want - no cost, just building case studies 🌱"
     }
   ],
 
   "constraints": {
-    "maxChars": 280,
-    "maxSentences": 6,
-    "minSentences": 4,
-    "tone": "professional-transparent",
-    "required_elements": ["honest_positioning", "value_delivery", "specific_finding", "why_free"],
-    "forbidden_elements": ["apologies", "buzzwords", "hard_pitch"]
+    "maxChars": 180,
+    "maxSentences": 5,
+    "minSentences": 3,
+    "tone": "authentic-confident",
+    "required_elements": ["honest_positioning", "specific_finding", "why_free", "soft_offer"],
+    "forbidden_elements": ["urls", "formal_tone", "apologetic_language"]
   }
 }

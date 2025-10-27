@@ -173,7 +173,7 @@ export class ResultsAggregator {
         seo_score: scores.seo_score,
         content_score: scores.content_score,
         social_score: scores.social_score,
-        tech_stack: homepage.metadata?.techStack || 'Unknown',
+        tech_stack: homepage.techStack?.cms || 'Unknown',
         page_load_time: homepage.metadata?.loadTime || null,
         is_mobile_friendly: gradeMetadata.isMobileFriendly,
         has_https: gradeMetadata.hasHTTPS,
@@ -494,7 +494,7 @@ export class ResultsAggregator {
       ...leadScoringData,
 
       // Technical data
-      tech_stack: homepage.metadata?.techStack || 'Unknown',
+      tech_stack: homepage.techStack?.cms || 'Unknown',
       page_load_time: homepage.metadata?.loadTime,
       is_mobile_friendly: !analysisResults.mobileVisual?.issues?.some(i => i.severity === 'critical'),
       has_https: homepage.fullUrl?.startsWith('https://') || false,
