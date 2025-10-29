@@ -283,6 +283,15 @@ app.post('/api/analyze-url', async (req, res) => {
       // Screenshots (ensure we don't save buffers - only URLs/paths)
       screenshot_desktop_url: typeof result.screenshot_desktop_url === 'string' ? result.screenshot_desktop_url : null,
       screenshot_mobile_url: typeof result.screenshot_mobile_url === 'string' ? result.screenshot_mobile_url : null,
+      screenshots_manifest: result.screenshots_manifest || null,
+
+      // Performance Metrics (from PageSpeed Insights & Chrome UX Report)
+      performance_metrics_pagespeed: result.performance_metrics_pagespeed || null,
+      performance_metrics_crux: result.performance_metrics_crux || null,
+      performance_issues: result.performance_issues || [],
+      performance_score_mobile: result.performance_score_mobile ? Math.round(result.performance_score_mobile) : null,
+      performance_score_desktop: result.performance_score_desktop ? Math.round(result.performance_score_desktop) : null,
+      performance_api_errors: result.performance_api_errors || [],
 
       // Social Media
       social_profiles: result.social_profiles || {},
@@ -294,6 +303,9 @@ app.post('/api/analyze-url', async (req, res) => {
 
       // Business Intelligence
       business_intelligence: result.business_intelligence || {},
+
+      // Benchmark Comparison Data
+      matched_benchmark_id: result.matched_benchmark?.id || null,
 
       // Crawl & Analysis Metadata (preserve detailed page data for reports)
       crawl_metadata: result.crawl_metadata
@@ -318,15 +330,6 @@ app.post('/api/analyze-url', async (req, res) => {
         totalPages: result.discovery_log.totalPages || 0,
         sources: result.discovery_log.sources || []
       } : {},
-
-      // Report Synthesis Results (AI-generated condensed insights)
-      consolidated_issues: result.consolidated_issues || [],
-      consolidated_issue_stats: result.consolidated_issue_stats || null,
-      consolidated_issue_merge_log: result.consolidated_issue_merge_log || [],
-      executive_summary: result.executive_summary || null,
-      executive_summary_metadata: result.executive_summary_metadata || null,
-      synthesis_stage_metadata: result.synthesis_stage_metadata || {},
-      synthesis_errors: result.synthesis_errors || [],
 
       // Timestamps
       analyzed_at: new Date().toISOString(),
@@ -369,48 +372,9 @@ app.post('/api/analyze-url', async (req, res) => {
       await markAsUploaded(backupPath, savedLead.id);
     }
 
-    // Auto-generate report (if enabled in .env)
+    // NOTE: Auto-report generation has been moved to ReportEngine microservice
+    // To generate a report, make a POST request to http://localhost:3003/api/generate
     let reportInfo = null;
-    const { getReportConfig } = await import('./config/report-config.js');
-    const reportConfig = getReportConfig();
-
-    if (reportConfig.autoGenerateReports) {
-      const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
-
-      // Ensure reports bucket exists
-      await ensureReportsBucket();
-
-      // Generate and upload report with full analysis payload (includes crawl_metadata.pages_analyzed)
-      const reportPayload = {
-        ...result,
-        id: savedLead.id,
-        project_id: project_id ?? result.project_id ?? savedLead.project_id,
-        grade: result.grade || savedLead.website_grade,
-        overall_score: result.overall_score || savedLead.overall_score,
-        website_grade: savedLead.website_grade || result.grade,
-        website_score: savedLead.overall_score || result.overall_score
-      };
-
-      const reportResult = await autoGenerateReport(reportPayload, {
-        format: reportConfig.defaultFormat,
-        sections: reportConfig.defaultSections,
-        saveToDatabase: true,
-        project_id: project_id
-      });
-
-      if (reportResult.success) {
-        reportInfo = {
-          id: reportResult.report_id,
-          path: reportResult.storage_path,
-          format: reportResult.format
-        };
-        console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
-      } else {
-        throw new Error(`Report generation failed: ${reportResult.error}`);
-      }
-    } else {
-      console.log(`[Report Generation] Skipped (AUTO_GENERATE_REPORTS=false)`);
-    }
 
     res.json({
       success: true,
@@ -675,6 +639,15 @@ app.post('/api/analyze', async (req, res) => {
             // Screenshots (ensure we don't save buffers - only URLs/paths)
             screenshot_desktop_url: typeof result.screenshot_desktop_url === 'string' ? result.screenshot_desktop_url : null,
             screenshot_mobile_url: typeof result.screenshot_mobile_url === 'string' ? result.screenshot_mobile_url : null,
+            screenshots_manifest: result.screenshots_manifest || null,
+
+            // Performance Metrics (from PageSpeed Insights & Chrome UX Report)
+            performance_metrics_pagespeed: result.performance_metrics_pagespeed || null,
+            performance_metrics_crux: result.performance_metrics_crux || null,
+            performance_issues: result.performance_issues || [],
+            performance_score_mobile: result.performance_score_mobile ? Math.round(result.performance_score_mobile) : null,
+            performance_score_desktop: result.performance_score_desktop ? Math.round(result.performance_score_desktop) : null,
+            performance_api_errors: result.performance_api_errors || [],
 
             // Social Media
             social_profiles: result.social_profiles || {},
@@ -686,6 +659,9 @@ app.post('/api/analyze', async (req, res) => {
 
             // Business Intelligence
             business_intelligence: result.business_intelligence || {},
+
+            // Benchmark Comparison Data
+            matched_benchmark_id: result.matched_benchmark?.id || null,
 
             // Crawl & Analysis Metadata (simplified to avoid timeout)
             crawl_metadata: result.crawl_metadata
@@ -769,40 +745,8 @@ app.post('/api/analyze', async (req, res) => {
               console.log(`[Intelligent Analysis] Backup marked as uploaded for ${prospect.company_name}`);
             }
 
-            // STEP 3c: Auto-generate report (if enabled in .env)
-            const { getReportConfig } = await import('./config/report-config.js');
-            const reportConfig = getReportConfig();
-
-            if (reportConfig.autoGenerateReports) {
-              const { autoGenerateReport, ensureReportsBucket } = await import('./reports/auto-report-generator.js');
-
-              // Ensure reports bucket exists
-              await ensureReportsBucket();
-
-              // Generate and upload report with full analysis payload
-              const reportPayload = {
-                ...result,
-                id: savedLead.id,
-                project_id: project_id ?? result.project_id ?? savedLead.project_id,
-                grade: result.grade || savedLead.website_grade,
-                overall_score: result.overall_score || savedLead.overall_score,
-                website_grade: savedLead.website_grade || result.grade,
-                website_score: savedLead.overall_score || result.overall_score
-              };
-
-              const reportResult = await autoGenerateReport(reportPayload, {
-                format: reportConfig.defaultFormat,
-                sections: reportConfig.defaultSections,
-                saveToDatabase: true,
-                project_id: project_id
-              });
-
-              if (reportResult.success) {
-                console.log(`[Report Generation]  Report generated: ${reportResult.storage_path}`);
-              } else {
-                throw new Error(`Report generation failed: ${reportResult.error}`);
-              }
-            }
+            // NOTE: Auto-report generation has been moved to ReportEngine microservice
+            // To generate reports, call POST http://localhost:3003/api/generate
 
             // Send success event
             sendEvent('success', {
@@ -1160,210 +1104,75 @@ app.post('/api/leads/batch-delete', async (req, res) => {
  *   "sections": ["all"]              // For markdown only
  * }
  */
+/**
+ * POST /api/reports/generate
+ * DEPRECATED: Report generation has been moved to ReportEngine microservice
+ */
 app.post('/api/reports/generate', async (req, res) => {
-  try {
-    const { lead_id, format = 'markdown', sections = ['all'] } = req.body;
-
-    if (!lead_id) {
-      return res.status(400).json({
-        error: 'lead_id is required'
-      });
-    }
-
-    // Fetch lead from database
-    const { data: lead, error: fetchError } = await supabase
-      .from('leads')
-      .select('*')
-      .eq('id', lead_id)
-      .single();
-
-    if (fetchError || !lead) {
-      return res.status(404).json({
-        error: 'Lead not found',
-        details: fetchError?.message
-      });
-    }
-
-    // Generate report
-    const { generateReport, generateStoragePath, generateReportFilename } = await import('./reports/report-generator.js');
-    const { uploadReport, saveReportMetadata } = await import('./reports/storage/supabase-storage.js');
-
-    const report = await generateReport(lead, { format, sections });
-
-    // Save a local backup of the report before uploading
-    const reportsDir = join(__dirname, '..', 'local-backups', 'analysis-engine', 'reports');
-    await mkdir(reportsDir, { recursive: true });
-    const localFilename = generateReportFilename(lead, format);
-    const localReportPath = join(reportsDir, localFilename);
-    await writeFile(localReportPath, report.content, 'utf8');
-    console.log(`[Report Generation] Local backup saved: ${localReportPath}`);
-
-    // Upload to Supabase Storage
-    const storagePath = generateStoragePath(lead, format);
-
-    // Determine content type based on format
-    const contentTypeMap = {
-      'markdown': 'text/markdown',
-      'html': 'text/html',
-      'pdf': 'application/pdf',
-      'json': 'application/json'
-    };
-    const contentType = contentTypeMap[format] || 'text/plain';
-
-    const uploadResult = await uploadReport(report.content, storagePath, contentType);
-
-    // Save metadata to database
-    const reportRecord = await saveReportMetadata({
-      lead_id,
-      project_id: lead.project_id,
-      report_type: 'website_audit',
-      format,
-      storage_path: uploadResult.path,
-      storage_bucket: 'reports',
-      file_size_bytes: Buffer.byteLength(report.content, 'utf8'),
-      company_name: lead.company_name,
-      website_url: lead.url,
-      overall_score: lead.overall_score,
-      website_grade: lead.website_grade,
-      config: { sections, local_path: localReportPath },
-      status: 'completed'
-    });
-
-    res.json({
-      success: true,
-      report: {
-        id: reportRecord.id,
-        storage_path: uploadResult.path,
-        local_path: localReportPath,
-        metadata: report.metadata
+  res.status(410).json({
+    success: false,
+    error: 'This endpoint has been moved to the ReportEngine microservice',
+    message: 'Report generation is now handled by a dedicated microservice',
+    migrationInfo: {
+      newEndpoint: 'http://localhost:3003/api/generate',
+      method: 'POST',
+      body: {
+        analysisResult: '{ ...lead data from /leads table... }',
+        options: {
+          format: 'html | markdown | pdf',
+          sections: ['all'],
+          saveToDatabase: true,
+          project_id: 'uuid',
+          lead_id: 'uuid'
+        }
       }
-    });
-
-  } catch (error) {
-    console.error('[Report Generation] Error:', error);
-    res.status(500).json({
-      error: 'Failed to generate report',
-      details: error.message
-    });
-  }
+    }
+  });
 });
 
 /**
  * GET /api/reports/:id/download
- * Get download URL for a report
+ * DEPRECATED: This endpoint has been moved to ReportEngine microservice
  */
 app.get('/api/reports/:id/download', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const { getReportById, getSignedUrl, incrementDownloadCount } = await import('./reports/storage/supabase-storage.js');
-
-    // Get report metadata
-    const report = await getReportById(id);
-
-    if (!report) {
-      return res.status(404).json({
-        error: 'Report not found'
-      });
+  res.status(410).json({
+    success: false,
+    error: 'This endpoint has been moved to the ReportEngine microservice',
+    migrationInfo: {
+      newEndpoint: `http://localhost:3003/api/reports/${req.params.id}/download`,
+      method: 'GET'
     }
-
-    // Get signed URL (valid for 1 hour)
-    const signedUrl = await getSignedUrl(report.storage_path, 3600);
-
-    // Increment download count
-    await incrementDownloadCount(id);
-
-    res.json({
-      success: true,
-      download_url: signedUrl,
-      report: {
-        id: report.id,
-        company_name: report.company_name,
-        format: report.format,
-        generated_at: report.generated_at
-      }
-    });
-
-  } catch (error) {
-    console.error('[Report Download] Error:', error);
-    res.status(500).json({
-      error: 'Failed to get download URL',
-      details: error.message
-    });
-  }
+  });
 });
 
 /**
  * GET /api/reports/lead/:lead_id
- * Get all reports for a lead
+ * DEPRECATED: This endpoint has been moved to ReportEngine microservice
  */
 app.get('/api/reports/lead/:lead_id', async (req, res) => {
-  try {
-    const { lead_id } = req.params;
-
-    const { getReportsByLeadId } = await import('./reports/storage/supabase-storage.js');
-
-    const reports = await getReportsByLeadId(lead_id);
-
-    res.json({
-      success: true,
-      reports,
-      count: reports.length
-    });
-
-  } catch (error) {
-    console.error('[Get Reports] Error:', error);
-    res.status(500).json({
-      error: 'Failed to fetch reports',
-      details: error.message
-    });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'This endpoint has been moved to the ReportEngine microservice',
+    migrationInfo: {
+      newEndpoint: `http://localhost:3003/api/reports/lead/${req.params.lead_id}`,
+      method: 'GET'
+    }
+  });
 });
 
 /**
  * DELETE /api/reports/:id
- * Delete a report
+ * DEPRECATED: This endpoint has been moved to ReportEngine microservice
  */
 app.delete('/api/reports/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const { getReportById, deleteReport } = await import('./reports/storage/supabase-storage.js');
-
-    // Get report metadata
-    const report = await getReportById(id);
-
-    if (!report) {
-      return res.status(404).json({
-        error: 'Report not found'
-      });
+  res.status(410).json({
+    success: false,
+    error: 'This endpoint has been moved to the ReportEngine microservice',
+    migrationInfo: {
+      newEndpoint: `http://localhost:3003/api/reports/${req.params.id}`,
+      method: 'DELETE'
     }
-
-    // Delete from storage
-    await deleteReport(report.storage_path);
-
-    // Delete metadata from database
-    const { error: deleteError } = await supabase
-      .from('reports')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      throw new Error(`Failed to delete report metadata: ${deleteError.message}`);
-    }
-
-    res.json({
-      success: true,
-      message: 'Report deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('[Delete Report] Error:', error);
-    res.status(500).json({
-      error: 'Failed to delete report',
-      details: error.message
-    });
-  }
+  });
 });
 
 // Start server

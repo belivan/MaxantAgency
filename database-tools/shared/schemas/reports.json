@@ -1,0 +1,264 @@
+{
+  "table": "reports",
+  "description": "Stores generated report metadata and references to report files in Supabase Storage",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier for the report"
+    },
+    {
+      "name": "lead_id",
+      "type": "uuid",
+      "nullable": true,
+      "description": "Reference to the lead this report was generated for"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": true,
+      "description": "Reference to the project this report belongs to"
+    },
+    {
+      "name": "report_type",
+      "type": "text",
+      "nullable": false,
+      "default": "website_audit",
+      "description": "Type of report (e.g., website_audit, competitor_analysis)"
+    },
+    {
+      "name": "format",
+      "type": "text",
+      "nullable": false,
+      "description": "Report format (markdown, html, pdf)"
+    },
+    {
+      "name": "storage_path",
+      "type": "text",
+      "nullable": true,
+      "description": "Path to the report file in Supabase Storage"
+    },
+    {
+      "name": "storage_bucket",
+      "type": "text",
+      "nullable": false,
+      "default": "reports",
+      "description": "Storage bucket name"
+    },
+    {
+      "name": "file_size_bytes",
+      "type": "integer",
+      "nullable": true,
+      "description": "Size of the report file in bytes"
+    },
+    {
+      "name": "company_name",
+      "type": "text",
+      "nullable": true,
+      "description": "Company name the report is for"
+    },
+    {
+      "name": "website_url",
+      "type": "text",
+      "nullable": true,
+      "description": "Website URL that was analyzed"
+    },
+    {
+      "name": "overall_score",
+      "type": "integer",
+      "nullable": true,
+      "description": "Overall score of the website (0-100)"
+    },
+    {
+      "name": "website_grade",
+      "type": "text",
+      "nullable": true,
+      "description": "Letter grade (A-F) for the website"
+    },
+    {
+      "name": "config",
+      "type": "jsonb",
+      "nullable": true,
+      "description": "Report generation configuration (sections, synthesis settings, etc.)"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "nullable": false,
+      "default": "completed",
+      "description": "Report generation status (pending, processing, completed, failed)"
+    },
+    {
+      "name": "download_count",
+      "type": "integer",
+      "nullable": false,
+      "default": "0",
+      "description": "Number of times the report has been downloaded"
+    },
+    {
+      "name": "synthesis_used",
+      "type": "boolean",
+      "nullable": false,
+      "default": "false",
+      "description": "Whether AI synthesis was used for this report"
+    },
+    {
+      "name": "synthesis_cost",
+      "type": "decimal",
+      "nullable": true,
+      "description": "Cost of AI synthesis in USD"
+    },
+    {
+      "name": "synthesis_tokens",
+      "type": "integer",
+      "nullable": true,
+      "description": "Total tokens used in AI synthesis"
+    },
+    {
+      "name": "synthesis_duration_ms",
+      "type": "integer",
+      "nullable": true,
+      "description": "Duration of AI synthesis in milliseconds"
+    },
+    {
+      "name": "synthesis_errors",
+      "type": "integer",
+      "nullable": false,
+      "default": "0",
+      "description": "Number of errors during synthesis"
+    },
+    {
+      "name": "consolidated_issues_count",
+      "type": "integer",
+      "nullable": true,
+      "description": "Number of issues after AI deduplication"
+    },
+    {
+      "name": "original_issues_count",
+      "type": "integer",
+      "nullable": true,
+      "description": "Number of issues before AI deduplication"
+    },
+    {
+      "name": "issue_reduction_percentage",
+      "type": "integer",
+      "nullable": true,
+      "description": "Percentage of issues reduced through deduplication"
+    },
+    {
+      "name": "report_version",
+      "type": "text",
+      "nullable": true,
+      "description": "Report template version (v1, v2, v3)"
+    },
+    {
+      "name": "report_subtype",
+      "type": "text",
+      "nullable": true,
+      "description": "Report subtype (preview, full)"
+    },
+    {
+      "name": "sections_included",
+      "type": "jsonb",
+      "nullable": true,
+      "description": "Array of section names included in the report"
+    },
+    {
+      "name": "generation_time_ms",
+      "type": "integer",
+      "nullable": true,
+      "description": "Total report generation time in milliseconds"
+    },
+    {
+      "name": "word_count",
+      "type": "integer",
+      "nullable": true,
+      "description": "Total word count of the report"
+    },
+    {
+      "name": "synthesis_data",
+      "type": "jsonb",
+      "nullable": true,
+      "description": "AI synthesis results including consolidatedIssues, executiveSummary, and screenshotReferences"
+    },
+    {
+      "name": "generated_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "default": "now()",
+      "description": "When the report was generated"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "default": "now()",
+      "description": "Record creation timestamp"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "nullable": false,
+      "default": "now()",
+      "description": "Record last update timestamp"
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "lead_id",
+      "references": "leads.id",
+      "onDelete": "CASCADE",
+      "description": "Links report to analyzed lead"
+    },
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "SET NULL",
+      "description": "Links report to project"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_reports_lead_id",
+      "columns": ["lead_id"],
+      "description": "Index for finding reports by lead"
+    },
+    {
+      "name": "idx_reports_project_id",
+      "columns": ["project_id"],
+      "description": "Index for finding reports by project"
+    },
+    {
+      "name": "idx_reports_generated_at",
+      "columns": ["generated_at"],
+      "description": "Index for sorting reports by generation date"
+    },
+    {
+      "name": "idx_reports_status",
+      "columns": ["status"],
+      "description": "Index for filtering by status"
+    },
+    {
+      "name": "idx_reports_synthesis_used",
+      "columns": ["synthesis_used"],
+      "description": "Index for filtering reports with/without synthesis"
+    },
+    {
+      "name": "idx_reports_synthesis_cost",
+      "columns": ["synthesis_cost"],
+      "description": "Index for analyzing synthesis costs"
+    },
+    {
+      "name": "idx_reports_synthesis_data_gin",
+      "type": "GIN",
+      "columns": ["synthesis_data"],
+      "description": "GIN index for fast JSONB queries on synthesis_data"
+    }
+  ],
+  "rls": {
+    "enabled": false,
+    "description": "Row Level Security is disabled for service role access"
+  }
+}

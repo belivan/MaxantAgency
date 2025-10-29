@@ -61,6 +61,10 @@ export class CrawlingService {
           desktop: ensureBuffer(p.screenshots?.desktop),
           mobile: ensureBuffer(p.screenshots?.mobile)
         },
+        designTokens: {
+          desktop: p.designTokens?.desktop || { fonts: [], colors: [], extractedAt: new Date().toISOString() },
+          mobile: p.designTokens?.mobile || { fonts: [], colors: [], extractedAt: new Date().toISOString() }
+        },
         success: true,
         isHomepage: p.url === '/' || p.url === ''
       }));

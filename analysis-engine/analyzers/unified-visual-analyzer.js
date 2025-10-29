@@ -56,13 +56,19 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
     for (const page of pagesToAnalyze) {
       console.log(`[Unified Visual Analyzer] Analyzing page: ${page.url} (both viewports)...`);
 
+      // Extract design tokens from this page
+      const designTokensDesktop = page.designTokens?.desktop || { fonts: [], colors: [], extractedAt: new Date().toISOString() };
+      const designTokensMobile = page.designTokens?.mobile || { fonts: [], colors: [], extractedAt: new Date().toISOString() };
+
       const variables = {
         company_name: context.company_name || 'this business',
         industry: context.industry || 'unknown industry',
         url: page.fullUrl || page.url,
         tech_stack: context.tech_stack || 'unknown',
         pageContext: `Page: ${page.url}`,
-        totalPages: String(pages.length)
+        totalPages: String(pages.length),
+        designTokensDesktop: JSON.stringify(designTokensDesktop, null, 2),
+        designTokensMobile: JSON.stringify(designTokensMobile, null, 2)
       };
 
       // Use custom prompt if provided, otherwise load default

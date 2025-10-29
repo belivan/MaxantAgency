@@ -49,6 +49,14 @@ export function generateCritique(analysisResults, gradeResults, context = {}) {
     gradeResults.grade
   );
 
+  // Generate one-liner for email subject/preview
+  const oneLiner = generateOneLiner(
+    companyName,
+    topIssue,
+    gradeResults.grade,
+    quickWins.length
+  );
+
   return {
     summary,
     topIssue,
@@ -57,6 +65,8 @@ export function generateCritique(analysisResults, gradeResults, context = {}) {
     sections,
     recommendations,
     callToAction: generateCallToAction(gradeResults.grade, quickWins.length),
+    one_liner: oneLiner,
+    outreachAngle: gradeResults.outreachAngle,
 
     _meta: {
       generator: 'v1.0',

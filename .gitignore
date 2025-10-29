@@ -123,3 +123,19 @@ test-output.*
 test-*-results.txt
 batch-test-results.txt
 *-INVESTIGATION-SUMMARY.txt
+
+# Root directory test scripts and temporary files
+/*test*
+/*verify*
+/*apply*
+/*fixes*
+/temp-*
+/check-*.js
+/retry-*.js
+/*.txt
+
+# Root directory markdown files (except specific ones)
+/*.md
+!/README.md
+!/SETUP.md
+!/CLAUDE.md

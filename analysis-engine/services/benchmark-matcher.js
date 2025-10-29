@@ -106,7 +106,30 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
     });
 
     // Parse the JSON response from the content field
-    const matchResult = typeof result.content === 'string' ? JSON.parse(result.content) : result;
+    let matchResult;
+    if (typeof result.content === 'string') {
+      // Clean up AI response: remove markdown code blocks, trim whitespace, extract JSON
+      let jsonString = result.content.trim();
+
+      // Remove markdown code blocks
+      jsonString = jsonString.replace(/^```json\n?/i, '').replace(/^```\n?/,'').replace(/\n?```$/,'');
+
+      // Try to extract JSON if there's extra text
+      const jsonMatch = jsonString.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonString = jsonMatch[0];
+      }
+
+      try {
+        matchResult = JSON.parse(jsonString);
+      } catch (parseError) {
+        console.error(`❌ Failed to parse benchmark matcher JSON:`, parseError.message);
+        console.error(`Raw response:`, result.content.substring(0, 500));
+        throw new Error(`Invalid JSON from AI: ${parseError.message}`);
+      }
+    } else {
+      matchResult = result;
+    }
 
     // Step 4: Get full benchmark data
     const selectedBenchmark = candidateBenchmarks.find(b => b.id === matchResult.benchmark_id);

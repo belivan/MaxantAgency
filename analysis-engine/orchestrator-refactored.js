@@ -17,7 +17,6 @@ import { PageSelectionService } from './services/page-selection-service.js';
 import { CrawlingService } from './services/crawling-service.js';
 import { AnalysisCoordinator } from './services/analysis-coordinator.js';
 import { ResultsAggregator } from './services/results-aggregator.js';
-import { autoGenerateReport } from './reports/auto-report-generator.js';
 import { findBestBenchmark } from './services/benchmark-matcher.js';
 
 /**
@@ -277,60 +276,11 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     console.log(`[Orchestrator] ✅ Analysis complete in ${(totalTime / 1000).toFixed(2)}s`);
 
     // ========================================
-    // PHASE 6: REPORT GENERATION (if requested)
+    // NOTE: Report generation has been moved to ReportEngine microservice
+    // To generate reports, call the ReportEngine API:
+    //   POST http://localhost:3003/api/generate
+    //   Body: { analysisResult: finalResults, options: { format, sections, saveToDatabase, project_id } }
     // ========================================
-    if (generate_report) {
-      console.log(`\n[Report Generation] Starting ${report_format.toUpperCase()} report generation...`);
-      progress({ step: 'report', message: `Generating ${report_format} report...` });
-
-      const reportResult = await autoGenerateReport(finalResults, {
-        format: report_format,
-        sections: ['all'],
-        saveToDatabase: save_to_database,
-        project_id: context.project_id
-      });
-
-      if (reportResult.success) {
-        console.log(`[Report Generation] ✅ Report generated successfully`);
-        console.log(`[Report Generation] 📄 Local path: ${reportResult.local_path}`);
-
-        // Add report paths to the result
-        finalResults.report_html_path = reportResult.local_path;
-        finalResults.report_markdown_path = null;
-        finalResults.report_storage_path = reportResult.storage_path;
-        finalResults.report_format = report_format;
-
-        // Add synthesis metadata if available
-        if (reportResult.synthesis?.used) {
-          const totalOriginalIssues =
-            (finalResults.design_issues_desktop?.length || 0) +
-            (finalResults.design_issues_mobile?.length || 0) +
-            (finalResults.seo_issues?.length || 0) +
-            (finalResults.content_issues?.length || 0) +
-            (finalResults.social_issues?.length || 0) +
-            (finalResults.accessibility_issues?.length || 0);
-
-          finalResults.synthesis_metadata = {
-            success: true,
-            original_issue_count: totalOriginalIssues,
-            consolidated_issue_count: reportResult.synthesis.consolidatedIssuesCount,
-            reduction_percentage: totalOriginalIssues > 0
-              ? Math.round((1 - reportResult.synthesis.consolidatedIssuesCount / totalOriginalIssues) * 100)
-              : 0,
-            total_duration_seconds: reportResult.metadata?.generation_time_ms
-              ? (reportResult.metadata.generation_time_ms / 1000).toFixed(1)
-              : 'N/A',
-            total_tokens_used: reportResult.metadata?.total_tokens || 0,
-            total_cost: reportResult.metadata?.total_cost || 0,
-            errors: reportResult.synthesis.errors
-          };
-        }
-
-        progress({ step: 'report', message: `Report saved to ${reportResult.local_path}` });
-      } else {
-        throw new Error(`Report generation failed: ${reportResult.error}`);
-      }
-    }
 
     return finalResults;
 

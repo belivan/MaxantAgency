@@ -576,6 +576,117 @@ export async function estimateCrawl(url) {
 }
 
 /**
+ * Extract design tokens (fonts and colors) from a page using computed styles
+ *
+ * @param {Page} page - Playwright page object
+ * @returns {Promise<object>} Design tokens with fonts and colors sorted by frequency
+ */
+async function extractDesignTokens(page) {
+  return await page.evaluate(() => {
+    const fontData = new Map(); // family -> { sizes: Set, weights: Set, count: number }
+    const colorData = new Map(); // hex -> count
+
+    // Convert RGB/RGBA to HEX
+    const rgbToHex = (rgb) => {
+      if (!rgb || rgb === 'rgba(0, 0, 0, 0)') return null;
+
+      const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (!match) return null;
+
+      const r = parseInt(match[1]).toString(16).padStart(2, '0');
+      const g = parseInt(match[2]).toString(16).padStart(2, '0');
+      const b = parseInt(match[3]).toString(16).padStart(2, '0');
+
+      return `#${r}${g}${b}`;
+    };
+
+    // Get all visible elements
+    const elements = document.querySelectorAll('body *');
+
+    for (const el of elements) {
+      // Skip hidden elements
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) continue;
+
+      const styles = window.getComputedStyle(el);
+
+      // Extract font data
+      if (styles.fontFamily) {
+        // Clean font family (remove quotes, split on commas)
+        const families = styles.fontFamily
+          .split(',')
+          .map(f => f.trim().replace(/['"]/g, ''));
+
+        // Use first font in stack (actual rendered font)
+        const family = families[0];
+
+        if (family && family !== 'inherit') {
+          if (!fontData.has(family)) {
+            fontData.set(family, { sizes: new Set(), weights: new Set(), count: 0 });
+          }
+
+          const fontInfo = fontData.get(family);
+          fontInfo.count++;
+
+          // Add font size (convert to px if needed)
+          const fontSize = styles.fontSize;
+          if (fontSize) {
+            fontInfo.sizes.add(fontSize);
+          }
+
+          // Add font weight
+          const fontWeight = styles.fontWeight;
+          if (fontWeight) {
+            fontInfo.weights.add(parseInt(fontWeight) || 400);
+          }
+        }
+      }
+
+      // Extract colors (text, background, border)
+      const textColor = rgbToHex(styles.color);
+      const bgColor = rgbToHex(styles.backgroundColor);
+      const borderColor = rgbToHex(styles.borderTopColor);
+
+      [textColor, bgColor, borderColor].forEach(hex => {
+        if (hex) {
+          colorData.set(hex, (colorData.get(hex) || 0) + 1);
+        }
+      });
+    }
+
+    // Convert Maps to sorted arrays
+    const fonts = Array.from(fontData.entries())
+      .map(([family, data]) => ({
+        family,
+        sizes: Array.from(data.sizes).sort((a, b) => {
+          // Sort by numeric value
+          const aNum = parseFloat(a);
+          const bNum = parseFloat(b);
+          return aNum - bNum;
+        }),
+        weights: Array.from(data.weights).sort((a, b) => a - b),
+        usage: data.count
+      }))
+      .sort((a, b) => b.usage - a.usage) // Sort by usage (most used first)
+      .slice(0, 20); // Top 20 fonts
+
+    const colors = Array.from(colorData.entries())
+      .map(([hex, count]) => ({
+        hex,
+        usage: count
+      }))
+      .sort((a, b) => b.usage - a.usage) // Sort by usage (most used first)
+      .slice(0, 30); // Top 30 colors
+
+    return {
+      fonts,
+      colors,
+      extractedAt: new Date().toISOString()
+    };
+  });
+}
+
+/**
  * Crawl selected pages with both desktop and mobile screenshots
  * Used by intelligent analysis system for targeted page analysis
  *
@@ -709,7 +820,12 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
 
     // Extract content first (before screenshot to ensure page is ready)
     const htmlContent = await desktopPage.content();
-    
+
+    // Extract design tokens from desktop page
+    console.log(`[Targeted Crawler] Extracting design tokens (desktop) for ${fullUrl}...`);
+    const designTokensDesktop = await extractDesignTokens(desktopPage);
+    console.log(`[Targeted Crawler] Extracted ${designTokensDesktop.fonts.length} fonts, ${designTokensDesktop.colors.length} colors (desktop)`);
+
     // Capture desktop screenshot
     const desktopScreenshot = await desktopPage.screenshot({
       fullPage: true,
@@ -738,6 +854,11 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
       await mobilePage.waitForTimeout(SCREENSHOT_DELAY_MS);
     }
 
+    // Extract design tokens from mobile page
+    console.log(`[Targeted Crawler] Extracting design tokens (mobile) for ${fullUrl}...`);
+    const designTokensMobile = await extractDesignTokens(mobilePage);
+    console.log(`[Targeted Crawler] Extracted ${designTokensMobile.fonts.length} fonts, ${designTokensMobile.colors.length} colors (mobile)`);
+
     // Capture mobile screenshot
     const mobileScreenshot = await mobilePage.screenshot({
       fullPage: true,
@@ -759,6 +880,10 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
       screenshots: {
         desktop: desktopScreenshot || null,
         mobile: mobileScreenshot || null
+      },
+      designTokens: {
+        desktop: designTokensDesktop || { fonts: [], colors: [], extractedAt: new Date().toISOString() },
+        mobile: designTokensMobile || { fonts: [], colors: [], extractedAt: new Date().toISOString() }
       },
       metadata: {
         crawlTime,

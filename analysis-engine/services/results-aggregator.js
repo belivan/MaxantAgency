@@ -14,12 +14,13 @@
 import { calculateGrade, extractQuickWins as extractQuickWinsFromModules, getTopIssue } from '../grading/grader.js';
 import { generateCritique, generateOneLiner } from '../grading/critique-generator.js';
 import { scoreLeadPriority } from '../analyzers/lead-scorer.js';
-import { saveDualScreenshots } from '../utils/screenshot-storage.js';
+import { saveDualScreenshots, generateScreenshotsManifest } from '../utils/screenshot-storage.js';
 import { countCriticalDesktopIssues } from '../analyzers/desktop-visual-analyzer.js';
 import { countCriticalMobileIssues } from '../analyzers/mobile-visual-analyzer.js';
 import { calculateTotalCost } from '../analyzers/index.js';
-import { runReportSynthesis } from '../reports/synthesis/report-synthesis.js';
-import { validateReportQuality, generateQAReport } from '../reports/synthesis/qa-validator.js';
+// NOTE: Report synthesis has been moved to ReportEngine microservice
+// import { runReportSynthesis } from '../reports/synthesis/report-synthesis.js';
+// import { validateReportQuality, generateQAReport } from '../reports/synthesis/qa-validator.js';
 import { gradeWithAI } from '../grading/ai-grader.js';
 
 export class ResultsAggregator {
@@ -119,10 +120,17 @@ export class ResultsAggregator {
 
         leadScoringData = {
           lead_score: aiGradingResult.lead_score,
-          lead_priority: aiGradingResult.lead_score,  // Use numeric score (0-100), not string
-          priority_tier: aiGradingResult.lead_score >= 75 ? 'hot' :
-                         aiGradingResult.lead_score >= 50 ? 'warm' : 'cold',
-          budget_likelihood: aiGradingResult.sales_insights?.estimated_project_value,
+          lead_priority: aiGradingResult.lead_score,
+          priority_tier: aiGradingResult.priority_tier,
+          budget_likelihood: aiGradingResult.budget_likelihood,
+          fit_score: aiGradingResult.fit_score,
+          quality_gap_score: aiGradingResult.quality_gap_score,
+          budget_score: aiGradingResult.budget_score,
+          urgency_score: aiGradingResult.urgency_score,
+          industry_fit_score: aiGradingResult.industry_fit_score,
+          company_size_score: aiGradingResult.company_size_score,
+          engagement_score: aiGradingResult.engagement_score,
+          lead_priority_reasoning: aiGradingResult.lead_priority_reasoning,
           receptiveness_score: aiGradingResult.sales_insights?.receptiveness_score,
           key_pain_points: aiGradingResult.sales_insights?.key_pain_points || [],
           value_proposition: aiGradingResult.sales_insights?.value_proposition,
@@ -130,13 +138,15 @@ export class ResultsAggregator {
           comparison_summary: aiGradingResult.comparison,
           business_context: aiGradingResult.business_context,
           _meta: {
-            scorer: 'ai-comparative-v1',
+            scorer: 'ai-comparative-v2',
             timestamp: new Date().toISOString()
           }
         };
 
         console.log(`[AI Grading] ✅ Grade: ${gradeResults.grade} (${gradeResults.overallScore}/100)`);
         console.log(`[AI Grading] ✅ Lead Score: ${leadScoringData.lead_score}/100 (${leadScoringData.lead_priority} priority)`);
+        console.log(`[DEBUG] leadScoringData.fit_score: ${leadScoringData.fit_score}`);
+        console.log(`[DEBUG] gradeResults.weights:`, gradeResults.weights);
       } else {
         // AI grading failed - fall back to manual
         console.warn('[AI Grading] ⚠️ AI grading failed, falling back to manual grading');
@@ -226,64 +236,34 @@ export class ResultsAggregator {
     this.onProgress({ step: 'critique', message: 'Generating actionable critique...' });
     const critique = generateCritique(analysisResults, gradeResults, enrichedContext);
 
+    // PHASE 5: Generate Lead ID
+    // Generate UUID early so it can be used for screenshot storage paths
+    const leadId = crypto.randomUUID();
+
     // PHASE 6: Save Screenshots
-    const screenshotPaths = await this.saveScreenshots(pages, context, baseUrl);
+    const { screenshotPaths, screenshotsManifest } = await this.saveScreenshots(pages, context, baseUrl, leadId);
 
-    // PHASE 7: Run report synthesis pipeline
-    this.onProgress({ step: 'synthesis', message: 'Running AI synthesis pipeline...' });
-    console.log('\n[Report Synthesis] Starting synthesis pipeline...');
+    // PHASE 7: Report Synthesis (MOVED TO REPORTENGINE)
+    // NOTE: Report synthesis has been moved to ReportEngine microservice
+    // This Analysis Engine now focuses solely on analysis, grading, and data extraction
+    // Synthesis happens during report generation in the ReportEngine
+    console.log('\n[Report Synthesis] Skipped - handled by ReportEngine microservice');
 
-    console.log('[Report Synthesis] Calling runReportSynthesis...');
-    const synthesisResults = await runReportSynthesis({
-      companyName: context.company_name,
-      industry: context.industry,
-      grade: gradeResults.grade,
-      overallScore: gradeResults.overallScore,
-      url: homepage.fullUrl,
-      issuesByModule: {
-        desktop: analysisResults.desktopVisual?.issues || [],
-        mobile: analysisResults.mobileVisual?.issues || [],
-        seo: analysisResults.seo?.issues || [],
-        content: analysisResults.content?.issues || [],
-        social: analysisResults.social?.issues || [],
-        accessibility: analysisResults.accessibility?.issues || []
-      },
-      quickWins,
-      leadScoring: leadScoringData,
-      topIssue: getTopIssue(analysisResults),
-      techStack: homepage.metadata?.techStack || parsedData?.tech?.stack || parsedData?.techStack || 'Unknown',
-      hasBlog: parsedData?.content?.hasBlog,
-      socialPlatforms: parsedData?.social?.platformsPresent || [],
-      isMobileFriendly: gradeMetadata.isMobileFriendly,
-      hasHttps: gradeMetadata.hasHTTPS,
-      crawlPages: crawlData.pages
-    });
-    console.log('[Report Synthesis] Synthesis completed successfully');
-    console.log(`[Report Synthesis] Generated ${synthesisResults.consolidatedIssues?.length || 0} consolidated issues`);
-    console.log(`[Report Synthesis] Executive summary: ${synthesisResults.executiveSummary ? 'YES' : 'NO'}`);
+    const synthesisResults = {
+      consolidatedIssues: [],
+      mergeLog: [],
+      consolidationStatistics: { originalCount: 0, consolidatedCount: 0, reductionPercentage: 0 },
+      executiveSummary: null,
+      executiveMetadata: {},
+      screenshotReferences: [],
+      stageMetadata: {},
+      errors: [],
+      quickWinStrategy: { topQuickWins: quickWins }
+    };
 
-    // PHASE 7.5: QA Validation
-    this.onProgress({ step: 'qa', message: 'Running QA validation...' });
-    console.log('\n═══════════════════════════════════════════════════════════');
-    console.log('[QA Validation] Starting QA validation...');
-    console.log('═══════════════════════════════════════════════════════════\n');
-
-    const qaValidation = validateReportQuality(synthesisResults);
-
-    // Log QA report
-    const qaReport = generateQAReport(qaValidation);
-    console.log(qaReport);
-
-    // Warn if quality is low
-    if (qaValidation.status === 'FAIL' || qaValidation.status === 'WARN') {
-      console.warn(`\n[QA WARNING] Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
-      console.warn('[QA WARNING] Recommendations:');
-      qaValidation.recommendations.forEach((rec, idx) => {
-        console.warn(`  ${idx + 1}. ${rec}`);
-      });
-    } else {
-      console.log(`\n[QA PASS] ✅ Report quality: ${qaValidation.status} (Score: ${qaValidation.qualityScore}/100)`);
-    }
+    // PHASE 7.5: QA Validation (MOVED TO REPORTENGINE)
+    const qaValidation = { status: 'SKIPPED', message: 'QA validation handled by ReportEngine' };
+    console.log('[QA Validation] Skipped - handled by ReportEngine microservice');
 
     // PHASE 8: Calculate Costs & Timing
     const analysisTime = Date.now() - startTime;
@@ -301,6 +281,8 @@ export class ResultsAggregator {
       pageSelection,
       discoveryData,
       screenshotPaths,
+      screenshotsManifest,  // NEW: Pass screenshots manifest
+      leadId,  // NEW: Pass pre-generated lead ID
       synthesisResults,
       qaValidation,
       parsedData,
@@ -341,9 +323,15 @@ export class ResultsAggregator {
   }
 
   /**
-   * Save screenshots to local storage
+   * Save screenshots to local storage and Supabase Storage
+   *
+   * @param {Array} pages - Crawled pages with screenshot buffers
+   * @param {object} context - Business context (company_name, etc.)
+   * @param {string} baseUrl - Base website URL
+   * @param {string} leadId - Pre-generated UUID for lead
+   * @returns {Promise<object>} { screenshotPaths, screenshotsManifest }
    */
-  async saveScreenshots(pages, context, baseUrl) {
+  async saveScreenshots(pages, context, baseUrl, leadId) {
     const baseScreenshotLabel = (() => {
       if (context.company_name) return context.company_name;
       try {
@@ -364,6 +352,7 @@ export class ResultsAggregator {
 
     const screenshotPaths = {};
 
+    // Save all screenshots to local disk (backward compatibility)
     for (const page of pages) {
       if (!page.screenshots) {
         screenshotPaths[page.url] = { desktop: null, mobile: null };
@@ -385,7 +374,23 @@ export class ResultsAggregator {
       page.screenshot_paths = paths;
     }
 
-    return screenshotPaths;
+    // Generate screenshots manifest (uploads to Supabase Storage)
+    let screenshotsManifest = null;
+    const storageType = process.env.SCREENSHOT_STORAGE || 'supabase_storage';
+
+    if (storageType !== 'local') {
+      try {
+        console.log(`[Screenshots] Generating manifest and uploading to Supabase Storage...`);
+        screenshotsManifest = await generateScreenshotsManifest(pages, leadId, storageType);
+        console.log(`[Screenshots] ✅ Manifest generated: ${screenshotsManifest.total_screenshots} screenshots, ${(screenshotsManifest.total_size_bytes / 1024 / 1024).toFixed(2)} MB`);
+      } catch (error) {
+        console.error(`[Screenshots] ⚠️  Failed to generate manifest:`, error.message);
+        console.error(`[Screenshots] Falling back to local storage only`);
+        // Don't throw - gracefully fall back to local storage
+      }
+    }
+
+    return { screenshotPaths, screenshotsManifest };
   }
 
   /**
@@ -403,6 +408,8 @@ export class ResultsAggregator {
       pageSelection,
       discoveryData,
       screenshotPaths,
+      screenshotsManifest,  // NEW: Screenshots manifest from Supabase Storage
+      leadId,  // NEW: Pre-generated lead ID
       synthesisResults,
       qaValidation,
       parsedData,
@@ -439,6 +446,10 @@ export class ResultsAggregator {
       content_score: scores.content_score,
       accessibility_score: scores.accessibility_score,
       social_score: scores.social_score,
+
+      // Design tokens (extracted from crawl data)
+      design_tokens_desktop: crawlData.pages[0]?.designTokens?.desktop || null,
+      design_tokens_mobile: crawlData.pages[0]?.designTokens?.mobile || null,
 
       // Issues
       design_issues: [...(analysisResults.desktopVisual?.issues || []), ...(analysisResults.mobileVisual?.issues || [])],
@@ -491,7 +502,7 @@ export class ResultsAggregator {
       qa_validation: qaValidation || { status: 'NOT_RUN' },
 
       // Lead scoring
-      ...leadScoringData,
+      ...(console.log('[DEBUG buildFinalResults] leadScoringData:', JSON.stringify(leadScoringData).slice(0, 200)), leadScoringData),
 
       // Technical data
       tech_stack: homepage.techStack?.cms || 'Unknown',
@@ -500,9 +511,19 @@ export class ResultsAggregator {
       has_https: homepage.fullUrl?.startsWith('https://') || false,
       has_blog: parsedData.content.hasBlog,
 
-      // Screenshots
-      screenshot_desktop_url: screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop,
-      screenshot_mobile_url: screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile,
+      // Lead ID (pre-generated for screenshot storage)
+      id: leadId,
+
+      // Screenshots (provide both _path and _url for compatibility)
+      // _path: Expected by report generator (auto-report-generator.js)
+      // _url: Used by database schema (leads.json)
+      screenshot_desktop_path: screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop,
+      screenshot_mobile_path: screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile,
+      screenshot_desktop_url: screenshotsManifest?.pages['/']?.desktop?.url || screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop,
+      screenshot_mobile_url: screenshotsManifest?.pages['/']?.mobile?.url || screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile,
+
+      // NEW: Screenshots manifest (Supabase Storage with multi-page support)
+      screenshots_manifest: screenshotsManifest,
 
       // Social data
       social_profiles: parsedData.social.links,
@@ -544,9 +565,13 @@ export class ResultsAggregator {
         content_strengths: benchmark.content_strengths,
         social_strengths: benchmark.social_strengths,
         accessibility_strengths: benchmark.accessibility_strengths,
-        // Screenshot URLs for side-by-side comparison
-        screenshot_desktop_url: benchmark.screenshot_desktop_url || null,
-        screenshot_mobile_url: benchmark.screenshot_mobile_url || null
+        // Screenshot paths/URLs for side-by-side comparison
+        // FIXED: Corrected field names to match benchmarks schema (desktop_screenshot_url vs screenshot_desktop_url)
+        // Provide both _path and _url for report engine compatibility
+        screenshot_desktop_path: benchmark.desktop_screenshot_url || null,
+        screenshot_mobile_path: benchmark.mobile_screenshot_url || null,
+        screenshot_desktop_url: benchmark.desktop_screenshot_url || null,
+        screenshot_mobile_url: benchmark.mobile_screenshot_url || null
       } : null,
 
       // Multi-page crawl metadata

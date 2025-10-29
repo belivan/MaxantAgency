@@ -123,6 +123,11 @@
       "description": "URL to mobile screenshot"
     },
     {
+      "name": "screenshots_manifest",
+      "type": "jsonb",
+      "description": "Screenshot manifest with storage paths, URLs, and metadata for benchmark website (homepage only). Structure: { storage_type, base_url, pages: { '/': { desktop: {url, width, height, size}, mobile: {...} } }, total_screenshots, benchmark_id }"
+    },
+    {
       "name": "business_intelligence",
       "type": "jsonb",
       "description": "Extracted business data (employee count, pricing, features, etc.)"

@@ -1,0 +1,35 @@
+{
+  "name": "@maxant/report-engine",
+  "version": "1.0.0",
+  "description": "Report generation microservice for MaxantAgency - generates professional website audit reports in multiple formats",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node tests/test-report-generation.js"
+  },
+  "keywords": [
+    "report-generation",
+    "website-audit",
+    "pdf-generation",
+    "ai-synthesis",
+    "maxant"
+  ],
+  "author": "MaxantAgency",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0",
+    "@supabase/supabase-js": "^2.75.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "handlebars": "^4.7.8",
+    "openai": "^4.75.0",
+    "playwright": "^1.40.0",
+    "sharp": "^0.34.4"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

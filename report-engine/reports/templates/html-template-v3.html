@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Analysis Report - {{COMPANY_NAME}}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    {{STYLES}}
+</head>
+<body>
+    <div class="report-wrapper">
+        <!-- Dark Mode Toggle -->
+        <button class="dark-mode-toggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode">
+            <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M12 17.5a5.5 5.5 0 1 0 0-11 5.5 5.5 0 0 0 0 11zm0-9a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7zm0-4a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm0 16a1 1 0 0 1 1 1v1a1 1 0 1 1-2 0v-1a1 1 0 0 1 1-1zm8.5-8.5a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1zm-16 0a1 1 0 0 1-1 1h-1a1 1 0 1 1 0-2h1a1 1 0 0 1 1 1zm13.74 5.33a1 1 0 0 1 0 1.41l-.71.71a1 1 0 0 1-1.41-1.41l.71-.71a1 1 0 0 1 1.41 0zm-11.31 0a1 1 0 0 1 1.41 0l.71.71a1 1 0 1 1-1.41 1.41l-.71-.71a1 1 0 0 1 0-1.41zm0-8.49a1 1 0 0 1 0-1.41l.71-.71a1 1 0 0 1 1.41 1.41l-.71.71a1 1 0 0 1-1.41 0zm11.31 0a1 1 0 0 1-1.41 0l-.71-.71a1 1 0 0 1 1.41-1.41l.71.71a1 1 0 0 1 0 1.41z"/>
+            </svg>
+            <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path d="M21.75 15.14A9.5 9.5 0 0 1 8.86 2.25a9.38 9.38 0 0 0-1.11 4.38A9.5 9.5 0 0 0 17.25 16.13a9.38 9.38 0 0 0 4.38-1.11.12.12 0 0 1 .12.12z"/>
+            </svg>
+        </button>
+
+        {{REPORT_CONTENT}}
+    </div>
+
+    <!-- Dark mode toggle script -->
+    <script>
+        function updateDarkModeIcon() {
+            const isDark = document.body.classList.contains('dark-mode');
+            const sunIcon = document.querySelector('.sun-icon');
+            const moonIcon = document.querySelector('.moon-icon');
+
+            if (isDark) {
+                sunIcon.style.display = 'block';
+                moonIcon.style.display = 'none';
+            } else {
+                sunIcon.style.display = 'none';
+                moonIcon.style.display = 'block';
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            localStorage.setItem('reportTheme', isDark ? 'dark' : 'light');
+            updateDarkModeIcon();
+        }
+
+        // Persist dark mode preference
+        const savedTheme = localStorage.getItem('reportTheme');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-mode');
+        }
+
+        // Initialize icon on page load
+        updateDarkModeIcon();
+    </script>
+</body>
+</html>

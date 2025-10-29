@@ -121,7 +121,7 @@ export async function gradeWithAI(analysisResults, metadata) {
     console.log(`  ├─ Gap vs Benchmark: ${parsedGrading.comparison_summary.gap} points`);
     console.log(`  └─ Weights Used: Design ${parsedGrading.dimension_weights_used.design * 100}%, SEO ${parsedGrading.dimension_weights_used.seo * 100}%, Perf ${parsedGrading.dimension_weights_used.performance * 100}%`);
 
-    // Step 4: Return comprehensive grading result
+    // Step 4: Return comprehensive grading result (NOW WITH ALL DIMENSION SCORES!)
     return {
       success: true,
 
@@ -129,9 +129,23 @@ export async function gradeWithAI(analysisResults, metadata) {
       grade: parsedGrading.overall_grade,
       overall_score: Math.round(parsedGrading.overall_score),
 
-      // Lead scoring
+      // Lead scoring - overall
       lead_score: Math.round(parsedGrading.lead_score),
       lead_priority: parsedGrading.lead_priority,
+      priority_tier: parsedGrading.priority_tier,  // NEW: hot/warm/cold
+      budget_likelihood: parsedGrading.budget_likelihood,  // NEW: high/medium/low
+
+      // Lead scoring - 6 dimension breakdown (NEW!)
+      fit_score: Math.round(parsedGrading.fit_score || 50),  // Overall fit (0-100)
+      quality_gap_score: Math.round(parsedGrading.quality_gap_score || 0),  // 0-25
+      budget_score: Math.round(parsedGrading.budget_score || 0),  // 0-25
+      urgency_score: Math.round(parsedGrading.urgency_score || 0),  // 0-20
+      industry_fit_score: Math.round(parsedGrading.industry_fit_score || 0),  // 0-15
+      company_size_score: Math.round(parsedGrading.company_size_score || 0),  // 0-10
+      engagement_score: Math.round(parsedGrading.engagement_score || 0),  // 0-5
+
+      // Lead scoring reasoning
+      lead_priority_reasoning: parsedGrading.lead_scoring_reasoning || 'AI-generated lead score based on 6-dimension framework',
 
       // Weights used (for transparency/debugging)
       dimension_weights: parsedGrading.dimension_weights_used,
