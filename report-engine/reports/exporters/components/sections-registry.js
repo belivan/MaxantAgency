@@ -23,6 +23,10 @@ import { generateCompleteIssueBreakdown } from './sections/issue-breakdown.js';
 import { generateAccessibilityComplianceSection } from './sections/accessibility.js';
 import { generatePerformanceMetricsSection } from './sections/performance-metrics.js';
 import { generateMultiPageScreenshotGallery } from './sections/screenshot-gallery.js';
+import { generateLeadScoringDashboard } from './sections/lead-scoring.js';
+import { generateAIWeights } from './sections/ai-weights.js';
+import { generateAnalysisScope } from './sections/analysis-scope.js';
+import { generateDesignTokensSection } from './sections/design-tokens.js';
 import { generateFooter } from './sections/footer.js';
 
 /**
@@ -51,15 +55,15 @@ export const SECTIONS_REGISTRY = [
     description: 'Header with company info, grade badge, and score overview'
   },
   {
-    id: 'score-breakdown',
-    name: 'Grading Methodology',
-    component: generateScoreBreakdownSection,
-    order: 15,
-    reportTypes: ['preview', 'full'],
+    id: 'lead-scoring',
+    name: 'Lead Scoring Dashboard',
+    component: generateLeadScoringDashboard,
+    order: 2,
+    reportTypes: ['full'],
     required: false,
-    showPlaceholder: true,
+    showPlaceholder: false,
     requiredData: [],
-    description: 'Pie chart and bars showing how the grade was calculated'
+    description: 'BANT+ lead qualification scores and priority tier'
   },
   {
     id: 'strategic-assessment',
@@ -73,10 +77,32 @@ export const SECTIONS_REGISTRY = [
     description: 'AI-generated executive summary with key insights'
   },
   {
+    id: 'analysis-scope',
+    name: 'Analysis Scope & Methodology',
+    component: generateAnalysisScope,
+    order: 4,
+    reportTypes: ['full'],
+    required: false,
+    showPlaceholder: false,
+    requiredData: [],
+    description: 'Intelligent page selection and analysis metadata'
+  },
+  {
+    id: 'design-tokens',
+    name: 'Design System Tokens',
+    component: generateDesignTokensSection,
+    order: 5,
+    reportTypes: ['full'],
+    required: false,
+    showPlaceholder: false,
+    requiredData: [],
+    description: 'Extracted color palettes and typography from desktop and mobile viewports'
+  },
+  {
     id: 'benchmark-comparison-chart',
     name: 'Industry Benchmark Comparison',
     component: generateBenchmarkComparisonChart,
-    order: 4,
+    order: 6,
     reportTypes: ['preview', 'full'],
     required: false,
     showPlaceholder: true,
@@ -87,7 +113,7 @@ export const SECTIONS_REGISTRY = [
     id: 'benchmark-screenshots',
     name: 'Side-by-Side Screenshot Comparison',
     component: generateSideBySideComparison,
-    order: 5,
+    order: 7,
     reportTypes: ['preview', 'full'],
     required: false,
     showPlaceholder: false,
@@ -98,7 +124,7 @@ export const SECTIONS_REGISTRY = [
     id: 'action-plan',
     name: 'Action Plan',
     component: generateActionPlan,
-    order: 6,
+    order: 8,
     reportTypes: ['preview', 'full'],
     required: true,
     showPlaceholder: true,
@@ -109,7 +135,7 @@ export const SECTIONS_REGISTRY = [
     id: 'timeline',
     name: '30/60/90 Day Roadmap',
     component: generateTimeline,
-    order: 7,
+    order: 9,
     reportTypes: ['preview', 'full'],
     required: false,
     showPlaceholder: true,
@@ -120,7 +146,7 @@ export const SECTIONS_REGISTRY = [
     id: 'business-intelligence',
     name: 'Business Intelligence',
     component: generateBusinessIntelligenceSection,
-    order: 8,
+    order: 10,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: true,
@@ -131,7 +157,7 @@ export const SECTIONS_REGISTRY = [
     id: 'design-system',
     name: 'Design System Analysis',
     component: generateDesignSystemSection,
-    order: 9,
+    order: 11,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: false,
@@ -142,7 +168,7 @@ export const SECTIONS_REGISTRY = [
     id: 'technical-deep-dive',
     name: 'Technical Deep Dive',
     component: generateTechnicalDeepDive,
-    order: 10,
+    order: 12,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: true,
@@ -153,7 +179,7 @@ export const SECTIONS_REGISTRY = [
     id: 'complete-issue-breakdown',
     name: 'Complete Issue Breakdown',
     component: generateCompleteIssueBreakdown,
-    order: 11,
+    order: 13,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: true,
@@ -164,7 +190,7 @@ export const SECTIONS_REGISTRY = [
     id: 'accessibility-compliance',
     name: 'Accessibility Compliance',
     component: generateAccessibilityComplianceSection,
-    order: 12,
+    order: 14,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: true,
@@ -175,7 +201,7 @@ export const SECTIONS_REGISTRY = [
     id: 'performance-metrics',
     name: 'Performance Metrics',
     component: generatePerformanceMetricsSection,
-    order: 13,
+    order: 15,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: true,
@@ -183,10 +209,32 @@ export const SECTIONS_REGISTRY = [
     description: 'PageSpeed Insights and Core Web Vitals data'
   },
   {
+    id: 'score-breakdown',
+    name: 'Grading Methodology',
+    component: generateScoreBreakdownSection,
+    order: 16,
+    reportTypes: ['preview', 'full'],
+    required: false,
+    showPlaceholder: true,
+    requiredData: [],
+    description: 'Pie chart and bars showing how the grade was calculated'
+  },
+  {
+    id: 'ai-weights',
+    name: 'AI Category Weights',
+    component: generateAIWeights,
+    order: 17,
+    reportTypes: ['full'],
+    required: false,
+    showPlaceholder: false,
+    requiredData: [],
+    description: 'AI-calculated category weights and reasoning'
+  },
+  {
     id: 'screenshot-gallery',
     name: 'Multi-Page Screenshot Gallery',
     component: generateMultiPageScreenshotGallery,
-    order: 14,
+    order: 18,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: false,

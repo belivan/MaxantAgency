@@ -109,7 +109,7 @@ export class ResultsAggregator {
           weightedScore: aiGradingResult.overall_score,
           bonuses: [],
           penalties: [],
-          weights: aiGradingResult.dimension_weights_used,  // Fixed: was dimension_weights
+          weights: aiGradingResult.dimension_weights,  // Read from ai-grader return value
           weight_reasoning: aiGradingResult.weight_reasoning,  // Moved to top level for report display
           _meta: {
             grader: 'ai-comparative-v1',
@@ -145,11 +145,13 @@ export class ResultsAggregator {
 
         console.log(`[AI Grading] ✅ Grade: ${gradeResults.grade} (${gradeResults.overallScore}/100)`);
         console.log(`[AI Grading] ✅ Lead Score: ${leadScoringData.lead_score}/100 (${leadScoringData.lead_priority} priority)`);
-        console.log(`[DEBUG] leadScoringData.fit_score: ${leadScoringData.fit_score}`);
-        console.log(`[DEBUG] gradeResults.weights:`, gradeResults.weights);
       } else {
         // AI grading failed - fall back to manual
         console.warn('[AI Grading] ⚠️ AI grading failed, falling back to manual grading');
+        console.warn('[AI Grading] ⚠️ WARNING: Manual grading will NOT populate dimension scores!');
+        console.warn('[AI Grading] ⚠️ Fields that will be NULL: pain_score, budget_score, authority_score, etc.');
+        console.warn('[AI Grading] ⚠️ AI weights will also be NULL: ai_category_weights, ai_weights_reasoning');
+        console.warn('[AI Grading] ⚠️ Check ai-grader.js logs above for root cause.');
         useAIGrading = false; // Trigger fallback below
       }
     }
@@ -437,6 +439,10 @@ export class ResultsAggregator {
       grade_label: gradeResults.gradeLabel,
       grade_description: gradeResults.gradeDescription,
 
+      // Grading weights (from AI grader)
+      weights: gradeResults.weights || null,
+      weight_reasoning: gradeResults.weight_reasoning || null,
+
       // Scores
       design_score: scores.design_score,
       design_score_desktop: analysisResults.desktopVisual?.visualScore,
@@ -502,7 +508,7 @@ export class ResultsAggregator {
       qa_validation: qaValidation || { status: 'NOT_RUN' },
 
       // Lead scoring
-      ...(console.log('[DEBUG buildFinalResults] leadScoringData:', JSON.stringify(leadScoringData).slice(0, 200)), leadScoringData),
+      ...leadScoringData,
 
       // Technical data
       tech_stack: homepage.techStack?.cms || 'Unknown',

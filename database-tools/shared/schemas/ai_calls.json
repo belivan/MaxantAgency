@@ -1,0 +1,118 @@
+{
+  "table": "ai_calls",
+  "description": "Logs all AI API calls across all engines for cost tracking, debugging, and analysis",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "engine",
+      "type": "text",
+      "notNull": true,
+      "comment": "Which engine made the call: prospecting, analysis, outreach, report, pipeline"
+    },
+    {
+      "name": "module",
+      "type": "text",
+      "notNull": true,
+      "comment": "Which module/file made the call: ai-grader, seo-analyzer, email-generator, etc."
+    },
+    {
+      "name": "model",
+      "type": "text",
+      "notNull": true,
+      "comment": "AI model used: gpt-4o, claude-3-5-sonnet, grok-beta, etc."
+    },
+    {
+      "name": "provider",
+      "type": "text",
+      "notNull": true,
+      "comment": "AI provider: openai, anthropic, xai"
+    },
+    {
+      "name": "prompt_tokens",
+      "type": "integer",
+      "notNull": false,
+      "comment": "Number of tokens in the prompt"
+    },
+    {
+      "name": "completion_tokens",
+      "type": "integer",
+      "notNull": false,
+      "comment": "Number of tokens in the completion"
+    },
+    {
+      "name": "total_tokens",
+      "type": "integer",
+      "notNull": false,
+      "comment": "Total tokens used (prompt + completion)"
+    },
+    {
+      "name": "cost",
+      "type": "decimal(10,6)",
+      "notNull": false,
+      "comment": "Cost in USD for this API call"
+    },
+    {
+      "name": "response_content",
+      "type": "jsonb",
+      "notNull": false,
+      "comment": "The full AI response (text or structured data)"
+    },
+    {
+      "name": "request_data",
+      "type": "jsonb",
+      "notNull": false,
+      "comment": "Request details: systemPrompt, userPrompt, temperature, maxTokens, etc."
+    },
+    {
+      "name": "duration_ms",
+      "type": "integer",
+      "notNull": false,
+      "comment": "API call duration in milliseconds"
+    },
+    {
+      "name": "cached",
+      "type": "boolean",
+      "default": false,
+      "comment": "Was this response served from cache"
+    },
+    {
+      "name": "error",
+      "type": "text",
+      "notNull": false,
+      "comment": "Error message if the call failed"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "NOW()",
+      "notNull": true
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_ai_calls_engine",
+      "columns": ["engine"]
+    },
+    {
+      "name": "idx_ai_calls_module",
+      "columns": ["module"]
+    },
+    {
+      "name": "idx_ai_calls_model",
+      "columns": ["model"]
+    },
+    {
+      "name": "idx_ai_calls_created_at",
+      "columns": ["created_at"]
+    },
+    {
+      "name": "idx_ai_calls_cost",
+      "columns": ["cost"]
+    }
+  ]
+}

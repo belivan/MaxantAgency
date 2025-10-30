@@ -12,7 +12,7 @@
  */
 
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { callAI } from '../shared/ai-client.js';
+import { callAI, parseJSONResponse } from '../shared/ai-client.js';
 import { findBestBenchmark } from '../services/benchmark-matcher.js';
 import { calculateGrade } from './grader.js';
 
@@ -111,10 +111,8 @@ export async function gradeWithAI(analysisResults, metadata) {
       responseFormat: 'json'
     });
 
-    // Parse JSON response from content field
-    const parsedGrading = typeof gradingResult.content === 'string'
-      ? JSON.parse(gradingResult.content)
-      : gradingResult;
+    // Parse JSON response from content field (handles markdown/prose wrapping)
+    const parsedGrading = parseJSONResponse(gradingResult.content);
 
     console.log(`  ├─ Grade: ${parsedGrading.overall_grade} (${parsedGrading.overall_score}/100)`);
     console.log(`  ├─ Lead Score: ${parsedGrading.lead_score}/100 (${parsedGrading.lead_priority} priority)`);
@@ -179,7 +177,13 @@ export async function gradeWithAI(analysisResults, metadata) {
 
   } catch (error) {
     console.error(`  ❌ AI grading failed:`, error.message);
-    console.log(`  └─ Falling back to manual grading...`);
+    console.error(`     Error details:`, error);
+    console.error(`     Stack trace:`, error.stack);
+    console.log(`  └─ Falling back to manual grading (dimension scores will be NULL)...`);
+
+    // Return error details for debugging
+    console.warn(`  ⚠️  WARNING: Manual grading does NOT populate dimension scores (pain_score, budget_score, etc.)`);
+    console.warn(`  ⚠️  Check logs above to fix AI grading and get full lead scoring data.`);
 
     return fallbackGrading(analysisResults, metadata);
   }

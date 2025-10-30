@@ -9,6 +9,7 @@ import { readFile } from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
+import fetch from 'node-fetch';
 import { ScreenshotRegistry } from '../utils/screenshot-registry.js';
 import { compressImageFromFile } from '../utils/image-compressor.js';
 
@@ -37,7 +38,8 @@ const __dirname = dirname(__filename);
 
 /**
  * Process screenshots for embedding in report
- * Converts screenshot files to base64 dataURIs
+ * NEW: Loads from screenshots_manifest (Supabase Storage URLs)
+ * Fetches images and converts to base64 dataURIs
  */
 async function processScreenshots(analysisResult, registry) {
   const screenshotData = {
@@ -49,36 +51,108 @@ async function processScreenshots(analysisResult, registry) {
     benchmarkScreenshots: []
   };
 
-  // Homepage screenshots
-  if (analysisResult.screenshot_desktop_path && existsSync(analysisResult.screenshot_desktop_path)) {
-    try {
-      const compressed = await compressImageFromFile(analysisResult.screenshot_desktop_path, { quality: 85 });
-      screenshotData.desktopScreenshot = {
-        dataUri: compressed.dataUri,
-        device: 'desktop'
-      };
-      screenshotData.screenshots.push(screenshotData.desktopScreenshot);
-      registry.register('homepage-desktop', compressed.dataUri);
-    } catch (err) {
-      console.warn(`⚠️  Failed to process desktop screenshot: ${err.message}`);
+  // Load from screenshots_manifest (NEW)
+  const manifest = analysisResult.screenshots_manifest;
+  if (manifest && manifest.pages && manifest.pages.length > 0) {
+    console.log(`📸 Loading ${manifest.total_screenshots} screenshots from manifest...`);
+
+    for (const page of manifest.pages) {
+      const pagePath = page.page_path || '/';
+
+      // Desktop screenshot
+      if (page.desktop_screenshot && page.desktop_screenshot.public_url) {
+        try {
+          const response = await fetch(page.desktop_screenshot.public_url);
+          if (response.ok) {
+            const buffer = await response.buffer();
+            const base64 = buffer.toString('base64');
+            const dataUri = `data:image/png;base64,${base64}`;
+
+            const screenshotObj = {
+              dataUri,
+              device: 'desktop',
+              page: pagePath,
+              pageName: page.page_name
+            };
+
+            screenshotData.screenshots.push(screenshotObj);
+            registry.register(`${pagePath}-desktop`, dataUri);
+
+            // Set homepage as main desktop screenshot
+            if (pagePath === '/' && !screenshotData.desktopScreenshot) {
+              screenshotData.desktopScreenshot = screenshotObj;
+            }
+          }
+        } catch (err) {
+          console.warn(`⚠️  Failed to load desktop screenshot for ${pagePath}: ${err.message}`);
+        }
+      }
+
+      // Mobile screenshot
+      if (page.mobile_screenshot && page.mobile_screenshot.public_url) {
+        try {
+          const response = await fetch(page.mobile_screenshot.public_url);
+          if (response.ok) {
+            const buffer = await response.buffer();
+            const base64 = buffer.toString('base64');
+            const dataUri = `data:image/png;base64,${base64}`;
+
+            const screenshotObj = {
+              dataUri,
+              device: 'mobile',
+              page: pagePath,
+              pageName: page.page_name
+            };
+
+            screenshotData.screenshots.push(screenshotObj);
+            registry.register(`${pagePath}-mobile`, dataUri);
+
+            // Set homepage as main mobile screenshot
+            if (pagePath === '/' && !screenshotData.mobileScreenshot) {
+              screenshotData.mobileScreenshot = screenshotObj;
+            }
+          }
+        } catch (err) {
+          console.warn(`⚠️  Failed to load mobile screenshot for ${pagePath}: ${err.message}`);
+        }
+      }
     }
   }
 
-  if (analysisResult.screenshot_mobile_path && existsSync(analysisResult.screenshot_mobile_path)) {
-    try {
-      const compressed = await compressImageFromFile(analysisResult.screenshot_mobile_path, { quality: 85 });
-      screenshotData.mobileScreenshot = {
-        dataUri: compressed.dataUri,
-        device: 'mobile'
-      };
-      screenshotData.screenshots.push(screenshotData.mobileScreenshot);
-      registry.register('homepage-mobile', compressed.dataUri);
-    } catch (err) {
-      console.warn(`⚠️  Failed to process mobile screenshot: ${err.message}`);
+  // FALLBACK: Try old local paths if manifest is empty
+  if (screenshotData.screenshots.length === 0) {
+    if (analysisResult.screenshot_desktop_path && existsSync(analysisResult.screenshot_desktop_path)) {
+      try {
+        const compressed = await compressImageFromFile(analysisResult.screenshot_desktop_path, { quality: 85 });
+        screenshotData.desktopScreenshot = {
+          dataUri: compressed.dataUri,
+          device: 'desktop',
+          page: '/'
+        };
+        screenshotData.screenshots.push(screenshotData.desktopScreenshot);
+        registry.register('homepage-desktop', compressed.dataUri);
+      } catch (err) {
+        console.warn(`⚠️  Failed to process desktop screenshot: ${err.message}`);
+      }
+    }
+
+    if (analysisResult.screenshot_mobile_path && existsSync(analysisResult.screenshot_mobile_path)) {
+      try {
+        const compressed = await compressImageFromFile(analysisResult.screenshot_mobile_path, { quality: 85 });
+        screenshotData.mobileScreenshot = {
+          dataUri: compressed.dataUri,
+          device: 'mobile',
+          page: '/'
+        };
+        screenshotData.screenshots.push(screenshotData.mobileScreenshot);
+        registry.register('homepage-mobile', compressed.dataUri);
+      } catch (err) {
+        console.warn(`⚠️  Failed to process mobile screenshot: ${err.message}`);
+      }
     }
   }
 
-  // Benchmark screenshots
+  // Benchmark screenshots (unchanged)
   const benchmark = analysisResult.matched_benchmark;
   if (benchmark) {
     if (benchmark.screenshot_desktop_path && existsSync(benchmark.screenshot_desktop_path)) {
@@ -110,6 +184,7 @@ async function processScreenshots(analysisResult, registry) {
     }
   }
 
+  console.log(`📸 Loaded ${screenshotData.screenshots.length} target screenshots, ${screenshotData.benchmarkScreenshots.length} benchmark screenshots`);
   return screenshotData;
 }
 

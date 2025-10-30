@@ -224,6 +224,14 @@ app.post('/api/analyze-url', async (req, res) => {
       social_score: Math.round(result.social_score),
       accessibility_score: Math.round(result.accessibility_score || 50),
 
+      // Grading weights (from AI grader)
+      weights: result.weights || null,
+      weight_reasoning: result.weight_reasoning || null,
+
+      // Design tokens (extracted from crawl)
+      design_tokens_desktop: result.design_tokens_desktop || null,
+      design_tokens_mobile: result.design_tokens_mobile || null,
+
       // Lead Scoring (AI-driven qualification)
       lead_priority: result.lead_priority || null,
       lead_priority_reasoning: result.lead_priority_reasoning || null,
@@ -314,12 +322,10 @@ app.post('/api/analyze-url', async (req, res) => {
             failed_pages: result.crawl_metadata.failed_pages || []
           }
         : {},
-      pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
-      pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
-      pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
-      ai_page_selection: result.intelligent_analysis?.ai_page_selection ? {
-        strategy: result.intelligent_analysis.ai_page_selection.strategy || null
-      } : null,
+      pages_discovered: result.crawl_metadata?.pages_discovered || 0,
+      pages_crawled: result.crawl_metadata?.pages_crawled || 0,
+      pages_analyzed: result.crawl_metadata?.pages_analyzed || 0,
+      ai_page_selection: result.ai_page_selection || null,
 
       // Performance
       analysis_cost: result.analysis_cost || 0,
@@ -580,6 +586,14 @@ app.post('/api/analyze', async (req, res) => {
             social_score: Math.round(result.social_score),
             accessibility_score: Math.round(result.accessibility_score || 50),
 
+            // Grading weights (from AI grader)
+            weights: result.weights || null,
+            weight_reasoning: result.weight_reasoning || null,
+
+            // Design tokens (extracted from crawl)
+            design_tokens_desktop: result.design_tokens_desktop || null,
+            design_tokens_mobile: result.design_tokens_mobile || null,
+
             // Lead Scoring (AI-driven qualification)
             lead_priority: result.lead_priority || null,
             lead_priority_reasoning: result.lead_priority_reasoning || null,
@@ -670,12 +684,10 @@ app.post('/api/analyze', async (req, res) => {
                   failed_pages: result.crawl_metadata.failed_pages || []
                 }
               : {},
-            pages_discovered: result.intelligent_analysis?.pages_discovered || 0,
-            pages_crawled: result.intelligent_analysis?.pages_crawled || 0,
-            pages_analyzed: result.intelligent_analysis?.pages_crawled || 0,
-            ai_page_selection: result.intelligent_analysis?.ai_page_selection ? {
-              strategy: result.intelligent_analysis.ai_page_selection.strategy || null
-            } : null,
+            pages_discovered: result.crawl_metadata?.pages_discovered || 0,
+            pages_crawled: result.crawl_metadata?.pages_crawled || 0,
+            pages_analyzed: result.crawl_metadata?.pages_analyzed || 0,
+            ai_page_selection: result.ai_page_selection || null,
 
             // Performance
             analysis_cost: result.analysis_cost || 0,

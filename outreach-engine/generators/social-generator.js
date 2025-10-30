@@ -5,20 +5,18 @@
  * Platform-aware with character limits and tone adjustments.
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import { loadPrompt, fillTemplate, validateContext } from '../shared/prompt-loader.js';
 import { buildSocialContext } from '../shared/personalization-builder.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { callAI } from '../shared/ai-client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 dotenv.config({ path: join(__dirname, '../../.env') });
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 /**
  * Generate social media DM for a lead
@@ -76,17 +74,29 @@ export async function generateSocialDM(lead, options = {}) {
     // Get platform specs
     const platformSpecs = prompt.platformSpecs[platform];
 
-    // Call Claude AI
+    // Map model names to actual Claude model IDs
+    const modelMap = {
+      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
+      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
+      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
+    };
+
+    const actualModel = modelMap[model] || model;
+
+    // Call centralized AI client
     const startTime = Date.now();
-    const response = await callClaude(
-      model,
-      prompt.systemPrompt,
-      filledPrompt,
-      prompt.temperature || 0.8
-    );
+    const response = await callAI({
+      model: actualModel,
+      systemPrompt: prompt.systemPrompt,
+      userPrompt: filledPrompt,
+      temperature: prompt.temperature || 0.8,
+      maxTokens: 512, // Social DMs are shorter
+      engine: 'outreach',
+      module: 'social-generator'
+    });
 
     const duration = Date.now() - startTime;
-    const cost = calculateCost(model, response.usage);
+    const cost = response.cost;
 
     const message = response.content.trim();
 
@@ -106,7 +116,7 @@ export async function generateSocialDM(lead, options = {}) {
       platform,
       strategy,
       character_count: message.length,
-      model_used: model,
+      model_used: actualModel,
       generation_time_ms: duration,
       cost,
       usage: response.usage,
@@ -229,70 +239,4 @@ function validatePlatformMessage(message, platform, specs) {
   }
 }
 
-/**
- * Call Claude AI
- * @param {string} model - Model name
- * @param {string} systemPrompt - System prompt
- * @param {string} userPrompt - User prompt
- * @param {number} temperature - Temperature
- * @returns {Promise<object>} Response
- */
-async function callClaude(model, systemPrompt, userPrompt, temperature = 0.8) {
-  if (!model) throw new Error('Model is required');
-  if (!systemPrompt) throw new Error('System prompt is required');
-  if (!userPrompt) throw new Error('User prompt is required');
-
-  try {
-    const modelMap = {
-      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
-      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929'
-    };
-
-    const actualModel = modelMap[model] || model;
-
-    const response = await anthropic.messages.create({
-      model: actualModel,
-      max_tokens: 512, // Social DMs are shorter
-      temperature,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
-    });
-
-    if (!response || !response.content || !response.content[0]) {
-      throw new Error('Invalid response from Claude API');
-    }
-
-    return {
-      content: response.content[0].text,
-      usage: response.usage
-    };
-  } catch (error) {
-    throw new Error(`Claude API call failed: ${error.message}`);
-  }
-}
-
-/**
- * Calculate cost
- * @param {string} model - Model name
- * @param {object} usage - Usage object
- * @returns {number} Cost in dollars
- */
-function calculateCost(model, usage) {
-  if (!model) throw new Error('Model is required for cost calculation');
-  if (!usage) throw new Error('Usage object is required for cost calculation');
-  if (typeof usage.input_tokens !== 'number' || typeof usage.output_tokens !== 'number') {
-    throw new Error('Usage must have input_tokens and output_tokens as numbers');
-  }
-
-  const pricing = {
-    'claude-haiku-4-5': { input: 0.25, output: 1.25 },
-    'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
-    'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
-    'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 }
-  };
-
-  const rates = pricing[model] || { input: 0.25, output: 1.25 };
-
-  return (usage.input_tokens / 1_000_000) * rates.input +
-         (usage.output_tokens / 1_000_000) * rates.output;
-}
+// Note: callClaude and calculateCost functions removed - now using centralized AI client

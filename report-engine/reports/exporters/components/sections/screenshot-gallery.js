@@ -2,8 +2,8 @@
  * Multi-Page Screenshot Gallery - Full Report Only
  *
  * CRITICAL FIXES APPLIED:
- * - Desktop screenshots: max-height: 400px with object-fit: cover; object-position: top;
- * - Mobile screenshots: max-height: 500px with object-fit: cover; object-position: top;
+ * - Desktop screenshots: max-height: 200px with object-fit: cover; object-position: top;
+ * - Mobile screenshots: max-height: 250px with object-fit: cover; object-position: top;
  * - Prevents oversized images from dominating the report layout
  * - Shows multi-page screenshots if available, otherwise displays homepage screenshots
  */
@@ -19,7 +19,11 @@ import { escapeHtml } from '../utils/helpers.js';
  * - screenshotData.screenshots includes all pages with page URL metadata
  * - No need to read local files or fetch URLs - already embedded
  */
-export function generateMultiPageScreenshotGallery(analysisResult, screenshotData, registry) {
+export function generateMultiPageScreenshotGallery(analysisResult, synthesisData, options) {
+  // Extract screenshotData from options
+  const screenshotData = options.screenshotData || {};
+  const registry = options.registry;
+
   // NEW: Group screenshots by page URL
   const screenshotsByPage = new Map();
 
@@ -85,17 +89,17 @@ export function generateMultiPageScreenshotGallery(analysisResult, screenshotDat
         html += '          <div>\n';
         html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">🖥️ Desktop View</h4>\n';
         html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary);">\n';
-        html += `              <img src="${homepageScreenshots.desktop.dataUri}" alt="Homepage - Desktop" style="width: 100%; max-height: 400px; object-fit: cover; object-position: top; display: block;" />\n`;
+        html += `              <img src="${homepageScreenshots.desktop.dataUri}" alt="Homepage - Desktop" style="width: 100%; max-height: 200px; object-fit: cover; object-position: top; display: block;" />\n`;
         html += '            </div>\n';
         html += '          </div>\n';
       }
 
-      // Mobile screenshot - CRITICAL FIX: max-height 500px, object-fit cover
+      // Mobile screenshot - CRITICAL FIX: max-height 250px, object-fit cover
       if (homepageScreenshots.mobile && homepageScreenshots.mobile.dataUri) {
         html += '          <div>\n';
         html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">📱 Mobile View</h4>\n';
         html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary); max-width: 400px;">\n';
-        html += `              <img src="${homepageScreenshots.mobile.dataUri}" alt="Homepage - Mobile" style="width: 100%; max-height: 500px; object-fit: cover; object-position: top; display: block;" />\n`;
+        html += `              <img src="${homepageScreenshots.mobile.dataUri}" alt="Homepage - Mobile" style="width: 100%; max-height: 250px; object-fit: cover; object-position: top; display: block;" />\n`;
         html += '            </div>\n';
         html += '          </div>\n';
       }
@@ -127,22 +131,22 @@ export function generateMultiPageScreenshotGallery(analysisResult, screenshotDat
     html += `        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px;">${idx + 1}. ${escapeHtml(pageTitle)}</h3>\n`;
     html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">\n';
 
-    // Desktop screenshot - CRITICAL FIX: max-height 400px, object-fit cover
+    // Desktop screenshot - CRITICAL FIX: max-height 200px, object-fit cover
     if (screenshots.desktop && screenshots.desktop.dataUri) {
       html += '          <div>\n';
       html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">🖥️ Desktop View</h4>\n';
       html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary);">\n';
-      html += `              <img src="${screenshots.desktop.dataUri}" alt="${escapeHtml(pageTitle)} - Desktop" style="width: 100%; max-height: 400px; object-fit: cover; object-position: top; display: block;" loading="lazy" />\n`;
+      html += `              <img src="${screenshots.desktop.dataUri}" alt="${escapeHtml(pageTitle)} - Desktop" style="width: 100%; max-height: 200px; object-fit: cover; object-position: top; display: block;" loading="lazy" />\n`;
       html += '            </div>\n';
       html += '          </div>\n';
     }
 
-    // Mobile screenshot - CRITICAL FIX: max-height 500px, object-fit cover
+    // Mobile screenshot - CRITICAL FIX: max-height 250px, object-fit cover
     if (screenshots.mobile && screenshots.mobile.dataUri) {
       html += '          <div>\n';
       html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">📱 Mobile View</h4>\n';
       html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary); max-width: 400px;">\n';
-      html += `              <img src="${screenshots.mobile.dataUri}" alt="${escapeHtml(pageTitle)} - Mobile" style="width: 100%; max-height: 500px; object-fit: cover; object-position: top; display: block;" loading="lazy" />\n`;
+      html += `              <img src="${screenshots.mobile.dataUri}" alt="${escapeHtml(pageTitle)} - Mobile" style="width: 100%; max-height: 250px; object-fit: cover; object-position: top; display: block;" loading="lazy" />\n`;
       html += '            </div>\n';
       html += '          </div>\n';
     }

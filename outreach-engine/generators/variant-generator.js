@@ -8,7 +8,7 @@
 import { loadPrompt, fillTemplate } from '../shared/prompt-loader.js';
 import { buildPersonalizationContext } from '../shared/personalization-builder.js';
 import { generateEmail } from './email-generator.js';
-import Anthropic from '@anthropic-ai/sdk';
+import { callAI } from '../shared/ai-client.js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -16,8 +16,6 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../../.env') });
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 /**
  * Generate email variants for A/B testing
@@ -119,12 +117,24 @@ async function generateSubjectVariants(lead, options = {}) {
 
     const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
 
-    const response = await callClaude(
-      model,
-      prompt.systemPrompt,
-      filledPrompt,
-      prompt.temperature || 0.9
-    );
+    // Map model names to actual Claude model IDs
+    const modelMap = {
+      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
+      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
+      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
+    };
+
+    const actualModel = modelMap[model] || model;
+
+    const response = await callAI({
+      model: actualModel,
+      systemPrompt: prompt.systemPrompt,
+      userPrompt: filledPrompt,
+      temperature: prompt.temperature || 0.9,
+      maxTokens: 1024,
+      engine: 'outreach',
+      module: 'variant-generator-subjects'
+    });
 
     // Parse JSON array
     let subjects;
@@ -144,7 +154,7 @@ async function generateSubjectVariants(lead, options = {}) {
       subjects.push(`quick fix for ${context.domain}`);
     }
 
-    const cost = calculateCost(model, response.usage);
+    const cost = response.cost;
 
     subjects.forEach((subj, i) => {
       console.log(`      ${i + 1}. "${subj}" (${subj.length} chars)`);
@@ -243,7 +253,24 @@ ${bodies.map((b, i) => `${i}. ${b.substring(0, 200)}...`).join('\n\n')}
 Which combination (subject index + body index) will have highest conversion?
 Return JSON only.`;
 
-    const response = await callClaude(model, systemPrompt, userPrompt, 0.3);
+    // Map model names to actual Claude model IDs
+    const modelMap = {
+      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
+      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
+      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
+    };
+
+    const actualModel = modelMap[model] || model;
+
+    const response = await callAI({
+      model: actualModel,
+      systemPrompt,
+      userPrompt,
+      temperature: 0.3,
+      maxTokens: 1024,
+      engine: 'outreach',
+      module: 'variant-generator-recommendation'
+    });
 
     // Parse JSON
     let result;
@@ -257,7 +284,7 @@ Return JSON only.`;
       };
     }
 
-    const cost = calculateCost(model, response.usage);
+    const cost = response.cost;
 
     return {
       recommended: result.recommended,
@@ -278,70 +305,4 @@ Return JSON only.`;
  * @param {number} temperature - Temperature
  * @returns {Promise<object>} Response
  */
-async function callClaude(model, systemPrompt, userPrompt, temperature = 0.7) {
-  if (!model) throw new Error('Model is required');
-  if (!systemPrompt) throw new Error('System prompt is required');
-  if (!userPrompt) throw new Error('User prompt is required');
-
-  try {
-    const modelMap = {
-      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
-      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929'
-    };
-
-    const actualModel = modelMap[model] || model;
-
-    const response = await anthropic.messages.create({
-      model: actualModel,
-      max_tokens: 1024,
-      temperature,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: userPrompt }]
-    });
-
-    if (!response || !response.content || !response.content[0]) {
-      throw new Error('Invalid response from Claude API');
-    }
-
-    return {
-      content: response.content[0].text,
-      usage: response.usage
-    };
-  } catch (error) {
-    throw new Error(`Claude API call failed: ${error.message}`);
-  }
-}
-
-/**
- * Calculate cost
- * @param {string} model - Model name
- * @param {object} usage - Usage object
- * @returns {number} Cost in dollars
- */
-function calculateCost(model, usage) {
-  if (!model) {
-    throw new Error('Model is required for cost calculation');
-  }
-  if (!usage) {
-    throw new Error('Usage object is required for cost calculation');
-  }
-  if (typeof usage.input_tokens !== 'number' || typeof usage.output_tokens !== 'number') {
-    throw new Error('Usage must have input_tokens and output_tokens as numbers');
-  }
-
-  try {
-    const pricing = {
-      'claude-haiku-4-5': { input: 0.25, output: 1.25 },
-      'claude-3-5-haiku-20241022': { input: 0.25, output: 1.25 },
-      'claude-sonnet-4-5': { input: 3.00, output: 15.00 },
-      'claude-sonnet-4-5-20250929': { input: 3.00, output: 15.00 }
-    };
-
-    const rates = pricing[model] || { input: 0.25, output: 1.25 };
-
-    return (usage.input_tokens / 1_000_000) * rates.input +
-           (usage.output_tokens / 1_000_000) * rates.output;
-  } catch (error) {
-    throw new Error(`Failed to calculate cost: ${error.message}`);
-  }
-}
+// Note: callClaude and calculateCost functions removed - now using centralized AI client

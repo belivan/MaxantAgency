@@ -91,6 +91,55 @@ export async function loadPrompt(promptPath, variables = {}) {
   };
 }
 
+// Cache for Handlebars instance with helpers registered
+let handlebarsInstance = null;
+
+/**
+ * Get or create Handlebars instance with custom helpers
+ */
+async function getHandlebars() {
+  if (handlebarsInstance) {
+    return handlebarsInstance;
+  }
+
+  const Handlebars = (await import('handlebars')).default;
+
+  // Register custom helpers
+
+  // Greater than comparison
+  Handlebars.registerHelper('gt', function(a, b) {
+    return a > b;
+  });
+
+  // Less than comparison
+  Handlebars.registerHelper('lt', function(a, b) {
+    return a < b;
+  });
+
+  // Equals comparison
+  Handlebars.registerHelper('eq', function(a, b) {
+    return a === b;
+  });
+
+  // JSON stringify helper
+  Handlebars.registerHelper('json', function(context) {
+    return JSON.stringify(context, null, 2);
+  });
+
+  // Array length helper
+  Handlebars.registerHelper('length', function(array) {
+    return Array.isArray(array) ? array.length : 0;
+  });
+
+  // Default value helper
+  Handlebars.registerHelper('default', function(value, defaultValue) {
+    return value || defaultValue;
+  });
+
+  handlebarsInstance = Handlebars;
+  return Handlebars;
+}
+
 /**
  * Substitute variables in template string using Handlebars
  *
@@ -106,8 +155,8 @@ export async function substituteVariables(template, variables, requiredVars = []
     throw new Error(`Missing required variables: ${missingVars.join(', ')}`);
   }
 
-  // Use Handlebars for template processing
-  const Handlebars = (await import('handlebars')).default;
+  // Get Handlebars instance with helpers
+  const Handlebars = await getHandlebars();
 
   // Compile and execute template
   const compiledTemplate = Handlebars.compile(template);
