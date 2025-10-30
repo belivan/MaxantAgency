@@ -11,7 +11,7 @@ import { buildSocialContext } from '../shared/personalization-builder.js';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { callAI } from '../shared/ai-client.js';
+import { callAI } from '../../database-tools/shared/ai-client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

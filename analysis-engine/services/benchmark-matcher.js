@@ -7,7 +7,7 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { getBenchmarksByIndustry, getBenchmarks } from '../database/supabase-client.js';
-import { callAI } from '../shared/ai-client.js';
+import { callAI } from '../../database-tools/shared/ai-client.js';
 
 /**
  * Find the best benchmark match for a target business

@@ -12,7 +12,7 @@
  */
 
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { callAI, parseJSONResponse } from '../shared/ai-client.js';
+import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 
 /**
  * Analyze visual design using GPT-4o Vision (Multi-page version with both viewports)
@@ -90,7 +90,7 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
       // Call centralized AI client with both desktop and mobile screenshots
       // Prepare images with smart split support
       // Import compression function to handle sections
-      const { compressImageIfNeeded } = await import('../shared/ai-client.js');
+      const { compressImageIfNeeded } = await import('../../database-tools/shared/ai-client.js');
 
       const desktopProcessed = await compressImageIfNeeded(page.screenshots.desktop);
       const mobileProcessed = await compressImageIfNeeded(page.screenshots.mobile);

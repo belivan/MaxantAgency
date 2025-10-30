@@ -11,7 +11,7 @@
  * Time: 2-3 seconds
  */
 
-import { callAI } from '../shared/ai-client.js';
+import { callAI } from '../../database-tools/shared/ai-client.js';
 
 /**
  * Select pages for analysis using AI

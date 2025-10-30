@@ -93,7 +93,42 @@ app.get('/api/prompts/default', async (req, res) => {
  *   "force": false
  * }
  */
-app.post('/api/analyze-benchmark', async (req, res) => {
+// Helper function to extract params from both GET and POST
+function getBenchmarkParams(req) {
+  if (req.method === 'GET') {
+    return {
+      url: req.query.url,
+      company_name: req.query.company_name,
+      industry: req.query.industry,
+      benchmark_tier: req.query.benchmark_tier,
+      google_rating: req.query.google_rating ? parseFloat(req.query.google_rating) : undefined,
+      google_review_count: req.query.google_review_count ? parseInt(req.query.google_review_count) : undefined,
+      location_city: req.query.location_city,
+      location_state: req.query.location_state,
+      awards: req.query.awards ? JSON.parse(req.query.awards) : undefined,
+      notes: req.query.notes,
+      force: req.query.force === 'true'
+    };
+  } else {
+    return req.body;
+  }
+}
+
+// Tier mapping: UI labels -> database tiers
+const TIER_MAPPING = {
+  'aspirational': 'national',    // Top performers, award-winning
+  'competitive': 'regional',     // Industry standard, top local
+  'baseline': 'local',           // Entry level, direct competitors
+  'national': 'national',        // Allow direct database values too
+  'regional': 'regional',
+  'local': 'local',
+  'manual': 'manual'
+};
+
+const VALID_TIERS = ['national', 'regional', 'local', 'manual'];
+
+// Support both GET (for SSE with EventSource) and POST (for backward compatibility)
+app.all('/api/analyze-benchmark', async (req, res) => {
   try {
     const {
       url,
@@ -107,7 +142,7 @@ app.post('/api/analyze-benchmark', async (req, res) => {
       awards,
       notes,
       force
-    } = req.body;
+    } = getBenchmarkParams(req);
 
     // Validation
     if (!url) {
@@ -120,13 +155,56 @@ app.post('/api/analyze-benchmark', async (req, res) => {
       return res.status(400).json({ error: 'industry is required' });
     }
 
+    // Tier validation and mapping
+    const uiTier = benchmark_tier || 'competitive';  // Default to 'competitive' (maps to 'regional')
+    const databaseTier = TIER_MAPPING[uiTier];
+
+    if (!databaseTier) {
+      return res.status(400).json({
+        error: `Invalid benchmark_tier: "${uiTier}". Must be one of: aspirational, competitive, baseline, national, regional, local, manual`
+      });
+    }
+
     console.log(`[Benchmark Analysis] Analyzing ${company_name} as benchmark...`);
 
+    // Set up Server-Sent Events headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    // Helper function to send SSE events
+    function sendEvent(eventType, data) {
+      res.write(`event: ${eventType}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+
+    // Send start event
+    sendEvent('start', {
+      company_name,
+      url,
+      message: `Starting benchmark analysis for ${company_name}...`
+    });
+
+    // Progress callback for real-time updates
+    let progressCount = 10;
+    const onProgress = (message, phase, step) => {
+      progressCount = Math.min(progressCount + 10, 90);
+      sendEvent('analyzing', {
+        current: progressCount,
+        total: 100,
+        phase,
+        step,
+        message
+      });
+    };
+
+    // Analyze the benchmark with progress callback
     const result = await analyzeBenchmark({
       company_name,
       website_url: url,
       industry,
-      benchmark_tier: benchmark_tier || 'regional',
+      benchmark_tier: databaseTier,  // Use mapped and validated database tier
       google_rating,
       google_review_count,
       location_city,
@@ -135,27 +213,41 @@ app.post('/api/analyze-benchmark', async (req, res) => {
       notes,
       source: 'api'
     }, {
-      force: force || false
+      force: force || false,
+      onProgress
     });
 
+    // Send final event
     if (result.success) {
-      return res.json({
+      sendEvent('complete', {
         success: true,
         benchmark: result.benchmark
       });
     } else {
-      return res.status(400).json({
-        success: false,
+      sendEvent('error', {
+        message: result.error || 'Analysis failed',
         error: result.error
       });
     }
 
+    // End the SSE stream
+    res.end();
+
   } catch (error) {
     console.error('[Benchmark Analysis] Error:', error);
-    return res.status(500).json({
-      success: false,
-      error: error.message
-    });
+
+    // If headers already sent (SSE started), send error event
+    if (res.headersSent) {
+      res.write(`event: error\n`);
+      res.write(`data: ${JSON.stringify({ message: 'Internal server error', error: error.message })}\n\n`);
+      res.end();
+    } else {
+      // Otherwise send regular error response
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
   }
 });
 
@@ -713,6 +805,26 @@ app.post('/api/analyze', async (req, res) => {
             updated_at: new Date().toISOString()
           };
 
+          // VALIDATION: Ensure required fields are present before database save
+          if (!leadData.project_id) {
+            console.error(`[Intelligent Analysis] CRITICAL: project_id is missing for ${prospect.company_name || prospect.website}`);
+            sendEvent('error', {
+              current: currentIndex,
+              total: prospects.length,
+              company_name: prospect.company_name,
+              company: prospect.company_name || prospect.website,
+              url: prospect.website,
+              error: 'Missing project_id - lead not saved to database'
+            });
+            continue; // Skip this prospect, move to next
+          }
+
+          // Fix overall_score if it's NaN, null, or undefined
+          if (leadData.overall_score == null || isNaN(leadData.overall_score) || typeof leadData.overall_score !== 'number') {
+            console.warn(`[Intelligent Analysis] WARNING: overall_score invalid (${leadData.overall_score}, type: ${typeof leadData.overall_score}) for ${prospect.company_name || prospect.website}, using fallback value of 50`);
+            leadData.overall_score = 50; // Fallback to middle score
+          }
+
           // STEP 1: Save local backup BEFORE attempting database upload
           let backupPath;
           try {
@@ -1106,86 +1218,100 @@ app.post('/api/leads/batch-delete', async (req, res) => {
 });
 
 /**
- * POST /api/reports/generate
- * Generate a website audit report for a lead
+ * DELETE /api/benchmarks/:id
+ * Delete a single benchmark by ID
+ */
+app.delete('/api/benchmarks/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        error: 'Benchmark ID is required'
+      });
+    }
+
+    const { error } = await supabase
+      .from('benchmarks')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('[Delete Benchmark] Error:', error);
+      return res.status(500).json({
+        error: 'Failed to delete benchmark',
+        details: error.message
+      });
+    }
+
+    console.log(`[Delete Benchmark] Successfully deleted benchmark ${id}`);
+
+    res.json({
+      success: true,
+      message: 'Benchmark deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('[Delete Benchmark] Error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
+/**
+ * POST /api/benchmarks/batch-delete
+ * Delete multiple benchmarks in batch
  *
  * Body:
  * {
- *   "lead_id": "uuid",
- *   "format": "markdown" | "html",  // Default: "markdown"
- *   "sections": ["all"]              // For markdown only
+ *   "ids": ["id1", "id2", "id3"]
  * }
  */
-/**
- * POST /api/reports/generate
- * DEPRECATED: Report generation has been moved to ReportEngine microservice
- */
-app.post('/api/reports/generate', async (req, res) => {
-  res.status(410).json({
-    success: false,
-    error: 'This endpoint has been moved to the ReportEngine microservice',
-    message: 'Report generation is now handled by a dedicated microservice',
-    migrationInfo: {
-      newEndpoint: 'http://localhost:3003/api/generate',
-      method: 'POST',
-      body: {
-        analysisResult: '{ ...lead data from /leads table... }',
-        options: {
-          format: 'html | markdown | pdf',
-          sections: ['all'],
-          saveToDatabase: true,
-          project_id: 'uuid',
-          lead_id: 'uuid'
-        }
-      }
+app.post('/api/benchmarks/batch-delete', async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({
+        error: 'An array of benchmark IDs is required'
+      });
     }
-  });
+
+    console.log(`[Batch Delete Benchmarks] Deleting ${ids.length} benchmarks`);
+
+    const { error, count } = await supabase
+      .from('benchmarks')
+      .delete()
+      .in('id', ids);
+
+    if (error) {
+      console.error('[Batch Delete Benchmarks] Error:', error);
+      return res.status(500).json({
+        error: 'Failed to delete benchmarks',
+        details: error.message
+      });
+    }
+
+    console.log(`[Batch Delete Benchmarks] Successfully deleted ${ids.length} benchmarks`);
+
+    res.json({
+      success: true,
+      deleted: ids.length,
+      failed: 0,
+      message: `${ids.length} benchmark(s) deleted successfully`
+    });
+
+  } catch (error) {
+    console.error('[Batch Delete Benchmarks] Error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
 });
 
-/**
- * GET /api/reports/:id/download
- * DEPRECATED: This endpoint has been moved to ReportEngine microservice
- */
-app.get('/api/reports/:id/download', async (req, res) => {
-  res.status(410).json({
-    success: false,
-    error: 'This endpoint has been moved to the ReportEngine microservice',
-    migrationInfo: {
-      newEndpoint: `http://localhost:3003/api/reports/${req.params.id}/download`,
-      method: 'GET'
-    }
-  });
-});
-
-/**
- * GET /api/reports/lead/:lead_id
- * DEPRECATED: This endpoint has been moved to ReportEngine microservice
- */
-app.get('/api/reports/lead/:lead_id', async (req, res) => {
-  res.status(410).json({
-    success: false,
-    error: 'This endpoint has been moved to the ReportEngine microservice',
-    migrationInfo: {
-      newEndpoint: `http://localhost:3003/api/reports/lead/${req.params.lead_id}`,
-      method: 'GET'
-    }
-  });
-});
-
-/**
- * DELETE /api/reports/:id
- * DEPRECATED: This endpoint has been moved to ReportEngine microservice
- */
-app.delete('/api/reports/:id', async (req, res) => {
-  res.status(410).json({
-    success: false,
-    error: 'This endpoint has been moved to the ReportEngine microservice',
-    migrationInfo: {
-      newEndpoint: `http://localhost:3003/api/reports/${req.params.id}`,
-      method: 'DELETE'
-    }
-  });
-});
 
 // Start server
 app.listen(PORT, () => {
@@ -1195,17 +1321,16 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log('');
   console.log('Endpoints:');
-  console.log(`  GET    /health                      - Health check`);
-  console.log(`  POST   /api/analyze-url             - Analyze single URL`);
-  console.log(`  POST   /api/analyze                 - Analyze prospects (SSE)`);
-  console.log(`  GET    /api/leads                   - Get analyzed leads`);
-  console.log(`  DELETE /api/leads/:id               - Delete a lead`);
-  console.log(`  POST   /api/leads/batch-delete      - Delete multiple leads`);
-  console.log(`  GET    /api/stats                   - Get statistics`);
-  console.log(`  POST   /api/reports/generate        - Generate website audit report`);
-  console.log(`  GET    /api/reports/:id/download    - Get report download URL`);
-  console.log(`  GET    /api/reports/lead/:lead_id   - Get all reports for a lead`);
-  console.log(`  DELETE /api/reports/:id             - Delete a report`);
+  console.log(`  GET    /health                          - Health check`);
+  console.log(`  ALL    /api/analyze-benchmark           - Analyze website as benchmark (SSE)`);
+  console.log(`  POST   /api/analyze-url                 - Analyze single URL`);
+  console.log(`  POST   /api/analyze                     - Analyze prospects (SSE)`);
+  console.log(`  GET    /api/leads                       - Get analyzed leads`);
+  console.log(`  DELETE /api/leads/:id                   - Delete a lead`);
+  console.log(`  POST   /api/leads/batch-delete          - Delete multiple leads`);
+  console.log(`  DELETE /api/benchmarks/:id              - Delete a benchmark`);
+  console.log(`  POST   /api/benchmarks/batch-delete     - Delete multiple benchmarks`);
+  console.log(`  GET    /api/stats                       - Get statistics`);
   console.log('');
   console.log('Ready to analyze websites!');
   console.log('');

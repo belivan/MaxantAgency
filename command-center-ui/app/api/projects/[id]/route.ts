@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -19,7 +19,7 @@ export async function GET(
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const projectId = params.id;
+    const { id: projectId } = await params;
 
     if (!projectId) {
       return NextResponse.json(
@@ -66,7 +66,7 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -80,7 +80,7 @@ export async function PATCH(
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const projectId = params.id;
+    const { id: projectId } = await params;
     const body = await request.json();
 
     // NOTE: ICP brief locking removed - auto-fork feature on frontend handles this
@@ -135,7 +135,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -149,7 +149,7 @@ export async function DELETE(
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const projectId = params.id;
+    const { id: projectId } = await params;
 
     // Delete project
     const { error } = await supabase

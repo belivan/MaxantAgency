@@ -19,6 +19,13 @@ import {
   Info
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import {
+  SignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+  UserButton
+} from '@clerk/nextjs';
 
 interface NavItem {
   label: string;
@@ -30,7 +37,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   {
     label: 'Dashboard',
-    href: '/',
+    href: '/dashboard',
     icon: <LayoutDashboard className="w-5 h-5" />
   },
   {
@@ -62,11 +69,6 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Analytics',
     href: '/analytics',
     icon: <BarChart3 className="w-5 h-5" />
-  },
-  {
-    label: 'About',
-    href: '/about',
-    icon: <Info className="w-5 h-5" />
   }
 ];
 
@@ -74,8 +76,8 @@ export function Navbar() {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
-    if (href === '/') {
-      return pathname === '/';
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
     }
     return pathname.startsWith(href);
   };
@@ -96,29 +98,50 @@ export function Navbar() {
             </Link>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Links - Only show when signed in */}
           <div className="flex items-center space-x-1">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                  'hover:bg-accent hover:text-accent-foreground',
-                  isActive(item.href)
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground'
-                )}
-              >
-                <span className="hidden sm:inline">{item.icon}</span>
-                <span>{item.label}</span>
-                {item.badge && item.badge > 0 && (
-                  <span className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
-                    {item.badge}
-                  </span>
-                )}
-              </Link>
-            ))}
+            <SignedIn>
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                    'hover:bg-accent hover:text-accent-foreground',
+                    isActive(item.href)
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground'
+                  )}
+                >
+                  <span className="hidden sm:inline">{item.icon}</span>
+                  <span>{item.label}</span>
+                  {item.badge && item.badge > 0 && (
+                    <span className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </SignedIn>
+
+            {/* Auth Buttons */}
+            <div className="ml-2 pl-2 border-l border-border flex items-center space-x-2">
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                    Sign In
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
+                    Sign Up
+                  </button>
+                </SignUpButton>
+              </SignedOut>
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+            </div>
 
             {/* Theme Toggle */}
             <div className="ml-2 pl-2 border-l border-border">

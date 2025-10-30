@@ -3,7 +3,7 @@
  * Tests ALL supported AI models: OpenAI (GPT), xAI (Grok), and Anthropic (Claude)
  */
 
-import { callAI } from './shared/ai-client.js';
+import { callAI } from '../../../database-tools/shared/ai-client.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

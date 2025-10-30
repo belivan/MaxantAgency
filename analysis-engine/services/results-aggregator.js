@@ -120,8 +120,8 @@ export class ResultsAggregator {
 
         leadScoringData = {
           lead_score: aiGradingResult.lead_score,
-          lead_priority: aiGradingResult.lead_score,
-          priority_tier: aiGradingResult.priority_tier,
+          lead_priority: aiGradingResult.lead_score,  // INTEGER (0-100) - same as lead_score
+          priority_tier: aiGradingResult.priority_tier || 'warm',  // TEXT: "hot"/"warm"/"cold"
           budget_likelihood: aiGradingResult.budget_likelihood,
           fit_score: aiGradingResult.fit_score,
           quality_gap_score: aiGradingResult.quality_gap_score,

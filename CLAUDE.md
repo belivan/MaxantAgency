@@ -348,6 +348,96 @@ Synthesis metadata tracked in report config:
 
 **Documentation**: See `analysis-engine/reports/synthesis/SYNTHESIS-INTEGRATION-GUIDE.md` for complete guide.
 
+### 7. Centralized AI Client & Cost Tracking
+
+All engines use a **single consolidated AI client** located at `database-tools/shared/ai-client.js`.
+
+**Key Features:**
+- Unified interface for OpenAI, Anthropic (Claude), and xAI (Grok)
+- Automatic cost calculation per API call
+- Response caching for development
+- Centralized logging to `ai_calls` table
+
+**Import Pattern:**
+```javascript
+// All engines import from the same location
+import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
+```
+
+**Cost Tracking via `ai_calls` Table:**
+
+When `LOG_AI_CALLS_TO_DB=true` in `.env`, every AI call is automatically logged to the `ai_calls` table:
+
+```sql
+-- ai_calls table schema
+CREATE TABLE ai_calls (
+  id uuid PRIMARY KEY,
+  engine text,              -- prospecting, analysis, outreach, report
+  module text,              -- Which file made the call
+  model text,               -- gpt-4o, claude-3-5-sonnet, grok-beta
+  provider text,            -- openai, anthropic, xai
+  prompt_tokens integer,
+  completion_tokens integer,
+  total_tokens integer,
+  cost decimal(10,6),       -- USD cost calculated automatically
+  duration_ms integer,
+  cached boolean,           -- Was response cached?
+  request_data jsonb,       -- Full prompt for debugging
+  response_content jsonb,   -- AI response
+  error text,
+  created_at timestamptz
+);
+```
+
+**Usage:**
+```javascript
+// Enable in .env
+LOG_AI_CALLS_TO_DB=true
+
+// Every callAI() is automatically logged
+const response = await callAI({
+  model: 'gpt-4o',
+  systemPrompt: 'You are a design expert',
+  userPrompt: 'Analyze this website...',
+  jsonMode: true
+});
+// ✅ Logged to ai_calls table with cost, tokens, duration
+```
+
+**Benefits:**
+- Track AI costs per engine/module
+- Debug failed AI calls with full prompts
+- Analyze token usage patterns
+- Cost optimization insights
+- Audit trail for all AI usage
+
+**Query Examples:**
+```sql
+-- Total cost by engine
+SELECT engine, SUM(cost) as total_cost, COUNT(*) as calls
+FROM ai_calls
+GROUP BY engine
+ORDER BY total_cost DESC;
+
+-- Most expensive modules
+SELECT engine, module, SUM(cost) as cost
+FROM ai_calls
+GROUP BY engine, module
+ORDER BY cost DESC
+LIMIT 10;
+
+-- Failed calls for debugging
+SELECT engine, module, model, error, request_data
+FROM ai_calls
+WHERE error IS NOT NULL
+ORDER BY created_at DESC;
+```
+
+**Important:**
+- Logging adds ~50ms overhead per AI call (non-blocking)
+- Errors in logging don't block AI operations
+- For production, consider pruning old ai_calls records periodically
+
 ## Important Gotchas
 
 ### Database Schema Alignment

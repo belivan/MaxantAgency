@@ -6,10 +6,21 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Target, Plus, TrendingUp } from 'lucide-react';
+import { Target, Plus, TrendingUp, Trash2, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog';
 import {
   Dialog,
   DialogContent,
@@ -20,6 +31,8 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useTaskProgress } from '@/lib/contexts/task-progress-context';
+import { deleteBenchmarks } from '@/lib/api/analysis';
 
 interface Benchmark {
   id: string;
@@ -35,6 +48,9 @@ export function BenchmarkManager() {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchBenchmarks();
@@ -54,6 +70,35 @@ export function BenchmarkManager() {
       console.error('Failed to load benchmarks:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (selectedIds.length === 0) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteBenchmarks(selectedIds);
+
+      // Clear selection
+      setSelectedIds([]);
+      setShowDeleteDialog(false);
+
+      // Refresh the data
+      await fetchBenchmarks();
+    } catch (error) {
+      console.error('Failed to delete benchmarks:', error);
+      alert(`Failed to delete benchmarks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function handleSelectBenchmark(benchmarkId: string, checked: boolean) {
+    if (checked) {
+      setSelectedIds(prev => [...prev, benchmarkId]);
+    } else {
+      setSelectedIds(prev => prev.filter(id => id !== benchmarkId));
     }
   }
 
@@ -86,26 +131,58 @@ export function BenchmarkManager() {
               {total > 0 ? `${total} benchmarks across ${Object.keys(groupedBenchmarks).length} industries` : 'No benchmarks yet'}
             </CardDescription>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Benchmark
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Analyze Website as Benchmark</DialogTitle>
-                <DialogDescription>
-                  Add a top-performing website to use as a comparison benchmark for analysis
-                </DialogDescription>
-              </DialogHeader>
-              <BenchmarkForm onSuccess={() => {
-                setDialogOpen(false);
-                fetchBenchmarks();
-              }} />
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedIds([])}
+                >
+                  Clear Selection ({selectedIds.length})
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete ({selectedIds.length})
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchBenchmarks}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Benchmark
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Analyze Website as Benchmark</DialogTitle>
+                  <DialogDescription>
+                    Add a top-performing website to use as a comparison benchmark for analysis
+                  </DialogDescription>
+                </DialogHeader>
+                <BenchmarkForm
+                  onSuccess={() => {
+                    setDialogOpen(false);
+                  }}
+                  onRefresh={fetchBenchmarks}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -137,11 +214,17 @@ export function BenchmarkManager() {
                 <div className="space-y-2">
                   {industryBenchmarks.map((benchmark) => {
                     const tier = tierConfig[benchmark.benchmark_tier as keyof typeof tierConfig] || tierConfig.competitive;
+                    const isSelected = selectedIds.includes(benchmark.id);
                     return (
                       <div
                         key={benchmark.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
                       >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => handleSelectBenchmark(benchmark.id, checked as boolean)}
+                          aria-label={`Select ${benchmark.company_name}`}
+                        />
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium text-foreground text-sm">
@@ -184,45 +267,116 @@ export function BenchmarkManager() {
           </ul>
         </div>
       </CardContent>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selectedIds.length} Benchmark{selectedIds.length !== 1 ? 's' : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the selected benchmark{selectedIds.length !== 1 ? 's' : ''} from the database.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
 
-function BenchmarkForm({ onSuccess }: { onSuccess: () => void }) {
+function BenchmarkForm({ onSuccess, onRefresh }: { onSuccess: () => void; onRefresh: () => void }) {
   const [url, setUrl] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [tier, setTier] = useState('competitive');
-  const [loading, setLoading] = useState(false);
+  const { startTask, updateTask, addLog, completeTask, errorTask } = useTaskProgress();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+
+    // Close dialog immediately
+    onSuccess();
+
+    // Start task in floating indicator
+    const taskId = startTask('analysis', `Analyzing ${companyName}`, 100);
 
     try {
       const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
-      const response = await fetch(`${API_BASE}/api/analyze-benchmark`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          url,
-          company_name: companyName,
-          industry,
-          benchmark_tier: tier
-        })
+
+      // Build URL with query parameters for SSE
+      const params = new URLSearchParams({
+        url,
+        company_name: companyName,
+        industry,
+        benchmark_tier: tier
       });
 
-      const result = await response.json();
+      // Start SSE connection
+      const eventSource = new EventSource(`${API_BASE}/api/analyze-benchmark?${params}`);
 
-      if (result.success) {
-        onSuccess();
-      } else {
-        alert(`Failed to create benchmark: ${result.error}`);
-      }
+      // Handle start event
+      eventSource.addEventListener('start', (e) => {
+        const data = JSON.parse(e.data);
+        addLog(taskId, data.message || 'Starting benchmark analysis');
+      });
+
+      // Handle analyzing event (progress updates)
+      eventSource.addEventListener('analyzing', (e) => {
+        const data = JSON.parse(e.data);
+        updateTask(taskId, data.current || 50, data.message);
+        if (data.phase && data.step) {
+          addLog(taskId, `Phase ${data.phase}: ${data.step}`, 'info');
+        }
+      });
+
+      // Handle complete event
+      eventSource.addEventListener('complete', (e) => {
+        const data = JSON.parse(e.data);
+        completeTask(taskId);
+        eventSource.close();
+
+        // Refresh benchmarks list
+        onRefresh();
+
+        addLog(taskId, `Benchmark created successfully!`, 'success');
+      });
+
+      // Handle error event
+      eventSource.addEventListener('error', (e) => {
+        try {
+          const data = JSON.parse((e as any).data);
+          errorTask(taskId, data.message || 'Analysis failed');
+          addLog(taskId, data.error || 'Unknown error', 'error');
+        } catch {
+          errorTask(taskId, 'Connection error');
+          addLog(taskId, 'Failed to connect to analysis engine', 'error');
+        }
+        eventSource.close();
+      });
+
+      // Handle connection errors
+      eventSource.onerror = () => {
+        if (eventSource.readyState === EventSource.CLOSED) {
+          // Connection closed - check if it was intentional
+          return;
+        }
+        errorTask(taskId, 'Connection error');
+        addLog(taskId, 'Lost connection to analysis engine', 'error');
+        eventSource.close();
+      };
+
     } catch (error: any) {
-      alert(`Failed to create benchmark: ${error.message}`);
-    } finally {
-      setLoading(false);
+      errorTask(taskId, 'Failed to start analysis');
+      addLog(taskId, error.message, 'error');
     }
   }
 
@@ -272,8 +426,8 @@ function BenchmarkForm({ onSuccess }: { onSuccess: () => void }) {
           <option value="baseline">Baseline (Entry Level)</option>
         </select>
       </div>
-      <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? 'Analyzing...' : 'Create Benchmark'}
+      <Button type="submit" className="w-full">
+        Create Benchmark
       </Button>
     </form>
   );

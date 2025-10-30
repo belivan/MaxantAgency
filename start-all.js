@@ -13,6 +13,7 @@ const SERVICES = [
   { name: 'Command Center UI', port: 3000, dir: 'command-center-ui', cmd: 'npm run dev', color: '\x1b[36m' },
   { name: 'Prospecting Engine', port: 3010, dir: 'prospecting-engine', cmd: 'node server.js', color: '\x1b[32m' },
   { name: 'Analysis Engine', port: 3001, dir: 'analysis-engine', cmd: 'node server.js', color: '\x1b[33m' },
+  { name: 'Report Engine', port: 3003, dir: 'report-engine', cmd: 'node server.js', color: '\x1b[37m' },
   { name: 'Outreach Engine', port: 3002, dir: 'outreach-engine', cmd: 'node server.js', color: '\x1b[35m' },
   { name: 'Pipeline Orchestrator', port: 3020, dir: 'pipeline-orchestrator', cmd: 'node server.js', color: '\x1b[34m' }
 ];

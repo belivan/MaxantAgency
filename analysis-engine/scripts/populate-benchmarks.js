@@ -13,7 +13,7 @@
 import { analyzeWebsiteIntelligent } from '../orchestrator-refactored.js';
 import { saveBenchmark, getBenchmarkByUrl } from '../database/supabase-client.js';
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { callAI } from '../shared/ai-client.js';
+import { callAI } from '../../database-tools/shared/ai-client.js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';

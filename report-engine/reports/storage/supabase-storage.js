@@ -1,35 +1,14 @@
 /**
  * Supabase Storage Integration
- * Upload and manage reports in Supabase Storage
+ * Upload and manage report files in Supabase Storage
+ *
+ * NOTE: This module handles STORAGE operations only (files, buckets).
+ * For DATABASE operations (reports table), see: ../../database/supabase-client.js
  */
 
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-dotenv.config({ path: join(__dirname, '../../../.env') });
+import { getSupabaseClient } from '../../database/supabase-client.js';
 
 const BUCKET_NAME = 'reports';
-
-// Lazy-load Supabase client to avoid import-time errors
-let supabase = null;
-
-function getSupabaseClient() {
-  if (!supabase) {
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables');
-    }
-
-    supabase = createClient(supabaseUrl, supabaseKey);
-  }
-  return supabase;
-}
 
 /**
  * Upload report to Supabase Storage
@@ -42,7 +21,7 @@ function getSupabaseClient() {
 export async function uploadReport(content, storagePath, contentType = 'text/markdown') {
   try {
     const supabase = getSupabaseClient();
-    
+
     // Convert string content to buffer if needed
     const fileBuffer = typeof content === 'string'
       ? Buffer.from(content, 'utf-8')
@@ -84,7 +63,7 @@ export async function uploadReport(content, storagePath, contentType = 'text/mar
 export async function getSignedUrl(storagePath, expiresIn = 3600) {
   try {
     const supabase = getSupabaseClient();
-    
+
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .createSignedUrl(storagePath, expiresIn);
@@ -110,7 +89,7 @@ export async function getSignedUrl(storagePath, expiresIn = 3600) {
 export async function downloadReport(storagePath) {
   try {
     const supabase = getSupabaseClient();
-    
+
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .download(storagePath);
@@ -137,7 +116,7 @@ export async function downloadReport(storagePath) {
 export async function deleteReport(storagePath) {
   try {
     const supabase = getSupabaseClient();
-    
+
     const { error } = await supabase.storage
       .from(BUCKET_NAME)
       .remove([storagePath]);
@@ -164,8 +143,8 @@ export async function deleteReport(storagePath) {
 export async function listReports(folderPath = 'reports') {
   try {
     const supabase = getSupabaseClient();
-    
-    const { data, error } = await supabase.storage
+
+    const { data, error} = await supabase.storage
       .from(BUCKET_NAME)
       .list(folderPath);
 
@@ -178,161 +157,6 @@ export async function listReports(folderPath = 'reports') {
   } catch (error) {
     console.error('❌ Failed to list reports:', error);
     throw error;
-  }
-}
-
-/**
- * Save report metadata to database
- *
- * @param {object} reportMetadata - Report metadata
- * @returns {Promise<object>} Saved record
- */
-export async function saveReportMetadata(reportMetadata) {
-  try {
-    const supabase = getSupabaseClient();
-    
-    const { data, error } = await supabase
-      .from('reports')
-      .insert(reportMetadata)
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to save report metadata: ${error.message}`);
-    }
-
-    console.log(`📝 Report metadata saved: ${data.id}`);
-    return data;
-
-  } catch (error) {
-    console.error('❌ Failed to save report metadata:', error);
-    throw error;
-  }
-}
-
-/**
- * Update report download count
- *
- * @param {string} reportId - Report ID
- * @returns {Promise<void>}
- */
-export async function incrementDownloadCount(reportId) {
-  try {
-    const supabase = getSupabaseClient();
-    
-    const { error } = await supabase.rpc('increment_report_downloads', {
-      report_id: reportId
-    });
-
-    if (error) {
-      // Try manual increment if RPC doesn't exist
-      const { data: report } = await supabase
-        .from('reports')
-        .select('download_count')
-        .eq('id', reportId)
-        .single();
-
-      if (report) {
-        await supabase
-          .from('reports')
-          .update({
-            download_count: (report.download_count || 0) + 1,
-            last_downloaded_at: new Date().toISOString()
-          })
-          .eq('id', reportId);
-      }
-    }
-
-  } catch (error) {
-    console.error('❌ Failed to increment download count:', error);
-  }
-}
-
-/**
- * Get report by ID
- *
- * @param {string} reportId - Report ID
- * @returns {Promise<object>} Report record
- */
-export async function getReportById(reportId) {
-  try {
-    const supabase = getSupabaseClient();
-    
-    const { data, error } = await supabase
-      .from('reports')
-      .select('*')
-      .eq('id', reportId)
-      .single();
-
-    if (error) {
-      throw new Error(`Failed to get report: ${error.message}`);
-    }
-
-    return data;
-
-  } catch (error) {
-    console.error('❌ Failed to get report:', error);
-    throw error;
-  }
-}
-
-/**
- * Get reports for a lead
- *
- * @param {string} leadId - Lead ID
- * @returns {Promise<array>} List of reports
- */
-export async function getReportsByLeadId(leadId) {
-  try {
-    const supabase = getSupabaseClient();
-    
-    const { data, error } = await supabase
-      .from('reports')
-      .select('*')
-      .eq('lead_id', leadId)
-      .order('generated_at', { ascending: false });
-
-    if (error) {
-      throw new Error(`Failed to get reports: ${error.message}`);
-    }
-
-    return data || [];
-
-  } catch (error) {
-    console.error('❌ Failed to get reports by lead:', error);
-    throw error;
-  }
-}
-
-/**
- * Get benchmark by ID
- *
- * @param {string} benchmarkId - Benchmark ID
- * @returns {Promise<object|null>} Benchmark record or null if not found
- */
-export async function getBenchmarkById(benchmarkId) {
-  try {
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase
-      .from('benchmarks')
-      .select('*')
-      .eq('id', benchmarkId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        // Not found - return null instead of throwing
-        return null;
-      }
-      throw new Error(`Failed to get benchmark: ${error.message}`);
-    }
-
-    return data;
-
-  } catch (error) {
-    console.error('❌ Failed to get benchmark:', error);
-    return null; // Return null on error instead of throwing
   }
 }
 
@@ -381,3 +205,12 @@ export async function ensureReportsBucket() {
     return false;
   }
 }
+
+export default {
+  uploadReport,
+  getSignedUrl,
+  downloadReport,
+  deleteReport,
+  listReports,
+  ensureReportsBucket
+};

@@ -16,7 +16,7 @@ import { getBenchmarks, updateBenchmark, getBenchmarkById, supabase } from '../d
 async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   // Import dependencies
   const { loadPrompt } = await import('../shared/prompt-loader.js');
-  const { callAI, parseJSONResponse } = await import('../shared/ai-client.js');
+  const { callAI, parseJSONResponse } = await import('../../database-tools/shared/ai-client.js');
 
   const strengths = {
     design: null,

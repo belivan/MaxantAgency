@@ -11,7 +11,7 @@
  */
 
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { callAI, parseJSONResponse } from '../shared/ai-client.js';
+import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 import * as cheerio from 'cheerio';
 
 /**

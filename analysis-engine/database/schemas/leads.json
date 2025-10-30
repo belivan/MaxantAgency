@@ -71,10 +71,10 @@
     },
     {
       "name": "overall_score",
-      "type": "decimal",
+      "type": "integer",
       "required": true,
       "index": true,
-      "description": "Overall score 0-100"
+      "description": "Overall score 0-100 (rounded integer for consistency)"
     },
 
     {

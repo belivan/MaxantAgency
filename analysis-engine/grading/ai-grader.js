@@ -12,7 +12,7 @@
  */
 
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { callAI, parseJSONResponse } from '../shared/ai-client.js';
+import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 import { findBestBenchmark } from '../services/benchmark-matcher.js';
 import { calculateGrade } from './grader.js';
 
@@ -114,10 +114,63 @@ export async function gradeWithAI(analysisResults, metadata) {
     // Parse JSON response from content field (handles markdown/prose wrapping)
     const parsedGrading = parseJSONResponse(gradingResult.content);
 
-    console.log(`  ├─ Grade: ${parsedGrading.overall_grade} (${parsedGrading.overall_score}/100)`);
-    console.log(`  ├─ Lead Score: ${parsedGrading.lead_score}/100 (${parsedGrading.lead_priority} priority)`);
-    console.log(`  ├─ Gap vs Benchmark: ${parsedGrading.comparison_summary.gap} points`);
-    console.log(`  └─ Weights Used: Design ${parsedGrading.dimension_weights_used.design * 100}%, SEO ${parsedGrading.dimension_weights_used.seo * 100}%, Perf ${parsedGrading.dimension_weights_used.performance * 100}%`);
+    // Calculate fallback overall_score if AI didn't provide it
+    let overallScore = parsedGrading.overall_score;
+    if (overallScore == null || isNaN(overallScore)) {
+      console.warn(`  ⚠️ AI did not return overall_score, calculating from dimension scores...`);
+      // Fallback: calculate weighted average of dimension scores
+      const weights = parsedGrading.dimension_weights_used || { design: 0.30, seo: 0.30, performance: 0.20, content: 0.10, accessibility: 0.05, social: 0.05 };
+      overallScore = (
+        (gradingData.design_score * weights.design) +
+        (gradingData.seo_score * weights.seo) +
+        (gradingData.performance_score * (weights.performance || 0.20)) +
+        (gradingData.content_score * (weights.content || 0.10)) +
+        (gradingData.accessibility_score * (weights.accessibility || 0.05)) +
+        (gradingData.social_score * (weights.social || 0.05))
+      );
+    }
+
+    // Calculate fallback lead_score if AI didn't provide it
+    let leadScore = parsedGrading.lead_score;
+    if (leadScore == null || isNaN(leadScore)) {
+      console.warn(`  ⚠️ AI did not return lead_score, using overall_score as fallback...`);
+      leadScore = Math.round(overallScore); // Simple fallback: use overall score
+    }
+
+    // Calculate fallback priority_tier (hot/warm/cold) if AI didn't provide it
+    let priorityTier = parsedGrading.priority_tier;
+    if (!priorityTier || typeof priorityTier !== 'string') {
+      console.warn(`  ⚠️ AI did not return priority_tier, calculating from lead_score...`);
+      // Map lead_score to tier
+      if (leadScore >= 80) {
+        priorityTier = 'hot';
+      } else if (leadScore >= 55) {
+        priorityTier = 'warm';
+      } else {
+        priorityTier = 'cold';
+      }
+    }
+
+    // Calculate fallback budget_likelihood if AI didn't provide it
+    let budgetLikelihood = parsedGrading.budget_likelihood;
+    if (!budgetLikelihood || typeof budgetLikelihood !== 'string') {
+      console.warn(`  ⚠️ AI did not return budget_likelihood, using default...`);
+      // Simple fallback based on business signals
+      const hasPremiumFeatures = metadata.business_intelligence?.premiumFeatures > 0;
+      const hasPricingPage = metadata.business_intelligence?.pricingVisibility === true;
+      if (hasPremiumFeatures && hasPricingPage) {
+        budgetLikelihood = 'high';
+      } else if (hasPremiumFeatures || hasPricingPage) {
+        budgetLikelihood = 'medium';
+      } else {
+        budgetLikelihood = 'low';
+      }
+    }
+
+    console.log(`  ├─ Grade: ${parsedGrading.overall_grade} (${Math.round(overallScore)}/100)`);
+    console.log(`  ├─ Lead Score: ${leadScore}/100 (${priorityTier} tier)`);
+    console.log(`  ├─ Gap vs Benchmark: ${parsedGrading.comparison_summary?.gap || 'N/A'} points`);
+    console.log(`  └─ Weights Used: Design ${(parsedGrading.dimension_weights_used?.design || 0.30) * 100}%, SEO ${(parsedGrading.dimension_weights_used?.seo || 0.30) * 100}%, Perf ${(parsedGrading.dimension_weights_used?.performance || 0.20) * 100}%`);
 
     // Step 4: Return comprehensive grading result (NOW WITH ALL DIMENSION SCORES!)
     return {
@@ -125,13 +178,13 @@ export async function gradeWithAI(analysisResults, metadata) {
 
       // Core grading
       grade: parsedGrading.overall_grade,
-      overall_score: Math.round(parsedGrading.overall_score),
+      overall_score: Math.round(overallScore),
 
-      // Lead scoring - overall
-      lead_score: Math.round(parsedGrading.lead_score),
-      lead_priority: parsedGrading.lead_priority,
-      priority_tier: parsedGrading.priority_tier,  // NEW: hot/warm/cold
-      budget_likelihood: parsedGrading.budget_likelihood,  // NEW: high/medium/low
+      // Lead scoring - overall (use fallback values)
+      lead_score: Math.round(leadScore),
+      // NOTE: lead_priority field removed - results-aggregator maps lead_score to lead_priority (integer)
+      priority_tier: priorityTier,  // TEXT: "hot"/"warm"/"cold"
+      budget_likelihood: budgetLikelihood,  // TEXT: "high"/"medium"/"low"
 
       // Lead scoring - 6 dimension breakdown (NEW!)
       fit_score: Math.round(parsedGrading.fit_score || 50),  // Overall fit (0-100)

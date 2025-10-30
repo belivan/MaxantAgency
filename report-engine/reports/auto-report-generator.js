@@ -4,7 +4,8 @@
  */
 
 import { generateReport, generateStoragePath, generateReportFilename, validateAnalysisResult } from './report-generator.js';
-import { uploadReport, saveReportMetadata, getBenchmarkById } from './storage/supabase-storage.js';
+import { uploadReport, ensureReportsBucket } from './storage/supabase-storage.js';
+import { saveReportMetadata, getBenchmarkById } from '../database/supabase-client.js';
 import { runReportSynthesis } from './synthesis/report-synthesis.js';
 import { generateHTMLReportV3 } from './exporters/html-exporter-v3.js';
 import { writeFile, mkdir, readFile } from 'fs/promises';
@@ -701,56 +702,3 @@ function generateFallbackSynthesis(reportData) {
   };
 }
 
-/**
- * Check if reports bucket exists and create if needed
- */
-export async function ensureReportsBucket() {
-  try {
-    const { createClient } = await import('@supabase/supabase-js');
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Check if bucket exists
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-
-    if (listError) {
-      console.warn('⚠️ Could not list storage buckets:', listError.message);
-      return false;
-    }
-
-    const reportsExists = buckets?.some(bucket => bucket.name === 'reports');
-
-    if (!reportsExists) {
-      console.log('📦 Creating reports bucket...');
-
-      const { data, error } = await supabase.storage.createBucket('reports', {
-        public: false, // Keep reports private by default
-        allowedMimeTypes: [
-          'text/markdown',
-          'text/html',
-          'application/pdf',
-          'application/json',
-          'text/plain'
-        ],
-        fileSizeLimit: 10485760 // 10MB limit
-      });
-
-      if (error) {
-        console.error('❌ Failed to create reports bucket:', error.message);
-        return false;
-      }
-
-      console.log('✅ Reports bucket created successfully');
-    } else {
-      console.log('✅ Reports bucket already exists');
-    }
-
-    return true;
-
-  } catch (error) {
-    console.error('❌ Error checking/creating reports bucket:', error);
-    return false;
-  }
-}

@@ -228,7 +228,7 @@ console.log('Test 6: Test AI client utility');
 console.log('─────────────────────────────────────────────────────────────');
 
 try {
-  const aiClient = await import('../../shared/ai-client.js');
+  const aiClient = await import('../../../database-tools/shared/ai-client.js');
 
   assert(typeof aiClient.callAI === 'function', 'AI client exports callAI function');
   assert(typeof aiClient.parseJSONResponse === 'function', 'AI client exports parseJSONResponse function');

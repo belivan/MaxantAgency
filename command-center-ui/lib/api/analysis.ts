@@ -243,6 +243,44 @@ export async function deleteLeads(ids: string[]): Promise<{ deleted: number; fai
 }
 
 /**
+ * Delete a benchmark
+ */
+export async function deleteBenchmark(id: string): Promise<void> {
+  // Call Analysis Engine directly for delete operations
+  const response = await fetch(`${API_BASE}/api/benchmarks/${id}`, {
+    method: 'DELETE'
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete benchmark');
+  }
+}
+
+/**
+ * Delete multiple benchmarks in batch
+ */
+export async function deleteBenchmarks(ids: string[]): Promise<{ deleted: number; failed: number }> {
+  // Call Analysis Engine directly for delete operations
+  const response = await fetch(`${API_BASE}/api/benchmarks/batch-delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to delete benchmarks');
+  }
+
+  const data = await response.json();
+  return {
+    deleted: data.deleted || 0,
+    failed: data.failed || 0
+  };
+}
+
+/**
  * Report Types
  */
 export interface Report {

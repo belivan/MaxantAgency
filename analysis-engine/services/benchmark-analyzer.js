@@ -14,7 +14,7 @@
 import { analyzeWebsiteIntelligent } from '../orchestrator-refactored.js';
 import { saveBenchmark, getBenchmarkByUrl, updateBenchmark } from '../database/supabase-client.js';
 import { loadPrompt } from '../shared/prompt-loader.js';
-import { callAI, parseJSONResponse } from '../shared/ai-client.js';
+import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 
 /**
 
@@ -43,6 +43,9 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
   console.log(`   Industry: ${benchmarkData.industry}`);
   console.log(`${'='.repeat(80)}\n`);
 
+  // Extract progress callback from options
+  const onProgress = options.onProgress || (() => {});
+
   try {
     // Check if already analyzed
     const existing = await getBenchmarkByUrl(benchmarkData.website_url);
@@ -56,6 +59,7 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
 
     // === PHASE 1: FULL ANALYSIS ===
     console.log(`\n🔬 Phase 1: Running full analysis...`);
+    onProgress('Running full website analysis...', '1/3', 'Analyzing website');
 
     // DISABLE AI grading to avoid circular dependency
     // (Benchmarks can't grade against themselves!)
@@ -71,17 +75,34 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
 
     process.env.USE_AI_GRADING = originalGradingFlag; // Restore
     console.log(`✅ Analysis complete`);
+    onProgress('Website analysis complete', '1/3', 'Analysis complete');
 
     // === PHASE 2: STRENGTH EXTRACTION ===
     console.log(`\n🔍 Phase 2: Extracting benchmark strengths...`);
     console.log(`   (Using special "success pattern" prompts)`);
+    onProgress('Extracting success patterns...', '2/3', 'Extracting strengths');
 
     const strengths = await extractBenchmarkStrengths(
       analysisResult,
       benchmarkData
     );
+    onProgress('Strength extraction complete', '2/3', 'Strengths extracted');
 
     // === PHASE 3: SAVE BENCHMARK ===
+    onProgress('Saving benchmark to database...', '3/3', 'Saving to database');
+
+    // Validate benchmark tier (must be one of the valid database tiers)
+    const VALID_TIERS = ['national', 'regional', 'local', 'manual'];
+    const tier = benchmarkData.benchmark_tier || 'regional';
+
+    if (!VALID_TIERS.includes(tier)) {
+      throw new Error(
+        `Invalid benchmark_tier: "${tier}". Must be one of: ${VALID_TIERS.join(', ')}. ` +
+        `Note: UI labels (aspirational, competitive, baseline) should be mapped to database tiers ` +
+        `(national, regional, local) in the API layer.`
+      );
+    }
+
     const benchmarkRecord = {
       company_name: benchmarkData.company_name,
       website_url: benchmarkData.website_url,
@@ -89,7 +110,7 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
       industry_subcategory: benchmarkData.industry_subcategory || null,
       location_city: benchmarkData.location_city || null,
       location_state: benchmarkData.location_state || null,
-      benchmark_tier: benchmarkData.benchmark_tier || 'regional',
+      benchmark_tier: tier,
       source: benchmarkData.source || 'manual',
       google_rating: benchmarkData.google_rating || null,
       google_review_count: benchmarkData.google_review_count || null,
@@ -144,6 +165,8 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
       savedBenchmark = await saveBenchmark(benchmarkRecord);
       console.log(`\n✅ BENCHMARK SAVED`);
     }
+
+    onProgress(`Benchmark saved successfully!`, '3/3', 'Complete');
 
     console.log(`   ID: ${savedBenchmark.id}`);
     console.log(`   Overall Score: ${savedBenchmark.overall_score}/100 (Grade ${savedBenchmark.overall_grade})`);
@@ -221,16 +244,26 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 2. Technical Strengths (SEO + Content)
     console.log(`   - Running technical-strengths-extractor...`);
+
+    // Extract actual HTML content from crawled pages
+    const homepageHtml = analysisResult.crawlPages?.find(p => p.url === '/')?.html ||
+                         analysisResult.crawlPages?.[0]?.html ||
+                         'Homepage HTML not available';
+
+    // Extract sitemap URLs from discovery data
+    const sitemapUrls = analysisResult.discoveredPages?.slice(0, 20).map(p => p.url).join('\n') ||
+                        'Sitemap data not available';
+
     const technicalPrompt = await loadPrompt('benchmarking/technical-strengths-extractor', {
       company_name: benchmarkData.company_name,
       industry: benchmarkData.industry,
       url: benchmarkData.website_url,
       google_rating: benchmarkData.google_rating,
       google_review_count: benchmarkData.google_review_count,
-      html_content: 'N/A',
+      html_content: homepageHtml.substring(0, 15000), // Limit to 15k chars to avoid token limits
       meta_title: analysisResult.page_title || '',
       meta_description: analysisResult.meta_description || '',
-      sitemap_urls: 'N/A'
+      sitemap_urls: sitemapUrls
     });
 
     const technicalResult = await callAI({
@@ -253,13 +286,25 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 3. Social Strengths
     console.log(`   - Running social-strengths-extractor...`);
+
+    // Extract HTML content for social analysis
+    const homepageHtml = analysisResult.crawlPages?.find(p => p.url === '/')?.html ||
+                         analysisResult.crawlPages?.[0]?.html ||
+                         'Homepage HTML not available';
+
+    // Extract social links from analysis result
+    const socialLinks = analysisResult.social_profiles ?
+                        JSON.stringify(analysisResult.social_profiles, null, 2) :
+                        'No social links found';
+
     const socialPrompt = await loadPrompt('benchmarking/social-strengths-extractor', {
       company_name: benchmarkData.company_name,
       industry: benchmarkData.industry,
       url: benchmarkData.website_url,
-      social_profiles: analysisResult.social_profiles || {},
       google_rating: benchmarkData.google_rating,
-      google_review_count: benchmarkData.google_review_count
+      google_review_count: benchmarkData.google_review_count,
+      html_content: homepageHtml.substring(0, 10000), // Limit to 10k chars
+      social_links: socialLinks
     });
 
     const socialResult = await callAI({
@@ -280,13 +325,29 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 4. Accessibility Strengths
     console.log(`   - Running accessibility-strengths-extractor...`);
+
+    // Extract HTML content for accessibility analysis
+    const homepageHtml = analysisResult.crawlPages?.find(p => p.url === '/')?.html ||
+                         analysisResult.crawlPages?.[0]?.html ||
+                         'Homepage HTML not available';
+
+    // Extract ARIA attributes from crawled page
+    const ariaAttributes = analysisResult.crawlPages?.[0]?.ariaLabels ?
+                          JSON.stringify(analysisResult.crawlPages[0].ariaLabels, null, 2) :
+                          'ARIA attributes not extracted';
+
+    // Extract color palette from design tokens
+    const colorPalette = analysisResult.crawlPages?.[0]?.designTokens?.desktop?.colors ?
+                        analysisResult.crawlPages[0].designTokens.desktop.colors.slice(0, 10).join(', ') :
+                        'Color palette not extracted';
+
     const accessibilityPrompt = await loadPrompt('benchmarking/accessibility-strengths-extractor', {
       company_name: benchmarkData.company_name,
       industry: benchmarkData.industry,
       url: benchmarkData.website_url,
-      html_content: 'N/A',
-      aria_attributes: 'N/A',
-      color_palette: 'N/A'
+      html_content: homepageHtml.substring(0, 10000), // Limit to 10k chars
+      aria_attributes: ariaAttributes,
+      color_palette: colorPalette
     });
 
     const accessibilityResult = await callAI({

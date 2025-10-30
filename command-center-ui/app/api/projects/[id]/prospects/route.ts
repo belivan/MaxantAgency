@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabaseUrl = process.env.SUPABASE_URL;
@@ -19,7 +19,7 @@ export async function GET(
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const projectId = params.id;
+    const { id: projectId } = await params;
 
     if (!projectId) {
       return NextResponse.json(

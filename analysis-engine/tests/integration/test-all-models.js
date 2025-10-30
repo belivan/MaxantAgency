@@ -3,7 +3,7 @@
  * Tests all supported AI models to verify configuration and functionality
  */
 
-import { callAI } from './shared/ai-client.js';
+import { callAI } from '../../../database-tools/shared/ai-client.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

@@ -12,11 +12,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // Build query - fetch leads that are marked as benchmarks
+    // Build query - fetch from dedicated benchmarks table
     let query = supabase
-      .from('leads')
-      .select('id, company_name, url, industry, overall_score, website_grade, benchmark_tier, analyzed_at', { count: 'exact' })
-      .not('benchmark_tier', 'is', null)
+      .from('benchmarks')
+      .select('id, company_name, website_url, industry, overall_score, overall_grade, benchmark_tier, analyzed_at', { count: 'exact' })
       .order('overall_score', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -35,9 +34,21 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
+    // Map benchmarks table fields to UI expected format
+    const mappedData = (data || []).map(benchmark => ({
+      id: benchmark.id,
+      company_name: benchmark.company_name,
+      url: benchmark.website_url,
+      industry: benchmark.industry,
+      overall_score: benchmark.overall_score,
+      website_grade: benchmark.overall_grade,
+      benchmark_tier: benchmark.benchmark_tier,
+      analyzed_at: benchmark.analyzed_at
+    }));
+
     return NextResponse.json({
       success: true,
-      data: data || [],
+      data: mappedData,
       total: count || 0,
       limit,
       offset

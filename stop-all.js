@@ -13,6 +13,7 @@ const SERVICES = [
   { name: 'Command Center UI', port: 3000, color: '\x1b[36m' },
   { name: 'Prospecting Engine', port: 3010, color: '\x1b[32m' },
   { name: 'Analysis Engine', port: 3001, color: '\x1b[33m' },
+  { name: 'Report Engine', port: 3003, color: '\x1b[37m' },
   { name: 'Outreach Engine', port: 3002, color: '\x1b[35m' },
   { name: 'Pipeline Orchestrator', port: 3020, color: '\x1b[34m' }
 ];

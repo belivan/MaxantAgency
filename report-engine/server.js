@@ -2,29 +2,33 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { dirname, join, resolve } from 'path';
 import fs from 'fs/promises';
-
-// Load environment variables
-dotenv.config();
 
 // Get current directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+// Load environment variables from root .env
+dotenv.config({ path: resolve(__dirname, '../.env') });
+
 // Import report generation modules
 import { autoGenerateReport } from './reports/auto-report-generator.js';
 import { generateReport } from './reports/report-generator.js';
+// Storage operations (files/buckets)
 import {
   uploadReport,
+  deleteReport,
+  getSignedUrl,
+  ensureReportsBucket
+} from './reports/storage/supabase-storage.js';
+// Database operations (reports table)
+import {
   saveReportMetadata,
   getReportById,
   getReportsByLeadId,
-  deleteReport,
-  getSignedUrl,
-  incrementDownloadCount,
-  ensureReportsBucket
-} from './reports/storage/supabase-storage.js';
+  incrementDownloadCount
+} from './database/supabase-client.js';
 
 // Initialize Express app
 const app = express();

@@ -5,7 +5,7 @@
  * Advanced table for viewing and managing analyzed leads
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Mail,
@@ -635,9 +635,8 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                   const businessIntel = lead.business_intelligence;
 
                   return (
-                    <>
+                    <React.Fragment key={lead.id}>
                       <TableRow
-                        key={lead.id}
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={(e) => {
                           if ((e.target as HTMLElement).closest('input, button, a')) return;
@@ -747,7 +746,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                         </TableCell>
                       </TableRow>
                       {isExpanded && (
-                        <TableRow key={`${lead.id}-expanded`}>
+                        <TableRow>
                           <TableCell colSpan={12} className="p-0">
                             <div className="p-4 bg-muted/30">
                               <LeadDetailsCard lead={lead} />
@@ -755,7 +754,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </TableBody>
