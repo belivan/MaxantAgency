@@ -5,7 +5,7 @@
 
 import { escapeHtml, getGradeColor } from '../utils/helpers.js';
 
-export function generateHeroSection(analysisResult, options = {}) {
+export function generateHeroSection(analysisResult, synthesisData = null, options = {}) {
   const { reportType = 'full' } = options;
 
   const {
@@ -17,7 +17,9 @@ export function generateHeroSection(analysisResult, options = {}) {
     overall_score,
     design_score,
     seo_score,
+    performance_score,
     content_score,
+    accessibility_score,
     social_score,
     contact_email,
     contact_phone,
@@ -142,12 +144,15 @@ export function generateHeroSection(analysisResult, options = {}) {
   html += '          <div class="score-details">\n';
   html += '            <div class="score-breakdown" style="display: grid; gap: 12px;">\n';
 
+  // Build scores array and filter out undefined/null values
   const scores = [
     { label: 'Design', value: design_score, icon: '🎨' },
     { label: 'SEO', value: seo_score, icon: '🔍' },
+    { label: 'Performance', value: performance_score, icon: '⚡' },
     { label: 'Content', value: content_score, icon: '✍️' },
+    { label: 'Accessibility', value: accessibility_score, icon: '♿' },
     { label: 'Social', value: social_score, icon: '📱' }
-  ];
+  ].filter(score => score.value !== undefined && score.value !== null);
 
   scores.forEach(score => {
     if (score.value !== undefined && score.value !== null) {

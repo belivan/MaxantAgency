@@ -249,12 +249,6 @@
       "name": "idx_reports_synthesis_cost",
       "columns": ["synthesis_cost"],
       "description": "Index for analyzing synthesis costs"
-    },
-    {
-      "name": "idx_reports_synthesis_data_gin",
-      "type": "GIN",
-      "columns": ["synthesis_data"],
-      "description": "GIN index for fast JSONB queries on synthesis_data"
     }
   ],
   "rls": {

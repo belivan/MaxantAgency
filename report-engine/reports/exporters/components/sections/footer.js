@@ -8,10 +8,11 @@ import { formatDate } from '../utils/helpers.js';
 /**
  * Generate footer section HTML
  * @param {Object} analysisResult - Full analysis result data
+ * @param {Object} synthesisData - AI synthesis data (if available)
  * @param {Object} options - Generation options
  * @returns {string} HTML string for footer section
  */
-export function generateFooter(analysisResult, options = {}) {
+export function generateFooter(analysisResult, synthesisData = null, options = {}) {
   const { reportType = 'full' } = options;
 
   const {

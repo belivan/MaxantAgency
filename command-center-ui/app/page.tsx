@@ -3,7 +3,7 @@
 import React from 'react';
 import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
 import Link from 'next/link';
-import { Zap, Brain, Target, TrendingUp, Sparkles, Bot, Search, FileText, Mail, BarChart3, Shield, Rocket, ArrowRight } from 'lucide-react';
+import { Zap, Brain, Target, TrendingUp, Sparkles, Bot, Search, FileText, Mail, BarChart3, Shield, Rocket, ArrowRight, FileCode, Layers, Clock } from 'lucide-react';
 
 export default function LandingPage() {
   return (
@@ -19,8 +19,8 @@ export default function LandingPage() {
             Maxant Agency
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
-            Where <span className="text-primary font-semibold">15+ AI Agents</span> work in harmony to transform
-            how you discover, analyze, and engage with potential clients.
+            Where <span className="text-primary font-semibold">17+ AI Agents</span> work in harmony across <span className="text-primary font-semibold">4 specialized engines</span> to transform
+            how you discover, analyze, report, and engage with potential clients.
           </p>
 
           {/* Auth CTAs */}
@@ -47,14 +47,18 @@ export default function LandingPage() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto mt-16">
+          <div className="grid grid-cols-4 gap-6 max-w-3xl mx-auto mt-16">
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">15+</div>
+              <div className="text-4xl font-bold text-primary mb-2">17+</div>
               <div className="text-sm text-muted-foreground">AI Agents</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-primary mb-2">3</div>
-              <div className="text-sm text-muted-foreground">Intelligence Engines</div>
+              <div className="text-4xl font-bold text-primary mb-2">4</div>
+              <div className="text-sm text-muted-foreground">Specialized Engines</div>
+            </div>
+            <div className="text-center">
+              <div className="text-4xl font-bold text-primary mb-2">3.5m</div>
+              <div className="text-sm text-muted-foreground">Report Generation</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold text-primary mb-2">100%</div>
@@ -65,7 +69,7 @@ export default function LandingPage() {
 
         {/* The Journey */}
         <section className="mb-32">
-          <div className="bg-muted/30 rounded-2xl p-12 border border-border">
+          <div className="bg-gradient-to-br from-primary/5 via-muted/30 to-orange-500/5 rounded-2xl p-12 border border-border shadow-sm">
             <h2 className="text-3xl font-semibold mb-6 flex items-center gap-3 text-foreground">
               <Rocket className="w-8 h-8 text-primary" />
               The Journey: From Experiment to Intelligence Engine
@@ -81,29 +85,39 @@ export default function LandingPage() {
                 your ideal customer profile to crafting the perfect outreach message.
               </p>
               <p>
+                Then we realized something crucial: <span className="text-foreground font-medium">raw analysis data isn't enough</span>.
+                Agencies need <span className="text-foreground font-medium">client-ready reports</span> with executive summaries,
+                strategic roadmaps, and professional presentation. So we built a <span className="text-foreground font-medium">dedicated Report Engine</span> with
+                AI-powered synthesis that transforms technical findings into <span className="text-foreground font-medium">business intelligence</span>.
+              </p>
+              <p>
                 The result? A platform that doesn't just <span className="text-foreground font-medium">automate lead generation</span>—it
-                <span className="text-foreground font-medium"> thinks strategically</span>, analyzes deeply, and
+                <span className="text-foreground font-medium"> thinks strategically</span>, analyzes deeply,
+                <span className="text-foreground font-medium"> synthesizes intelligently</span>, and
                 <span className="text-foreground font-medium"> personalizes at scale</span>.
               </p>
             </div>
           </div>
         </section>
 
-        {/* The Three Engines */}
+        {/* The Four Engines */}
         <section className="mb-32">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-semibold mb-4 text-foreground">The Intelligence Architecture</h2>
-            <p className="text-lg text-muted-foreground">Three specialized engines, powered by 15+ AI agents working in concert</p>
+            <p className="text-lg text-muted-foreground">Four specialized engines, powered by 17+ AI agents working in concert</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
             {/* Prospecting Engine */}
-            <div className="bg-card rounded-xl p-8 border border-border hover:shadow-md transition-shadow">
+            <div className="bg-gradient-to-br from-success/5 via-card to-card rounded-xl p-8 border border-success/20 hover:shadow-lg hover:border-success/30 transition-all">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-success/10 rounded-lg">
                   <Search className="w-7 h-7 text-success" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground">Prospecting</h3>
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground">Prospecting Engine</h3>
+                  <p className="text-xs text-muted-foreground">Port 3010</p>
+                </div>
               </div>
 
               <p className="text-muted-foreground mb-6 leading-relaxed">
@@ -157,17 +171,20 @@ export default function LandingPage() {
             </div>
 
             {/* Analysis Engine */}
-            <div className="bg-card rounded-xl p-8 border border-border hover:shadow-md transition-shadow">
+            <div className="bg-gradient-to-br from-primary/5 via-card to-card rounded-xl p-8 border border-primary/20 hover:shadow-lg hover:border-primary/30 transition-all">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-primary/10 rounded-lg">
                   <Brain className="w-7 h-7 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground">Analysis</h3>
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground">Analysis Engine</h3>
+                  <p className="text-xs text-muted-foreground">Port 3001</p>
+                </div>
               </div>
 
               <p className="text-muted-foreground mb-6 leading-relaxed">
-                The brain of the operation. <span className="text-foreground font-medium">9 specialized agents</span> dissect
-                every aspect of a prospect's digital presence.
+                The brain of the operation. <span className="text-foreground font-medium">7 specialized agents</span> dissect
+                every aspect of a prospect's digital presence with deep intelligence.
               </p>
 
               <div className="space-y-3">
@@ -218,14 +235,64 @@ export default function LandingPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Output:</span> Structured analysis data with A-F grading and comprehensive insights
+                </div>
+              </div>
+            </div>
+
+            {/* Report Engine */}
+            <div className="bg-gradient-to-br from-orange-500/5 via-card to-card rounded-xl p-8 border border-orange-500/20 hover:shadow-lg hover:border-orange-500/30 transition-all">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-3 bg-orange-500/10 rounded-lg">
+                  <FileCode className="w-7 h-7 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground">Report Engine</h3>
+                  <p className="text-xs text-muted-foreground">Port 3003</p>
+                </div>
+              </div>
+
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                Transforms raw analysis into <span className="text-foreground font-medium">client-ready intelligence</span>.
+                AI-powered synthesis creates <span className="text-foreground font-medium">professional reports</span> that close deals.
+              </p>
+
+              <div className="space-y-3">
+                <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <Bot className="w-4 h-4 text-orange-600 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium text-foreground text-sm mb-1">Issue Deduplication Agent</div>
+                      <div className="text-xs text-muted-foreground leading-relaxed">
+                        Consolidates 40-70% of redundant findings using GPT-5 (~35s)
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
                   <div className="flex items-start gap-3">
-                    <Bot className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                    <Bot className="w-4 h-4 text-orange-600 mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-medium text-foreground text-sm mb-1">Report Synthesis (2)</div>
+                      <div className="font-medium text-foreground text-sm mb-1">Executive Insights Generator</div>
                       <div className="text-xs text-muted-foreground leading-relaxed">
-                        Issue deduplication and executive insights generation
+                        Creates business-friendly summaries with 30/60/90 roadmaps (~140s)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <Bot className="w-4 h-4 text-orange-600 mt-1 flex-shrink-0" />
+                    <div>
+                      <div className="font-medium text-foreground text-sm mb-1">Multi-Format Exporter</div>
+                      <div className="text-xs text-muted-foreground leading-relaxed">
+                        Generates HTML, Markdown, and PDF reports with screenshot evidence
                       </div>
                     </div>
                   </div>
@@ -234,18 +301,21 @@ export default function LandingPage() {
 
               <div className="mt-6 pt-6 border-t border-border">
                 <div className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Output:</span> Comprehensive intelligence reports with actionable insights
+                  <span className="font-medium text-foreground">Output:</span> Professional reports ready for client presentation ($0.06, ~3.5min)
                 </div>
               </div>
             </div>
 
             {/* Outreach Engine */}
-            <div className="bg-card rounded-xl p-8 border border-border hover:shadow-md transition-shadow">
+            <div className="bg-gradient-to-br from-purple-500/5 via-card to-card rounded-xl p-8 border border-purple-500/20 hover:shadow-lg hover:border-purple-500/30 transition-all">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-purple-500/10 rounded-lg">
                   <Mail className="w-7 h-7 text-purple-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-foreground">Outreach</h3>
+                <div>
+                  <h3 className="text-xl font-semibold text-foreground">Outreach Engine</h3>
+                  <p className="text-xs text-muted-foreground">Port 3002</p>
+                </div>
               </div>
 
               <p className="text-muted-foreground mb-6 leading-relaxed">
@@ -295,6 +365,35 @@ export default function LandingPage() {
                 <div className="text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">Output:</span> Ready-to-send personalized outreach at scale
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Pipeline Orchestrator */}
+          <div className="mt-12 bg-gradient-to-r from-primary/10 via-orange-500/10 to-purple-500/10 rounded-xl p-8 border border-primary/20">
+            <div className="flex items-center gap-3 mb-4">
+              <Layers className="w-8 h-8 text-primary" />
+              <div>
+                <h3 className="text-2xl font-semibold text-foreground">Pipeline Orchestrator</h3>
+                <p className="text-sm text-muted-foreground">Port 3020 • The Automation Brain</p>
+              </div>
+            </div>
+            <p className="text-muted-foreground leading-relaxed mb-4">
+              The conductor of the symphony. <span className="text-foreground font-medium">Coordinates all 4 engines</span> to execute
+              multi-lead campaigns with precision timing, batch processing, and real-time progress tracking.
+            </p>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-card/50 rounded-lg p-4 border border-border/50">
+                <div className="text-sm font-medium text-foreground mb-1">Campaign Scheduling</div>
+                <div className="text-xs text-muted-foreground">Automated workflows with custom timing</div>
+              </div>
+              <div className="bg-card/50 rounded-lg p-4 border border-border/50">
+                <div className="text-sm font-medium text-foreground mb-1">Batch Processing</div>
+                <div className="text-xs text-muted-foreground">Parallel execution across multiple leads</div>
+              </div>
+              <div className="bg-card/50 rounded-lg p-4 border border-border/50">
+                <div className="text-sm font-medium text-foreground mb-1">Progress Tracking</div>
+                <div className="text-xs text-muted-foreground">Real-time SSE updates and error handling</div>
               </div>
             </div>
           </div>
@@ -383,29 +482,115 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            <div className="bg-card rounded-xl p-8 border border-border">
+            <div className="bg-gradient-to-br from-orange-500/5 to-card rounded-xl p-8 border border-orange-500/20">
               <div className="flex items-center gap-3 mb-4">
-                <FileText className="w-7 h-7 text-primary" />
-                <h3 className="text-xl font-semibold text-foreground">Rich Reports</h3>
+                <FileCode className="w-7 h-7 text-orange-600" />
+                <h3 className="text-xl font-semibold text-foreground">AI-Powered Reports</h3>
               </div>
               <p className="text-muted-foreground mb-4 leading-relaxed">
-                Generate comprehensive analysis reports in multiple formats (Markdown, HTML, PDF)
-                with embedded screenshots and visual evidence.
+                Dedicated Report Engine with AI synthesis that consolidates findings and generates
+                executive summaries. Professional reports in MD/HTML/PDF with 30/60/90 roadmaps.
               </p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <span className="text-success mt-1">✓</span>
-                  <span>Multi-format export (MD/HTML/PDF)</span>
+                  <span>40-70% noise reduction via AI deduplication</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-success mt-1">✓</span>
-                  <span>Screenshot embedding</span>
+                  <span>Executive insights with business impact</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-success mt-1">✓</span>
-                  <span>Actionable recommendations</span>
+                  <span>Multi-format export with screenshot evidence</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-success mt-1">✓</span>
+                  <span>Strategic 30/60/90 day roadmaps</span>
                 </li>
               </ul>
+            </div>
+          </div>
+        </section>
+
+        {/* Report Intelligence */}
+        <section className="mb-32">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-semibold mb-4 text-foreground">Report Intelligence</h2>
+            <p className="text-lg text-muted-foreground">From raw data to client-ready insights in 3.5 minutes</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-500/10 via-primary/5 to-purple-500/10 rounded-2xl p-12 border border-orange-500/20">
+            <div className="grid md:grid-cols-2 gap-8 mb-8">
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full mb-4">
+                  <Clock className="w-4 h-4 text-orange-600" />
+                  <span className="text-xs font-medium text-muted-foreground">Stage 1: ~35 seconds</span>
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">Issue Deduplication</h3>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  GPT-5 analyzes findings from all analyzers and consolidates redundant issues.
+                  <span className="text-foreground font-medium"> Reduces noise by 40-70%</span>, merging overlapping
+                  observations into unified insights.
+                </p>
+                <div className="bg-card/50 rounded-lg p-4 border border-border/50 text-sm">
+                  <div className="text-muted-foreground italic">
+                    "CTA too small" (desktop) + "CTA not prominent" (mobile) →
+                    <span className="text-foreground font-medium"> "CTA lacks prominence across devices"</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full mb-4">
+                  <Clock className="w-4 h-4 text-orange-600" />
+                  <span className="text-xs font-medium text-muted-foreground">Stage 2: ~140 seconds</span>
+                </div>
+                <h3 className="text-xl font-semibold mb-3 text-foreground">Executive Insights</h3>
+                <p className="text-muted-foreground leading-relaxed mb-4">
+                  Transforms technical findings into <span className="text-foreground font-medium">business intelligence</span>.
+                  Generates executive summary, strategic roadmap, ROI projections, and links findings to screenshot evidence.
+                </p>
+                <div className="bg-card/50 rounded-lg p-4 border border-border/50 text-sm space-y-2">
+                  <div className="flex items-start gap-2">
+                    <span className="text-success mt-0.5">✓</span>
+                    <span className="text-muted-foreground">One-sentence headline assessing site health</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-success mt-0.5">✓</span>
+                    <span className="text-muted-foreground">3-5 critical findings with business impact</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-success mt-0.5">✓</span>
+                    <span className="text-muted-foreground">30/60/90 day strategic roadmap</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card rounded-xl p-6 border border-border">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold text-foreground">The Result</h4>
+                <div className="text-sm text-muted-foreground">Cost: <span className="text-foreground font-medium">$0.06</span> per report</div>
+              </div>
+              <p className="text-muted-foreground leading-relaxed mb-4">
+                Professional reports that speak the client's language. No technical jargon—just clear business value,
+                actionable recommendations, and a strategic roadmap for improvement.
+              </p>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <div className="text-2xl font-bold text-primary mb-1">40-70%</div>
+                  <div className="text-xs text-muted-foreground">Fewer redundant findings</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <div className="text-2xl font-bold text-primary mb-1">+135%</div>
+                  <div className="text-xs text-muted-foreground">More content with synthesis</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <div className="text-2xl font-bold text-primary mb-1">100%</div>
+                  <div className="text-xs text-muted-foreground">Evidence-linked findings</div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -417,17 +602,17 @@ export default function LandingPage() {
             <p className="text-lg text-muted-foreground">This isn't another lead gen tool—it's an intelligence engine</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-primary/5 rounded-xl p-8 border border-primary/10">
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-primary/5 rounded-xl p-8 border border-primary/10 hover:shadow-md transition-shadow">
               <div className="text-4xl mb-4">🧠</div>
               <h3 className="text-lg font-semibold mb-3 text-foreground">Multi-Agent Intelligence</h3>
               <p className="text-muted-foreground leading-relaxed">
-                Not just one AI doing everything. <span className="text-foreground font-medium">15+ specialized agents</span> collaborate,
-                each trained for specific tasks with different AI models, ensuring expert-level analysis at every step.
+                Not just one AI doing everything. <span className="text-foreground font-medium">17+ specialized agents</span> collaborate across
+                <span className="text-foreground font-medium"> 4 engines</span>, each trained for specific tasks with different AI models.
               </p>
             </div>
 
-            <div className="bg-success/5 rounded-xl p-8 border border-success/10">
+            <div className="bg-success/5 rounded-xl p-8 border border-success/10 hover:shadow-md transition-shadow">
               <div className="text-4xl mb-4">🎯</div>
               <h3 className="text-lg font-semibold mb-3 text-foreground">Deep Understanding</h3>
               <p className="text-muted-foreground leading-relaxed">
@@ -436,7 +621,16 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-purple-500/5 rounded-xl p-8 border border-purple-500/10">
+            <div className="bg-orange-500/5 rounded-xl p-8 border border-orange-500/10 hover:shadow-md transition-shadow">
+              <div className="text-4xl mb-4">📊</div>
+              <h3 className="text-lg font-semibold mb-3 text-foreground">Client-Ready Reports</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Dedicated Report Engine with <span className="text-foreground font-medium">AI synthesis</span> that transforms technical data into
+                <span className="text-foreground font-medium"> professional presentations</span> with executive summaries and strategic roadmaps.
+              </p>
+            </div>
+
+            <div className="bg-purple-500/5 rounded-xl p-8 border border-purple-500/10 hover:shadow-md transition-shadow">
               <div className="text-4xl mb-4">⚡</div>
               <h3 className="text-lg font-semibold mb-3 text-foreground">Real-Time Evolution</h3>
               <p className="text-muted-foreground leading-relaxed">
@@ -445,12 +639,21 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-orange-500/5 rounded-xl p-8 border border-orange-500/10">
+            <div className="bg-orange-500/5 rounded-xl p-8 border border-orange-500/10 hover:shadow-md transition-shadow">
               <div className="text-4xl mb-4">🚀</div>
               <h3 className="text-lg font-semibold mb-3 text-foreground">End-to-End Automation</h3>
               <p className="text-muted-foreground leading-relaxed">
-                From <span className="text-foreground font-medium">prospect discovery to sent email</span>, fully automated.
-                You define the ICP, we handle everything else—including quality control and personalization.
+                From <span className="text-foreground font-medium">prospect discovery to professional report</span>, fully automated.
+                You define the ICP, we handle discovery, analysis, synthesis, and personalized outreach.
+              </p>
+            </div>
+
+            <div className="bg-primary/5 rounded-xl p-8 border border-primary/10 hover:shadow-md transition-shadow">
+              <div className="text-4xl mb-4">💎</div>
+              <h3 className="text-lg font-semibold mb-3 text-foreground">Microservices Architecture</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                <span className="text-foreground font-medium">4 independent engines</span> that scale separately. Update reports without
+                touching analysis. Run campaigns while prospects are discovered. True parallel intelligence.
               </p>
             </div>
           </div>
@@ -458,27 +661,32 @@ export default function LandingPage() {
 
         {/* Results Section */}
         <section className="mb-32">
-          <div className="bg-muted/30 rounded-2xl p-12 border border-border text-center">
+          <div className="bg-gradient-to-br from-primary/10 via-muted/30 to-orange-500/10 rounded-2xl p-12 border border-primary/20 text-center shadow-sm">
             <Zap className="w-12 h-12 text-primary mx-auto mb-6" />
             <h2 className="text-3xl font-semibold mb-6 text-foreground">The Result?</h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
               A lead generation system that doesn't just <span className="text-foreground font-medium">find companies</span>—it
               <span className="text-foreground font-medium"> understands their business</span>,
-              <span className="text-foreground font-medium"> analyzes their opportunities</span>, and
+              <span className="text-foreground font-medium"> analyzes their opportunities</span>,
+              <span className="text-foreground font-medium"> generates professional reports</span>, and
               <span className="text-foreground font-medium"> crafts messages that convert</span>.
             </p>
-            <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
-              <div>
+            <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+              <div className="bg-card/50 rounded-xl p-6 border border-border">
                 <div className="text-4xl font-bold text-primary mb-2">10x</div>
                 <div className="text-sm text-muted-foreground">Faster than manual prospecting</div>
               </div>
-              <div>
+              <div className="bg-card/50 rounded-xl p-6 border border-border">
                 <div className="text-4xl font-bold text-primary mb-2">95%</div>
                 <div className="text-sm text-muted-foreground">Lead quality score</div>
               </div>
-              <div>
-                <div className="text-4xl font-bold text-primary mb-2">$0.13</div>
-                <div className="text-sm text-muted-foreground">Cost per deep analysis</div>
+              <div className="bg-card/50 rounded-xl p-6 border border-border">
+                <div className="text-4xl font-bold text-orange-600 mb-2">3.5m</div>
+                <div className="text-sm text-muted-foreground">Client-ready report generation</div>
+              </div>
+              <div className="bg-card/50 rounded-xl p-6 border border-border">
+                <div className="text-4xl font-bold text-primary mb-2">$0.19</div>
+                <div className="text-sm text-muted-foreground">Total cost per lead (analysis + report)</div>
               </div>
             </div>
           </div>
@@ -527,7 +735,7 @@ export default function LandingPage() {
             Built with <span className="text-red-500">♥</span> using GPT-4o/5, Claude 3.5 Sonnet, and Grok-4-fast
           </p>
           <p className="text-xs mt-2 text-muted-foreground/70">
-            Powered by Next.js, Supabase, and Playwright • 15+ Multi-Agent AI Architecture
+            Powered by Next.js, Supabase, and Playwright • 17+ Multi-Agent AI Architecture across 4 Specialized Engines
           </p>
         </div>
       </div>

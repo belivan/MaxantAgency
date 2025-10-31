@@ -187,7 +187,8 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     format = 'markdown',
     sections = ['all'],
     saveToDatabase = true,
-    project_id = null
+    project_id = null,
+    lead_id = null
   } = options;
 
   try {
@@ -256,9 +257,9 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       }
     }
 
-    // PHASE 2: AI SYNTHESIS (if enabled)
+    // PHASE 2: AI SYNTHESIS (ALWAYS ENABLED by default, only disabled if explicitly set to 'false')
     let synthesisData = null;
-    const useSynthesis = process.env.USE_AI_SYNTHESIS === 'true';
+    const useSynthesis = process.env.USE_AI_SYNTHESIS !== 'false';
 
     if (useSynthesis) {
       try {
@@ -400,31 +401,39 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       }
     }
 
-    let localPath = localReportPath;
-    let contentForUpload = report.content;
+    // For HTML format, we've already generated Preview and Full reports above
+    // No need for additional backup/audit report
+    let localPath = null;
+    let contentForUpload = null;
+    let uploadResult = { path: null, fullPath: null };
 
-    // For PDF format, the file is already saved, just need to copy or reference it
-    if (format === 'pdf' && report.path) {
-      // PDF was already generated to a file
-      const { readFile: fsReadFile, copyFile } = await import('fs/promises');
-      
-      // Copy the PDF to local backup location
-      await copyFile(report.path, localReportPath);
-      console.log(`📄 Local PDF backup saved: ${localReportPath}`);
-      
-      // Read the PDF for Supabase upload
-      contentForUpload = await fsReadFile(report.path);
+    // Only handle non-HTML formats (markdown, json, etc.)
+    if (format !== 'html') {
       localPath = localReportPath;
-    } else if (report.content) {
-      // For text-based formats (markdown, html), save content to file
-      await writeFile(localReportPath, report.content, 'utf8');
-      console.log(`📄 Local report backup saved: ${localReportPath}`);
-    } else {
-      throw new Error(`Report generation failed: No content or path returned for format ${format}`);
+      contentForUpload = report.content;
+
+      // For PDF format, the file is already saved, just need to copy or reference it
+      if (format === 'pdf' && report.path) {
+        // PDF was already generated to a file
+        const { readFile: fsReadFile, copyFile } = await import('fs/promises');
+
+        // Copy the PDF to local backup location
+        await copyFile(report.path, localReportPath);
+        console.log(`📄 Local PDF backup saved: ${localReportPath}`);
+
+        // Read the PDF for Supabase upload
+        contentForUpload = await fsReadFile(report.path);
+        localPath = localReportPath;
+      } else if (report.content) {
+        // For text-based formats (markdown, json), save content to file
+        await writeFile(localReportPath, report.content, 'utf8');
+        console.log(`📄 Local report backup saved: ${localReportPath}`);
+      } else {
+        throw new Error(`Report generation failed: No content or path returned for format ${format}`);
+      }
     }
 
     const shouldUpload = format !== 'html';
-    let uploadResult = { path: null, fullPath: null };
 
     if (shouldUpload) {
       const storagePath = generateStoragePath(reportData, format);
@@ -441,20 +450,22 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         uploadResult = await uploadReport(contentForUpload, storagePath, contentType);
       } catch (uploadError) {
         console.log('Supabase upload skipped: '+ uploadError.message);
-        console.log('Report available locally at: '+ localPath);
+        if (localPath) {
+          console.log('Report available locally at: '+ localPath);
+        }
         // Continue without upload - local backup is enough
       }
     } else {
-      console.log('Skipping Supabase upload for HTML report. Report available locally at: '+ localPath);
+      console.log('Skipping Supabase upload for HTML reports (already generated as Preview and Full versions)');
     }
 
     // Save metadata to database if requested
     let reportRecord = null;
     if (saveToDatabase) {
-      // Calculate file size based on what we're uploading
-      const fileSize = Buffer.isBuffer(contentForUpload)
-        ? contentForUpload.length
-        : Buffer.byteLength(contentForUpload, 'utf8');
+      // Calculate file size based on what we're uploading (for HTML, size doesn't matter as we have separate files)
+      const fileSize = contentForUpload
+        ? (Buffer.isBuffer(contentForUpload) ? contentForUpload.length : Buffer.byteLength(contentForUpload, 'utf8'))
+        : 0;
 
       // Calculate synthesis metrics
       const totalSynthesisCost = synthesisData?.stageMetadata ?
@@ -479,11 +490,11 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         Math.round(((originalIssuesCount - consolidatedIssuesCount) / originalIssuesCount) * 100) : 0;
 
       const metadata = {
-        lead_id: analysisResult.id, // The lead ID from the analysis
+        lead_id: lead_id || analysisResult.id, // Use options.lead_id if provided, fallback to analysisResult.id
         project_id: project_id || analysisResult.project_id,
         report_type: 'website_audit',
         format,
-        storage_path: uploadResult.path,
+        storage_path: uploadResult?.path || localPath || null, // Use upload path if available, fallback to local path
         storage_bucket: 'reports',
         file_size_bytes: fileSize,
         company_name: reportData.company_name,
@@ -531,8 +542,14 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         generated_at: new Date().toISOString()
       };
 
-      reportRecord = await saveReportMetadata(metadata);
-      console.log(`✅ Report saved: ${reportRecord.id}`);
+      try {
+        reportRecord = await saveReportMetadata(metadata);
+        console.log(`✅ Report saved: ${reportRecord.id}`);
+      } catch (dbError) {
+        console.error('❌ Failed to save report metadata to database:', dbError.message);
+        console.error('Metadata that failed:', JSON.stringify(metadata, null, 2));
+        // Don't throw - let the function continue and return what it can
+      }
     }
 
     // Calculate file size for return value

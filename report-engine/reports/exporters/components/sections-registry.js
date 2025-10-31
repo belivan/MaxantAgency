@@ -154,10 +154,21 @@ export const SECTIONS_REGISTRY = [
     description: 'Market analysis, competitor insights, and lead scoring'
   },
   {
+    id: 'complete-issue-breakdown',
+    name: 'Complete Issue Breakdown',
+    component: generateCompleteIssueBreakdown,
+    order: 11,
+    reportTypes: ['full'],
+    required: false,
+    showPlaceholder: true,
+    requiredData: [],
+    description: 'All issues categorized by type with severity ratings'
+  },
+  {
     id: 'design-system',
     name: 'Design System Analysis',
     component: generateDesignSystemSection,
-    order: 11,
+    order: 12,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: false,
@@ -168,23 +179,12 @@ export const SECTIONS_REGISTRY = [
     id: 'technical-deep-dive',
     name: 'Technical Deep Dive',
     component: generateTechnicalDeepDive,
-    order: 12,
-    reportTypes: ['full'],
-    required: false,
-    showPlaceholder: true,
-    requiredData: [],
-    description: 'Technical stack, performance metrics, SEO details'
-  },
-  {
-    id: 'complete-issue-breakdown',
-    name: 'Complete Issue Breakdown',
-    component: generateCompleteIssueBreakdown,
     order: 13,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: true,
     requiredData: [],
-    description: 'All issues categorized by type with severity ratings'
+    description: 'Technical stack, performance metrics, SEO details'
   },
   {
     id: 'accessibility-compliance',

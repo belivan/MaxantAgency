@@ -70,6 +70,11 @@ export interface Lead {
   design_score?: number;
   design_issues?: Issue[];
 
+  design_score_desktop?: number;
+  design_score_mobile?: number;
+  design_issues_desktop?: Issue[];
+  design_issues_mobile?: Issue[];
+
   seo_score?: number;
   seo_issues?: Issue[];
   seo_title?: string;

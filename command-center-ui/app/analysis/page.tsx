@@ -167,6 +167,7 @@ export default function AnalysisPage() {
     }
 
     loadDefaultPrompts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load project-specific prompts and leads count when project changes
@@ -243,6 +244,7 @@ export default function AnalysisPage() {
     if (defaultPromptsRef.current) {
       loadProjectData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProjectId]);
 
   const handleModelSelectionsChange = useCallback((selection: Record<string, string>) => {

@@ -17,7 +17,7 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join, resolve } from 'path';
 import { existsSync } from 'fs';
-import { runProspectingPipeline } from './orchestrator.js';
+import { runProspectingPipeline, lookupSingleBusiness } from './orchestrator.js';
 import { getProspects, getProspectById, getProspectStats, deleteProspect, deleteProspects } from './database/supabase-client.js';
 import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 import { logInfo, logError } from './shared/logger.js';
@@ -369,6 +369,61 @@ app.get('/api/prompts/default', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════
+// POST /api/lookup-business - Look up a single business without ICP
+//
+// Request body:
+//   query: string (business name, website URL, or Google Place ID)
+//   options: {
+//     projectId: string (optional)
+//     scrapeWebsite: boolean (optional, default: true)
+//     findSocial: boolean (optional, default: true)
+//     scrapeSocial: boolean (optional, default: false for speed)
+//     fullPageScreenshots: boolean (optional, default: false for speed)
+//     visionModel: string (optional)
+//   }
+// ═══════════════════════════════════════════════════════════════════
+
+app.post('/api/lookup-business', async (req, res) => {
+  const { query, options = {} } = req.body;
+
+  // Validate request
+  if (!query) {
+    return res.status(400).json({
+      success: false,
+      error: 'Missing "query" in request body. Provide a business name, website URL, or Google Place ID.'
+    });
+  }
+
+  try {
+    logInfo('Looking up single business', {
+      query,
+      projectId: options.projectId || 'none'
+    });
+
+    const result = await lookupSingleBusiness(query, options);
+
+    res.json(result);
+
+  } catch (error) {
+    logError('POST /api/lookup-business failed', error);
+
+    // Check if it's a "not found" error
+    if (error.message === 'Business not found in Google Maps') {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+        query
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
 // GET /health - Health check
 // ═══════════════════════════════════════════════════════════════════
 
@@ -392,6 +447,7 @@ app.get('/', (req, res) => {
     description: 'Universal company discovery and enrichment system',
     endpoints: {
       prospect: 'POST /api/prospect',
+      lookupBusiness: 'POST /api/lookup-business',
       listProspects: 'GET /api/prospects',
       getProspect: 'GET /api/prospects/:id',
       stats: 'GET /api/stats',

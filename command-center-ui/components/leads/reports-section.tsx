@@ -156,7 +156,7 @@ export function ReportsSection({ selectedLeads }: ReportsSectionProps) {
             </TableHeader>
             <TableBody>
               {reports.length === 0 ? (
-                <TableRow>
+                <TableRow key="empty-state">
                   <TableCell colSpan={7} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <FileText className="h-12 w-12 text-muted-foreground/50" />

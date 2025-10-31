@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Protected page routes (require authentication)
+// Protected routes (require authentication)
+// This includes both page routes AND API routes
 const isProtectedRoute = createRouteMatcher([
   '/dashboard(.*)',
   '/projects(.*)',
@@ -9,27 +10,11 @@ const isProtectedRoute = createRouteMatcher([
   '/leads(.*)',
   '/outreach(.*)',
   '/analytics(.*)',
-]);
-
-// Public API routes (no authentication required)
-// These are internal Next.js API routes that proxy to backend services
-const isPublicApiRoute = createRouteMatcher([
-  '/api/analysis/prompts(.*)',
-  '/api/leads(.*)',
-  '/api/projects(.*)',
-  '/api/benchmarks(.*)',
+  '/api(.*)',  // Protect ALL API routes
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Allow public API routes without authentication
-  if (isPublicApiRoute(req)) {
-    return;
-  }
-
-  // Protect all other routes
-  if (isProtectedRoute(req)) {
-    await auth.protect();
-  }
+  if (isProtectedRoute(req)) await auth.protect();
 });
 
 export const config = {

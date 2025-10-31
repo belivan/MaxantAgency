@@ -4,11 +4,22 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 
 const ANALYSIS_ENGINE_URL = process.env.NEXT_PUBLIC_ANALYSIS_ENGINE_URL || 'http://localhost:3001';
 
 export async function GET(request: NextRequest) {
   try {
+    // Verify authentication
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Fetch default prompts from Analysis Engine
     const response = await fetch(`${ANALYSIS_ENGINE_URL}/api/prompts/default`, {
       method: 'GET',

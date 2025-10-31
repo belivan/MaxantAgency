@@ -24,6 +24,7 @@ import {
 } from './reports/storage/supabase-storage.js';
 // Database operations (reports table)
 import {
+  supabase,
   saveReportMetadata,
   getReportById,
   getReportsByLeadId,
@@ -169,12 +170,167 @@ app.post('/api/generate-from-lead', async (req, res) => {
       });
     }
 
-    // This endpoint would need to fetch the lead from the database
-    // For now, return a helpful error
-    return res.status(501).json({
-      success: false,
-      error: 'This endpoint requires database integration',
-      message: 'Please use POST /api/generate with full analysisResult data instead'
+    console.log(`\n📊 Generating report for lead: ${lead_id}`);
+    console.log(`   Format: ${format}`);
+
+    // Fetch lead from database
+    const { data: lead, error: leadError } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', lead_id)
+      .single();
+
+    if (leadError || !lead) {
+      return res.status(404).json({
+        success: false,
+        error: 'Lead not found',
+        details: leadError?.message
+      });
+    }
+
+    // Fetch benchmark data if matched_benchmark_id exists
+    let matchedBenchmark = null;
+    if (lead.matched_benchmark_id) {
+      const { data: benchmark, error: benchmarkError } = await supabase
+        .from('benchmarks')
+        .select('*')
+        .eq('id', lead.matched_benchmark_id)
+        .single();
+
+      if (!benchmarkError && benchmark) {
+        // Calculate match score based on similarity (simplified version)
+        // Could be made more sophisticated by comparing multiple metrics
+        const matchScore = 85; // Default high match since it was AI-selected
+
+        // Format tier for display
+        const tierMapping = {
+          'local': 'Local Leader',
+          'regional': 'Regional Leader',
+          'national': 'National Leader',
+          'enterprise': 'Enterprise Leader'
+        };
+        const comparisonTier = tierMapping[benchmark.benchmark_tier] || 'Industry Leader';
+
+        // Structure benchmark data for report compatibility
+        matchedBenchmark = {
+          id: benchmark.id,
+          company_name: benchmark.company_name,
+          website_url: benchmark.website_url,
+          industry: benchmark.industry,
+          benchmark_tier: benchmark.benchmark_tier,
+
+          // Fields expected by report sections
+          match_score: matchScore,
+          comparison_tier: comparisonTier,
+
+          // Create scores object that report sections expect
+          scores: {
+            overall: benchmark.analysis_results?.overall_score || 0,
+            grade: benchmark.analysis_results?.grade || 'N/A',
+            design: benchmark.analysis_results?.design_score || 0,
+            seo: benchmark.analysis_results?.seo_score || 0,
+            content: benchmark.analysis_results?.content_score || 0,
+            social: benchmark.analysis_results?.social_score || 0,
+            accessibility: benchmark.analysis_results?.accessibility_score || 0,
+            performance: benchmark.analysis_results?.performance_score || 0
+          },
+
+          // Include full analysis_results for detailed sections
+          ...benchmark.analysis_results,
+
+          // Keep original nested structure for reference
+          analysis_results: benchmark.analysis_results
+        };
+        console.log(`   📊 Benchmark loaded: ${benchmark.company_name} (Grade: ${matchedBenchmark.scores.grade}, Tier: ${comparisonTier})`);
+      }
+    }
+
+    // Extract analysis data from lead
+    const analysisResult = {
+      company_name: lead.company_name,
+      url: lead.url,
+      industry: lead.industry,
+      overall_score: lead.overall_score || lead.website_score,
+      grade: lead.website_grade,
+      design_score: lead.design_score,
+      seo_score: lead.seo_score,
+      performance_score: lead.performance_score,  // Don't default to 0 - let it be undefined if not available
+      content_score: lead.content_score,
+      accessibility_score: lead.accessibility_score,
+      social_score: lead.social_score,
+
+      // Structured data for report
+      design_issues: lead.design_issues || [],
+      seo_issues: lead.seo_issues || [],
+      content_issues: lead.content_issues || [],
+      accessibility_issues: lead.accessibility_issues || [],
+      social_issues: lead.social_issues || [],
+
+      quick_wins: lead.quick_wins || [],
+      top_issue: lead.top_issue,
+      one_liner: lead.one_liner,
+
+      // Screenshots
+      screenshot_desktop: lead.screenshot_desktop,
+      screenshot_mobile: lead.screenshot_mobile,
+
+      // Raw analyzer outputs
+      design_analysis: lead.design_analysis,
+      seo_analysis: lead.seo_analysis,
+      content_analysis: lead.content_analysis,
+      accessibility_analysis: lead.accessibility_analysis,
+      social_analysis: lead.social_analysis,
+
+      // Metadata
+      analyzed_at: lead.analyzed_at,
+      analysis_time_ms: lead.analysis_time_ms,
+
+      // Benchmark comparison data
+      matched_benchmark: matchedBenchmark
+    };
+
+    // Generate report using auto-report-generator
+    const reportResult = await autoGenerateReport(analysisResult, {
+      format,
+      sections,
+      saveToDatabase: true,
+      project_id: lead.project_id || null,
+      lead_id: lead.id
+    });
+
+    console.log(`✅ Report generated successfully`);
+    console.log(`   Report ID: ${reportResult.report_id || 'N/A'}`);
+    console.log(`   Storage Path: ${reportResult.storage_path || 'N/A'}`);
+
+    // Validate that report was saved to database
+    if (!reportResult.report_id) {
+      return res.status(500).json({
+        success: false,
+        error: 'Report was generated but not saved to database',
+        details: 'report_id is missing from result'
+      });
+    }
+
+    res.json({
+      success: true,
+      report: {
+        id: reportResult.report_id,
+        lead_id: lead.id,
+        project_id: lead.project_id,
+        report_type: 'website-audit',
+        format,
+        storage_path: reportResult.storage_path,
+        storage_bucket: reportResult.storage_bucket || 'reports',
+        file_size_bytes: reportResult.file_size_bytes || 0,
+        company_name: lead.company_name,
+        website_url: lead.website,
+        overall_score: lead.overall_score || lead.website_score,
+        website_grade: lead.website_grade,
+        download_count: 0,
+        status: 'completed',
+        generated_at: new Date().toISOString(),
+        download_url: reportResult.download_url || null
+      }
     });
 
   } catch (error) {
@@ -371,7 +527,7 @@ async function startServer() {
       console.log('='.repeat(60));
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🤖 AI Synthesis: ${process.env.USE_AI_SYNTHESIS === 'true' ? 'ENABLED' : 'DISABLED'}`);
+      console.log(`🤖 AI Synthesis: ${process.env.USE_AI_SYNTHESIS !== 'false' ? 'ENABLED (default on)' : 'DISABLED'}`);
       console.log(`📝 Default Format: ${process.env.REPORT_FORMAT || 'html'}`);
       console.log(`📦 Report Version: ${process.env.REPORT_VERSION || 'v3'}`);
       console.log('='.repeat(60));

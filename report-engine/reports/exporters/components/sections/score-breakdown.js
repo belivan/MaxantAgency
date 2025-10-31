@@ -53,10 +53,11 @@ function loadStandardWeights() {
 /**
  * Generate Score Breakdown / Grading Methodology Section
  * @param {Object} analysisResult - Complete analysis data
+ * @param {Object} synthesisData - AI synthesis data (if available)
  * @param {Object} options - Configuration options
  * @returns {string} HTML section
  */
-export function generateScoreBreakdownSection(analysisResult, options = {}) {
+export function generateScoreBreakdownSection(analysisResult, synthesisData = null, options = {}) {
   const { reportType = 'full' } = options;
   let { weight_reasoning, weights } = analysisResult;
 

@@ -13,6 +13,7 @@ import type {
 } from '@/lib/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
+const REPORT_API_BASE = process.env.NEXT_PUBLIC_REPORT_API || 'http://localhost:3003';
 
 /**
  * Analyze prospects by URLs
@@ -309,7 +310,7 @@ export async function generateReport(
   leadId: string,
   format: 'markdown' | 'html' = 'html'
 ): Promise<Report> {
-  const response = await fetch(`${API_BASE}/api/reports/generate`, {
+  const response = await fetch(`${REPORT_API_BASE}/api/generate-from-lead`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -321,7 +322,7 @@ export async function generateReport(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to generate report');
+    throw new Error(error.error || error.message || 'Failed to generate report');
   }
 
   const data = await response.json();
@@ -332,11 +333,11 @@ export async function generateReport(
  * Get all reports for a lead
  */
 export async function getReportsByLeadId(leadId: string): Promise<Report[]> {
-  const response = await fetch(`${API_BASE}/api/reports/lead/${leadId}`);
+  const response = await fetch(`${REPORT_API_BASE}/api/reports/lead/${leadId}`);
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch reports');
+    throw new Error(error.error || error.message || 'Failed to fetch reports');
   }
 
   const data = await response.json();
@@ -347,11 +348,11 @@ export async function getReportsByLeadId(leadId: string): Promise<Report[]> {
  * Get download URL for a report
  */
 export async function getReportDownloadUrl(reportId: string): Promise<string> {
-  const response = await fetch(`${API_BASE}/api/reports/${reportId}/download`);
+  const response = await fetch(`${REPORT_API_BASE}/api/reports/${reportId}/download`);
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to get download URL');
+    throw new Error(error.error || error.message || 'Failed to get download URL');
   }
 
   const data = await response.json();
@@ -362,12 +363,12 @@ export async function getReportDownloadUrl(reportId: string): Promise<string> {
  * Delete a report
  */
 export async function deleteReport(reportId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/api/reports/${reportId}`, {
+  const response = await fetch(`${REPORT_API_BASE}/api/reports/${reportId}`, {
     method: 'DELETE'
   });
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.message || 'Failed to delete report');
+    throw new Error(error.error || error.message || 'Failed to delete report');
   }
 }
