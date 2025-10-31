@@ -44,7 +44,8 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
     console.log('🚀 Launching Chromium browser for PDF generation...');
 
     browser = await chromium.launch({
-      headless: true
+      headless: true,
+      timeout: 30000  // 30 second timeout for browser launch
     });
 
     const context = await browser.newContext();
@@ -52,7 +53,8 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
 
     console.log('📄 Setting HTML content...');
     await page.setContent(htmlContent, {
-      waitUntil: 'networkidle'
+      waitUntil: 'domcontentloaded',  // Don't wait for network - we have inline content
+      timeout: 30000  // Add 30-second timeout as safety net
     });
 
     // Emulate screen media to ensure proper CSS rendering
@@ -146,7 +148,8 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
       </html>
     `;
 
-    await page.pdf({
+    // Add timeout to PDF generation to prevent hanging
+    const pdfPromise = page.pdf({
       path: outputPath,
       format,
       landscape,
@@ -157,6 +160,14 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
       margin,
       preferCSSPageSize: false
     });
+
+    // Race against timeout (60 seconds for large documents)
+    await Promise.race([
+      pdfPromise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('PDF generation timeout after 60s')), 60000)
+      )
+    ]);
 
     const generationTime = Date.now() - startTime;
 

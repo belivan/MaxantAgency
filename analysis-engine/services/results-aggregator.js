@@ -605,6 +605,15 @@ export class ResultsAggregator {
           })
       },
 
+      // FIX #1: Preserve screenshot Buffers for benchmark strength extraction
+      // This prevents re-fetching and re-compressing images in Phase 2
+      crawlPages: crawlData.pages.map(p => ({
+        url: p.url,
+        screenshots: p.screenshots, // Contains Buffers for desktop and mobile
+        html: p.html,
+        designTokens: p.designTokens
+      })),
+
       // AI page selection
       ai_page_selection: {
         seo_pages: pageSelection.seo_pages,

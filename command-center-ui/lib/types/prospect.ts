@@ -34,8 +34,12 @@ export interface Prospect {
   updated_at?: string;
 
   // Prospecting details
-  discovery_source?: 'google_maps' | 'web_search' | 'manual' | 'csv_import';
+  discovery_source?: 'google_maps' | 'web_search' | 'manual' | 'csv_import' | 'single-lookup';
   discovery_metadata?: Record<string, any>;
+
+  // Social profiles
+  social_profiles?: Record<string, any>;
+  social_metadata?: Record<string, any>;
 }
 
 export interface ProspectFilters {
@@ -103,4 +107,30 @@ export interface ProspectGenerationResponse {
     description?: string;
   };
   error?: string;
+}
+
+/**
+ * Single business lookup options
+ */
+export interface BusinessLookupOptions {
+  projectId?: string;
+  scrapeWebsite?: boolean;
+  findSocial?: boolean;
+  scrapeSocial?: boolean;
+  fullPageScreenshots?: boolean;
+  visionModel?: string;
+}
+
+/**
+ * Single business lookup result
+ */
+export interface BusinessLookupResult {
+  success: boolean;
+  prospect: Prospect;
+  metadata: {
+    discovery_cost_usd: number;
+    discovery_time_ms: number;
+    steps_completed: string;
+    source: string;
+  };
 }

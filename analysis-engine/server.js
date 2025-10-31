@@ -31,6 +31,9 @@ dotenv.config({ path: resolve(__dirname, '../.env') });
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// FIX #5: Request deduplication - prevent concurrent analyses of same URL
+const activeAnalyses = new Map(); // URL -> { promise, startTime, type }
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -167,6 +170,20 @@ app.all('/api/analyze-benchmark', async (req, res) => {
 
     console.log(`[Benchmark Analysis] Analyzing ${company_name} as benchmark...`);
 
+    // FIX #5: Check if this URL is already being analyzed
+    const normalizedUrl = url.toLowerCase().replace(/\/$/, ''); // Normalize for comparison
+    if (activeAnalyses.has(normalizedUrl)) {
+      const existing = activeAnalyses.get(normalizedUrl);
+      const elapsedSeconds = Math.round((Date.now() - existing.startTime) / 1000);
+      console.log(`⚠️  [Deduplication] URL already being analyzed (${elapsedSeconds}s elapsed)`);
+      console.log(`   Returning 409 Conflict - wait for existing analysis to complete`);
+      return res.status(409).json({
+        error: 'Analysis already in progress',
+        message: `This URL is currently being analyzed. Please wait for completion (${elapsedSeconds}s elapsed).`,
+        elapsed_seconds: elapsedSeconds
+      });
+    }
+
     // Set up Server-Sent Events headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -199,40 +216,72 @@ app.all('/api/analyze-benchmark', async (req, res) => {
       });
     };
 
-    // Analyze the benchmark with progress callback
-    const result = await analyzeBenchmark({
-      company_name,
-      website_url: url,
-      industry,
-      benchmark_tier: databaseTier,  // Use mapped and validated database tier
-      google_rating,
-      google_review_count,
-      location_city,
-      location_state,
-      awards,
-      notes,
-      source: 'api'
-    }, {
-      force: force || false,
-      onProgress
+    // FIX #5: Register this analysis to prevent duplicates
+    activeAnalyses.set(normalizedUrl, {
+      startTime: Date.now(),
+      type: 'benchmark',
+      company_name
     });
+    console.log(`🔒 [Deduplication] Registered analysis for ${normalizedUrl}`);
 
-    // Send final event
-    if (result.success) {
-      sendEvent('complete', {
-        success: true,
-        benchmark: result.benchmark
+    try {
+      // Analyze the benchmark with progress callback
+      const result = await analyzeBenchmark({
+        company_name,
+        website_url: url,
+        industry,
+        benchmark_tier: databaseTier,  // Use mapped and validated database tier
+        google_rating,
+        google_review_count,
+        location_city,
+        location_state,
+        awards,
+        notes,
+        source: 'api'
+      }, {
+        force: force || false,
+        onProgress
       });
-    } else {
-      sendEvent('error', {
-        message: result.error || 'Analysis failed',
-        error: result.error
-      });
+
+      // Send final event
+      if (result.success) {
+        sendEvent('complete', {
+          success: true,
+          benchmark: result.benchmark
+        });
+      } else {
+        sendEvent('error', {
+          message: result.error || 'Analysis failed',
+          error: result.error
+        });
+      }
+
+      // End the SSE stream
+      res.end();
+
+    } catch (error) {
+      console.error('[Benchmark Analysis] Error:', error);
+
+      // If headers already sent (SSE started), send error event
+      if (res.headersSent) {
+        res.write(`event: error\n`);
+        res.write(`data: ${JSON.stringify({ message: 'Internal server error', error: error.message })}\n\n`);
+        res.end();
+      } else {
+        // Otherwise send regular error response
+        return res.status(500).json({
+          success: false,
+          error: error.message
+        });
+      }
+    } finally {
+      // FIX #5: Always clean up the lock when analysis completes (success or error)
+      if (activeAnalyses.has(normalizedUrl)) {
+        const elapsed = Date.now() - activeAnalyses.get(normalizedUrl).startTime;
+        activeAnalyses.delete(normalizedUrl);
+        console.log(`🔓 [Deduplication] Unregistered analysis for ${normalizedUrl} (${Math.round(elapsed / 1000)}s)`);
+      }
     }
-
-    // End the SSE stream
-    res.end();
-
   } catch (error) {
     console.error('[Benchmark Analysis] Error:', error);
 

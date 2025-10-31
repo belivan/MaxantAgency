@@ -163,30 +163,41 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
           console.log(`[Orchestrator]    Benchmark score: ${benchmark.overall_score}/100 (Grade ${benchmark.overall_grade})`);
           console.log(`[Orchestrator]    Reasoning: ${benchmarkMatchMetadata.match_reasoning}`);
 
-          // Capture benchmark screenshots for side-by-side comparison
+          // FIX #2: Use cached benchmark screenshots if available (avoid re-crawling)
           if (benchmark.website_url) {
-            console.log(`[Orchestrator] 📸 Capturing benchmark screenshots: ${benchmark.website_url}`);
-            progress({ step: 'benchmark-screenshots', message: 'Capturing benchmark website screenshots...' });
+            // Check if benchmark already has screenshots in database
+            if (benchmark.desktop_screenshot_url && benchmark.mobile_screenshot_url) {
+              console.log(`[Orchestrator] ✅ Using cached benchmark screenshots (skipping re-crawl)`);
+              console.log(`[Orchestrator]    Desktop: ${benchmark.desktop_screenshot_url.substring(0, 80)}...`);
+              console.log(`[Orchestrator]    Mobile: ${benchmark.mobile_screenshot_url.substring(0, 80)}...`);
+              // Screenshots already available in benchmark object from database
+              benchmark.screenshot_desktop_url = benchmark.desktop_screenshot_url;
+              benchmark.screenshot_mobile_url = benchmark.mobile_screenshot_url;
+            } else {
+              // No cached screenshots - need to capture them
+              console.log(`[Orchestrator] 📸 Benchmark missing screenshots, capturing now: ${benchmark.website_url}`);
+              progress({ step: 'benchmark-screenshots', message: 'Capturing benchmark website screenshots...' });
 
-            try {
-              const benchmarkCrawler = new CrawlingService({
-                timeout: 30000,
-                concurrency: 1,
-                onProgress: () => {} // Silent progress for benchmark
-              });
+              try {
+                const benchmarkCrawler = new CrawlingService({
+                  timeout: 30000,
+                  concurrency: 1,
+                  onProgress: () => {} // Silent progress for benchmark
+                });
 
-              const benchmarkCrawlData = await benchmarkCrawler.crawl(benchmark.website_url, ['/']);
+                const benchmarkCrawlData = await benchmarkCrawler.crawl(benchmark.website_url, ['/']);
 
-              if (benchmarkCrawlData.homepage) {
-                benchmark.screenshot_desktop_url = benchmarkCrawlData.homepage.screenshotDesktop;
-                benchmark.screenshot_mobile_url = benchmarkCrawlData.homepage.screenshotMobile;
-                console.log(`[Orchestrator] ✅ Benchmark screenshots captured`);
-              } else {
-                console.warn(`[Orchestrator] ⚠️ Benchmark homepage not found in crawl data`);
+                if (benchmarkCrawlData.homepage) {
+                  benchmark.screenshot_desktop_url = benchmarkCrawlData.homepage.screenshotDesktop;
+                  benchmark.screenshot_mobile_url = benchmarkCrawlData.homepage.screenshotMobile;
+                  console.log(`[Orchestrator] ✅ Benchmark screenshots captured`);
+                } else {
+                  console.warn(`[Orchestrator] ⚠️ Benchmark homepage not found in crawl data`);
+                }
+              } catch (error) {
+                console.warn(`[Orchestrator] ⚠️ Failed to capture benchmark screenshots:`, error.message);
+                console.warn(`[Orchestrator]    Side-by-side comparisons will be skipped`);
               }
-            } catch (error) {
-              console.warn(`[Orchestrator] ⚠️ Failed to capture benchmark screenshots:`, error.message);
-              console.warn(`[Orchestrator]    Side-by-side comparisons will be skipped`);
             }
           }
         } else {

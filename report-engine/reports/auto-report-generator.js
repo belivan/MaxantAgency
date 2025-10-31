@@ -560,8 +560,8 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     return {
       success: true,
       report_id: reportRecord?.id,
-      storage_path: uploadResult.path,
-      full_path: uploadResult.fullPath,
+      storage_path: uploadResult?.path || null,
+      full_path: uploadResult?.fullPath || null,
       local_path: localPath,
       preview_path: previewPath, // Preview report path (HTML only)
       full_report_path: fullPath, // Full report path (HTML only)

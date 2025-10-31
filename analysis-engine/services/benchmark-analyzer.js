@@ -78,15 +78,40 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
     onProgress('Website analysis complete', '1/3', 'Analysis complete');
 
     // === PHASE 2: STRENGTH EXTRACTION ===
-    console.log(`\n🔍 Phase 2: Extracting benchmark strengths...`);
-    console.log(`   (Using special "success pattern" prompts)`);
-    onProgress('Extracting success patterns...', '2/3', 'Extracting strengths');
-
-    const strengths = await extractBenchmarkStrengths(
-      analysisResult,
-      benchmarkData
+    // FIX #3: Skip strength extraction if already cached (unless force re-analysis)
+    let strengths;
+    const hasExistingStrengths = existing && (
+      existing.design_strengths ||
+      existing.seo_strengths ||
+      existing.content_strengths ||
+      existing.social_strengths ||
+      existing.accessibility_strengths
     );
-    onProgress('Strength extraction complete', '2/3', 'Strengths extracted');
+
+    if (hasExistingStrengths && !options.force) {
+      console.log(`\n✅ Phase 2: Using cached benchmark strengths (skipping extraction)`);
+      console.log(`   Design: ${existing.design_strengths ? '✓' : '✗'} | SEO: ${existing.seo_strengths ? '✓' : '✗'} | Content: ${existing.content_strengths ? '✓' : '✗'}`);
+      console.log(`   Social: ${existing.social_strengths ? '✓' : '✗'} | Accessibility: ${existing.accessibility_strengths ? '✓' : '✗'}`);
+      onProgress('Using cached strengths', '2/3', 'Strengths cached');
+
+      strengths = {
+        design: existing.design_strengths,
+        seo: existing.seo_strengths,
+        content: existing.content_strengths,
+        social: existing.social_strengths,
+        accessibility: existing.accessibility_strengths
+      };
+    } else {
+      console.log(`\n🔍 Phase 2: Extracting benchmark strengths...`);
+      console.log(`   (Using special "success pattern" prompts)`);
+      onProgress('Extracting success patterns...', '2/3', 'Extracting strengths');
+
+      strengths = await extractBenchmarkStrengths(
+        analysisResult,
+        benchmarkData
+      );
+      onProgress('Strength extraction complete', '2/3', 'Strengths extracted');
+    }
 
     // === PHASE 3: SAVE BENCHMARK ===
     onProgress('Saving benchmark to database...', '3/3', 'Saving to database');
@@ -223,15 +248,31 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
       awards: benchmarkData.awards || []
     });
 
-    // Pass screenshot URLs directly - ai-client.js will fetch and compress them
+    // FIX #1: Use screenshot Buffers from crawlPages if available (avoids re-fetch + re-compression)
+    // Fall back to URLs only if Buffers not available (backward compatibility)
+    let screenshotImages;
+    if (analysisResult.crawlPages && analysisResult.crawlPages.length > 0) {
+      const homepage = analysisResult.crawlPages.find(p => p.url === '/' || p.url === '') || analysisResult.crawlPages[0];
+      if (homepage.screenshots) {
+        console.log(`     📸 Using cached screenshot Buffers (skipping re-fetch)`);
+        screenshotImages = [homepage.screenshots.desktop, homepage.screenshots.mobile].filter(Boolean);
+      }
+    }
+
+    // Fall back to URLs if Buffers not available
+    if (!screenshotImages) {
+      console.log(`     ⚠️  Screenshot Buffers not found, fetching from URLs...`);
+      screenshotImages = [analysisResult.screenshot_desktop_url, analysisResult.screenshot_mobile_url].filter(Boolean);
+    }
 
     const visualResult = await callAI({
       model: visualPrompt.model,
       temperature: visualPrompt.temperature,
       systemPrompt: visualPrompt.systemPrompt,
       userPrompt: visualPrompt.userPrompt,
-      images: [analysisResult.screenshot_desktop_url, analysisResult.screenshot_mobile_url].filter(Boolean),
-      jsonMode: true
+      images: screenshotImages,
+      jsonMode: true,
+      caller: 'benchmark-visual-strengths-phase-2'  // FIX #6: Track caller for redundancy detection
     });
 
     strengths.design = parseAIResponse(visualResult);

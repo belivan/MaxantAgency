@@ -8,7 +8,9 @@ import type {
   ProspectFilters,
   ProspectGenerationOptions,
   ProspectGenerationResponse,
-  APIResponse
+  APIResponse,
+  BusinessLookupOptions,
+  BusinessLookupResult
 } from '@/lib/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_PROSPECTING_API || 'http://localhost:3010';
@@ -196,5 +198,27 @@ export async function getProspectingStats(): Promise<{
   }
 
   const data = await response.json();
+  return data;
+}
+
+/**
+ * Look up a single business without requiring an ICP
+ */
+export async function lookupSingleBusiness(
+  query: string,
+  options: BusinessLookupOptions
+): Promise<BusinessLookupResult> {
+  const response = await fetch(`${API_BASE}/api/lookup-business`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, options })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to lookup business');
+  }
+
+  const data: BusinessLookupResult = await response.json();
   return data;
 }

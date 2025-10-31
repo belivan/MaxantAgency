@@ -9,3 +9,4 @@ export * from './model-selector';
 export * from './prompt-editor';
 export * from './progress-stream';
 export * from './prospect-table';
+export * from './quick-business-lookup';

@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import {
   ICPBriefEditor,
   EnhancedProspectConfigForm,
-  ProspectTable
+  ProspectTable,
+  QuickBusinessLookup
 } from '@/components/prospecting';
 import { parseJSON } from '@/lib/utils/validation';
 import { useEngineHealth, useProspects } from '@/lib/hooks';
@@ -450,8 +451,17 @@ export default function ProspectingPage() {
           />
         </div>
 
-        {/* Right Column - Enhanced Config Form */}
-        <div>
+        {/* Right Column - Quick Lookup & Enhanced Config Form */}
+        <div className="space-y-6">
+          {/* Quick Business Lookup */}
+          <QuickBusinessLookup
+            selectedProjectId={selectedProjectId}
+            disabled={isProspecting}
+            engineOffline={isProspectingEngineOffline}
+            onSuccess={refreshProspects}
+          />
+
+          {/* Enhanced Config Form */}
           <EnhancedProspectConfigForm
             onSubmit={handleGenerate}
             onPromptsChange={handlePromptsChange}

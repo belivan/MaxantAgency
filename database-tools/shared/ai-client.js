@@ -93,13 +93,17 @@ function truncateForDisplay(text, maxLength = 500) {
   return text.substring(0, maxLength) + `...[${text.length - maxLength} more chars]`;
 }
 
-function logDebugCall(model, systemPrompt, userPrompt, hasImage, temperature, jsonMode) {
+function logDebugCall(model, systemPrompt, userPrompt, hasImage, temperature, jsonMode, caller) {
   if (!DEBUG_AI_CALLS) return;
 
   debugCallCounter++;
 
   console.log('\n' + '='.repeat(80));
   console.log(`🤖 AI CALL #${debugCallCounter} - ${model}`);
+  // FIX #6: Show caller for redundancy tracking
+  if (caller) {
+    console.log(`   Called by: ${caller}`);
+  }
   console.log('='.repeat(80));
   console.log(`Temperature: ${temperature} | JSON Mode: ${jsonMode} | Has Image: ${hasImage}`);
   console.log('\n📝 SYSTEM PROMPT:');
@@ -391,7 +395,8 @@ export async function callAI({
   maxTokens = null,  // Will be set based on model if not provided
   autoFallback = false,
   engine = null,  // Optional: which engine is calling (for logging)
-  module = null   // Optional: which module is calling (for logging)
+  module = null,  // Optional: which module is calling (for logging)
+  caller = null   // FIX #6: Optional: specific caller for redundancy tracking (e.g., 'benchmark-visual-strengths-phase-2')
 }) {
   const callStartTime = Date.now();
 
@@ -444,7 +449,9 @@ export async function callAI({
   }
 
   // Log the AI call for debugging
-  logDebugCall(model, systemPrompt, userPrompt, hasImages, temperature, jsonMode);
+  // FIX #6: Build caller string from engine, module, and caller parameters
+  const callerString = [engine, module, caller].filter(Boolean).join(' > ') || 'unknown';
+  logDebugCall(model, systemPrompt, userPrompt, hasImages, temperature, jsonMode, callerString);
 
   // ⚡ Check cache first (only for non-image requests)
   if (!hasImages) {
