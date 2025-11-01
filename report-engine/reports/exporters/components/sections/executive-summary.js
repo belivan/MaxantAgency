@@ -40,14 +40,31 @@ export function generateStrategicAssessment(analysisResult, synthesisData = {}, 
   html += '        </h2>\n';
   html += '      </div>\n';
 
+  // DEBUG: Log synthesis data structure
+  console.log('[EXECUTIVE-SUMMARY] Synthesis data check:');
+  console.log(`  - synthesisData type: ${typeof synthesisData}`);
+  console.log(`  - synthesisData keys: ${synthesisData ? Object.keys(synthesisData).join(', ') : 'null'}`);
+  if (synthesisData && synthesisData.executiveSummary) {
+    console.log(`  - executiveSummary type: ${typeof synthesisData.executiveSummary}`);
+    console.log(`  - executiveSummary keys: ${Object.keys(synthesisData.executiveSummary).join(', ')}`);
+    console.log(`  - Has overview?: ${synthesisData.executiveSummary.overview ? 'YES' : 'NO'}`);
+    if (synthesisData.executiveSummary.overview) {
+      console.log(`  - Overview length: ${synthesisData.executiveSummary.overview.length} chars`);
+    }
+  } else {
+    console.log(`  - executiveSummary: ${synthesisData?.executiveSummary || 'null/undefined'}`);
+  }
+
   // Generate benchmark-aware summary (2-3 paragraphs)
   let summary = '';
 
   if (synthesisData.executiveSummary?.overview) {
     // Use AI synthesis if available
+    console.log('✅ [EXECUTIVE-SUMMARY] Using AI-generated overview');
     summary = synthesisData.executiveSummary.overview;
   } else {
     // Generate benchmark-aware summary
+    console.log('⚠️  [EXECUTIVE-SUMMARY] Falling back to basic summary');
     summary = generateBenchmarkAwareSummary({
       company_name,
       grade,

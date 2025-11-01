@@ -203,6 +203,47 @@ export async function uploadScreenshotToSupabase(screenshotBuffer, leadId, pageU
 }
 
 /**
+ * Sleep utility for rate limiting
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Process array in batches with delays
+ * @param {Array} items - Items to process
+ * @param {number} batchSize - Number of items per batch
+ * @param {number} delayMs - Delay between batches in milliseconds
+ * @param {Function} processFn - Async function to process each item
+ */
+async function processBatches(items, batchSize, delayMs, processFn) {
+  const results = [];
+
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+    const batchNum = Math.floor(i / batchSize) + 1;
+    const totalBatches = Math.ceil(items.length / batchSize);
+
+    console.log(`📦 Processing batch ${batchNum}/${totalBatches} (${batch.length} items)...`);
+
+    // Process batch items in parallel
+    const batchResults = await Promise.all(
+      batch.map(item => processFn(item).catch(err => ({ error: err })))
+    );
+
+    results.push(...batchResults);
+
+    // Add delay between batches (except after last batch)
+    if (i + batchSize < items.length) {
+      console.log(`⏱️  Waiting ${delayMs}ms before next batch...`);
+      await sleep(delayMs);
+    }
+  }
+
+  return results;
+}
+
+/**
  * Generate screenshots manifest from crawled pages
  * Uploads all screenshots to Supabase Storage and returns manifest
  *
@@ -225,48 +266,75 @@ export async function generateScreenshotsManifest(pages, leadId, storageType = '
       lead_id: leadId
     };
 
+    // Collect all screenshots to upload
+    const uploadsQueue = [];
+
     for (const page of pages) {
       if (!page.screenshots) continue;
 
-      const pageManifest = {};
-
-      // Upload desktop screenshot (if available)
+      // Queue desktop screenshot upload
       if (page.screenshots.desktop && Buffer.isBuffer(page.screenshots.desktop)) {
-        try {
-          const desktopData = await uploadScreenshotToSupabase(
-            page.screenshots.desktop,
-            leadId,
-            page.url,
-            'desktop'
-          );
-          pageManifest.desktop = desktopData;
-          manifest.total_size_bytes += desktopData.file_size;
-          manifest.total_screenshots++;
-        } catch (error) {
-          console.error(`⚠️  Failed to upload desktop screenshot for ${page.url}:`, error.message);
-        }
+        uploadsQueue.push({
+          buffer: page.screenshots.desktop,
+          pageUrl: page.url,
+          viewport: 'desktop'
+        });
       }
 
-      // Upload mobile screenshot (if available)
+      // Queue mobile screenshot upload
       if (page.screenshots.mobile && Buffer.isBuffer(page.screenshots.mobile)) {
+        uploadsQueue.push({
+          buffer: page.screenshots.mobile,
+          pageUrl: page.url,
+          viewport: 'mobile'
+        });
+      }
+    }
+
+    console.log(`📸 Uploading ${uploadsQueue.length} screenshots in batches of 5...`);
+
+    // Process uploads in batches of 5 with 1-second delays
+    const BATCH_SIZE = 5;
+    const DELAY_BETWEEN_BATCHES_MS = 1000;
+
+    const uploadResults = await processBatches(
+      uploadsQueue,
+      BATCH_SIZE,
+      DELAY_BETWEEN_BATCHES_MS,
+      async (upload) => {
         try {
-          const mobileData = await uploadScreenshotToSupabase(
-            page.screenshots.mobile,
+          const data = await uploadScreenshotToSupabase(
+            upload.buffer,
             leadId,
-            page.url,
-            'mobile'
+            upload.pageUrl,
+            upload.viewport
           );
-          pageManifest.mobile = mobileData;
-          manifest.total_size_bytes += mobileData.file_size;
-          manifest.total_screenshots++;
+          return { success: true, data, pageUrl: upload.pageUrl, viewport: upload.viewport };
         } catch (error) {
-          console.error(`⚠️  Failed to upload mobile screenshot for ${page.url}:`, error.message);
+          console.error(`⚠️  Failed to upload ${upload.viewport} screenshot for ${upload.pageUrl}:`, error.message);
+          return { success: false, error, pageUrl: upload.pageUrl, viewport: upload.viewport };
         }
       }
+    );
 
-      if (Object.keys(pageManifest).length > 0) {
-        manifest.pages[page.url] = pageManifest;
+    // Build manifest from upload results
+    for (const result of uploadResults) {
+      if (!result.success) continue;
+
+      const { data, pageUrl, viewport } = result;
+
+      if (!manifest.pages[pageUrl]) {
+        manifest.pages[pageUrl] = {};
       }
+
+      manifest.pages[pageUrl][viewport] = data;
+      manifest.total_size_bytes += data.file_size;
+      manifest.total_screenshots++;
+    }
+
+    const failedUploads = uploadResults.filter(r => !r.success).length;
+    if (failedUploads > 0) {
+      console.warn(`⚠️  ${failedUploads} screenshot uploads failed`);
     }
 
     console.log(`✅ Generated screenshots manifest: ${manifest.total_screenshots} screenshots uploaded (${(manifest.total_size_bytes / 1024 / 1024).toFixed(2)} MB)`);

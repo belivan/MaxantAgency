@@ -15,7 +15,8 @@ import {
   StatsOverview,
   FeaturesShowcase,
   AnalysisResults,
-  BenchmarkManager
+  BenchmarkManager,
+  QuickWebsiteAnalysis
 } from '@/components/analysis';
 import { type AnalysisPrompts, type PromptConfig } from '@/components/analysis/prompt-editor';
 import { useSSE, useEngineHealth } from '@/lib/hooks';
@@ -111,6 +112,12 @@ export default function AnalysisPage() {
   }, []);
   const [leadsCount, setLeadsCount] = useState(0);
   const [promptsLoading, setPromptsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Callback to refresh leads after quick analysis
+  const refreshLeads = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
 
   // SSE connection
   const { status, error: sseError } = useSSE({
@@ -432,18 +439,20 @@ export default function AnalysisPage() {
               </Alert>
             )}
 
+            {/* Analysis Section - Single Grid */}
             <div className="grid gap-6 lg:grid-cols-3">
+              {/* Left Column - Row 1: Quick Website Analysis */}
               <div className="lg:col-span-2">
-                <ProspectSelector
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  preSelectedIds={preSelectedIds}
-                  projectId={selectedProjectId}
-                  onProjectChange={setSelectedProjectId}
+                <QuickWebsiteAnalysis
+                  selectedProjectId={selectedProjectId}
+                  disabled={isAnalyzing}
+                  engineOffline={isAnalysisEngineOffline}
+                  onSuccess={refreshLeads}
                 />
               </div>
 
-              <div>
+              {/* Right Column - Rows 1-2: Analysis Config */}
+              <div className="lg:row-span-2">
                 <AnalysisConfig
                   prospectCount={selectedIds.length}
                   onSubmit={handleAnalyze}
@@ -459,12 +468,23 @@ export default function AnalysisPage() {
                   onModelSelectionsChange={handleModelSelectionsChange}
                 />
               </div>
+
+              {/* Left Column - Row 2: Prospect Selector */}
+              <div className="lg:col-span-2">
+                <ProspectSelector
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  preSelectedIds={preSelectedIds}
+                  projectId={selectedProjectId}
+                  onProjectChange={setSelectedProjectId}
+                />
+              </div>
             </div>
           </TabsContent>
 
           {/* Results Tab */}
           <TabsContent value="results" className="space-y-6">
-            <AnalysisResults projectId={selectedProjectId} limit={20} />
+            <AnalysisResults projectId={selectedProjectId} limit={20} key={refreshTrigger} />
           </TabsContent>
 
           {/* Benchmarks Tab */}

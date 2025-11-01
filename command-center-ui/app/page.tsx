@@ -116,7 +116,6 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-foreground">Prospecting Engine</h3>
-                  <p className="text-xs text-muted-foreground">Port 3010</p>
                 </div>
               </div>
 
@@ -178,7 +177,6 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-foreground">Analysis Engine</h3>
-                  <p className="text-xs text-muted-foreground">Port 3001</p>
                 </div>
               </div>
 
@@ -194,7 +192,7 @@ export default function LandingPage() {
                     <div>
                       <div className="font-medium text-foreground text-sm mb-1">Visual Analyzers (2)</div>
                       <div className="text-xs text-muted-foreground leading-relaxed">
-                        Desktop & mobile design critique with GPT-4o Vision
+                        Desktop & mobile design critique with AI vision analysis
                       </div>
                     </div>
                   </div>
@@ -228,9 +226,9 @@ export default function LandingPage() {
                   <div className="flex items-start gap-3">
                     <Bot className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
                     <div>
-                      <div className="font-medium text-foreground text-sm mb-1">Lead Priority Scorer</div>
+                      <div className="font-medium text-foreground text-sm mb-1">AI Grader</div>
                       <div className="text-xs text-muted-foreground leading-relaxed">
-                        AI-driven qualification using 6-dimension framework
+                        Assigns A-F website grades and Hot/Warm/Cold lead priority scores
                       </div>
                     </div>
                   </div>
@@ -252,7 +250,6 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-foreground">Report Engine</h3>
-                  <p className="text-xs text-muted-foreground">Port 3003</p>
                 </div>
               </div>
 
@@ -268,7 +265,7 @@ export default function LandingPage() {
                     <div>
                       <div className="font-medium text-foreground text-sm mb-1">Issue Deduplication Agent</div>
                       <div className="text-xs text-muted-foreground leading-relaxed">
-                        Consolidates 40-70% of redundant findings using GPT-5 (~35s)
+                        Consolidates 40-70% of redundant findings using AI synthesis
                       </div>
                     </div>
                   </div>
@@ -280,7 +277,7 @@ export default function LandingPage() {
                     <div>
                       <div className="font-medium text-foreground text-sm mb-1">Executive Insights Generator</div>
                       <div className="text-xs text-muted-foreground leading-relaxed">
-                        Creates business-friendly summaries with 30/60/90 roadmaps (~140s)
+                        Creates business-friendly summaries with 30/60/90 day roadmaps
                       </div>
                     </div>
                   </div>
@@ -301,7 +298,7 @@ export default function LandingPage() {
 
               <div className="mt-6 pt-6 border-t border-border">
                 <div className="text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Output:</span> Professional reports ready for client presentation ($0.06, ~3.5min)
+                  <span className="font-medium text-foreground">Output:</span> Client-ready reports in 3.5 minutes
                 </div>
               </div>
             </div>
@@ -314,7 +311,6 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-foreground">Outreach Engine</h3>
-                  <p className="text-xs text-muted-foreground">Port 3002</p>
                 </div>
               </div>
 
@@ -375,7 +371,7 @@ export default function LandingPage() {
               <Layers className="w-8 h-8 text-primary" />
               <div>
                 <h3 className="text-2xl font-semibold text-foreground">Pipeline Orchestrator</h3>
-                <p className="text-sm text-muted-foreground">Port 3020 • The Automation Brain</p>
+                <p className="text-sm text-muted-foreground">The Automation Brain</p>
               </div>
             </div>
             <p className="text-muted-foreground leading-relaxed mb-4">
@@ -517,52 +513,119 @@ export default function LandingPage() {
         <section className="mb-32">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-semibold mb-4 text-foreground">Report Intelligence</h2>
-            <p className="text-lg text-muted-foreground">From raw data to client-ready insights in 3.5 minutes</p>
+            <p className="text-lg text-muted-foreground">Professional reports that convert prospects into clients</p>
           </div>
 
           <div className="bg-gradient-to-br from-orange-500/10 via-primary/5 to-purple-500/10 rounded-2xl p-12 border border-orange-500/20">
-            <div className="grid md:grid-cols-2 gap-8 mb-8">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full mb-4">
-                  <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="text-xs font-medium text-muted-foreground">Stage 1: ~35 seconds</span>
-                </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Issue Deduplication</h3>
-                <p className="text-muted-foreground leading-relaxed mb-4">
-                  GPT-5 analyzes findings from all analyzers and consolidates redundant issues.
-                  <span className="text-foreground font-medium"> Reduces noise by 40-70%</span>, merging overlapping
-                  observations into unified insights.
-                </p>
-                <div className="bg-card/50 rounded-lg p-4 border border-border/50 text-sm">
-                  <div className="text-muted-foreground italic">
-                    "CTA too small" (desktop) + "CTA not prominent" (mobile) →
-                    <span className="text-foreground font-medium"> "CTA lacks prominence across devices"</span>
-                  </div>
-                </div>
-              </div>
+            <div className="mb-8">
+              <h3 className="text-2xl font-semibold mb-6 text-foreground">What's Included in Every Report</h3>
+              <p className="text-muted-foreground leading-relaxed mb-8">
+                Our AI-powered Report Engine generates comprehensive, client-ready reports that provide deep insights and strategic guidance.
+                Each report contains 8 essential sections designed to demonstrate value and guide improvement.
+              </p>
 
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-muted rounded-full mb-4">
-                  <Clock className="w-4 h-4 text-orange-600" />
-                  <span className="text-xs font-medium text-muted-foreground">Stage 2: ~140 seconds</span>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">📊</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Executive Summary</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        AI-generated business overview that speaks the client's language. Includes headline assessment,
+                        key findings, and opportunity positioning without technical jargon.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold mb-3 text-foreground">Executive Insights</h3>
-                <p className="text-muted-foreground leading-relaxed mb-4">
-                  Transforms technical findings into <span className="text-foreground font-medium">business intelligence</span>.
-                  Generates executive summary, strategic roadmap, ROI projections, and links findings to screenshot evidence.
-                </p>
-                <div className="bg-card/50 rounded-lg p-4 border border-border/50 text-sm space-y-2">
-                  <div className="flex items-start gap-2">
-                    <span className="text-success mt-0.5">✓</span>
-                    <span className="text-muted-foreground">One-sentence headline assessing site health</span>
+
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">🎯</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Industry Benchmarking</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Competitive analysis showing how the website stacks up against industry leaders.
+                        Identifies gaps and opportunities for differentiation.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-success mt-0.5">✓</span>
-                    <span className="text-muted-foreground">3-5 critical findings with business impact</span>
+                </div>
+
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">⚡</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Priority Action Plan</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Top 5-7 critical improvements ranked by impact and effort.
+                        Clear, actionable recommendations with expected ROI for each fix.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <span className="text-success mt-0.5">✓</span>
-                    <span className="text-muted-foreground">30/60/90 day strategic roadmap</span>
+                </div>
+
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">📅</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">30/60/90 Day Timeline</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Strategic roadmap breaking down improvements into manageable phases.
+                        Helps clients understand the journey from quick wins to long-term optimization.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">🔍</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Complete Issues Analysis</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Comprehensive findings from all 6 AI analyzers: Design, SEO, Content, Social,
+                        and Accessibility. Each issue linked to evidence and impact assessment.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">⚙️</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Technical Deep Dive</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Performance metrics, Core Web Vitals, tech stack analysis, and infrastructure
+                        recommendations for developers and technical teams.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">♿</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">WCAG Compliance</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Detailed accessibility audit with WCAG 2.1 compliance breakdown.
+                        Ensures websites are usable by all visitors and meet legal requirements.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-card/50 rounded-lg p-6 border border-border/50">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">📸</div>
+                    <div>
+                      <h4 className="font-semibold text-foreground mb-2">Screenshot Gallery</h4>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        Visual evidence with desktop and mobile screenshots. All findings linked
+                        to specific visual elements for clear, undeniable proof of issues.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -571,24 +634,26 @@ export default function LandingPage() {
             <div className="bg-card rounded-xl p-6 border border-border">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-semibold text-foreground">The Result</h4>
-                <div className="text-sm text-muted-foreground">Cost: <span className="text-foreground font-medium">$0.06</span> per report</div>
+                <div className="text-sm text-muted-foreground">
+                  <span className="text-foreground font-medium">Client-ready in 3.5 minutes</span>
+                </div>
               </div>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                Professional reports that speak the client's language. No technical jargon—just clear business value,
-                actionable recommendations, and a strategic roadmap for improvement.
+                Professional reports that demonstrate immediate value. Every finding backed by evidence,
+                every recommendation tied to business impact, and every insight designed to close deals.
               </p>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="text-center p-3 bg-muted/30 rounded-lg">
-                  <div className="text-2xl font-bold text-primary mb-1">40-70%</div>
-                  <div className="text-xs text-muted-foreground">Fewer redundant findings</div>
-                </div>
-                <div className="text-center p-3 bg-muted/30 rounded-lg">
-                  <div className="text-2xl font-bold text-primary mb-1">+135%</div>
-                  <div className="text-xs text-muted-foreground">More content with synthesis</div>
+                  <div className="text-2xl font-bold text-primary mb-1">8</div>
+                  <div className="text-xs text-muted-foreground">Comprehensive sections</div>
                 </div>
                 <div className="text-center p-3 bg-muted/30 rounded-lg">
                   <div className="text-2xl font-bold text-primary mb-1">100%</div>
-                  <div className="text-xs text-muted-foreground">Evidence-linked findings</div>
+                  <div className="text-xs text-muted-foreground">Evidence-backed findings</div>
+                </div>
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <div className="text-2xl font-bold text-primary mb-1">3</div>
+                  <div className="text-xs text-muted-foreground">Export formats (HTML/MD/PDF)</div>
                 </div>
               </div>
             </div>
@@ -685,9 +750,14 @@ export default function LandingPage() {
                 <div className="text-sm text-muted-foreground">Client-ready report generation</div>
               </div>
               <div className="bg-card/50 rounded-xl p-6 border border-border">
-                <div className="text-4xl font-bold text-primary mb-2">$0.19</div>
-                <div className="text-sm text-muted-foreground">Total cost per lead (analysis + report)</div>
+                <div className="text-4xl font-bold text-primary mb-2">~$0.10*</div>
+                <div className="text-sm text-muted-foreground">Average cost per lead</div>
               </div>
+            </div>
+            <div className="mt-6 text-center">
+              <p className="text-xs text-muted-foreground italic">
+                *Subject to AI model selection and usage patterns
+              </p>
             </div>
           </div>
         </section>
@@ -732,7 +802,7 @@ export default function LandingPage() {
         {/* Footer */}
         <div className="text-center text-muted-foreground pt-16 mt-16 border-t border-border">
           <p className="text-sm">
-            Built with <span className="text-red-500">♥</span> using GPT-4o/5, Claude 3.5 Sonnet, and Grok-4-fast
+            Built with <span className="text-red-500">♥</span> using Claude Code by Anton Yanovich
           </p>
           <p className="text-xs mt-2 text-muted-foreground/70">
             Powered by Next.js, Supabase, and Playwright • 17+ Multi-Agent AI Architecture across 4 Specialized Engines

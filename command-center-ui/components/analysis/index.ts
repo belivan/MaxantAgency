@@ -11,3 +11,4 @@ export * from './stats-overview';
 export * from './features-showcase';
 export * from './analysis-results';
 export * from './benchmark-manager';
+export * from './quick-website-analysis';

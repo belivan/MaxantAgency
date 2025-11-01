@@ -147,7 +147,7 @@ function extractLeadData(result) {
 AI prompts are **not hardcoded**. They live in JSON files and are loaded dynamically:
 
 **Analysis Engine** (`config/prompts/web-design/*.json`):
-- `design-critique.json` - GPT-4o Vision for screenshot analysis
+- `design-critique.json` - GPT-5 Vision for screenshot analysis
 - `seo-analysis.json` - Grok-4-fast for SEO
 - `content-analysis.json` - Grok-4-fast for content
 - `social-analysis.json` - Grok-4-fast for social media
@@ -170,7 +170,7 @@ const prompt = loadPrompt('web-design', 'design-critique', {
 ```
 
 Prompts include:
-- `model` - AI model to use (gpt-4o, grok-beta, claude-3-5-sonnet-20241022)
+- `model` - AI model to use (gpt-5, grok-4-fast, claude-4-5-haiku)
 - `temperature` - Sampling temperature
 - `systemPrompt` - System instructions
 - `userPrompt` - User message with `{{variables}}`
@@ -374,7 +374,7 @@ CREATE TABLE ai_calls (
   id uuid PRIMARY KEY,
   engine text,              -- prospecting, analysis, outreach, report
   module text,              -- Which file made the call
-  model text,               -- gpt-4o, claude-3-5-sonnet, grok-beta
+  model text,               -- gpt-5, claude-4-5-haiku, grok-4
   provider text,            -- openai, anthropic, xai
   prompt_tokens integer,
   completion_tokens integer,
@@ -396,7 +396,7 @@ LOG_AI_CALLS_TO_DB=true
 
 // Every callAI() is automatically logged
 const response = await callAI({
-  model: 'gpt-4o',
+  model: 'gpt-5',
   systemPrompt: 'You are a design expert',
   userPrompt: 'Analyze this website...',
   jsonMode: true

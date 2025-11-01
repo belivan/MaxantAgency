@@ -114,20 +114,31 @@ export async function gradeWithAI(analysisResults, metadata) {
     // Parse JSON response from content field (handles markdown/prose wrapping)
     const parsedGrading = parseJSONResponse(gradingResult.content);
 
+    // DIAGNOSTIC: Log what AI returned
+    console.log(`[AI Grader Debug] Raw AI response keys: ${Object.keys(parsedGrading).join(', ')}`);
+    console.log(`[AI Grader Debug] overall_score from AI: ${parsedGrading.overall_score}`);
+    console.log(`[AI Grader Debug] overall_grade from AI: ${parsedGrading.overall_grade}`);
+
     // Calculate fallback overall_score if AI didn't provide it
     let overallScore = parsedGrading.overall_score;
     if (overallScore == null || isNaN(overallScore)) {
-      console.warn(`  ⚠️ AI did not return overall_score, calculating from dimension scores...`);
+      console.warn(`  ⚠️ AI did not return overall_score (value: ${parsedGrading.overall_score}), calculating from dimension scores...`);
       // Fallback: calculate weighted average of dimension scores
       const weights = parsedGrading.dimension_weights_used || { design: 0.30, seo: 0.30, performance: 0.20, content: 0.10, accessibility: 0.05, social: 0.05 };
       overallScore = (
-        (gradingData.design_score * weights.design) +
-        (gradingData.seo_score * weights.seo) +
-        (gradingData.performance_score * (weights.performance || 0.20)) +
-        (gradingData.content_score * (weights.content || 0.10)) +
-        (gradingData.accessibility_score * (weights.accessibility || 0.05)) +
-        (gradingData.social_score * (weights.social || 0.05))
+        ((gradingData.design_score || 50) * weights.design) +
+        ((gradingData.seo_score || 50) * weights.seo) +
+        ((gradingData.performance_score || 50) * (weights.performance || 0.20)) +
+        ((gradingData.content_score || 50) * (weights.content || 0.10)) +
+        ((gradingData.accessibility_score || 50) * (weights.accessibility || 0.05)) +
+        ((gradingData.social_score || 50) * (weights.social || 0.05))
       );
+
+      // Final safety check: if still NaN, use 50 as absolute fallback
+      if (isNaN(overallScore)) {
+        console.error(`  ❌ CRITICAL: Calculated overall_score is NaN, using 50 as absolute fallback`);
+        overallScore = 50;
+      }
     }
 
     // Calculate fallback lead_score if AI didn't provide it

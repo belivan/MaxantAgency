@@ -60,8 +60,8 @@ export function FeaturesShowcase() {
       iconColor: 'text-destructive',
       bgColor: 'bg-destructive/5',
       borderColor: 'border-destructive/10',
-      title: 'Lead Priority Scoring',
-      description: 'Automatically qualifies every lead into Hot/Warm/Cold priority tiers using 6-dimension framework',
+      title: 'AI Grader',
+      description: 'Assigns A-F website grades based on design, SEO, content, and performance. Plus Hot/Warm/Cold lead priority scoring',
       details: [
         'Quality Gap • Budget • Urgency',
         'Industry Fit • Size • Engagement',
@@ -81,7 +81,7 @@ export function FeaturesShowcase() {
       bgColor: 'bg-purple-500/5',
       borderColor: 'border-purple-500/10',
       title: 'Report Synthesis',
-      description: 'AI-powered deduplication and executive insights generation (optional, +$0.06 per lead)',
+      description: 'AI-powered deduplication and executive insights generation for professional client-ready reports',
       details: [
         'Reduces redundancy by 40-70%',
         '500-word executive summaries',
@@ -90,7 +90,7 @@ export function FeaturesShowcase() {
       visual: (
         <div className="mt-4">
           <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-500/20">
-            Optional • GPT-5 Powered
+            Optional • AI Powered
           </Badge>
         </div>
       )

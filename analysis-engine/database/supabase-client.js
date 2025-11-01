@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import { queueDatabaseOperation } from './db-queue.js';
 
 // Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
@@ -354,23 +355,25 @@ export async function getLeadStats(filters = {}) {
  * @returns {Promise<object>} Saved benchmark with ID
  */
 export async function saveBenchmark(benchmark) {
-  try {
-    const { data, error } = await supabase
-      .from('benchmarks')
-      .insert(benchmark)
-      .select()
-      .single();
+  return queueDatabaseOperation(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('benchmarks')
+        .insert(benchmark)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Failed to save benchmark:', error);
+      if (error) {
+        console.error('Failed to save benchmark:', error);
+        throw error;
+      }
+
+      console.log(`✅ Benchmark saved: ${data.company_name} (${data.industry})`);
+      return data;
+    } catch (error) {
       throw error;
     }
-
-    console.log(`✅ Benchmark saved: ${data.company_name} (${data.industry})`);
-    return data;
-  } catch (error) {
-    throw error;
-  }
+  }, `saveBenchmark(${benchmark.company_name})`);
 }
 
 /**

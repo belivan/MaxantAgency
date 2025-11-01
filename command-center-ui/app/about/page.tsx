@@ -152,7 +152,7 @@ export default function AboutPage() {
                     <div>
                       <div className="font-medium text-foreground text-sm mb-1">Visual Analyzers (2)</div>
                       <div className="text-xs text-muted-foreground leading-relaxed">
-                        Desktop & mobile design critique with GPT-4o Vision
+                        Desktop & mobile design critique with AI vision analysis
                       </div>
                     </div>
                   </div>
@@ -489,7 +489,7 @@ export default function AboutPage() {
         {/* Footer */}
         <div className="text-center text-muted-foreground pt-16 mt-16 border-t border-border">
           <p className="text-sm">
-            Built with <span className="text-red-500">♥</span> using GPT-4o/5, Claude 3.5 Sonnet, and Grok-4-fast
+            Built with <span className="text-red-500">♥</span> using Claude Code by Anton Yanovich
           </p>
           <p className="text-xs mt-2 text-muted-foreground/70">
             Powered by Next.js, Supabase, and Playwright • 15+ Multi-Agent AI Architecture

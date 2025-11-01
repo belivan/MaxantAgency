@@ -201,6 +201,19 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       overall_score: analysisResult.overall_score || analysisResult.website_score
     };
 
+    // DIAGNOSTIC: Log key fields to debug missing data
+    console.log('[Report Debug] Data check:');
+    console.log(`  - tech_stack: "${reportData.tech_stack}" (${typeof reportData.tech_stack})`);
+    console.log(`  - has performance_metrics_pagespeed: ${!!reportData.performance_metrics_pagespeed}`);
+    console.log(`  - has business_intelligence: ${!!reportData.business_intelligence}`);
+    if (reportData.business_intelligence) {
+      console.log(`    - business_intelligence keys: ${Object.keys(reportData.business_intelligence).join(', ')}`);
+    }
+    console.log(`  - has performance_api_errors: ${Array.isArray(reportData.performance_api_errors) && reportData.performance_api_errors.length > 0}`);
+    if (reportData.performance_api_errors && reportData.performance_api_errors.length > 0) {
+      console.log(`    - performance errors: ${JSON.stringify(reportData.performance_api_errors)}`);
+    }
+
     // Validate analysis result has required fields
     validateAnalysisResult(reportData);
 
@@ -552,10 +565,16 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       }
     }
 
-    // Calculate file size for return value
-    const fileSize = Buffer.isBuffer(contentForUpload) 
-      ? contentForUpload.length 
-      : Buffer.byteLength(contentForUpload, 'utf8');
+    // Calculate file size for return value (handle null for HTML reports that skip upload)
+    const fileSize = contentForUpload
+      ? (Buffer.isBuffer(contentForUpload)
+          ? contentForUpload.length
+          : Buffer.byteLength(contentForUpload, 'utf8'))
+      : 0;
+
+    // Debug logging
+    console.log('🔍 DEBUG: reportRecord =', reportRecord ? `{id: ${reportRecord.id}}` : 'null');
+    console.log('🔍 DEBUG: Returning report_id =', reportRecord?.id || 'undefined');
 
     return {
       success: true,

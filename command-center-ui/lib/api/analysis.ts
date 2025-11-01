@@ -16,6 +16,42 @@ const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001'
 const REPORT_API_BASE = process.env.NEXT_PUBLIC_REPORT_API || 'http://localhost:3003';
 
 /**
+ * Analyze a single website URL directly
+ */
+export async function analyzeSingleUrl(
+  url: string,
+  options: {
+    company_name?: string;
+    industry?: string;
+    project_id: string;
+  }
+): Promise<Lead> {
+  const response = await fetch(`${API_BASE}/api/analyze-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url,
+      company_name: options.company_name,
+      industry: options.industry,
+      project_id: options.project_id
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || error.message || 'Failed to analyze URL');
+  }
+
+  const data = await response.json();
+
+  if (!data.success || !data.lead) {
+    throw new Error('Analysis failed to generate results');
+  }
+
+  return data.lead;
+}
+
+/**
  * Analyze prospects by URLs
  * Returns SSE URL for real-time progress tracking
  */

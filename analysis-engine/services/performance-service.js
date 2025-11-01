@@ -18,6 +18,13 @@ export class PerformanceService {
     this.cruxApiKey = process.env.CRUX_API_KEY || this.pageSpeedApiKey;
     this.timeout = parseInt(process.env.PERFORMANCE_API_TIMEOUT) || 30000;
     this.onProgress = options.onProgress || (() => {});
+
+    // DIAGNOSTIC LOGGING
+    console.log('[Performance] Service initialized with:');
+    console.log(`  - PageSpeed API Key: ${this.pageSpeedApiKey ? 'CONFIGURED (' + this.pageSpeedApiKey.substring(0, 10) + '...)' : 'NOT CONFIGURED'}`);
+    console.log(`  - CrUX API Key: ${this.cruxApiKey ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+    console.log(`  - Timeout: ${this.timeout}ms`);
+    console.log(`  - ENABLE_PERFORMANCE_API: ${process.env.ENABLE_PERFORMANCE_API}`);
   }
 
   /**
@@ -27,8 +34,10 @@ export class PerformanceService {
    * @returns {Promise<object>} PageSpeed data
    */
   async fetchPageSpeedInsights(url, strategy = 'mobile') {
+    console.log(`[Performance] fetchPageSpeedInsights called for ${url} (${strategy})`);
+
     if (!this.pageSpeedApiKey) {
-      console.warn('[Performance] PageSpeed API key not configured');
+      console.error('[Performance] PageSpeed API key not configured - cannot fetch performance data!');
       return { success: false, error: 'API key not configured' };
     }
 
@@ -38,6 +47,9 @@ export class PerformanceService {
       apiUrl.searchParams.set('strategy', strategy);
       apiUrl.searchParams.set('category', 'performance');
       apiUrl.searchParams.set('key', this.pageSpeedApiKey);
+
+      console.log(`[Performance] Making API call to: ${apiUrl.origin}${apiUrl.pathname}`);
+      console.log(`[Performance] Strategy: ${strategy}, Category: performance`);
 
       this.onProgress({
         step: 'performance',
@@ -59,18 +71,24 @@ export class PerformanceService {
       const data = await response.json();
 
       if (data.error) {
+        console.error(`[Performance] API returned error: ${data.error.message}`);
         return { success: false, error: data.error.message };
       }
 
+      console.log(`[Performance] PageSpeed API call successful for ${strategy}`);
+
       const audits = data.lighthouseResult.audits;
       const metrics = audits.metrics.details.items[0];
+
+      const performanceScore = Math.round(data.lighthouseResult.categories.performance.score * 100);
+      console.log(`[Performance] ${strategy} Performance Score: ${performanceScore}/100`);
 
       return {
         success: true,
         strategy,
         data: {
           // Performance score
-          performanceScore: Math.round(data.lighthouseResult.categories.performance.score * 100),
+          performanceScore,
 
           // Core Web Vitals
           lcp: Math.round(metrics.largestContentfulPaint),

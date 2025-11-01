@@ -129,10 +129,19 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     individualResults.forEach(result => {
       if (result.positives) {
         result.positives.forEach(positive => {
-          allPositives.push({
-            ...positive,
-            page: result.url
-          });
+          // Handle both string and object formats
+          if (typeof positive === 'string') {
+            allPositives.push({
+              text: positive,
+              page: result.url
+            });
+          } else if (typeof positive === 'object' && positive !== null) {
+            // If it's already an object, just add the page
+            allPositives.push({
+              ...positive,
+              page: result.url
+            });
+          }
         });
       }
     });
@@ -141,7 +150,7 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     const quickWinCount = allIssues.filter(issue => issue.difficulty === 'quick-win').length;
 
     // Add metadata
-    const resolvedModel = lastPromptModel || customPrompt?.model || 'gpt-5-mini-mini';
+    const resolvedModel = lastPromptModel || customPrompt?.model || 'gpt-5-mini';
 
     return {
       model: resolvedModel,
@@ -168,7 +177,7 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
     console.error('Desktop visual analysis failed:', error);
 
     // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5-mini-mini';
+    const fallbackModel = customPrompt?.model || 'gpt-5-mini';
     return {
       model: fallbackModel,
       visualScore: 30,

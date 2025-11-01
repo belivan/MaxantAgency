@@ -236,6 +236,11 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     // ========================================
     const enablePerformance = process.env.ENABLE_PERFORMANCE_API !== 'false';
 
+    console.log(`[Orchestrator] Performance API Configuration Check:`);
+    console.log(`  - ENABLE_PERFORMANCE_API env var: ${process.env.ENABLE_PERFORMANCE_API}`);
+    console.log(`  - enablePerformance calculated: ${enablePerformance}`);
+    console.log(`  - PAGESPEED_API_KEY exists: ${!!process.env.PAGESPEED_API_KEY}`);
+
     if (enablePerformance) {
       console.log(`[Orchestrator] Fetching performance analytics...`);
       progress({ step: 'performance', message: 'Fetching PageSpeed + CrUX data...' });

@@ -59,7 +59,7 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
 
     // === PHASE 1: FULL ANALYSIS ===
     console.log(`\n🔬 Phase 1: Running full analysis...`);
-    onProgress('Running full website analysis...', '1/3', 'Analyzing website');
+    onProgress({ step: 'benchmark-analysis', message: 'Running full website analysis...' });
 
     // DISABLE AI grading to avoid circular dependency
     // (Benchmarks can't grade against themselves!)
@@ -75,7 +75,7 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
 
     process.env.USE_AI_GRADING = originalGradingFlag; // Restore
     console.log(`✅ Analysis complete`);
-    onProgress('Website analysis complete', '1/3', 'Analysis complete');
+    onProgress({ step: 'benchmark-analysis', message: 'Website analysis complete' });
 
     // === PHASE 2: STRENGTH EXTRACTION ===
     // FIX #3: Skip strength extraction if already cached (unless force re-analysis)
@@ -92,7 +92,7 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
       console.log(`\n✅ Phase 2: Using cached benchmark strengths (skipping extraction)`);
       console.log(`   Design: ${existing.design_strengths ? '✓' : '✗'} | SEO: ${existing.seo_strengths ? '✓' : '✗'} | Content: ${existing.content_strengths ? '✓' : '✗'}`);
       console.log(`   Social: ${existing.social_strengths ? '✓' : '✗'} | Accessibility: ${existing.accessibility_strengths ? '✓' : '✗'}`);
-      onProgress('Using cached strengths', '2/3', 'Strengths cached');
+      onProgress({ step: 'benchmark-strength-extraction', message: 'Using cached strengths' });
 
       strengths = {
         design: existing.design_strengths,
@@ -104,17 +104,17 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
     } else {
       console.log(`\n🔍 Phase 2: Extracting benchmark strengths...`);
       console.log(`   (Using special "success pattern" prompts)`);
-      onProgress('Extracting success patterns...', '2/3', 'Extracting strengths');
+      onProgress({ step: 'benchmark-strength-extraction', message: 'Extracting success patterns...' });
 
       strengths = await extractBenchmarkStrengths(
         analysisResult,
         benchmarkData
       );
-      onProgress('Strength extraction complete', '2/3', 'Strengths extracted');
+      onProgress({ step: 'benchmark-strength-extraction', message: 'Strength extraction complete' });
     }
 
     // === PHASE 3: SAVE BENCHMARK ===
-    onProgress('Saving benchmark to database...', '3/3', 'Saving to database');
+    onProgress({ step: 'benchmark-save', message: 'Saving benchmark to database...' });
 
     // Validate benchmark tier (must be one of the valid database tiers)
     const VALID_TIERS = ['national', 'regional', 'local', 'manual'];
@@ -191,7 +191,7 @@ export async function analyzeBenchmark(benchmarkData, options = {}) {
       console.log(`\n✅ BENCHMARK SAVED`);
     }
 
-    onProgress(`Benchmark saved successfully!`, '3/3', 'Complete');
+    onProgress({ step: 'benchmark-save', message: 'Benchmark saved successfully!' });
 
     console.log(`   ID: ${savedBenchmark.id}`);
     console.log(`   Overall Score: ${savedBenchmark.overall_score}/100 (Grade ${savedBenchmark.overall_grade})`);

@@ -203,7 +203,7 @@ async function logAICallToDatabase({ engine, module, model, provider, request, r
  * Call AI model with text or vision prompt
  *
  * @param {object} options - Call options
- * @param {string} options.model - Model ID (e.g., 'gpt-4o', 'grok-4-fast', 'claude-3-5-sonnet-20241022')
+ * @param {string} options.model - Model ID (e.g., 'gpt-5', 'grok-4-fast', 'claude-4-5-sonnet')
  * @param {string} options.systemPrompt - System prompt
  * @param {string} options.userPrompt - User prompt
  * @param {number} options.temperature - Temperature (0-1)
@@ -473,11 +473,11 @@ export async function callAI({
       response = await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, jsonMode, maxTokens, provider });
     } catch (error) {
       const message = (error?.message || '').toLowerCase();
-      // Auto-fallback to GPT-4o if GPT-5 hits token limits (only when explicitly enabled)
-      if (autoFallback && model.startsWith('gpt-5') && message.includes('token limit')) {
-        console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-4o.');
+      // Auto-fallback to GPT-5-mini if GPT-5 hits token limits (only when explicitly enabled)
+      if (autoFallback && model === 'gpt-5' && message.includes('token limit')) {
+        console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-5-mini.');
         response = await callOpenAICompatible({
-          model: 'gpt-4o',
+          model: 'gpt-5-mini',
           systemPrompt,
           userPrompt,
           temperature,
@@ -829,38 +829,22 @@ function getProvider(modelId) {
 function calculateCost(modelId, usage) {
   if (!usage) return 0;
 
-  // Pricing per 1M tokens (as of October 2025)
+  // Pricing per 1M tokens (as of November 2025)
   const pricing = {
-    // OpenAI GPT-5 (verified pricing Oct 2025)
+    // OpenAI ChatGPT 5 (verified pricing Nov 2025)
     'gpt-5': { input: 1.25, output: 10 },
-    'gpt-5-2025-08-07': { input: 1.25, output: 10 },
+    'gpt-5-2025-08-07': { input: 1.25, output: 10 }, // Alias for backward compatibility
     'gpt-5-mini': { input: 0.25, output: 2 },
-    'gpt-5-nano': { input: 0.05, output: 0.40 },
-    'gpt-5-pro': { input: 15, output: 120 },
-    
-    // OpenAI GPT-4 (verified pricing Oct 2024)
-    'gpt-4o': { input: 5, output: 15 },
-    'gpt-4o-mini': { input: 0.15, output: 0.60 },
 
-    // Grok (xAI)
-    'grok-beta': { input: 5, output: 15 },
+    // Grok (xAI) - Latest models (Nov 2025)
     'grok-4': { input: 3, output: 15 },
     'grok-4-fast': { input: 0.20, output: 0.50 },
-    'grok-vision-beta': { input: 1, output: 3 },
 
-    // Claude (Anthropic) - Claude 4.5 models (Oct 2025)
+    // Claude (Anthropic) - Claude 4.5 models (Nov 2025)
     'claude-4-5-haiku': { input: 1.00, output: 5.00 },
     'claude-4.5-haiku': { input: 1.00, output: 5.00 }, // Alternative naming
-
-    // Claude 3.5 models
-    'claude-3-5-sonnet': { input: 3, output: 15 },
-    'claude-3-5-sonnet-20241022': { input: 3, output: 15 },
-    'claude-3.5-sonnet': { input: 3, output: 15 }, // Alternative naming
-    'claude-3-5-haiku': { input: 0.80, output: 4 },
-    'claude-3-5-haiku-20241022': { input: 0.80, output: 4 },
-    'claude-3.5-haiku': { input: 0.80, output: 4 }, // Alternative naming
-    // Claude 3.x (older models)
-    'claude-3-opus-20240229': { input: 15, output: 75 }
+    'claude-4-5-sonnet': { input: 3, output: 15 },
+    'claude-4.5-sonnet': { input: 3, output: 15 } // Alternative naming
   };
 
   const modelPricing = pricing[modelId] || { input: 0, output: 0 };

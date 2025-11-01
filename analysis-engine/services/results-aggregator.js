@@ -102,11 +102,44 @@ export class ResultsAggregator {
       );
 
       if (aiGradingResult.success) {
+        // DIAGNOSTIC: Log AI grading result
+        console.log(`[Results Aggregator Debug] AI grading result keys: ${Object.keys(aiGradingResult).join(', ')}`);
+        console.log(`[Results Aggregator Debug] AI overall_score: ${aiGradingResult.overall_score}`);
+        console.log(`[Results Aggregator Debug] AI overall_grade: ${aiGradingResult.overall_grade}`);
+
+        // Calculate fallback overall_score from WEIGHTED dimension scores if missing
+        let calculatedScore = aiGradingResult.overall_score;
+        if (calculatedScore == null || calculatedScore === undefined) {
+          // Use the ACTUAL WEIGHTS from grading architecture (AI may provide custom weights)
+          const weights = aiGradingResult.dimension_weights || {
+            design: 0.30,
+            seo: 0.30,
+            performance: 0.20,
+            content: 0.10,
+            accessibility: 0.05,
+            social: 0.05
+          };
+
+          // Calculate weighted average from actual dimension scores
+          calculatedScore = Math.round(
+            (scores.design_score || 50) * weights.design +
+            (scores.seo_score || 50) * weights.seo +
+            (scores.performance_score || 50) * weights.performance +
+            (scores.content_score || 50) * weights.content +
+            (scores.accessibility_score || 50) * weights.accessibility +
+            (scores.social_score || 50) * weights.social
+          );
+
+          console.warn(`[Results Aggregator] overall_score was null, calculated ${calculatedScore} from weighted scores`);
+          console.warn(`  Weights used: design=${weights.design}, seo=${weights.seo}, perf=${weights.performance}, content=${weights.content}, a11y=${weights.accessibility}, social=${weights.social}`);
+          console.warn(`  Scores: design=${scores.design_score}, seo=${scores.seo_score}, perf=${scores.performance_score}, content=${scores.content_score}, a11y=${scores.accessibility_score}, social=${scores.social_score}`);
+        }
+
         // AI grading successful - use AI results
         gradeResults = {
           grade: aiGradingResult.overall_grade || aiGradingResult.grade,  // Support both field names
-          overallScore: aiGradingResult.overall_score,
-          weightedScore: aiGradingResult.overall_score,
+          overallScore: calculatedScore,
+          weightedScore: calculatedScore,  // Use calculated score here too
           bonuses: [],
           penalties: [],
           weights: aiGradingResult.dimension_weights,  // Read from ai-grader return value
@@ -423,6 +456,13 @@ export class ResultsAggregator {
       benchmark,  // NEW: Benchmark data
       benchmarkMatchMetadata  // NEW: Benchmark match metadata
     } = data;
+
+    // DIAGNOSTIC: Log gradeResults before returning
+    console.log(`[Results Aggregator Debug] Final gradeResults.overallScore: ${gradeResults.overallScore}`);
+    console.log(`[Results Aggregator Debug] Final gradeResults.grade: ${gradeResults.grade}`);
+    if (gradeResults.overallScore === null || gradeResults.overallScore === undefined) {
+      console.error(`[Results Aggregator ERROR] overall_score is ${gradeResults.overallScore} - this will be saved as NULL!`);
+    }
 
     return {
       // Core analysis data

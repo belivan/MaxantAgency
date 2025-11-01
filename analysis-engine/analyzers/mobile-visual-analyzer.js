@@ -129,10 +129,19 @@ export async function analyzeMobileVisual(pages, context = {}, customPrompt = nu
     individualResults.forEach(result => {
       if (result.positives) {
         result.positives.forEach(positive => {
-          allPositives.push({
-            ...positive,
-            page: result.url
-          });
+          // Handle both string and object formats
+          if (typeof positive === 'string') {
+            allPositives.push({
+              text: positive,
+              page: result.url
+            });
+          } else if (typeof positive === 'object' && positive !== null) {
+            // If it's already an object, just add the page
+            allPositives.push({
+              ...positive,
+              page: result.url
+            });
+          }
         });
       }
     });
