@@ -35,24 +35,6 @@ export const PROSPECTING_MODELS: readonly AIModel[] = [
     speed: 'Very Fast'
   },
 
-  // OpenAI GPT-4o (Previous gen, still available)
-  {
-    value: 'gpt-4o',
-    label: 'GPT-4o',
-    provider: 'OpenAI',
-    description: 'Previous gen with vision - $5/$15 per 1M tokens',
-    cost: '$$',
-    speed: 'Fast'
-  },
-  {
-    value: 'gpt-4o-mini',
-    label: 'GPT-4o Mini',
-    provider: 'OpenAI',
-    description: 'Budget GPT-4o - $0.15/$0.60 per 1M tokens',
-    cost: '$',
-    speed: 'Very Fast'
-  },
-
   // Anthropic Claude 4.5 series (Sept-Oct 2025)
   {
     value: 'claude-sonnet-4-5',
@@ -132,7 +114,7 @@ export function getDefaultProspectingModels(): Record<string, string> {
  */
 export function getDefaultModels(): { model: string; visionModel: string } {
   return {
-    model: 'grok-4-fast',    // Default text model (cheapest)
-    visionModel: 'gpt-4o'    // Default vision model (highest quality)
+    model: 'grok-4-fast',      // Default text model (cheapest)
+    visionModel: 'gpt-5-mini'   // Default vision model (balanced quality/cost)
   };
 }

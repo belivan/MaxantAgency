@@ -15,6 +15,7 @@ import { parseString } from 'xml2js';
 import { JSDOM } from 'jsdom';
 import { promisify } from 'util';
 import { getChromeUserAgent } from '../shared/user-agents.js';
+import { isDownloadableFile } from '../utils/url-filter.js';
 
 const parseXml = promisify(parseString);
 
@@ -278,6 +279,11 @@ function deduplicatePages(pages, baseUrl) {
       // Normalize: remove hash, trailing slash
       const pathname = urlObj.pathname.replace(/\/$/, '') || '/';
       const normalizedUrl = pathname + urlObj.search;
+
+      // Skip downloadable files using shared utility
+      if (isDownloadableFile(page.url)) {
+        continue; // Skip this URL - it's a downloadable file
+      }
 
       if (!seen.has(normalizedUrl)) {
         seen.add(normalizedUrl);

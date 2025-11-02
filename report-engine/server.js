@@ -198,9 +198,9 @@ app.post('/api/generate-from-lead', async (req, res) => {
         .single();
 
       if (!benchmarkError && benchmark) {
-        // Calculate match score based on similarity (simplified version)
-        // Could be made more sophisticated by comparing multiple metrics
-        const matchScore = 85; // Default high match since it was AI-selected
+        // Use actual match score and reasoning from database, or defaults
+        const matchScore = benchmark.match_score || lead.benchmark_match_score || 85;
+        const matchReasoning = benchmark.match_reasoning || lead.benchmark_match_reasoning || null;
 
         // Format tier for display
         const tierMapping = {
@@ -221,6 +221,7 @@ app.post('/api/generate-from-lead', async (req, res) => {
 
           // Fields expected by report sections
           match_score: matchScore,
+          match_reasoning: matchReasoning,  // CRITICAL: This was missing!
           comparison_tier: comparisonTier,
 
           // Create scores object that report sections expect
@@ -234,6 +235,15 @@ app.post('/api/generate-from-lead', async (req, res) => {
             accessibility: benchmark.analysis_results?.accessibility_score || 0,
             performance: benchmark.analysis_results?.performance_score || 0
           },
+
+          // Benchmark strengths - CRITICAL: These were missing!
+          design_strengths: benchmark.design_strengths || benchmark.analysis_results?.design_strengths,
+          seo_strengths: benchmark.seo_strengths || benchmark.analysis_results?.seo_strengths,
+          content_strengths: benchmark.content_strengths || benchmark.analysis_results?.content_strengths,
+          social_strengths: benchmark.social_strengths || benchmark.analysis_results?.social_strengths,
+          accessibility_strengths: benchmark.accessibility_strengths || benchmark.analysis_results?.accessibility_strengths,
+          visual_strengths: benchmark.visual_strengths || benchmark.analysis_results?.visual_strengths,
+          technical_strengths: benchmark.technical_strengths || benchmark.analysis_results?.technical_strengths,
 
           // Include full analysis_results for detailed sections
           ...benchmark.analysis_results,
@@ -273,6 +283,9 @@ app.post('/api/generate-from-lead', async (req, res) => {
       // Screenshots
       screenshot_desktop: lead.screenshot_desktop,
       screenshot_mobile: lead.screenshot_mobile,
+      screenshot_desktop_path: lead.screenshot_desktop_path || lead.screenshot_desktop_url,
+      screenshot_mobile_path: lead.screenshot_mobile_path || lead.screenshot_mobile_url,
+      screenshots_manifest: lead.screenshots_manifest,
 
       // Raw analyzer outputs
       design_analysis: lead.design_analysis,
@@ -280,6 +293,34 @@ app.post('/api/generate-from-lead', async (req, res) => {
       content_analysis: lead.content_analysis,
       accessibility_analysis: lead.accessibility_analysis,
       social_analysis: lead.social_analysis,
+
+      // Social profiles - CRITICAL: This was missing!
+      social_profiles: lead.social_profiles,
+      social_platforms_present: lead.social_platforms_present,
+      social_metadata: lead.social_metadata,
+
+      // Business intelligence - CRITICAL: This was missing!
+      business_intelligence: lead.business_intelligence,
+
+      // Tech stack - CRITICAL: This was missing!
+      tech_stack: lead.tech_stack,
+
+      // Technical metadata
+      has_https: lead.has_https,
+      is_mobile_friendly: lead.is_mobile_friendly,
+      page_load_time: lead.page_load_time,
+
+      // Performance metrics - CRITICAL: These were missing!
+      performance_metrics_pagespeed: lead.performance_metrics_pagespeed,
+      performance_metrics_crux: lead.performance_metrics_crux,
+      performance_score_mobile: lead.performance_score_mobile,
+      performance_score_desktop: lead.performance_score_desktop,
+
+      // Crawl metadata
+      pages_discovered: lead.pages_discovered,
+      pages_crawled: lead.pages_crawled,
+      pages_analyzed: lead.pages_analyzed,
+      crawl_metadata: lead.crawl_metadata,
 
       // Metadata
       analyzed_at: lead.analyzed_at,

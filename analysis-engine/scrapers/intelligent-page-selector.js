@@ -12,6 +12,7 @@
  */
 
 import { callAI } from '../../database-tools/shared/ai-client.js';
+import { shouldExcludeUrl } from '../utils/url-filter.js';
 
 /**
  * Select pages for analysis using AI
@@ -28,12 +29,25 @@ export async function selectPagesForAnalysis(sitemap, context = {}, options = {}
     temperature = 0.3
   } = options;
 
-  console.log(`[Page Selector] Analyzing ${sitemap.totalPages} pages for ${context.industry || 'unknown'} industry...`);
+  // Filter out downloadable files and excluded patterns from sitemap
+  const filteredSitemap = {
+    ...sitemap,
+    pages: sitemap.pages.filter(page => !shouldExcludeUrl(page.url)),
+    totalPages: 0
+  };
+  filteredSitemap.totalPages = filteredSitemap.pages.length;
+
+  const skippedCount = sitemap.totalPages - filteredSitemap.totalPages;
+  if (skippedCount > 0) {
+    console.log(`[Page Selector] Filtered out ${skippedCount} downloadable/excluded URLs`);
+  }
+
+  console.log(`[Page Selector] Analyzing ${filteredSitemap.totalPages} valid pages for ${context.industry || 'unknown'} industry...`);
 
   const startTime = Date.now();
 
-  // Build the AI prompt
-  const prompt = buildSelectionPrompt(sitemap, context, maxPagesPerModule);
+  // Build the AI prompt with filtered sitemap
+  const prompt = buildSelectionPrompt(filteredSitemap, context, maxPagesPerModule);
 
   try {
     // Call AI for intelligent page selection
@@ -49,8 +63,8 @@ export async function selectPagesForAnalysis(sitemap, context = {}, options = {}
     // Parse AI response
     const selection = JSON.parse(result.content);
 
-    // Validate and normalize selection
-    const normalizedSelection = normalizeSelection(selection, sitemap);
+    // Validate and normalize selection with filtered sitemap
+    const normalizedSelection = normalizeSelection(selection, filteredSitemap);
 
     const selectionTime = Date.now() - startTime;
     console.log(`[Page Selector] AI selected pages in ${selectionTime}ms`);
@@ -62,7 +76,7 @@ export async function selectPagesForAnalysis(sitemap, context = {}, options = {}
     return {
       ...normalizedSelection,
       meta: {
-        totalPagesDiscovered: sitemap.totalPages,
+        totalPagesDiscovered: filteredSitemap.totalPages,
         selectionTime,
         model,
         cost: result.cost || 0.001
@@ -71,8 +85,8 @@ export async function selectPagesForAnalysis(sitemap, context = {}, options = {}
 
   } catch (error) {
     console.error('[Page Selector] AI selection failed:', error.message);
-    // Fallback to rule-based selection
-    return fallbackSelection(sitemap, maxPagesPerModule);
+    // Fallback to rule-based selection with filtered sitemap
+    return fallbackSelection(filteredSitemap, maxPagesPerModule);
   }
 }
 
@@ -166,7 +180,10 @@ function normalizeSelection(selection, sitemap) {
 
   const normalize = (pages) => {
     if (!Array.isArray(pages)) return ['/'];
-    const filtered = pages.filter(url => validUrls.has(url));
+    // Filter to only valid URLs from sitemap AND exclude downloadable files
+    const filtered = pages.filter(url =>
+      validUrls.has(url) && !shouldExcludeUrl(url)
+    );
     if (!filtered.includes('/')) {
       filtered.unshift('/');
     }

@@ -36,11 +36,11 @@ interface AnalysisConfigProps {
 }
 
 const CORE_MODULES = [
-  { value: 'unifiedVisual', label: 'Visual Analysis', description: 'Desktop + Mobile design (unified)', defaultModel: 'gpt-5', unified: true },
-  { value: 'unifiedTechnical', label: 'Technical Analysis', description: 'SEO + Content quality (unified)', defaultModel: 'gpt-5', unified: true },
-  { value: 'social', label: 'Social Media', description: 'Social profiles + presence', defaultModel: 'gpt-5' },
-  { value: 'accessibility', label: 'Accessibility', description: 'WCAG 2.1 Level AA compliance', defaultModel: 'gpt-5' },
-  { value: 'leadScorer', label: 'Lead Priority Scorer', description: 'AI qualification scoring', defaultModel: 'gpt-5' }
+  { value: 'unifiedVisual', label: 'Visual Analysis', description: 'Desktop + Mobile design (unified)', defaultModel: 'claude-haiku-4-5', unified: true },
+  { value: 'unifiedTechnical', label: 'Technical Analysis', description: 'SEO + Content quality (unified)', defaultModel: 'claude-haiku-4-5', unified: true },
+  { value: 'social', label: 'Social Media', description: 'Social profiles + presence', defaultModel: 'claude-haiku-4-5' },
+  { value: 'accessibility', label: 'Accessibility', description: 'WCAG 2.1 Level AA compliance', defaultModel: 'claude-haiku-4-5' },
+  { value: 'leadScorer', label: 'Lead Priority Scorer', description: 'AI qualification scoring', defaultModel: 'claude-haiku-4-5' }
 ] as const;
 
 const AI_MODELS: readonly AIModel[] = [
@@ -61,18 +61,10 @@ const AI_MODELS: readonly AIModel[] = [
     speed: 'Fast'
   },
   {
-    value: 'gpt-4o',
-    label: 'GPT-4o Vision',
+    value: 'gpt-5-nano',
+    label: 'GPT-5 Nano',
     provider: 'OpenAI',
-    description: 'Previous-gen multimodal model',
-    cost: '$$',
-    speed: 'Fast'
-  },
-  {
-    value: 'gpt-4o-mini',
-    label: 'GPT-4o Mini',
-    provider: 'OpenAI',
-    description: 'Cost-efficient fallback for light tasks',
+    description: 'Ultra budget - $0.10/$0.80 per 1M tokens',
     cost: '$',
     speed: 'Very Fast'
   },
@@ -83,6 +75,14 @@ const AI_MODELS: readonly AIModel[] = [
     description: 'Strong writing + structured output',
     cost: '$$',
     speed: 'Fast'
+  },
+  {
+    value: 'claude-haiku-4-5',
+    label: 'Claude Haiku 4.5',
+    provider: 'Anthropic',
+    description: 'Fast Claude 4.5 - Best value',
+    cost: '$',
+    speed: 'Very Fast'
   },
   {
     value: 'grok-4-fast',

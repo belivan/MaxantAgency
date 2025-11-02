@@ -33,10 +33,33 @@ export function generateTechnicalDeepDive(analysisResult) {
   html += '      </div>\n\n';
 
   // Tech Stack
+  let parsedTechStack = null;
+  try {
+    // Parse tech stack if it's a JSON string
+    if (typeof tech_stack === 'string' && tech_stack !== 'Unknown') {
+      parsedTechStack = JSON.parse(tech_stack);
+    }
+  } catch (e) {
+    // If parsing fails, treat as plain string
+  }
+
   html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
   html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🛠️ Technology Stack</h3>\n';
   html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">\n';
-  html += `          <div><strong>Platform:</strong> ${escapeHtml(tech_stack || 'Unknown')}</div>\n`;
+
+  // Display platform/CMS
+  if (parsedTechStack) {
+    html += `          <div><strong>Platform:</strong> ${escapeHtml(parsedTechStack.cms || 'Unknown')}</div>\n`;
+    if (parsedTechStack.frameworks && parsedTechStack.frameworks.length > 0) {
+      html += `          <div><strong>Frameworks:</strong> ${escapeHtml(parsedTechStack.frameworks.join(', '))}</div>\n`;
+    }
+    if (parsedTechStack.analytics && parsedTechStack.analytics.length > 0) {
+      html += `          <div><strong>Analytics:</strong> ${escapeHtml(parsedTechStack.analytics.join(', '))}</div>\n`;
+    }
+  } else {
+    html += `          <div><strong>Platform:</strong> ${escapeHtml(tech_stack || 'Unknown')}</div>\n`;
+  }
+
   html += `          <div><strong>HTTPS:</strong> ${has_https ? '✅ Enabled' : '❌ Not Enabled'}</div>\n`;
   html += `          <div><strong>Mobile Friendly:</strong> ${is_mobile_friendly ? '✅ Yes' : '❌ No'}</div>\n`;
   if (page_load_time) {

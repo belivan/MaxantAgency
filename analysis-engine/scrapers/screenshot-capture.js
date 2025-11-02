@@ -6,6 +6,7 @@
  */
 
 import { chromium } from 'playwright';
+import { detectTechStack as enhancedDetectTechStack } from '../utils/tech-stack-detector.js';
 
 /**
  * Capture screenshot and HTML of a website
@@ -177,60 +178,86 @@ async function extractPageMetadata(page) {
 
 /**
  * Detect technology stack from page source
+ * Uses enhanced detection with AI assistance for unknown technologies
  */
 async function detectTechStack(page) {
   try {
-    const tech = await page.evaluate(() => {
-      const hints = {
-        cms: null,
-        frameworks: [],
-        analytics: []
-      };
+    // Get page content and headers
+    const html = await page.content();
+    const response = await page.context().route('**/*', route => route.continue());
 
-      const html = document.documentElement.outerHTML;
+    // Use the enhanced tech stack detector
+    const techStack = await enhancedDetectTechStack(page, html, {});
 
-      // CMS detection
-      if (html.includes('wp-content') || html.includes('wordpress')) {
-        hints.cms = 'WordPress';
-      } else if (html.includes('shopify')) {
-        hints.cms = 'Shopify';
-      } else if (html.includes('squarespace')) {
-        hints.cms = 'Squarespace';
-      } else if (html.includes('wix.com')) {
-        hints.cms = 'Wix';
-      } else if (html.includes('webflow')) {
-        hints.cms = 'Webflow';
-      }
-
-      // Framework detection
-      if (window.React || html.includes('react')) {
-        hints.frameworks.push('React');
-      }
-      if (window.Vue || html.includes('vue')) {
-        hints.frameworks.push('Vue');
-      }
-      if (window.angular || html.includes('ng-')) {
-        hints.frameworks.push('Angular');
-      }
-      if (html.includes('next')) {
-        hints.frameworks.push('Next.js');
-      }
-
-      // Analytics detection
-      if (html.includes('google-analytics') || html.includes('gtag')) {
-        hints.analytics.push('Google Analytics');
-      }
-      if (html.includes('facebook') && html.includes('pixel')) {
-        hints.analytics.push('Facebook Pixel');
-      }
-
-      return hints;
-    });
-
-    return tech;
+    // Return in the expected format for backward compatibility
+    // but with much richer data
+    return {
+      cms: techStack.cms,
+      frameworks: techStack.frameworks,
+      analytics: techStack.analytics,
+      libraries: techStack.libraries,
+      payments: techStack.payments,
+      ecommerce: techStack.ecommerce,
+      marketing: techStack.marketing,
+      widgets: techStack.widgets,
+      cdn: techStack.cdn,
+      hosting: techStack.hosting,
+      aiIdentified: techStack.aiIdentified,
+      summary: techStack.summary
+    };
   } catch (error) {
     console.error('Failed to detect tech stack:', error.message);
-    return null;
+    // Fallback to basic detection if enhanced fails
+    try {
+      const tech = await page.evaluate(() => {
+        const hints = {
+          cms: null,
+          frameworks: [],
+          analytics: []
+        };
+
+        const html = document.documentElement.outerHTML;
+
+        // Basic CMS detection
+        if (html.includes('wp-content') || html.includes('wordpress')) {
+          hints.cms = 'WordPress';
+        } else if (html.includes('shopify')) {
+          hints.cms = 'Shopify';
+        } else if (html.includes('squarespace')) {
+          hints.cms = 'Squarespace';
+        } else if (html.includes('wix.com')) {
+          hints.cms = 'Wix';
+        } else if (html.includes('webflow')) {
+          hints.cms = 'Webflow';
+        }
+
+        // Basic framework detection
+        if (window.React || html.includes('react')) {
+          hints.frameworks.push('React');
+        }
+        if (window.Vue || html.includes('vue')) {
+          hints.frameworks.push('Vue');
+        }
+        if (window.angular || html.includes('ng-')) {
+          hints.frameworks.push('Angular');
+        }
+
+        // Basic analytics detection
+        if (html.includes('google-analytics') || html.includes('gtag')) {
+          hints.analytics.push('Google Analytics');
+        }
+        if (html.includes('facebook') && html.includes('pixel')) {
+          hints.analytics.push('Facebook Pixel');
+        }
+
+        return hints;
+      });
+
+      return tech;
+    } catch (fallbackError) {
+      console.error('Fallback tech detection also failed:', fallbackError.message);
+      return null;
+    }
   }
 }
 

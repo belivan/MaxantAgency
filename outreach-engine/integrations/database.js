@@ -566,41 +566,62 @@ export async function markLeadProcessed(id, status = 'contacted') {
  */
 export async function getStats() {
   try {
-    // Get lead counts
-    const { count: regularCount, error: error1 } = await supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('requires_social_outreach', false);
+    // Check database connection
+    if (!supabase) {
+      throw new Error('Database connection not initialized');
+    }
 
-    const { count: socialCount, error: error2 } = await supabase
+    // Get lead counts (simplified - no longer differentiating social/regular)
+    const { count: totalLeadsCount, error: error1 } = await supabase
       .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('requires_social_outreach', true);
+      .select('*', { count: 'exact', head: true });
 
-    const { count: composedCount, error: error3 } = await supabase
+    const { count: composedCount, error: error2 } = await supabase
       .from('composed_emails')
       .select('*', { count: 'exact', head: true });
 
-    const { count: readyCount, error: error4 } = await supabase
+    const { count: readyCount, error: error3 } = await supabase
       .from('composed_emails')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'ready');
 
-    const { count: sentCount, error: error5 } = await supabase
+    const { count: sentCount, error: error4 } = await supabase
       .from('composed_emails')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'sent');
 
-    if (error1 || error2 || error3 || error4 || error5) {
-      const errorMsg = error1?.message || error2?.message || error3?.message || error4?.message || error5?.message;
+    if (error1 || error2 || error3 || error4) {
+      const errors = [];
+      if (error1) {
+        const msg = error1.message && error1.message.trim() ? error1.message : JSON.stringify(error1);
+        errors.push(`Total leads: ${msg}`);
+      }
+      if (error2) {
+        const msg = error2.message && error2.message.trim() ? error2.message : JSON.stringify(error2);
+        errors.push(`Total emails: ${msg}`);
+      }
+      if (error3) {
+        const msg = error3.message && error3.message.trim() ? error3.message : JSON.stringify(error3);
+        errors.push(`Ready emails: ${msg}`);
+      }
+      if (error4) {
+        const msg = error4.message && error4.message.trim() ? error4.message : JSON.stringify(error4);
+        errors.push(`Sent emails: ${msg}`);
+      }
+
+      const errorMsg = errors.length > 0
+        ? errors.join(' | ')
+        : 'Unknown error occurred while fetching statistics';
+
       throw new Error(`Failed to fetch stats: ${errorMsg}`);
     }
 
     return {
       leads: {
-        regular: regularCount || 0,
-        social: socialCount || 0,
-        total: (regularCount || 0) + (socialCount || 0)
+        total: totalLeadsCount || 0,
+        // Keep regular/social for backward compatibility but set to 0/total
+        regular: totalLeadsCount || 0,
+        social: 0
       },
       emails: {
         total: composedCount || 0,

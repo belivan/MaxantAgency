@@ -11,21 +11,33 @@
  * Model costs per 1M tokens (approximate)
  */
 const PROSPECTING_MODEL_COSTS = {
+  'gpt-5': {
+    input: 1.25,   // per 1M input tokens
+    output: 10.00  // per 1M output tokens
+  },
+  'gpt-5-mini': {
+    input: 0.25,
+    output: 2.00
+  },
+  'gpt-5-nano': {
+    input: 0.10,
+    output: 0.80
+  },
   'grok-4-fast': {
-    input: 0.50,   // per 1M input tokens
-    output: 1.50   // per 1M output tokens
+    input: 0.20,   // Updated Nov 2025 pricing
+    output: 0.50
   },
-  'gpt-4o-mini': {
-    input: 0.15,
-    output: 0.60
-  },
-  'claude-3.5-sonnet': {
+  'grok-4': {
     input: 3.00,
     output: 15.00
   },
-  'claude-3.5-haiku': {
-    input: 0.80,
-    output: 4.00
+  'claude-sonnet-4-5': {
+    input: 3.00,
+    output: 15.00
+  },
+  'claude-haiku-4-5': {
+    input: 1.00,   // Updated Nov 2025 pricing
+    output: 5.00
   }
 } as const;
 

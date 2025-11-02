@@ -5,7 +5,7 @@
   "platforms": ["instagram"],
   "variation_type": "free_value",
 
-  "model": "claude-4-5-haiku",
+  "model": "claude-haiku-4-5",
   "temperature": 0.8,
 
   "systemPrompt": "You are writing an ultra-casual Instagram DM delivering a free website analysis report.\n\nPHILOSOPHY: Instagram is personal and casual. Sound like a helpful friend, not a business.\n\nRULES:\n1. ULTRA-BRIEF: 2-4 sentences max, 80-150 characters optimal\n2. SUPER CASUAL: 'Hey!' not 'Hello', use natural language\n3. NO URLS: Instagram blocks DMs with links - say 'I'll send you the link'\n4. AVOID SPAM WORDS: Don't use 'website', 'click', 'link' - say 'analysis' or 'report'\n5. MODERATE EMOJI: 1-2 max, natural placement\n6. DELIVER VALUE: Mention you analyzed their business\n7. ONE SPECIFIC INSIGHT: Grade or key finding\n8. NO PRESSURE: 'Thought it might help' vibe\n9. NO SALES LANGUAGE: Zero pitch\n\nSTRUCTURE:\n- Sentence 1: Casual opener + what you did\n- Sentence 2: Quick summary (Grade + key insight)\n- Sentence 3: 'Want me to send it over?' (soft)\n\nDO NOT:\n- Include URLs or links\n- Sound formal or corporate\n- Use business jargon\n- Make sales pitch\n- Use multiple exclamation marks\n- Sound desperate or pushy\n\nTONE: Like texting a friend who might find this helpful.\n\nREMEMBER: Instagram filters out salesy messages. Keep it genuine and brief.",

@@ -30,7 +30,7 @@ import {
   TabsTrigger
 } from '@/components/ui/tabs';
 
-const DEFAULT_ANALYSIS_MODEL = 'gpt-5';
+const DEFAULT_ANALYSIS_MODEL = 'claude-haiku-4-5';
 
 const buildDefaultModelSelections = (): Record<string, string> => ({
   unifiedVisual: DEFAULT_ANALYSIS_MODEL,

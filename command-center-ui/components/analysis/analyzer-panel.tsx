@@ -32,25 +32,26 @@ const moduleOptions = [
 ];
 
 const textModels = [
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast & Cheap)' },
-  { value: 'gpt-4o', label: 'GPT-4o' },
-  { value: 'grok-4-fast', label: 'Grok 4 Fast' },
-  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
-  { value: 'claude-3.5-haiku', label: 'Claude 3.5 Haiku' }
+  { value: 'gpt-5-nano', label: 'GPT-5 Nano (Ultra Budget)' },
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Balanced)' },
+  { value: 'gpt-5', label: 'GPT-5 (Flagship)' },
+  { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (Best Value)' },
+  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
+  { value: 'grok-4-fast', label: 'Grok 4 Fast' }
 ];
 
 const visionModels = [
-  { value: 'gpt-4o', label: 'GPT-4o (Recommended)' },
-  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet (Vision)' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Cheaper)' }
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Recommended)' },
+  { value: 'gpt-5', label: 'GPT-5 (Best Quality)' },
+  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5 (Vision)' }
 ];
 
 export default function AnalyzerPanel({ disabled, loading, selectionSummary, onRun }: Props) {
   const [tier, setTier] = useState<'tier1' | 'tier2' | 'tier3'>('tier1');
   const [emailType, setEmailType] = useState<'local' | 'national'>('local');
   const [modules, setModules] = useState<string[]>(['seo']);
-  const [textModel, setTextModel] = useState('gpt-4o-mini');
-  const [visionModel, setVisionModel] = useState('gpt-4o');
+  const [textModel, setTextModel] = useState('claude-haiku-4-5');
+  const [visionModel, setVisionModel] = useState('gpt-5-mini');
   const [campaignId, setCampaignId] = useState('');
   const [projectId, setProjectId] = useState('');
   const [clientName, setClientName] = useState('');

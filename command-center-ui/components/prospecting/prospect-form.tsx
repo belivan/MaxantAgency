@@ -24,10 +24,11 @@ type Props = {
 
 const models = [
   { value: 'grok-4-fast', label: 'Grok 4 Fast (Recommended - Real Companies via Web Search)' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast but may generate fake companies)' },
-  { value: 'gpt-4o', label: 'GPT-4o (Latest OpenAI)' },
-  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
-  { value: 'claude-3.5-haiku', label: 'Claude 3.5 Haiku (Fast & Cheap)' }
+  { value: 'gpt-5-nano', label: 'GPT-5 Nano (Ultra Budget - $0.10/$0.80 per 1M)' },
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Balanced Performance)' },
+  { value: 'gpt-5', label: 'GPT-5 (Flagship Model)' },
+  { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (Fast & Cheap)' },
+  { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' }
 ];
 
 export default function ProspectForm({

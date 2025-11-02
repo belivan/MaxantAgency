@@ -835,16 +835,17 @@ function calculateCost(modelId, usage) {
     'gpt-5': { input: 1.25, output: 10 },
     'gpt-5-2025-08-07': { input: 1.25, output: 10 }, // Alias for backward compatibility
     'gpt-5-mini': { input: 0.25, output: 2 },
+    'gpt-5-nano': { input: 0.10, output: 0.80 }, // Ultra budget model
 
     // Grok (xAI) - Latest models (Nov 2025)
     'grok-4': { input: 3, output: 15 },
     'grok-4-fast': { input: 0.20, output: 0.50 },
 
     // Claude (Anthropic) - Claude 4.5 models (Nov 2025)
-    'claude-4-5-haiku': { input: 1.00, output: 5.00 },
-    'claude-4.5-haiku': { input: 1.00, output: 5.00 }, // Alternative naming
-    'claude-4-5-sonnet': { input: 3, output: 15 },
-    'claude-4.5-sonnet': { input: 3, output: 15 } // Alternative naming
+    'claude-haiku-4-5': { input: 1.00, output: 5.00 },
+    'claude-4-5-haiku': { input: 1.00, output: 5.00 }, // Legacy naming (backward compatibility)
+    'claude-sonnet-4-5': { input: 3, output: 15 },
+    'claude-4-5-sonnet': { input: 3, output: 15 } // Legacy naming (backward compatibility)
   };
 
   const modelPricing = pricing[modelId] || { input: 0, output: 0 };

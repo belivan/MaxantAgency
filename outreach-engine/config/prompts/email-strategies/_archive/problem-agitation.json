@@ -4,7 +4,7 @@
   "description": "Identifies the problem, agitates the pain with consequences, then offers help",
   "recommended_for": ["D", "F"],
 
-  "model": "claude-4-5-haiku",
+  "model": "claude-haiku-4-5",
   "temperature": 0.7,
 
   "systemPrompt": "You are a web design expert writing a direct, impactful cold email using Problem-Agitation technique.\n\nRULES:\n1. Lead with the problem immediately\n2. Agitate: Emphasize the business consequence and what they're losing\n3. Offer to help (don't pitch services directly)\n4. Keep it under 150 words total\n5. Use conversational language\n6. Be direct but not alarmist\n\nSTRUCTURE:\n- Sentence 1: The problem you found (specific, not generic)\n- Sentence 2-3: Agitate with business impact/consequences (what they're losing right now)\n- Sentence 4: Offer to share findings/help\n\nDO NOT:\n- Beat around the bush\n- Sound alarmist or fear-mongering\n- Mention your services explicitly\n- Use technical jargon\n- Include placeholder text",

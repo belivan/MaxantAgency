@@ -15,6 +15,7 @@ import * as cheerio from 'cheerio';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { filterUrls } from '../utils/url-filter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -704,6 +705,19 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
 
   console.log(`[Targeted Crawler] Crawling ${pageUrls.length} selected pages for ${baseUrl}...`);
 
+  // Filter out downloadable files and excluded patterns using shared utility
+  const { validUrls: validPages, skippedUrls: skippedFiles } = filterUrls(pageUrls, {
+    logPrefix: '[Targeted Crawler]',
+    logSkipped: true
+  });
+
+  if (validPages.length === 0) {
+    console.log('[Targeted Crawler] No valid HTML pages to crawl after filtering');
+    return [];
+  }
+
+  console.log(`[Targeted Crawler] Processing ${validPages.length} valid HTML pages...`);
+
   const startTime = Date.now();
   const results = [];
   let browser = null;
@@ -727,14 +741,14 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
 
     // Crawl pages in batches (concurrency control)
     // Each page uses a separate context within the shared browser
-    for (let i = 0; i < pageUrls.length; i += concurrency) {
-      const batch = pageUrls.slice(i, i + concurrency);
+    for (let i = 0; i < validPages.length; i += concurrency) {
+      const batch = validPages.slice(i, i + concurrency);
 
       if (onProgress) {
         onProgress({
           crawled: i,
-          total: pageUrls.length,
-          message: `Crawling pages ${i + 1}-${Math.min(i + concurrency, pageUrls.length)} of ${pageUrls.length}`
+          total: validPages.length,
+          message: `Crawling pages ${i + 1}-${Math.min(i + concurrency, validPages.length)} of ${validPages.length}`
         });
       }
 
@@ -767,7 +781,7 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
       }
 
       // Small delay between batches to allow browser cleanup
-      if (i + concurrency < pageUrls.length) {
+      if (i + concurrency < validPages.length) {
         await new Promise(resolve => setTimeout(resolve, 500));
       }
     }

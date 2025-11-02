@@ -346,6 +346,29 @@ app.post('/api/analyze-url', async (req, res) => {
     }
 
     // Save to database - COMPLETE FIELD SET
+    // Helper function to safely round scores with NaN validation
+    const safeRoundScore = (score, fallback = 50, fieldName = 'score') => {
+      if (score == null || isNaN(score) || typeof score !== 'number') {
+        console.warn(`[Intelligent Analysis] WARNING: ${fieldName} invalid (${score}, type: ${typeof score}) for ${result.company_name || result.url}, using fallback value of ${fallback}`);
+        return fallback;
+      }
+      return Math.round(score);
+    };
+
+    // Helper function to validate screenshot URLs/paths
+    const validateScreenshotUrl = (url, fieldName) => {
+      if (typeof url === 'string' && url.length > 0) {
+        // Check if it's a valid URL or file path
+        if (url.startsWith('http://') || url.startsWith('https://') ||
+            url.startsWith('/') || url.includes('\\') ||
+            url.match(/^[a-zA-Z]:/)) {
+          return url;
+        }
+        console.warn(`[Intelligent Analysis] Invalid ${fieldName} format: ${url}`);
+      }
+      return null;
+    };
+
     const leadData = {
       // Core information
       url: result.url,
@@ -354,16 +377,16 @@ app.post('/api/analyze-url', async (req, res) => {
       project_id: project_id,  // Required
       prospect_id: result.prospect_id || null,
 
-      // Grading & Scores
-      overall_score: Math.round(result.overall_score),
+      // Grading & Scores (with NaN validation)
+      overall_score: safeRoundScore(result.overall_score, 50, 'overall_score'),
       website_grade: result.grade,
-      design_score: Math.round(result.design_score),
-      design_score_desktop: Math.round(result.design_score_desktop || result.design_score),
-      design_score_mobile: Math.round(result.design_score_mobile || result.design_score),
-      seo_score: Math.round(result.seo_score),
-      content_score: Math.round(result.content_score),
-      social_score: Math.round(result.social_score),
-      accessibility_score: Math.round(result.accessibility_score || 50),
+      design_score: safeRoundScore(result.design_score, 50, 'design_score'),
+      design_score_desktop: safeRoundScore(result.design_score_desktop || result.design_score, 50, 'design_score_desktop'),
+      design_score_mobile: safeRoundScore(result.design_score_mobile || result.design_score, 50, 'design_score_mobile'),
+      seo_score: safeRoundScore(result.seo_score, 50, 'seo_score'),
+      content_score: safeRoundScore(result.content_score, 50, 'content_score'),
+      social_score: safeRoundScore(result.social_score, 50, 'social_score'),
+      accessibility_score: safeRoundScore(result.accessibility_score || 50, 50, 'accessibility_score'),
 
       // Grading weights (from AI grader)
       weights: result.weights || null,
@@ -429,17 +452,17 @@ app.post('/api/analyze-url', async (req, res) => {
       page_title: result.page_title || null,
       meta_description: result.meta_description || null,
 
-      // Screenshots (ensure we don't save buffers - only URLs/paths)
-      screenshot_desktop_url: typeof result.screenshot_desktop_url === 'string' ? result.screenshot_desktop_url : null,
-      screenshot_mobile_url: typeof result.screenshot_mobile_url === 'string' ? result.screenshot_mobile_url : null,
+      // Screenshots (validate and ensure we don't save buffers - only valid URLs/paths)
+      screenshot_desktop_url: validateScreenshotUrl(result.screenshot_desktop_url, 'screenshot_desktop_url'),
+      screenshot_mobile_url: validateScreenshotUrl(result.screenshot_mobile_url, 'screenshot_mobile_url'),
       screenshots_manifest: result.screenshots_manifest || null,
 
       // Performance Metrics (from PageSpeed Insights & Chrome UX Report)
       performance_metrics_pagespeed: result.performance_metrics_pagespeed || null,
       performance_metrics_crux: result.performance_metrics_crux || null,
       performance_issues: result.performance_issues || [],
-      performance_score_mobile: result.performance_score_mobile ? Math.round(result.performance_score_mobile) : null,
-      performance_score_desktop: result.performance_score_desktop ? Math.round(result.performance_score_desktop) : null,
+      performance_score_mobile: result.performance_score_mobile ? safeRoundScore(result.performance_score_mobile, null, 'performance_score_mobile') : null,
+      performance_score_desktop: result.performance_score_desktop ? safeRoundScore(result.performance_score_desktop, null, 'performance_score_desktop') : null,
       performance_api_errors: result.performance_api_errors || [],
 
       // Social Media
