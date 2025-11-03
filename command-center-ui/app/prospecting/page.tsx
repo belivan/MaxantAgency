@@ -23,14 +23,12 @@ import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { updateProject } from '@/lib/api';
 import type { ProspectGenerationOptions, ProspectFilters } from '@/lib/types';
 import type { ProspectingPrompts } from '@/lib/types/prospect';
+import { startTaskWithSSE } from '@/lib/utils/task-sse-manager';
 
 export default function ProspectingPage() {
   const engineStatus = useEngineHealth();
   const searchParams = useSearchParams();
-  const { startTask, updateTask, addLog: addTaskLog, completeTask, errorTask, activeTasks } = useTaskProgress();
-
-  // Check if there's an active prospecting task
-  const isProspecting = activeTasks.some(task => task.type === 'prospecting');
+  const { startTask, updateTask, addLog: addTaskLog, completeTask, errorTask, cancelTask } = useTaskProgress();
 
   // Project selection state
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -168,187 +166,133 @@ export default function ProspectingPage() {
     setGeneratedCount(0);
     setIcpBriefSaved(false);
 
-    // Start global task
-    const taskId = startTask('prospecting', `Generate ${config.count} prospects`, config.count);
-    addTaskLog(taskId, 'Starting prospect generation...', 'info');
-
+    // Save configuration to project (non-blocking)
     try {
-      // SIMPLIFIED: Just save configuration to current project - NO FORKING!
-      try {
-        addTaskLog(taskId, 'Saving configuration to project...', 'info');
-
-        await updateProject(selectedProjectId, {
-          icp_brief: briefResult.data,
-          prospecting_prompts: currentPrompts || undefined,
-          prospecting_model_selections: currentModelSelections || undefined
-        });
-
-        // Log what was saved
-        const savedItems = [];
-        savedItems.push('ICP Brief');
-        if (currentModelSelections && Object.keys(currentModelSelections).length > 0) {
-          savedItems.push('Model Selections');
-        }
-        if (currentPrompts && Object.keys(currentPrompts).length > 0) {
-          savedItems.push('Custom Prompts');
-        }
-
-        setIcpBriefSaved(true);
-        addTaskLog(taskId, `Saved: ${savedItems.join(', ')}`, 'success');
-      } catch (err: any) {
-        console.error('Failed to save configuration:', err);
-        addTaskLog(taskId, `Warning: Could not save configuration: ${err.message}`, 'warning');
-      }
-
-      // Start prospect generation
-      const API_BASE = process.env.NEXT_PUBLIC_PROSPECTING_API || 'http://localhost:3010';
-
-      const brief = {
-        ...briefResult.data,
-        count: config.count
-      };
-
-      const options = {
-        model: config.model,
-        verify: config.verify,
-        projectId: selectedProjectId
-      };
-
-      const response = await fetch(`${API_BASE}/api/prospect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brief,
-          options,
-          custom_prompts: config.custom_prompts || undefined,
-          model_selections: config.model_selections || undefined
-        })
+      await updateProject(selectedProjectId, {
+        icp_brief: briefResult.data,
+        prospecting_prompts: currentPrompts || undefined,
+        prospecting_model_selections: currentModelSelections || undefined
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to start prospect generation');
-      }
+      setIcpBriefSaved(true);
+      console.log('✓ Saved configuration to project');
+    } catch (err: any) {
+      console.error('Failed to save configuration:', err);
+    }
 
-      addTaskLog(taskId, 'Connected to prospect generation stream', 'success');
+    // Prepare request data
+    const API_BASE = process.env.NEXT_PUBLIC_PROSPECTING_API || 'http://localhost:3010';
+    const brief = { ...briefResult.data, count: config.count };
+    const options = {
+      model: config.model,
+      verify: config.verify,
+      projectId: selectedProjectId
+    };
 
-      // Read SSE stream
-      const reader = response.body?.getReader();
-      if (!reader) {
-        throw new Error('Response body is not readable');
-      }
+    // Start non-blocking SSE operation
+    const connection = startTaskWithSSE({
+      url: `${API_BASE}/api/prospect`,
+      method: 'POST',
+      body: {
+        brief,
+        options,
+        custom_prompts: config.custom_prompts || undefined,
+        model_selections: config.model_selections || undefined
+      },
+      taskType: 'prospecting',
+      title: `Generate ${config.count} prospects`,
+      total: config.count,
+      taskManager: {
+        startTask,
+        updateTask,
+        addLog: addTaskLog,
+        completeTask,
+        errorTask,
+        cancelTask
+      },
+      onMessage: (message, taskId) => {
+        const event = message.data as any;
 
-      const decoder = new TextDecoder();
-      let buffer = '';
+        // Handle custom prospecting SSE events
+        if (event.type === 'started') {
+          addTaskLog(taskId, 'Prospect generation started', 'info');
+        }
 
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
+        if (event.type === 'step') {
+          const stepNames: Record<string, string> = {
+            'query-understanding': 'Understanding search query',
+            'google-maps-discovery': 'Discovering companies on Google Maps',
+            'website-verification': 'Verifying websites',
+            'website-scraping': 'Scraping website data',
+            'social-discovery': 'Finding social media profiles'
+          };
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
+          const stepName = stepNames[event.name] || event.name;
 
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const event = JSON.parse(line.slice(6));
-
-                if (event.type === 'started') {
-                  addTaskLog(taskId, 'Prospect generation started', 'info');
-                }
-
-                if (event.type === 'step') {
-                  const stepNames: Record<string, string> = {
-                    'query-understanding': 'Understanding search query',
-                    'google-maps-discovery': 'Discovering companies on Google Maps',
-                    'website-verification': 'Verifying websites',
-                    'website-scraping': 'Scraping website data',
-                    'social-discovery': 'Finding social media profiles'
-                  };
-
-                  const stepName = stepNames[event.name] || event.name;
-
-                  if (event.status === 'started') {
-                    addTaskLog(taskId, `${stepName}...`, 'info');
-                  } else if (event.status === 'completed') {
-                    if (event.found !== undefined) {
-                      addTaskLog(taskId, `Found ${event.found} companies`, 'success');
-                    } else {
-                      addTaskLog(taskId, `${stepName} completed`, 'success');
-                    }
-                  }
-                }
-
-                if (event.type === 'progress') {
-                  const message = event.company
-                    ? `Processing ${event.company} (${event.current}/${event.total})`
-                    : `Processing prospect ${event.current}/${event.total}`;
-
-                  updateTask(taskId, event.current || 0, message);
-                  addTaskLog(taskId, message, 'info');
-
-                  // Update prospect count in real-time
-                  if (event.current && event.current % 2 === 0) {
-                    try {
-                      const prospectsResponse = await fetch(`/api/projects/${selectedProjectId}/prospects`);
-                      if (prospectsResponse.ok) {
-                        const prospectsData = await prospectsResponse.json();
-                        const actualCount = prospectsData.data?.length || 0;
-                        setProspectCount(actualCount);
-                      }
-                    } catch (err) {
-                      console.error('Failed to update prospect count:', err);
-                    }
-                  }
-                }
-
-                if (event.message) {
-                  addTaskLog(taskId, event.message, 'info');
-                }
-
-                if (event.type === 'complete') {
-                  const count = event.results?.prospects?.length || event.results?.count || 0;
-                  setGeneratedCount(count);
-
-                  // Reload prospect count from API
-                  try {
-                    const prospectsResponse = await fetch(`/api/projects/${selectedProjectId}/prospects`);
-                    if (prospectsResponse.ok) {
-                      const prospectsData = await prospectsResponse.json();
-                      const actualCount = prospectsData.data?.length || 0;
-                      setProspectCount(actualCount);
-                      addTaskLog(taskId, `Project now has ${actualCount} total prospects`, 'info');
-                    }
-                  } catch (err) {
-                    console.error('Failed to reload prospect count:', err);
-                    setProspectCount(prev => prev + count);
-                  }
-
-                  addTaskLog(taskId, `Successfully generated ${count} prospects`, 'success');
-                  completeTask(taskId);
-                  refreshProspects();
-                  return;
-                }
-
-                if (event.type === 'error') {
-                  errorTask(taskId, event.message || 'Unknown error');
-                  return;
-                }
-              } catch (parseError) {
-                console.error('Failed to parse SSE event:', line, parseError);
-              }
+          if (event.status === 'started') {
+            addTaskLog(taskId, `${stepName}...`, 'info');
+          } else if (event.status === 'completed') {
+            if (event.found !== undefined) {
+              addTaskLog(taskId, `Found ${event.found} companies`, 'success');
+            } else {
+              addTaskLog(taskId, `${stepName} completed`, 'success');
             }
           }
         }
-      } finally {
-        reader.releaseLock();
-      }
 
-    } catch (error: any) {
-      errorTask(taskId, `Failed to start generation: ${error.message}`);
-    }
+        if (event.type === 'progress') {
+          const msg = event.company
+            ? `Processing ${event.company} (${event.current}/${event.total})`
+            : `Processing prospect ${event.current}/${event.total}`;
+
+          updateTask(taskId, event.current || 0, msg);
+          addTaskLog(taskId, msg, 'info');
+
+          // Update prospect count periodically
+          if (event.current && event.current % 2 === 0 && selectedProjectId) {
+            fetch(`/api/projects/${selectedProjectId}/prospects`)
+              .then(res => res.json())
+              .then(data => {
+                const actualCount = data.data?.length || 0;
+                setProspectCount(actualCount);
+              })
+              .catch(err => console.error('Failed to update prospect count:', err));
+          }
+        }
+
+        if (event.message) {
+          addTaskLog(taskId, event.message, 'info');
+        }
+      },
+      onComplete: (data, taskId) => {
+        const event = data as any;
+        const count = event.results?.prospects?.length || event.results?.count || 0;
+        setGeneratedCount(count);
+
+        // Reload prospect count
+        if (selectedProjectId) {
+          fetch(`/api/projects/${selectedProjectId}/prospects`)
+            .then(res => res.json())
+            .then(prospectsData => {
+              const actualCount = prospectsData.data?.length || 0;
+              setProspectCount(actualCount);
+              addTaskLog(taskId, `Project now has ${actualCount} total prospects`, 'info');
+            })
+            .catch(() => {
+              setProspectCount(prev => prev + count);
+            });
+        }
+
+        addTaskLog(taskId, `Successfully generated ${count} prospects`, 'success');
+        refreshProspects();
+      },
+      onError: (error, taskId) => {
+        console.error('Prospecting failed:', error);
+        alert(`Prospect generation failed: ${error.message}`);
+      }
+    });
+
+    console.log(`✓ Started prospecting task: ${connection.taskId} (non-blocking)`);
   };
 
   const handleIntelligentAnalysis = async () => {
@@ -456,7 +400,7 @@ export default function ProspectingPage() {
           {/* Quick Business Lookup */}
           <QuickBusinessLookup
             selectedProjectId={selectedProjectId}
-            disabled={isProspecting}
+            disabled={false}
             engineOffline={isProspectingEngineOffline}
             onSuccess={refreshProspects}
           />
@@ -466,8 +410,8 @@ export default function ProspectingPage() {
             onSubmit={handleGenerate}
             onPromptsChange={handlePromptsChange}
             onModelsChange={handleModelsChange}
-            isLoading={isProspecting}
-            disabled={isProspectingEngineOffline || isProspecting}
+            isLoading={false}
+            disabled={isProspectingEngineOffline}
             showForkWarning={false} // NO FORK WARNINGS
             prospectCount={prospectCount}
             isLoadingProject={isLoadingProject}

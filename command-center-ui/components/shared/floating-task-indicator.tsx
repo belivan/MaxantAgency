@@ -78,7 +78,7 @@ const getGradeColor = (grade: string) => {
 };
 
 export function FloatingTaskIndicator() {
-  const { tasks, activeTasks, removeTask, cancelTask } = useTaskProgress();
+  const { tasks, activeTasks, queuedTasks, removeTask, cancelTask } = useTaskProgress();
   const [isExpanded, setIsExpanded] = useState(false);
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set());
 
@@ -100,7 +100,14 @@ export function FloatingTaskIndicator() {
     cancelTask(taskId);
   };
 
+  const handleCancelAll = () => {
+    if (confirm(`Cancel all ${activeTasks.length} running tasks?`)) {
+      activeTasks.forEach(task => cancelTask(task.id));
+    }
+  };
+
   const activeCount = activeTasks.length;
+  const queuedCount = queuedTasks.length;
   const hasActiveTasks = activeCount > 0;
 
   return (
@@ -114,16 +121,39 @@ export function FloatingTaskIndicator() {
               <MaxantLogo className="w-4 h-4" />
               <span className="font-semibold text-sm">
                 Tasks ({tasks.length})
+                {activeCount > 0 && (
+                  <span className="ml-1 text-blue-600 dark:text-blue-400">
+                    • {activeCount} active
+                  </span>
+                )}
+                {queuedCount > 0 && (
+                  <span className="ml-1 text-amber-600 dark:text-amber-400">
+                    • {queuedCount} queued
+                  </span>
+                )}
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(false)}
-              className="h-6 w-6 p-0"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {hasActiveTasks && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelAll}
+                  className="h-7 px-2 text-xs text-destructive hover:text-destructive"
+                  title="Cancel all running tasks"
+                >
+                  Cancel All
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsExpanded(false)}
+                className="h-6 w-6 p-0"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Task List */}
@@ -138,6 +168,7 @@ export function FloatingTaskIndicator() {
                   ? Math.round((task.current / task.total) * 100)
                   : 0;
                 const isRunning = task.status === 'running';
+                const isQueued = task.status === 'queued';
                 const isCompleted = task.status === 'completed';
                 const isError = task.status === 'error';
                 const isCancelled = task.status === 'cancelled';
@@ -149,6 +180,8 @@ export function FloatingTaskIndicator() {
                     className={`border-b last:border-b-0 ${
                       isRunning
                         ? 'bg-primary/5 dark:bg-primary/10'
+                        : isQueued
+                        ? 'bg-amber-50/50 dark:bg-amber-950/20 border-l-2 border-l-amber-400'
                         : isCompleted
                         ? 'bg-green-50/50 dark:bg-green-950/20'
                         : isCancelled
@@ -163,6 +196,8 @@ export function FloatingTaskIndicator() {
                         <div className="flex-shrink-0 mt-0.5">
                           {isRunning ? (
                             <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                          ) : isQueued ? (
+                            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                           ) : isCompleted ? (
                             <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
                           ) : isCancelled ? (
@@ -178,10 +213,23 @@ export function FloatingTaskIndicator() {
                             <span className="text-sm font-medium truncate">
                               {task.title}
                             </span>
-                            <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
-                              {percentage}%
-                            </span>
+                            {isQueued && task.queuePosition ? (
+                              <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded-full flex-shrink-0">
+                                #{task.queuePosition} in queue
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground tabular-nums flex-shrink-0">
+                                {percentage}%
+                              </span>
+                            )}
                           </div>
+
+                          {/* Queue Status Message */}
+                          {isQueued && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">
+                              ⏳ Waiting for available slot...
+                            </p>
+                          )}
 
                           {/* Progress Bar */}
                           <Progress value={percentage} className="h-1.5 mb-2" />
@@ -265,13 +313,13 @@ export function FloatingTaskIndicator() {
                         </div>
 
                         {/* Cancel/Close Button */}
-                        {isRunning ? (
+                        {isRunning || isQueued ? (
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleCancel(task.id)}
                             className="flex-shrink-0 h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-950"
-                            title="Cancel task"
+                            title={isQueued ? "Remove from queue" : "Cancel task"}
                           >
                             <X className="w-3 h-3" />
                           </Button>

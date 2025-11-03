@@ -19,11 +19,11 @@ import {
   QuickWebsiteAnalysis
 } from '@/components/analysis';
 import { type AnalysisPrompts, type PromptConfig } from '@/components/analysis/prompt-editor';
-import { useSSE, useEngineHealth } from '@/lib/hooks';
+import { useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { updateProject, getProject } from '@/lib/api';
 import type { AnalysisOptionsFormData } from '@/lib/utils/validation';
-import type { SSEMessage } from '@/lib/types';
+import { startTaskWithSSE } from '@/lib/utils/task-sse-manager';
 import {
   Tabs,
   TabsContent,
@@ -73,7 +73,7 @@ const extractModelSelections = (prompts: AnalysisPrompts | null): Record<string,
 export default function AnalysisPage() {
   const searchParams = useSearchParams();
   const engineStatus = useEngineHealth();
-  const { startTask, updateTask, addLog, completeTask, errorTask } = useTaskProgress();
+  const { startTask, updateTask, addLog, completeTask, errorTask, cancelTask } = useTaskProgress();
 
   // Get pre-selected prospect IDs and project from URL
   const preSelectedIds = searchParams.get('prospect_ids')?.split(',') || [];
@@ -82,11 +82,6 @@ export default function AnalysisPage() {
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
-
-  // Analysis state
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [sseUrl, setSseUrl] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{ current: number; total: number } | undefined>();
 
   // Prompt state
   const [defaultPrompts, setDefaultPrompts] = useState<AnalysisPrompts | null>(null);
@@ -119,32 +114,6 @@ export default function AnalysisPage() {
   const refreshLeads = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
   }, []);
-
-  // SSE connection
-  const { status, error: sseError } = useSSE({
-    url: sseUrl,
-    onMessage: (message: SSEMessage<any>) => {
-      console.log('SSE Message:', message);
-
-      if (message.type === 'progress') {
-        setProgress({
-          current: message.data.current || 0,
-          total: message.data.total || 100
-        });
-      } else if (message.type === 'complete') {
-        setIsAnalyzing(false);
-        setSseUrl(null);
-      } else if (message.type === 'error') {
-        setIsAnalyzing(false);
-        setSseUrl(null);
-      }
-    },
-    onError: (error) => {
-      console.error('SSE Error:', error);
-      setIsAnalyzing(false);
-      setSseUrl(null);
-    }
-  });
 
   // Load default prompts on mount
   useEffect(() => {
@@ -273,9 +242,7 @@ export default function AnalysisPage() {
       return;
     }
 
-    setIsAnalyzing(true);
-    setProgress(undefined);
-
+    // Save prompts to project (non-blocking)
     if (selectedProjectId && currentPrompts) {
       try {
         await updateProject(selectedProjectId, {
@@ -290,105 +257,56 @@ export default function AnalysisPage() {
 
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const taskTitle = `Intelligent Analysis: ${selectedIds.length} prospects (${timestamp})`;
-    const taskId = startTask('analysis', taskTitle, selectedIds.length);
-
     const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
 
-    try {
-      addLog(taskId, 'Starting intelligent multi-page analysis...', 'info');
+    // Start SSE operation with automatic task tracking (non-blocking!)
+    const connection = startTaskWithSSE({
+      url: `${API_BASE}/api/analyze`,
+      method: 'POST',
+      body: {
+        prospect_ids: selectedIds,
+        project_id: selectedProjectId,
+        custom_prompts: (config as any).custom_prompts || undefined,
+        model_selections: (config as any).model_selections || currentModelSelections
+      },
+      taskType: 'analysis',
+      title: taskTitle,
+      total: selectedIds.length,
+      taskManager: {
+        startTask,
+        updateTask,
+        addLog,
+        completeTask,
+        errorTask,
+        cancelTask
+      },
+      onMessage: (message, taskId) => {
+        // Handle custom SSE message formats from analysis engine
+        const data = message.data as any;
 
-      const response = await fetch(`${API_BASE}/api/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prospect_ids: selectedIds,
-          project_id: selectedProjectId,
-          custom_prompts: (config as any).custom_prompts || undefined,
-          model_selections: (config as any).model_selections || currentModelSelections
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Analysis failed: ${response.statusText}`);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('text/event-stream')) {
-        const reader = response.body?.getReader();
-        const decoder = new TextDecoder();
-
-        if (!reader) {
-          throw new Error('No response stream available');
-        }
-
-        let analyzed = 0;
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('event:')) {
-              continue;
-            } else if (line.startsWith('data:')) {
-              try {
-                const data = JSON.parse(line.slice(5));
-
-                if (data.message && data.total) {
-                  addLog(taskId, data.message, 'info');
-                } else if (data.current && data.company) {
-                  addLog(taskId, `Analyzing ${data.company} (${data.current}/${data.total})...`, 'info');
-                } else if (data.success === false && data.company) {
-                  analyzed++;
-                  updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
-                  addLog(taskId, `❌ ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
-                } else if (data.grade && data.company) {
-                  analyzed++;
-                  updateTask(taskId, analyzed, `Completed ${analyzed}/${selectedIds.length}`);
-                  addLog(taskId, `✅ ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
-                } else if (data.successful !== undefined && data.failed !== undefined) {
-                  addLog(taskId, `Analysis complete: ${data.successful}/${data.total} successful`, 'success');
-                  completeTask(taskId);
-                }
-              } catch (e) {
-                console.log('Non-JSON SSE data:', line);
-              }
-            }
+        if (message.type === 'progress' || message.type === 'log') {
+          // Handle different progress message formats
+          if (data.company && data.current) {
+            addLog(taskId, `Analyzing ${data.company} (${data.current}/${data.total})...`, 'info');
+          } else if (data.grade && data.company) {
+            addLog(taskId, `✅ ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
+          } else if (data.success === false && data.company) {
+            addLog(taskId, `❌ ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
           }
         }
-      } else {
-        const result = await response.json();
-
-        if (result.success) {
-          result.data.results.forEach((r: any, i: number) => {
-            updateTask(taskId, i + 1, `Completed ${i + 1}/${result.data.total}`);
-
-            if (r.success) {
-              addLog(taskId, `✅ ${r.company_name}: Grade ${r.grade} (${r.score}/100)`, 'success');
-            } else {
-              addLog(taskId, `❌ ${r.company_name}: ${r.error}`, 'error');
-            }
-          });
-
-          addLog(taskId, `Analysis complete: ${result.data.successful}/${result.data.total} successful`, 'success');
-          completeTask(taskId);
-        } else {
-          throw new Error(result.error || 'Analysis failed');
-        }
+      },
+      onComplete: (data, taskId) => {
+        addLog(taskId, `Analysis complete!`, 'success');
+        // Refresh leads data after completion
+        // Note: You may want to call a refresh function here
+      },
+      onError: (error, taskId) => {
+        console.error('Analysis failed:', error);
+        alert(`Analysis failed: ${error.message}`);
       }
+    });
 
-      setIsAnalyzing(false);
-    } catch (error: any) {
-      console.error('Failed to analyze:', error);
-      alert(`Failed to analyze: ${error.message}`);
-      errorTask(taskId, error.message);
-      setIsAnalyzing(false);
-    }
+    console.log(`✓ Started analysis task: ${connection.taskId} (non-blocking)`);
   };
 
   const isAnalysisEngineOffline = engineStatus.analysis === 'offline';
@@ -446,7 +364,7 @@ export default function AnalysisPage() {
               <div className="lg:col-span-2">
                 <QuickWebsiteAnalysis
                   selectedProjectId={selectedProjectId}
-                  disabled={isAnalyzing}
+                  disabled={false}
                   engineOffline={isAnalysisEngineOffline}
                   onSuccess={refreshLeads}
                 />
@@ -457,7 +375,7 @@ export default function AnalysisPage() {
                 <AnalysisConfig
                   prospectCount={selectedIds.length}
                   onSubmit={handleAnalyze}
-                  isLoading={isAnalyzing}
+                  isLoading={false}
                   disabled={isAnalysisEngineOffline}
                   customPrompts={currentPrompts || undefined}
                   defaultPrompts={defaultPrompts || undefined}

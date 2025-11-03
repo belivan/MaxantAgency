@@ -112,3 +112,110 @@ Once migration is complete:
 2. The UI will automatically start saving model selections on first generation
 3. Existing projects will have `null` for these fields (that's expected)
 4. New projects and auto-forks will preserve model selections
+
+---
+
+# Database Migration: Rate Limit Tracking (2025-11-03)
+
+## Overview
+This migration adds support for tracking rate limit errors and retry attempts in the `ai_calls` table.
+
+## New Columns Added
+- `retry_count` (INTEGER) - Number of retry attempts needed due to rate limits
+- `rate_limit_hit` (BOOLEAN) - True if this call hit a 429 rate limit error
+
+## How to Run the Migration
+
+### Option 1: Supabase Dashboard (Recommended)
+
+1. Go to your [Supabase Dashboard](https://supabase.com/dashboard/)
+2. Select your project
+3. Navigate to **SQL Editor** in the left sidebar
+4. Click **New Query**
+5. Copy the contents of `add-rate-limit-fields.sql`
+6. Paste into the SQL editor
+7. Click **Run** or press `Ctrl+Enter`
+
+### Option 2: Command Line (psql)
+
+```bash
+psql "postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres" -f migrations/add-rate-limit-fields.sql
+```
+
+## Verify Migration Success
+
+Run this query in Supabase SQL Editor:
+```sql
+SELECT column_name, data_type, column_default
+FROM information_schema.columns
+WHERE table_name = 'ai_calls'
+  AND column_name IN ('retry_count', 'rate_limit_hit');
+```
+
+Expected output:
+- `retry_count` (integer, default: 0)
+- `rate_limit_hit` (boolean, default: false)
+
+## Rollback Procedure
+
+If you need to rollback:
+```sql
+ALTER TABLE ai_calls DROP COLUMN IF EXISTS retry_count;
+ALTER TABLE ai_calls DROP COLUMN IF EXISTS rate_limit_hit;
+DROP INDEX IF EXISTS idx_ai_calls_rate_limit_hit;
+DROP INDEX IF EXISTS idx_ai_calls_retry_count;
+```
+
+## Useful Queries After Migration
+
+### Check for rate limit issues:
+```sql
+SELECT
+  DATE_TRUNC('hour', created_at) as hour,
+  engine,
+  model,
+  COUNT(*) as total_calls,
+  SUM(CASE WHEN rate_limit_hit THEN 1 ELSE 0 END) as rate_limit_hits,
+  AVG(retry_count) as avg_retries
+FROM ai_calls
+WHERE created_at > NOW() - INTERVAL '24 hours'
+GROUP BY hour, engine, model
+HAVING SUM(CASE WHEN rate_limit_hit THEN 1 ELSE 0 END) > 0
+ORDER BY hour DESC, rate_limit_hits DESC;
+```
+
+### Find which models hit rate limits most:
+```sql
+SELECT
+  provider,
+  model,
+  COUNT(*) as calls_with_rate_limits,
+  AVG(retry_count) as avg_retries,
+  MAX(retry_count) as max_retries
+FROM ai_calls
+WHERE rate_limit_hit = true
+GROUP BY provider, model
+ORDER BY calls_with_rate_limits DESC;
+```
+
+### Analyze retry patterns:
+```sql
+SELECT
+  retry_count,
+  COUNT(*) as occurrences,
+  ROUND(AVG(duration_ms)) as avg_duration_ms,
+  ROUND(AVG(cost)::numeric, 4) as avg_cost
+FROM ai_calls
+WHERE retry_count > 0
+GROUP BY retry_count
+ORDER BY retry_count;
+```
+
+## What This Enables
+
+✅ **Rate Limit Monitoring** - Track when and how often you hit API rate limits
+✅ **Cost Analysis** - See how retries affect costs and duration
+✅ **Provider Comparison** - Identify which providers have the most rate limit issues
+✅ **Capacity Planning** - Data-driven decisions on tier upgrades
+✅ **Alerting** - Set up alerts when rate limit hits exceed thresholds
+✅ **Performance Analysis** - Correlate retry counts with response times

@@ -62,19 +62,13 @@ export async function generateEmail(lead, options = {}) {
     // Determine model to use
     const modelToUse = model || prompt.model || 'claude-haiku-4-5';
 
-    // Map model names to actual Claude model IDs
-    const modelMap = {
-      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
-      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
-      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
-    };
-
-    const actualModel = modelMap[modelToUse] || modelToUse;
+    // Let the centralized AI client handle model resolution - no mapping needed
+    // The AI client supports both naming conventions and knows the correct API-specific IDs
 
     // Call centralized AI client
     const startTime = Date.now();
     const response = await callAI({
-      model: actualModel,
+      model: modelToUse,
       systemPrompt: prompt.systemPrompt,
       userPrompt: filledPrompt,
       temperature: prompt.temperature || 0.7,
@@ -170,18 +164,12 @@ async function generateSubjectLine(lead, options = {}) {
     const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
     const modelToUse = options.model || prompt.model || 'claude-haiku-4-5';
 
-    // Map model names to actual Claude model IDs
-    const modelMap = {
-      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
-      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
-      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
-    };
-
-    const actualModel = modelMap[modelToUse] || modelToUse;
+    // Let the centralized AI client handle model resolution - no mapping needed
+    // The AI client supports both naming conventions and knows the correct API-specific IDs
 
     const startTime = Date.now();
     const response = await callAI({
-      model: actualModel,
+      model: modelToUse,
       systemPrompt: prompt.systemPrompt,
       userPrompt: filledPrompt,
       temperature: prompt.temperature || 0.9,

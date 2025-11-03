@@ -30,46 +30,143 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const projectId = searchParams.get('project_id');
+    const verified = searchParams.get('verified');
+    const industry = searchParams.get('industry');
+    const city = searchParams.get('city');
+    const minRating = searchParams.get('min_rating');
+    const fields = searchParams.get('fields'); // Support selective field fetching
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // Build query - use INNER join when filtering by project, LEFT join otherwise
-    const joinType = projectId ? '!inner' : '';
-    let query = supabase
-      .from('prospects')
-      .select(`
-        *,
-        project_prospects${joinType}(
-          project_id,
-          projects(
-            id,
-            name
-          )
-        )
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    // Apply filters
-    if (status) {
-      query = query.eq('status', status);
-    }
+    // Build query - always query from prospects table
+    let query;
+    let prospectIdsInProject: string[] | null = null;
 
     if (projectId) {
-      query = query.eq('project_prospects.project_id', projectId);
+      // First, get all prospect IDs in this project
+      const { data: projectProspectsData, error: projectProspectsError } = await supabase
+        .from('project_prospects')
+        .select('prospect_id')
+        .eq('project_id', projectId);
+
+      if (projectProspectsError) {
+        console.error('Error fetching project prospects:', projectProspectsError);
+        throw new Error(`Failed to fetch project prospects: ${projectProspectsError.message}`);
+      }
+
+      prospectIdsInProject = projectProspectsData?.map(pp => pp.prospect_id) || [];
+
+      // If no prospects in project, return empty result
+      if (prospectIdsInProject.length === 0) {
+        return NextResponse.json({
+          success: true,
+          prospects: [],
+          total: 0,
+          count: 0
+        });
+      }
+
+      // Now query prospects table with those IDs
+      const selectFields = fields === 'id'
+        ? 'id'
+        : `*`;
+
+      query = supabase
+        .from('prospects')
+        .select(selectFields, { count: 'exact' })
+        .in('id', prospectIdsInProject);
+
+      // Apply filters directly on prospects columns
+      if (status) {
+        query = query.eq('status', status);
+      }
+      if (verified) {
+        query = query.eq('verified', verified === 'true');
+      }
+      if (industry) {
+        query = query.ilike('industry', `%${industry}%`);
+      }
+      if (city) {
+        query = query.ilike('city', `%${city}%`);
+      }
+      if (minRating) {
+        query = query.gte('rating', parseFloat(minRating));
+      }
+
+      // Only add ordering for full record fetches (not for ID-only)
+      if (fields !== 'id') {
+        query = query.order('created_at', { ascending: false });
+      }
+    } else {
+      // No project filter - query prospects table directly
+      const selectFields = fields === 'id'
+        ? 'id'
+        : `*, project_prospects(project_id, projects(id, name))`;
+
+      query = supabase
+        .from('prospects')
+        .select(selectFields, { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      // Apply filters
+      if (status) {
+        query = query.eq('status', status);
+      }
+      if (verified) {
+        query = query.eq('verified', verified === 'true');
+      }
+      if (industry) {
+        query = query.ilike('industry', `%${industry}%`);
+      }
+      if (city) {
+        query = query.ilike('city', `%${city}%`);
+      }
+      if (minRating) {
+        query = query.gte('rating', parseFloat(minRating));
+      }
+    }
+
+    // Only apply pagination if not fetching just IDs
+    if (fields !== 'id') {
+      query = query.range(offset, offset + limit - 1);
     }
 
     const { data, error, count } = await query;
 
-    // Transform data to flatten project info
-    const prospects = data?.map(prospect => ({
-      ...prospect,
-      project_name: prospect.project_prospects?.[0]?.projects?.name || null,
-      project_id: prospect.project_prospects?.[0]?.project_id || null,
-      project_prospects: undefined // Remove the nested structure
-    })) || [];
+    if (error) {
+      console.error('Supabase query error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw new Error(`Database query failed: ${error.message}${error.details ? ` - ${error.details}` : ''}`);
+    }
 
-    if (error) throw error;
+    // Transform data
+    let prospects;
+
+    if (fields === 'id') {
+      // Just extract IDs
+      prospects = data?.map(item => ({ id: item.id })) || [];
+    } else if (projectId) {
+      // When filtering by project, we don't have project info in the response (we used .in() filter)
+      // Add it manually
+      prospects = data?.map(prospect => ({
+        ...prospect,
+        project_id: projectId,
+        project_name: null, // We could fetch this separately if needed
+        project_prospects: undefined
+      })) || [];
+    } else {
+      // No project filter - flatten project info from join
+      prospects = data?.map(prospect => ({
+        ...prospect,
+        project_id: prospect.project_prospects?.[0]?.project_id || null,
+        project_name: prospect.project_prospects?.[0]?.projects?.name || null,
+        project_prospects: undefined // Remove the nested structure
+      })) || [];
+    }
 
     return NextResponse.json({
       success: true,

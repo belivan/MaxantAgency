@@ -138,6 +138,16 @@ async function runSynthesisStage(stageId, variables) {
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);
   console.log(`[Report Synthesis] AI response received (${duration}s, ${response.usage?.total_tokens || 'unknown'} tokens)`);
 
+  // DEBUG: Log response preview if debug mode enabled
+  if (process.env.DEBUG_SYNTHESIS === 'true') {
+    const contentPreview = typeof response.content === 'string'
+      ? response.content.substring(0, 200)
+      : JSON.stringify(response.content).substring(0, 200);
+    console.log(`[Report Synthesis] [DEBUG] Response preview: ${contentPreview}...`);
+    console.log(`[Report Synthesis] [DEBUG] Response type: ${typeof response.content}`);
+    console.log(`[Report Synthesis] [DEBUG] Response length: ${typeof response.content === 'string' ? response.content.length : 'N/A'} chars`);
+  }
+
   const parsed = parseJSONResponse(response.content);
 
   return {
@@ -255,9 +265,17 @@ export async function runReportSynthesis({
   const screenshotReferences = buildScreenshotReferences(safeCrawlPages);
   console.log(`[Report Synthesis] Built ${screenshotReferences.length} screenshot references`);
 
-  // ⚡ PARALLEL SYNTHESIS: Run both stages simultaneously
-  console.log('[Report Synthesis] Running stages 1 & 2 in parallel...');
-  
+  // ⚡ SEQUENTIAL SYNTHESIS: Run stages with dynamic timeout budget
+  console.log('[Report Synthesis] Running synthesis stages sequentially...');
+
+  // Telemetry: Track synthesis timing
+  const synthesisStartTime = Date.now();
+  const telemetry = {
+    startTime: new Date().toISOString(),
+    stages: {},
+    executionMode: 'sequential'
+  };
+
   const execSummaryContext = {
     company_name: companyName || 'Unknown Company',
     industry: industry || 'Unknown',
@@ -274,33 +292,188 @@ export async function runReportSynthesis({
     screenshot_references_json: safeStringify(screenshotReferences)
   };
 
-  // Run both stages in parallel with timeout protection
-  const [dedupResponse, execSummaryResponse] = await Promise.allSettled([
-    runSynthesisStageWithTimeout(STAGES.DEDUP, consolidatedContext, SYNTHESIS_TIMEOUT),
-    runSynthesisStageWithTimeout(STAGES.EXEC_SUMMARY, execSummaryContext, SYNTHESIS_TIMEOUT)
-  ]);
-
-  // Process deduplication results
+  // STAGE 1: Issue Deduplication (CRITICAL - Always run first)
+  console.log('[Report Synthesis] Stage 1: Running issue deduplication...');
+  const dedupStartTime = Date.now();
   let dedupResult = null;
-  if (dedupResponse.status === 'fulfilled') {
-    dedupResult = dedupResponse.value.data;
-    stageMetadata.issueDeduplication = dedupResponse.value.meta;
-    console.log(`[Report Synthesis] ✓ Deduplication complete: ${dedupResult?.consolidatedIssues?.length || 0} consolidated issues`);
-  } else {
-    console.error('[Report Synthesis] ✗ Issue deduplication failed:', dedupResponse.reason);
-    errors.push({ stage: STAGES.DEDUP, message: dedupResponse.reason?.message || 'Unknown error' });
+
+  try {
+    const dedupResponse = await runSynthesisStageWithTimeout(STAGES.DEDUP, consolidatedContext, SYNTHESIS_TIMEOUT);
+    const dedupDuration = Date.now() - dedupStartTime;
+
+    dedupResult = dedupResponse.data;
+
+    // Validate dedup response structure
+    if (!dedupResult || !dedupResult.consolidatedIssues) {
+      console.error('[Report Synthesis] ✗ Invalid dedup response structure:', {
+        hasData: !!dedupResult,
+        dataKeys: dedupResult ? Object.keys(dedupResult) : [],
+        hasConsolidatedIssues: dedupResult?.consolidatedIssues !== undefined
+      });
+      throw new Error('Deduplication returned invalid structure - missing consolidatedIssues array');
+    }
+
+    stageMetadata.issueDeduplication = dedupResponse.meta;
+    telemetry.stages.deduplication = {
+      status: 'success',
+      duration_ms: dedupDuration,
+      tokens: dedupResponse.meta.usage?.total_tokens || 0,
+      cost: dedupResponse.meta.cost || 0,
+      model: dedupResponse.meta.model
+    };
+    console.log(`[Report Synthesis] ✓ Deduplication complete: ${dedupResult?.consolidatedIssues?.length || 0} consolidated issues (${(dedupDuration / 1000).toFixed(1)}s)`);
+  } catch (error) {
+    const dedupDuration = Date.now() - dedupStartTime;
+    const errorMessage = error?.message || 'Unknown error';
+    const isTimeout = errorMessage.includes('timed out');
+    telemetry.stages.deduplication = {
+      status: 'failed',
+      error: errorMessage,
+      timeout: isTimeout,
+      duration_ms: dedupDuration
+    };
+    console.error('[Report Synthesis] ✗ Issue deduplication failed:', error);
+    errors.push({ stage: STAGES.DEDUP, message: errorMessage });
   }
 
-  // Process executive summary results
-  let executiveSummary = null;
-  if (execSummaryResponse.status === 'fulfilled') {
-    executiveSummary = execSummaryResponse.value.data;
-    stageMetadata.executiveSummary = execSummaryResponse.value.meta;
-    console.log('[Report Synthesis] ✓ Executive summary generated successfully');
-  } else {
-    console.error('[Report Synthesis] ✗ Executive summary generation failed:', execSummaryResponse.reason);
-    errors.push({ stage: STAGES.EXEC_SUMMARY, message: execSummaryResponse.reason?.message || 'Unknown error' });
+  // Early return if deduplication failed completely
+  if (!dedupResult) {
+    console.warn('[Report Synthesis] ⚠️  Deduplication failed - returning fallback data without executive summary');
+    const synthesisEndTime = Date.now();
+    telemetry.endTime = new Date().toISOString();
+    telemetry.totalDuration_ms = synthesisEndTime - synthesisStartTime;
+    telemetry.totalDuration_seconds = ((synthesisEndTime - synthesisStartTime) / 1000).toFixed(1);
+    telemetry.earlyReturn = true;
+    telemetry.reason = 'deduplication_failed';
+
+    console.log('\n' + '='.repeat(80));
+    console.log('[Report Synthesis] EARLY TERMINATION - Deduplication Failed');
+    console.log('='.repeat(80));
+    console.log(`Total Duration: ${telemetry.totalDuration_seconds}s`);
+    console.log(`Returning fallback data`);
+    console.log('='.repeat(80) + '\n');
+
+    return {
+      consolidatedIssues: formatConsolidatedFallback(issuesByModule),
+      mergeLog: [],
+      consolidationStatistics: null,
+      executiveSummary: null,
+      executiveMetadata: null,
+      screenshotReferences,
+      stageMetadata,
+      errors,
+      telemetry
+    };
   }
+
+  // STAGE 2: Executive Summary (Optional - Only if time permits)
+  let executiveSummary = null;
+  const elapsedTime = Date.now() - synthesisStartTime;
+  const remainingTime = SYNTHESIS_TIMEOUT - elapsedTime;
+  const minimumTimeNeeded = 60000; // Need at least 1 minute for executive summary
+
+  if (remainingTime > minimumTimeNeeded) {
+    console.log(`[Report Synthesis] Stage 2: Running executive summary (${(remainingTime / 1000).toFixed(0)}s remaining)...`);
+    const execStartTime = Date.now();
+
+    try {
+      const execResponse = await runSynthesisStageWithTimeout(STAGES.EXEC_SUMMARY, execSummaryContext, remainingTime);
+      const execDuration = Date.now() - execStartTime;
+
+      executiveSummary = execResponse.data;
+      stageMetadata.executiveSummary = execResponse.meta;
+      telemetry.stages.executiveSummary = {
+        status: 'success',
+        duration_ms: execDuration,
+        tokens: execResponse.meta.usage?.total_tokens || 0,
+        cost: execResponse.meta.cost || 0,
+        model: execResponse.meta.model
+      };
+      console.log(`[Report Synthesis] ✓ Executive summary generated successfully (${(execDuration / 1000).toFixed(1)}s)`);
+    } catch (error) {
+      const execDuration = Date.now() - execStartTime;
+      const errorMessage = error?.message || 'Unknown error';
+      const isTimeout = errorMessage.includes('timed out');
+      telemetry.stages.executiveSummary = {
+        status: 'failed',
+        error: errorMessage,
+        timeout: isTimeout,
+        duration_ms: execDuration
+      };
+      console.error('[Report Synthesis] ✗ Executive summary generation failed:', error);
+      errors.push({ stage: STAGES.EXEC_SUMMARY, message: errorMessage });
+    }
+  } else {
+    console.warn(`[Report Synthesis] ⚠ Skipping executive summary - insufficient time remaining (${(remainingTime / 1000).toFixed(0)}s, need ${(minimumTimeNeeded / 1000)}s)`);
+    telemetry.stages.executiveSummary = {
+      status: 'skipped',
+      reason: 'insufficient_time',
+      remainingTime_ms: remainingTime,
+      minimumNeeded_ms: minimumTimeNeeded
+    };
+    errors.push({
+      stage: STAGES.EXEC_SUMMARY,
+      message: `Skipped due to insufficient time (${(remainingTime / 1000).toFixed(0)}s remaining, need ${(minimumTimeNeeded / 1000)}s)`
+    });
+  }
+
+  // Calculate total synthesis duration
+  const synthesisEndTime = Date.now();
+  const totalDuration = synthesisEndTime - synthesisStartTime;
+  telemetry.endTime = new Date().toISOString();
+  telemetry.totalDuration_ms = totalDuration;
+  telemetry.totalDuration_seconds = (totalDuration / 1000).toFixed(1);
+
+  // Log comprehensive telemetry
+  console.log('\n' + '='.repeat(80));
+  console.log('[Report Synthesis] TELEMETRY SUMMARY');
+  console.log('='.repeat(80));
+  console.log(`Execution Mode: ${telemetry.executionMode}`);
+  console.log(`Total Duration: ${telemetry.totalDuration_seconds}s (${telemetry.totalDuration_ms}ms)`);
+  console.log('\nStage: Deduplication');
+  if (telemetry.stages.deduplication) {
+    if (telemetry.stages.deduplication.status === 'success') {
+      console.log(`  ✓ Status: ${telemetry.stages.deduplication.status}`);
+      console.log(`  Duration: ${(telemetry.stages.deduplication.duration_ms / 1000).toFixed(1)}s`);
+      console.log(`  Tokens: ${telemetry.stages.deduplication.tokens}`);
+      console.log(`  Cost: $${telemetry.stages.deduplication.cost?.toFixed(4) || '0.0000'}`);
+      console.log(`  Model: ${telemetry.stages.deduplication.model}`);
+    } else {
+      console.log(`  ✗ Status: ${telemetry.stages.deduplication.status}`);
+      console.log(`  Error: ${telemetry.stages.deduplication.error}`);
+      console.log(`  Timeout: ${telemetry.stages.deduplication.timeout ? 'Yes' : 'No'}`);
+    }
+  }
+  console.log('\nStage: Executive Summary');
+  if (telemetry.stages.executiveSummary) {
+    if (telemetry.stages.executiveSummary.status === 'success') {
+      console.log(`  ✓ Status: ${telemetry.stages.executiveSummary.status}`);
+      console.log(`  Duration: ${(telemetry.stages.executiveSummary.duration_ms / 1000).toFixed(1)}s`);
+      console.log(`  Tokens: ${telemetry.stages.executiveSummary.tokens}`);
+      console.log(`  Cost: $${telemetry.stages.executiveSummary.cost?.toFixed(4) || '0.0000'}`);
+      console.log(`  Model: ${telemetry.stages.executiveSummary.model}`);
+    } else if (telemetry.stages.executiveSummary.status === 'skipped') {
+      console.log(`  ⚠ Status: ${telemetry.stages.executiveSummary.status}`);
+      console.log(`  Reason: ${telemetry.stages.executiveSummary.reason}`);
+      console.log(`  Remaining Time: ${(telemetry.stages.executiveSummary.remainingTime_ms / 1000).toFixed(1)}s`);
+      console.log(`  Minimum Needed: ${(telemetry.stages.executiveSummary.minimumNeeded_ms / 1000).toFixed(1)}s`);
+    } else {
+      console.log(`  ✗ Status: ${telemetry.stages.executiveSummary.status}`);
+      console.log(`  Error: ${telemetry.stages.executiveSummary.error || 'Unknown'}`);
+      if (telemetry.stages.executiveSummary.timeout !== undefined) {
+        console.log(`  Timeout: ${telemetry.stages.executiveSummary.timeout ? 'Yes' : 'No'}`);
+      }
+      if (telemetry.stages.executiveSummary.duration_ms) {
+        console.log(`  Duration before failure: ${(telemetry.stages.executiveSummary.duration_ms / 1000).toFixed(1)}s`);
+      }
+    }
+  }
+
+  const totalCost = (telemetry.stages.deduplication?.cost || 0) + (telemetry.stages.executiveSummary?.cost || 0);
+  const totalTokens = (telemetry.stages.deduplication?.tokens || 0) + (telemetry.stages.executiveSummary?.tokens || 0);
+  console.log(`\nTotal Cost: $${totalCost.toFixed(4)}`);
+  console.log(`Total Tokens: ${totalTokens}`);
+  console.log('='.repeat(80) + '\n');
 
   console.log('[Report Synthesis] Pipeline complete');
   console.log(`[Report Synthesis] Total errors: ${errors.length}`);

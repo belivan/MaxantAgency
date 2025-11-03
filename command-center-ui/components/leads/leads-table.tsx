@@ -21,7 +21,8 @@ import {
   ChevronsRight,
   RefreshCw,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  CheckSquare
 } from 'lucide-react';
 import {
   Table,
@@ -375,6 +376,18 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Select All button - shows when not all leads are selected */}
+            {selectedIds.length < filteredAndSortedLeads.length && filteredAndSortedLeads.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedIds(filteredAndSortedLeads.map(l => l.id))}
+                title="Select all leads on this page"
+              >
+                <CheckSquare className="w-4 h-4 mr-2" />
+                Select All ({filteredAndSortedLeads.length})
+              </Button>
+            )}
             {selectedIds.length > 0 && (
               <>
                 <Button

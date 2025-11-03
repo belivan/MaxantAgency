@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Filter, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Filter, RefreshCw, ChevronLeft, ChevronRight, CheckSquare, Square } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -116,6 +116,54 @@ export function ProspectSelector({
       ...prev,
       offset: (newPage - 1) * limit
     }));
+  };
+
+  // Select all prospects in project (across all pages)
+  const handleSelectAllInProject = async () => {
+    if (!filters.project_id) {
+      alert('Please select a project first');
+      return;
+    }
+
+    try {
+      // Fetch ALL prospect IDs for the project with current filters
+      const params = new URLSearchParams({
+        project_id: filters.project_id,
+        fields: 'id' // Only fetch IDs to minimize data transfer
+      });
+
+      // Apply current filters
+      if (filters.status) params.append('status', filters.status as string);
+      if (filters.verified !== undefined) params.append('verified', String(filters.verified));
+      if (filters.industry) params.append('industry', filters.industry as string);
+      if (filters.city) params.append('city', filters.city as string);
+      if (filters.min_rating) params.append('min_rating', String(filters.min_rating));
+
+      const response = await fetch(`/api/prospects?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // API returns { success: true, prospects: [...], total: X }
+      if (data.success && data.prospects && Array.isArray(data.prospects)) {
+        const allIds = data.prospects.map((p: any) => p.id);
+        onSelectionChange(allIds);
+        console.log(`✓ Selected ${allIds.length} prospects across all pages`);
+      } else {
+        throw new Error(data.error || 'Invalid response format from server');
+      }
+    } catch (err: any) {
+      console.error('Failed to select all prospects:', err);
+      alert(`Failed to select all prospects: ${err.message}`);
+    }
+  };
+
+  // Clear all selections
+  const handleClearAll = () => {
+    onSelectionChange([]);
   };
 
   const pageSize = filters.limit || 10;
@@ -268,6 +316,52 @@ export function ProspectSelector({
       ) : (
         /* Prospects Table */
         <>
+          {/* Selection Actions */}
+          {total > 0 && (
+            <Card className="mb-4">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSelectAllInProject}
+                      disabled={!filters.project_id || loading}
+                      title="Select all prospects in project (across all pages)"
+                    >
+                      <CheckSquare className="w-4 h-4 mr-2" />
+                      Select All ({total})
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearAll}
+                      disabled={selectedIds.length === 0}
+                      title="Clear all selections"
+                    >
+                      <Square className="w-4 h-4 mr-2" />
+                      Clear All
+                    </Button>
+                  </div>
+                  <div className="text-sm">
+                    {selectedIds.length > 0 ? (
+                      <>
+                        <span className="font-semibold text-primary">{selectedIds.length} selected</span>
+                        {selectedIds.length > pageSize && (
+                          <span className="text-muted-foreground ml-1">
+                            ({Math.min(prospects.filter(p => selectedIds.includes(p.id)).length, endIndex - startIndex + 1)} visible on this page)
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-muted-foreground">No prospects selected</span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Results Summary */}
           {total > 0 && (
             <div className="mb-3 text-sm text-muted-foreground">

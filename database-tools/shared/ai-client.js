@@ -15,6 +15,7 @@ import { getCachedResponse, cacheResponse } from './ai-cache.js';
 import sharp from 'sharp';
 import fetch from 'node-fetch';
 import { createClient } from '@supabase/supabase-js';
+import { getRateLimitTracker } from './rate-limit-tracker.js';
 
 // Load environment variables from the root .env file
 const __filename = fileURLToPath(import.meta.url);
@@ -26,6 +27,17 @@ const DEBUG_AI_CALLS = process.env.DEBUG_AI_CALLS === 'true';
 const DEBUG_AI_SAVE_TO_FILE = process.env.DEBUG_AI_SAVE_TO_FILE === 'true';
 const DEBUG_OUTPUT_DIR = process.env.DEBUG_OUTPUT_DIR || './debug-logs';
 const LOG_AI_CALLS_TO_DB = process.env.LOG_AI_CALLS_TO_DB === 'true';
+
+// Rate limiting and retry configuration
+const ENABLE_AUTO_RETRY = process.env.ENABLE_AUTO_RETRY !== 'false';
+const MAX_RETRY_ATTEMPTS = parseInt(process.env.MAX_RETRY_ATTEMPTS || '3');
+const RETRY_BASE_DELAY_MS = 1000; // 1 second base delay
+const RETRY_MAX_DELAY_MS = 60000; // Max 60 seconds
+const RETRY_JITTER_MS = 1000; // Random jitter up to 1 second
+
+// Timeout configuration
+const AI_TIMEOUT = parseInt(process.env.AI_TIMEOUT || '180000'); // 3 minutes default
+const OPENAI_TIMEOUT = parseInt(process.env.OPENAI_TIMEOUT || AI_TIMEOUT); // Use AI_TIMEOUT as fallback
 
 // Supabase client for database logging (initialized lazily)
 let supabase = null;
@@ -154,7 +166,7 @@ async function saveDebugToFile(callData) {
  * Log AI call to database for cost tracking and debugging
  * Non-blocking - does not throw errors if logging fails
  */
-async function logAICallToDatabase({ engine, module, model, provider, request, response, durationMs, cached, error }) {
+async function logAICallToDatabase({ engine, module, model, provider, request, response, durationMs, cached, error, retryCount, rateLimitHit }) {
   if (!LOG_AI_CALLS_TO_DB) return;
 
   try {
@@ -185,7 +197,9 @@ async function logAICallToDatabase({ engine, module, model, provider, request, r
       },
       duration_ms: durationMs,
       cached: cached || false,
-      error: error || null
+      error: error || null,
+      retry_count: retryCount || 0,
+      rate_limit_hit: rateLimitHit || false
     };
 
     const { error: dbError } = await db.from('ai_calls').insert(logEntry);
@@ -384,6 +398,97 @@ async function compressImageIfNeeded(image) {
   }
 }
 
+/**
+ * Calculate retry delay with exponential backoff and jitter
+ */
+function calculateRetryDelay(attemptNumber, retryAfterSeconds = null) {
+  // If API provides Retry-After header, respect it
+  if (retryAfterSeconds && retryAfterSeconds > 0) {
+    return Math.min(retryAfterSeconds * 1000, RETRY_MAX_DELAY_MS);
+  }
+
+  // Exponential backoff: delay = base * (2 ^ attempt)
+  const exponentialDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attemptNumber);
+
+  // Add random jitter to prevent thundering herd
+  const jitter = Math.random() * RETRY_JITTER_MS;
+
+  // Cap at maximum delay
+  return Math.min(exponentialDelay + jitter, RETRY_MAX_DELAY_MS);
+}
+
+/**
+ * Sleep for specified milliseconds
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if error is a rate limit error (429)
+ */
+function isRateLimitError(error) {
+  if (!error) return false;
+
+  const errorMessage = (error.message || '').toLowerCase();
+  const errorString = String(error).toLowerCase();
+
+  return (
+    errorMessage.includes('429') ||
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('rate_limit') ||
+    errorString.includes('429') ||
+    error.status === 429 ||
+    error.statusCode === 429
+  );
+}
+
+/**
+ * Extract Retry-After value from error (if available)
+ */
+function extractRetryAfter(error) {
+  try {
+    // Check for Retry-After in error message or headers
+    if (error.response?.headers) {
+      const retryAfter = error.response.headers['retry-after'];
+      if (retryAfter) {
+        return parseInt(retryAfter);
+      }
+    }
+
+    // Try to parse from error message
+    const match = error.message?.match(/retry.?after[:\s]+(\d+)/i);
+    if (match) {
+      return parseInt(match[1]);
+    }
+  } catch (e) {
+    // Ignore parsing errors
+  }
+
+  return null;
+}
+
+/**
+ * Create a timeout promise that rejects after specified milliseconds
+ */
+function createTimeoutPromise(timeoutMs, operationName = 'AI call') {
+  return new Promise((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+}
+
+/**
+ * Execute an async operation with timeout enforcement
+ */
+async function withTimeout(promise, timeoutMs, operationName = 'Operation') {
+  return Promise.race([
+    promise,
+    createTimeoutPromise(timeoutMs, operationName)
+  ]);
+}
+
 export async function callAI({
   model,
   systemPrompt,
@@ -457,31 +562,111 @@ export async function callAI({
   // Determine provider from model ID
   const provider = getProvider(model);
 
+  // Get rate limit tracker
+  const rateLimitTracker = getRateLimitTracker();
+
+  // Estimate token usage (rough estimates for rate limiting)
+  const estimatedInputTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
+  const estimatedOutputTokens = maxTokens || 4000;
+
+  // Retry loop with exponential backoff
   let response;
-  if (provider === 'anthropic') {
-    response = await callClaude({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, maxTokens });
-  } else {
+  let lastError;
+  let retryCount = 0;
+
+  for (let attempt = 0; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
     try {
-      response = await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, jsonMode, maxTokens, provider });
-    } catch (error) {
-      const message = (error?.message || '').toLowerCase();
-      // Auto-fallback to GPT-5-mini if GPT-5 hits token limits (only when explicitly enabled)
-      if (autoFallback && model === 'gpt-5' && message.includes('token limit')) {
-        console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-5-mini.');
-        response = await callOpenAICompatible({
-          model: 'gpt-5-mini',
-          systemPrompt,
-          userPrompt,
-          temperature,
-          images: normalizedImages,
-          jsonMode,
-          maxTokens,
-          provider: 'openai'
-        });
-      } else {
-        throw error;
+      // Check rate limits before making request (skip on retries after rate limit error)
+      if (attempt === 0) {
+        const limitCheck = rateLimitTracker.checkLimit(provider, model, estimatedInputTokens, estimatedOutputTokens);
+
+        if (!limitCheck.allowed) {
+          console.warn(`[AI Client] Rate limit would be exceeded for ${provider}/${model}: ${limitCheck.reason}`);
+          console.warn(`[AI Client] Wait time: ${limitCheck.waitTime}s, Current: ${limitCheck.current}, Limit: ${limitCheck.limit}`);
+
+          // Wait before retrying (respecting rate limits)
+          if (limitCheck.waitTime > 0 && limitCheck.waitTime <= 60) {
+            console.log(`[AI Client] Waiting ${limitCheck.waitTime}s before retrying...`);
+            await sleep(limitCheck.waitTime * 1000);
+          } else {
+            throw new Error(`Rate limit exceeded: ${limitCheck.reason}. Would need to wait ${limitCheck.waitTime}s`);
+          }
+        }
       }
+
+      // Make the actual API call
+      if (provider === 'anthropic') {
+        response = await callClaude({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, maxTokens });
+      } else {
+        try {
+          response = await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, jsonMode, maxTokens, provider });
+        } catch (error) {
+          const message = (error?.message || '').toLowerCase();
+          // Auto-fallback to GPT-5-mini if GPT-5 hits token limits (only when explicitly enabled)
+          if (autoFallback && model === 'gpt-5' && message.includes('token limit')) {
+            console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-5-mini.');
+            response = await callOpenAICompatible({
+              model: 'gpt-5-mini',
+              systemPrompt,
+              userPrompt,
+              temperature,
+              images: normalizedImages,
+              jsonMode,
+              maxTokens,
+              provider: 'openai'
+            });
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // Record successful usage
+      if (response && response.usage) {
+        rateLimitTracker.recordUsage(
+          provider,
+          model,
+          response.usage.prompt_tokens || 0,
+          response.usage.completion_tokens || 0
+        );
+      }
+
+      // Success - break out of retry loop
+      break;
+
+    } catch (error) {
+      lastError = error;
+
+      // Check if this is a rate limit error
+      if (isRateLimitError(error)) {
+        if (attempt < MAX_RETRY_ATTEMPTS && ENABLE_AUTO_RETRY) {
+          retryCount++;
+
+          // Extract Retry-After header if available
+          const retryAfterSeconds = extractRetryAfter(error);
+          const delayMs = calculateRetryDelay(attempt, retryAfterSeconds);
+          const delaySec = Math.ceil(delayMs / 1000);
+
+          console.warn(`[AI Client] Rate limit hit for ${provider}/${model} (attempt ${attempt + 1}/${MAX_RETRY_ATTEMPTS + 1})`);
+          console.log(`[AI Client] Retrying in ${delaySec}s...`);
+
+          await sleep(delayMs);
+          continue; // Retry
+        } else {
+          // Max retries exceeded or retry disabled
+          console.error(`[AI Client] Rate limit error after ${attempt + 1} attempts`);
+          throw error;
+        }
+      }
+
+      // Not a rate limit error - throw immediately
+      throw error;
     }
+  }
+
+  // If we exhausted all retries without success
+  if (!response && lastError) {
+    throw lastError;
   }
 
   const callDuration = Date.now() - callStartTime;
@@ -539,6 +724,8 @@ export async function callAI({
     },
     response,
     durationMs: callDuration,
+    retryCount,
+    rateLimitHit: retryCount > 0,
     cached: false,
     error: null
   }).catch(err => {
@@ -661,8 +848,12 @@ async function callOpenAICompatible({
       requestBody.response_format = { type: 'json_object' };
     }
 
-    // Make API call
-    const response = await client.chat.completions.create(requestBody);
+    // Make API call with timeout enforcement
+    const response = await withTimeout(
+      client.chat.completions.create(requestBody),
+      OPENAI_TIMEOUT,
+      `${provider} API call (${model})`
+    );
 
     // Calculate cost
     const cost = calculateCost(model, response.usage);
@@ -762,19 +953,23 @@ async function callClaude({
       }
     }
 
-    // Make API call - max_tokens is required by Claude API
-    const response = await client.messages.create({
-      model,
-      max_tokens: adjustedMaxTokens, // Required field - using model's native max (64K)
-      temperature,
-      system: systemPrompt,
-      messages: [
-        {
-          role: 'user',
-          content
-        }
-      ]
-    });
+    // Make API call with timeout enforcement - max_tokens is required by Claude API
+    const response = await withTimeout(
+      client.messages.create({
+        model,
+        max_tokens: adjustedMaxTokens, // Required field - using model's native max (64K)
+        temperature,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content
+          }
+        ]
+      }),
+      AI_TIMEOUT,
+      `Anthropic API call (${model})`
+    );
 
     // Calculate cost
     const usage = {

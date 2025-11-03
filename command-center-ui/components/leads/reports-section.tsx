@@ -11,6 +11,8 @@ import { generateReport, getReportDownloadUrl, deleteReport } from '@/lib/api';
 import type { Report } from '@/lib/api/analysis';
 import type { Lead } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { useTaskProgress } from '@/lib/contexts/task-progress-context';
+import { startTaskWithFetch } from '@/lib/utils/task-sse-manager';
 import {
   Table,
   TableBody,
@@ -37,42 +39,91 @@ interface ReportsSectionProps {
 
 export function ReportsSection({ selectedLeads }: ReportsSectionProps) {
   const [reports, setReports] = useState<Report[]>([]);
-  const [generating, setGenerating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { startTask, updateTask, addLog, completeTask, errorTask, cancelTask } = useTaskProgress();
 
   // Generate report dialog
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [isBatchMode, setIsBatchMode] = useState(false);
 
   const handleGenerateClick = () => {
     if (selectedLeads.length === 0) return;
 
-    // Use the first selected lead
-    setSelectedLead(selectedLeads[0]);
+    // Check if this is batch mode (multiple leads selected)
+    setIsBatchMode(selectedLeads.length > 1);
     setGenerateDialogOpen(true);
   };
 
   const handleGenerate = async (format: 'markdown' | 'html') => {
-    if (!selectedLead) return;
-
-    setGenerating(selectedLead.id);
     setError(null);
 
-    try {
-      const report = await generateReport(selectedLead.id, format);
+    // Close dialog immediately (non-blocking)
+    setGenerateDialogOpen(false);
 
-      // Add to reports list
-      setReports(prev => [report, ...prev]);
+    if (isBatchMode) {
+      // Batch generation for multiple leads
+      console.log(`🚀 Starting batch report generation for ${selectedLeads.length} leads (${format} format)`);
 
-      setGenerateDialogOpen(false);
-      setSelectedLead(null);
+      // Generate reports for each lead (tasks will be auto-queued if limits reached)
+      for (const lead of selectedLeads) {
+        await startTaskWithFetch({
+          taskType: 'analysis', // Report generation is part of analysis workflow
+          title: `Generate ${format.toUpperCase()} report for ${lead.company_name}`,
+          total: 1,
+          taskManager: {
+            startTask,
+            updateTask,
+            addLog,
+            completeTask,
+            errorTask,
+            cancelTask
+          },
+          execute: async () => {
+            return await generateReport(lead.id, format);
+          },
+          onComplete: (report, taskId) => {
+            // Add to reports list
+            setReports(prev => [report, ...prev]);
+            addLog(taskId, `${format.toUpperCase()} report generated successfully!`, 'success');
+          },
+          onError: (error, taskId) => {
+            console.error(`Report generation failed for ${lead.company_name}:`, error);
+            // Don't set global error for batch operations (would overwrite)
+            // Just log it in the task
+          }
+        });
+      }
 
-      // Show success notification
-      alert(`${format === 'html' ? 'HTML' : 'Markdown'} report generated successfully!`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to generate report');
-    } finally {
-      setGenerating(null);
+      console.log(`✓ Batch report generation initiated for ${selectedLeads.length} leads`);
+    } else {
+      // Single lead generation
+      const lead = selectedLeads[0];
+
+      await startTaskWithFetch({
+        taskType: 'analysis', // Report generation is part of analysis workflow
+        title: `Generate ${format.toUpperCase()} report for ${lead.company_name}`,
+        total: 1,
+        taskManager: {
+          startTask,
+          updateTask,
+          addLog,
+          completeTask,
+          errorTask,
+          cancelTask
+        },
+        execute: async () => {
+          return await generateReport(lead.id, format);
+        },
+        onComplete: (report, taskId) => {
+          // Add to reports list
+          setReports(prev => [report, ...prev]);
+          addLog(taskId, `${format.toUpperCase()} report generated successfully!`, 'success');
+        },
+        onError: (error, taskId) => {
+          setError(error.message);
+          console.error('Report generation failed:', error);
+        }
+      });
     }
   };
 
@@ -236,25 +287,34 @@ export function ReportsSection({ selectedLeads }: ReportsSectionProps) {
       <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Generate Report</DialogTitle>
+            <DialogTitle>
+              {isBatchMode ? `Generate ${selectedLeads.length} Reports` : 'Generate Report'}
+            </DialogTitle>
             <DialogDescription>
-              Choose the format for {selectedLead?.company_name}'s website audit report
+              {isBatchMode
+                ? `Choose the format for all ${selectedLeads.length} website audit reports. Each report will be generated as a separate task.`
+                : `Choose the format for ${selectedLeads[0]?.company_name}'s website audit report`
+              }
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
+            {isBatchMode && (
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 p-3">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <strong>Batch Mode:</strong> Reports will be generated concurrently with automatic queueing if limits are reached. Track progress in the floating task indicator.
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <Button
                 variant="outline"
                 className="h-auto flex-col items-start p-4 space-y-2"
                 onClick={() => handleGenerate('html')}
-                disabled={generating !== null}
+                disabled={false}
               >
-                {generating === selectedLead?.id ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                ) : (
-                  <FileCode className="h-8 w-8 text-blue-500" />
-                )}
+                <FileCode className="h-8 w-8 text-blue-500" />
                 <div className="text-left">
                   <p className="font-semibold">HTML (Dark Theme)</p>
                   <p className="text-xs text-muted-foreground">
@@ -267,13 +327,9 @@ export function ReportsSection({ selectedLeads }: ReportsSectionProps) {
                 variant="outline"
                 className="h-auto flex-col items-start p-4 space-y-2"
                 onClick={() => handleGenerate('markdown')}
-                disabled={generating !== null}
+                disabled={false}
               >
-                {generating === selectedLead?.id ? (
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                ) : (
-                  <FileText className="h-8 w-8 text-green-500" />
-                )}
+                <FileText className="h-8 w-8 text-green-500" />
                 <div className="text-left">
                   <p className="font-semibold">Markdown</p>
                   <p className="text-xs text-muted-foreground">
@@ -295,10 +351,9 @@ export function ReportsSection({ selectedLeads }: ReportsSectionProps) {
               variant="ghost"
               onClick={() => {
                 setGenerateDialogOpen(false);
-                setSelectedLead(null);
                 setError(null);
               }}
-              disabled={generating !== null}
+              disabled={false}
             >
               Cancel
             </Button>

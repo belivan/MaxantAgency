@@ -30,6 +30,42 @@ function sanitizeJSON(content) {
 }
 
 /**
+ * Map prompt path to environment variable name for model override
+ *
+ * @param {string} promptPath - Prompt path (e.g., 'web-design/unified-visual-analysis')
+ * @returns {string|null} Environment variable name or null if no mapping
+ */
+function getEnvVarNameForPrompt(promptPath) {
+  // Map of prompt paths to environment variable names
+  const envVarMap = {
+    // Analysis prompts
+    'web-design/unified-visual-analysis': 'UNIFIED_VISUAL_MODEL',
+    'web-design/unified-technical-analysis': 'UNIFIED_TECHNICAL_MODEL',
+    'web-design/seo-analysis': 'SEO_ANALYZER_MODEL',
+    'web-design/content-analysis': 'CONTENT_ANALYZER_MODEL',
+    'web-design/desktop-visual-analysis': 'DESKTOP_VISUAL_MODEL',
+    'web-design/mobile-visual-analysis': 'MOBILE_VISUAL_MODEL',
+    'web-design/social-analysis': 'SOCIAL_ANALYZER_MODEL',
+    'web-design/accessibility-analysis': 'ACCESSIBILITY_MODEL',
+    'web-design/industry-critique': 'INDUSTRY_ANALYZER_MODEL',
+
+    // Lead scoring
+    'lead-qualification/lead-priority-scorer': 'LEAD_SCORER_MODEL',
+
+    // Benchmark prompts
+    'benchmarking/visual-strengths': 'BENCHMARK_VISUAL_MODEL',
+    'benchmarking/technical-strengths': 'BENCHMARK_TECHNICAL_MODEL',
+    'benchmarking/social-strengths': 'BENCHMARK_SOCIAL_MODEL',
+    'benchmarking/accessibility-strengths': 'BENCHMARK_ACCESSIBILITY_MODEL',
+
+    // Page selection
+    'page-analysis/page-selector': 'PAGE_SELECTOR_MODEL'
+  };
+
+  return envVarMap[promptPath] || null;
+}
+
+/**
  * Load a prompt configuration from JSON file
  *
  * @param {string} promptPath - Path relative to config/prompts/ (e.g., 'web-design/design-critique')
@@ -69,13 +105,28 @@ export async function loadPrompt(promptPath, variables = {}) {
     promptConfig.variables
   );
 
-  // Resolve model from environment variable if using env: prefix
+  // Resolve model from environment variable
+  // Priority: 1. Explicit env override, 2. env: prefix in JSON, 3. JSON model field
   let resolvedModel = promptConfig.model;
-  if (typeof resolvedModel === 'string' && resolvedModel.startsWith('env:')) {
+  let modelSource = 'config';
+
+  // Check for environment variable override based on prompt path
+  const envVarName = getEnvVarNameForPrompt(promptPath);
+  if (envVarName && process.env[envVarName]) {
+    resolvedModel = process.env[envVarName];
+    modelSource = `env:${envVarName}`;
+    console.log(`[Prompt Loader] Using model '${resolvedModel}' from ${envVarName}`);
+  }
+  // Legacy support: Check if JSON uses env: prefix
+  else if (typeof resolvedModel === 'string' && resolvedModel.startsWith('env:')) {
     const envVar = resolvedModel.substring(4); // Remove 'env:' prefix
-    resolvedModel = process.env[envVar] || promptConfig.model; // Fallback to original if not set
-    if (!process.env[envVar]) {
+    if (process.env[envVar]) {
+      resolvedModel = process.env[envVar];
+      modelSource = `env:${envVar}`;
+      console.log(`[Prompt Loader] Using model '${resolvedModel}' from ${envVar}`);
+    } else {
       console.warn(`[Prompt Loader] Environment variable ${envVar} not set, using default: ${promptConfig.model}`);
+      resolvedModel = promptConfig.model; // Fallback to original
     }
   }
 

@@ -7,6 +7,25 @@ const __dirname = path.dirname(__filename);
 const CONFIG_DIR = path.resolve(__dirname, '../config/prompts');
 
 /**
+ * Map prompt path to environment variable name for model override
+ *
+ * @param {string} promptPath - Prompt path (e.g., '01-query-understanding')
+ * @returns {string|null} Environment variable name or null if no mapping
+ */
+function getEnvVarNameForPrompt(promptPath) {
+  // Map of prompt paths to environment variable names
+  const envVarMap = {
+    // Prospecting prompts
+    '01-query-understanding': 'PROSPECTING_QUERY_MODEL',
+    '02-place-categorizer': 'PROSPECTING_CATEGORIZER_MODEL',
+    '03-business-intelligence-extractor': 'PROSPECTING_INTELLIGENCE_MODEL',
+    '04-contact-info-extractor': 'PROSPECTING_CONTACT_MODEL'
+  };
+
+  return envVarMap[promptPath] || null;
+}
+
+/**
  * Load and render AI prompt from JSON configuration files
  *
  * This enables:
@@ -64,11 +83,19 @@ export function loadPrompt(promptPath, variables = {}) {
     console.warn(`Warning: Unreplaced variables in ${promptPath}: ${unreplacedVars.join(', ')}`);
   }
 
+  // Resolve model from environment variable if set
+  let resolvedModel = promptConfig.model || 'grok-4-fast';
+  const envVarName = getEnvVarNameForPrompt(promptPath);
+  if (envVarName && process.env[envVarName]) {
+    resolvedModel = process.env[envVarName];
+    console.log(`[Prompt Loader] Using model '${resolvedModel}' from ${envVarName} for ${promptPath}`);
+  }
+
   // Return rendered prompt
   return {
     name: promptConfig.name,
     version: promptConfig.version,
-    model: promptConfig.model || 'grok-4-fast',
+    model: resolvedModel,
     temperature: promptConfig.temperature || 0.3,
     systemPrompt: promptConfig.systemPrompt,
     userPrompt: userPrompt,

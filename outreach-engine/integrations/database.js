@@ -347,7 +347,7 @@ export async function saveComposedEmail(email) {
     };
 
     const { data, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .insert([record])
       .select()
       .single();
@@ -396,7 +396,7 @@ export async function updateEmailStatus(id, status, metadata = {}) {
     };
 
     const { data, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .update(update)
       .eq('id', id)
       .select()
@@ -442,7 +442,7 @@ export async function getReadyEmails(filters = {}) {
 
   try {
     let query = supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select(`
         *,
         leads (
@@ -490,7 +490,7 @@ export async function getComposedEmailById(id) {
 
   try {
     const { data, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select(`
         *,
         leads (
@@ -577,16 +577,16 @@ export async function getStats() {
       .select('*', { count: 'exact', head: true });
 
     const { count: composedCount, error: error2 } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*', { count: 'exact', head: true });
 
     const { count: readyCount, error: error3 } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'ready');
 
     const { count: sentCount, error: error4 } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'sent');
 

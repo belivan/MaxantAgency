@@ -14,6 +14,37 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
+ * Map prompt path to environment variable name for model override
+ *
+ * @param {string} category - Prompt category
+ * @param {string} name - Prompt name
+ * @returns {string|null} Environment variable name or null if no mapping
+ */
+function getEnvVarNameForPrompt(category, name) {
+  const fullPath = `${category}/${name}`;
+
+  // Map of prompt paths to environment variable names
+  const envVarMap = {
+    // Email strategies
+    'email-strategies/compliment-sandwich': 'EMAIL_COMPOSER_MODEL',
+    'email-strategies/problem-first': 'EMAIL_COMPOSER_MODEL',
+    'email-strategies/achievement-focused': 'EMAIL_COMPOSER_MODEL',
+    'email-strategies/question-based': 'EMAIL_COMPOSER_MODEL',
+
+    // Social strategies
+    'social-strategies/linkedin-dm': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/twitter-dm': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/instagram-dm': 'SOCIAL_COMPOSER_MODEL',
+
+    // Reasoning/composer
+    'reasoning/email-composer': 'EMAIL_COMPOSER_MODEL',
+    'reasoning/social-composer': 'SOCIAL_COMPOSER_MODEL'
+  };
+
+  return envVarMap[fullPath] || null;
+}
+
+/**
  * Load a prompt configuration from JSON file
  * @param {string} category - Prompt category ('email-strategies', 'social-strategies', 'reasoning')
  * @param {string} name - Prompt name (e.g., 'compliment-sandwich')
@@ -27,6 +58,13 @@ export function loadPrompt(category, name) {
 
     // Validate required fields
     validatePrompt(prompt);
+
+    // Resolve model from environment variable if set
+    const envVarName = getEnvVarNameForPrompt(category, name);
+    if (envVarName && process.env[envVarName]) {
+      prompt.model = process.env[envVarName];
+      console.log(`[Prompt Loader] Using model '${prompt.model}' from ${envVarName} for ${category}/${name}`);
+    }
 
     return prompt;
   } catch (error) {

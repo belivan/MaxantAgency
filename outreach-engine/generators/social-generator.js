@@ -74,19 +74,12 @@ export async function generateSocialDM(lead, options = {}) {
     // Get platform specs
     const platformSpecs = prompt.platformSpecs[platform];
 
-    // Map model names to actual Claude model IDs
-    const modelMap = {
-      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
-      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
-      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
-    };
-
-    const actualModel = modelMap[model] || model;
+    // Let the centralized AI client handle model resolution - no mapping needed
 
     // Call centralized AI client
     const startTime = Date.now();
     const response = await callAI({
-      model: actualModel,
+      model: model,
       systemPrompt: prompt.systemPrompt,
       userPrompt: filledPrompt,
       temperature: prompt.temperature || 0.8,

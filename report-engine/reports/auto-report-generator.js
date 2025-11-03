@@ -323,7 +323,18 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         }
 
       } catch (synthesisError) {
+        // Enhanced error logging for diagnosis
+        console.error('\n' + '!'.repeat(80));
+        console.error('[SYNTHESIS ERROR] Full diagnostic information:');
+        console.error('!'.repeat(80));
+        console.error('Error Message:', synthesisError.message);
+        console.error('Error Type:', synthesisError.constructor.name);
+        console.error('Error Stack:');
+        console.error(synthesisError.stack);
+        console.error('!'.repeat(80) + '\n');
+
         console.warn(`⚠️  AI synthesis failed, using fallback: ${synthesisError.message}`);
+
         // Generate basic fallback summary instead of null
         synthesisData = generateFallbackSynthesis(reportData);
         console.log('✅ Using fallback synthesis (non-AI generated)');

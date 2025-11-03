@@ -22,6 +22,20 @@ import type {
 
 const API_BASE = process.env.NEXT_PUBLIC_OUTREACH_API || 'http://localhost:3002';
 
+/**
+ * Helper function to parse error responses safely
+ * Handles both JSON and non-JSON (HTML) error responses
+ */
+async function parseErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
+  try {
+    const error = await response.json();
+    return error.message || error.error || fallbackMessage;
+  } catch {
+    // Response is not JSON (e.g., HTML error page)
+    return `${fallbackMessage}: ${response.status} ${response.statusText}`;
+  }
+}
+
 // ============================================================================
 // EMAIL COMPOSITION
 // ============================================================================
@@ -46,8 +60,8 @@ export async function composeEmails(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to start email composition');
+    const errorMessage = await parseErrorMessage(response, 'Failed to start email composition');
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
@@ -132,8 +146,8 @@ export async function getEmails(filters?: EmailFilters): Promise<Email[]> {
   const response = await fetch(`${API_BASE}/api/emails?${params.toString()}`);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch emails');
+    const errorMessage = await parseErrorMessage(response, 'Failed to fetch emails');
+    throw new Error(errorMessage);
   }
 
   const data: any = await response.json();
@@ -387,8 +401,8 @@ export async function getStrategies(): Promise<any[]> {
   const response = await fetch(`${API_BASE}/api/strategies`);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch strategies');
+    const errorMessage = await parseErrorMessage(response, 'Failed to fetch strategies');
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
@@ -424,8 +438,8 @@ export async function composeEmail(url: string, strategyId: string, generateVari
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to compose email');
+    const errorMessage = await parseErrorMessage(response, 'Failed to compose email');
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();

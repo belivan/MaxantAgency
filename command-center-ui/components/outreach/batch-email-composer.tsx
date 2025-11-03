@@ -20,6 +20,7 @@ import { EmailPreviewCard } from './email-preview-card';
 import { GradeBadge } from '@/components/leads/grade-badge';
 import { composeEmail } from '@/lib/api/outreach';
 import type { Lead, ComposedEmail } from '@/lib/types';
+import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 
 interface BatchEmailComposerProps {
   leads: Lead[];
@@ -40,11 +41,10 @@ export function BatchEmailComposer({
   onAllGenerated
 }: BatchEmailComposerProps) {
   const [statuses, setStatuses] = useState<Record<string, EmailGenerationStatus>>({});
-  const [generating, setGenerating] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const { startTask, updateTask, addLog, completeTask, errorTask, cancelTask } = useTaskProgress();
 
   const handleGenerateBatch = async () => {
-    setGenerating(true);
     setCurrentIndex(0);
 
     // Initialize statuses
@@ -59,53 +59,75 @@ export function BatchEmailComposer({
 
     const completedEmails: ComposedEmail[] = [];
 
-    // Generate emails sequentially
-    for (let i = 0; i < leads.length; i++) {
-      const lead = leads[i];
-      setCurrentIndex(i);
+    // Start task tracking
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const taskId = startTask('outreach', `Generate ${leads.length} emails (${timestamp})`, leads.length);
+    addLog(taskId, 'Starting email generation...', 'info');
 
-      // Update to generating
-      setStatuses(prev => ({
-        ...prev,
-        [lead.id]: { ...prev[lead.id], status: 'generating' }
-      }));
-
+    // Generate emails sequentially (non-blocking for UI)
+    (async () => {
       try {
-        const email = await composeEmail(lead.website, strategyId);
+        for (let i = 0; i < leads.length; i++) {
+          const lead = leads[i];
+          setCurrentIndex(i);
 
-        // Update to completed
-        setStatuses(prev => ({
-          ...prev,
-          [lead.id]: {
-            ...prev[lead.id],
-            status: 'completed',
-            email
+          // Update to generating
+          setStatuses(prev => ({
+            ...prev,
+            [lead.id]: { ...prev[lead.id], status: 'generating' }
+          }));
+
+          updateTask(taskId, i, `Generating email for ${lead.company_name}...`);
+          addLog(taskId, `Generating email for ${lead.company_name}...`, 'info');
+
+          try {
+            const email = await composeEmail(lead.url || lead.website, strategyId);
+
+            // Update to completed
+            setStatuses(prev => ({
+              ...prev,
+              [lead.id]: {
+                ...prev[lead.id],
+                status: 'completed',
+                email
+              }
+            }));
+
+            completedEmails.push(email);
+            updateTask(taskId, i + 1, `Completed ${i + 1}/${leads.length}`);
+            addLog(taskId, `✅ ${lead.company_name}: Email generated`, 'success');
+          } catch (error: any) {
+            console.error(`Failed to generate email for ${lead.company_name}:`, error);
+
+            // Update to error
+            setStatuses(prev => ({
+              ...prev,
+              [lead.id]: {
+                ...prev[lead.id],
+                status: 'error',
+                error: error.message || 'Failed to generate email'
+              }
+            }));
+
+            addLog(taskId, `❌ ${lead.company_name}: ${error.message || 'Failed to generate email'}`, 'error');
           }
-        }));
 
-        completedEmails.push(email);
+          // Small delay between requests
+          if (i < leads.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+
+        // Complete task
+        completeTask(taskId);
+        addLog(taskId, `Generated ${completedEmails.length}/${leads.length} emails`, 'success');
+        onAllGenerated?.(completedEmails);
       } catch (error: any) {
-        console.error(`Failed to generate email for ${lead.company_name}:`, error);
-
-        // Update to error
-        setStatuses(prev => ({
-          ...prev,
-          [lead.id]: {
-            ...prev[lead.id],
-            status: 'error',
-            error: error.message || 'Failed to generate email'
-          }
-        }));
+        errorTask(taskId, error.message);
       }
+    })();
 
-      // Small delay between requests
-      if (i < leads.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
-    }
-
-    setGenerating(false);
-    onAllGenerated?.(completedEmails);
+    console.log(`✓ Started email generation task: ${taskId} (non-blocking)`);
   };
 
   const completedCount = Object.values(statuses).filter(s => s.status === 'completed').length;
@@ -131,20 +153,11 @@ export function BatchEmailComposer({
           {!hasStarted && (
             <Button
               onClick={handleGenerateBatch}
-              disabled={generating || !strategyId || leads.length === 0}
+              disabled={!strategyId || leads.length === 0}
               size="lg"
             >
-              {generating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Generate All Emails
-                </>
-              )}
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate All Emails
             </Button>
           )}
         </div>

@@ -117,17 +117,10 @@ async function generateSubjectVariants(lead, options = {}) {
 
     const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
 
-    // Map model names to actual Claude model IDs
-    const modelMap = {
-      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
-      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
-      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
-    };
-
-    const actualModel = modelMap[model] || model;
+    // Let the centralized AI client handle model resolution - no mapping needed
 
     const response = await callAI({
-      model: actualModel,
+      model: model,
       systemPrompt: prompt.systemPrompt,
       userPrompt: filledPrompt,
       temperature: prompt.temperature || 0.9,
@@ -253,17 +246,10 @@ ${bodies.map((b, i) => `${i}. ${b.substring(0, 200)}...`).join('\n\n')}
 Which combination (subject index + body index) will have highest conversion?
 Return JSON only.`;
 
-    // Map model names to actual Claude model IDs
-    const modelMap = {
-      'claude-haiku-4-5': 'claude-3-5-haiku-20241022',
-      'claude-sonnet-4-5': 'claude-sonnet-4-5-20250929',
-      'claude-sonnet-3-5': 'claude-3-5-sonnet-20241022'
-    };
-
-    const actualModel = modelMap[model] || model;
+    // Let the centralized AI client handle model resolution - no mapping needed
 
     const response = await callAI({
-      model: actualModel,
+      model: model,
       systemPrompt,
       userPrompt,
       temperature: 0.3,
