@@ -27,7 +27,16 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
   // NEW: Group screenshots by page URL
   const screenshotsByPage = new Map();
 
+  console.log('\n🖼️  GALLERY DEBUG:');
+  console.log('  screenshotData exists:', !!screenshotData);
+  console.log('  screenshots array exists:', !!screenshotData?.screenshots);
+  console.log('  screenshots count:', screenshotData?.screenshots?.length || 0);
+
   if (screenshotData && screenshotData.screenshots) {
+    if (screenshotData.screenshots.length > 0) {
+      console.log('  First screenshot:', JSON.stringify(screenshotData.screenshots[0], null, 2).substring(0, 200) + '...');
+    }
+
     screenshotData.screenshots.forEach(screenshot => {
       const pageUrl = screenshot.page || '/';
       if (!screenshotsByPage.has(pageUrl)) {
@@ -41,7 +50,11 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
     });
   }
 
+  console.log('  Unique pages:', screenshotsByPage.size);
+  console.log('  Page URLs:', Array.from(screenshotsByPage.keys()).join(', '));
+
   const hasMultiPageData = screenshotsByPage.size > 1; // More than just homepage
+  console.log('  hasMultiPageData:', hasMultiPageData, '\n');
   const totalPages = screenshotsByPage.size;
 
   let html = '';
@@ -62,7 +75,7 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
 
   // If no screenshots at all, show message
   if (screenshotsByPage.size === 0) {
-    html += '      <div style="background: var(--bg-secondary); padding: 32px; border-radius: 12px; text-align: center; border: 1px solid var(--border-light);">\n';
+    html += '      <div style="background: var(--bg-secondary); padding: 32px; border-radius: var(--radius-lg); text-align: center; border: 1px solid var(--border-light);">\n';
     html += '        <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.5;">📷</div>\n';
     html += '        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 12px; color: var(--text-primary);">Screenshots Not Available</h3>\n';
     html += '        <p style="opacity: 0.7; font-size: 0.95rem;">Screenshot capture was not enabled or failed during analysis.</p>\n';
@@ -73,14 +86,14 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
 
   // If only homepage, show notice
   if (!hasMultiPageData) {
-    html += '      <div style="background: var(--bg-secondary); padding: 20px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid var(--primary);">\n';
+    html += '      <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-md); margin-bottom: 24px; border-left: 4px solid var(--primary);">\n';
     html += '        <p style="margin: 0; opacity: 0.8;"><strong>📌 Note:</strong> This analysis covered the homepage only. Enable multi-page crawling to capture screenshots from about, services, and other key pages.</p>\n';
     html += '      </div>\n';
 
     // Show homepage screenshots only
     const homepageScreenshots = screenshotsByPage.get('/');
     if (homepageScreenshots) {
-      html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px;">\n';
+      html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: var(--radius-lg);">\n';
       html += '        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px;">Homepage</h3>\n';
       html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">\n';
 
@@ -88,7 +101,7 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
       if (homepageScreenshots.desktop && homepageScreenshots.desktop.dataUri) {
         html += '          <div>\n';
         html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">🖥️ Desktop View</h4>\n';
-        html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary);">\n';
+        html += '            <div style="border: 2px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-secondary);">\n';
         html += `              <img src="${homepageScreenshots.desktop.dataUri}" alt="Homepage - Desktop" style="width: 100%; max-height: 200px; object-fit: cover; object-position: top; display: block;" />\n`;
         html += '            </div>\n';
         html += '          </div>\n';
@@ -98,7 +111,7 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
       if (homepageScreenshots.mobile && homepageScreenshots.mobile.dataUri) {
         html += '          <div>\n';
         html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">📱 Mobile View</h4>\n';
-        html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary); max-width: 400px;">\n';
+        html += '            <div style="border: 2px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-secondary); max-width: 400px;">\n';
         html += `              <img src="${homepageScreenshots.mobile.dataUri}" alt="Homepage - Mobile" style="width: 100%; max-height: 250px; object-fit: cover; object-position: top; display: block;" />\n`;
         html += '            </div>\n';
         html += '          </div>\n';
@@ -127,7 +140,7 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
 
     const pageTitle = pageUrl === '/' || pageUrl === '' ? 'Homepage' : pageUrl;
 
-    html += `      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n`;
+    html += `      <div style="background: var(--bg-secondary); padding: 24px; border-radius: var(--radius-lg); margin-bottom: 24px;">\n`;
     html += `        <h3 style="font-size: 1.2rem; font-weight: 600; margin-bottom: 16px;">${idx + 1}. ${escapeHtml(pageTitle)}</h3>\n`;
     html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px;">\n';
 
@@ -135,8 +148,8 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
     if (screenshots.desktop && screenshots.desktop.dataUri) {
       html += '          <div>\n';
       html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">🖥️ Desktop View</h4>\n';
-      html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary);">\n';
-      html += `              <img src="${screenshots.desktop.dataUri}" alt="${escapeHtml(pageTitle)} - Desktop" style="width: 100%; max-height: 200px; object-fit: cover; object-position: top; display: block;" loading="lazy" />\n`;
+      html += '            <div style="border: 2px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-secondary);">\n';
+      html += `              <img src="${screenshots.desktop.dataUri}" alt="${escapeHtml(pageTitle)} - Desktop" style="width: 100%; max-height: 200px; object-fit: cover; object-position: top; display: block;" />\n`;
       html += '            </div>\n';
       html += '          </div>\n';
     }
@@ -145,8 +158,8 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
     if (screenshots.mobile && screenshots.mobile.dataUri) {
       html += '          <div>\n';
       html += '            <h4 style="font-size: 1rem; margin-bottom: 12px; opacity: 0.8;">📱 Mobile View</h4>\n';
-      html += '            <div style="border: 2px solid var(--border-default); border-radius: 8px; overflow: hidden; background: var(--bg-secondary); max-width: 400px;">\n';
-      html += `              <img src="${screenshots.mobile.dataUri}" alt="${escapeHtml(pageTitle)} - Mobile" style="width: 100%; max-height: 250px; object-fit: cover; object-position: top; display: block;" loading="lazy" />\n`;
+      html += '            <div style="border: 2px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; background: var(--bg-secondary); max-width: 400px;">\n';
+      html += `              <img src="${screenshots.mobile.dataUri}" alt="${escapeHtml(pageTitle)} - Mobile" style="width: 100%; max-height: 250px; object-fit: cover; object-position: top; display: block;" />\n`;
       html += '            </div>\n';
       html += '          </div>\n';
     }

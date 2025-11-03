@@ -57,7 +57,7 @@ export function useDashboardStats(refreshInterval?: number): UseDashboardStatsRe
         total_prospects: prospectingData.total_prospects,
         total_analyzed: analysisData.total_analyzed,
         total_leads: analysisData.total_analyzed,
-        total_emails_sent: outreachData.emails_by_status?.sent || 0,
+        total_emails_sent: (outreachData.emails_by_status as Record<string, number> | undefined)?.sent || 0,
         total_social_messages: outreachData.total_social_messages,
 
         // This week (placeholder - would need time-based queries)
@@ -78,11 +78,11 @@ export function useDashboardStats(refreshInterval?: number): UseDashboardStatsRe
 
         // Quality metrics
         avg_lead_score: analysisData.avg_score,
-        grade_a_count: analysisData.by_grade?.A || 0,
-        grade_b_count: analysisData.by_grade?.B || 0,
-        grade_c_count: analysisData.by_grade?.C || 0,
-        grade_d_count: analysisData.by_grade?.D || 0,
-        grade_f_count: analysisData.by_grade?.F || 0,
+        grade_a_count: (analysisData.by_grade as Record<string, number> | undefined)?.A || 0,
+        grade_b_count: (analysisData.by_grade as Record<string, number> | undefined)?.B || 0,
+        grade_c_count: (analysisData.by_grade as Record<string, number> | undefined)?.C || 0,
+        grade_d_count: (analysisData.by_grade as Record<string, number> | undefined)?.D || 0,
+        grade_f_count: (analysisData.by_grade as Record<string, number> | undefined)?.F || 0,
 
         // Email metrics
         email_open_rate: 0, // Would need tracking

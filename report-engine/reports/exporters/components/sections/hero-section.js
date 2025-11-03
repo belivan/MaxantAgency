@@ -57,7 +57,7 @@ export function generateHeroSection(analysisResult, synthesisData = null, option
 
   // Contact information box
   if (contact_email || contact_phone || url) {
-    html += '        <div class="contact-info-box" style="margin-top: 24px; padding: 12px 20px; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); display: inline-block;">\n';
+    html += '        <div class="contact-info-box" style="margin-top: 24px; padding: 12px 20px; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); display: inline-block;">\n';
     html += '          <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: center;">\n';
 
     if (contact_email) {
@@ -82,7 +82,10 @@ export function generateHeroSection(analysisResult, synthesisData = null, option
   }
 
   // Social media links with modern SVG icons
-  if (social_profiles && Object.keys(social_profiles).length > 0) {
+  // Check if there are any non-null social media profiles
+  const hasAnySocialProfiles = social_profiles && Object.keys(social_profiles).some(key => social_profiles[key]);
+
+  if (hasAnySocialProfiles) {
     // SVG icon definitions
     const socialIcons = {
       facebook: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
@@ -126,6 +129,14 @@ export function generateHeroSection(analysisResult, synthesisData = null, option
     }
 
     html += '        </div>\n';
+  } else {
+    // Show disclaimer when no social media profiles were found
+    html += '        <div style="margin-top: 16px; padding: 12px 20px; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); text-align: center;">\n';
+    html += '          <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary); opacity: 0.85;">\n';
+    html += '            <span style="opacity: 0.6;">ℹ️</span> <strong style="color: var(--text-primary);">No Social Media Profiles Found</strong><br>\n';
+    html += '            <span style="font-size: 0.85rem;">Our analysis used Google Maps data and AI-powered web scraping but could not identify any social media profiles for this business.</span>\n';
+    html += '          </p>\n';
+    html += '        </div>\n';
   }
 
   html += '      </div>\n';
@@ -159,7 +170,7 @@ export function generateHeroSection(analysisResult, synthesisData = null, option
       const scoreValue = Math.round(score.value || 0);
       const barColor = scoreValue >= 80 ? 'var(--success)' : scoreValue >= 60 ? 'var(--warning)' : 'var(--danger)';
 
-      html += '              <div style="display: grid; grid-template-columns: 100px 1fr 50px; gap: 12px; align-items: center;">\n';
+      html += '              <div style="display: grid; grid-template-columns: 120px 1fr 50px; gap: 12px; align-items: center;">\n';
       html += '                <div style="display: flex; align-items: center; gap: 6px; font-size: 14px;">\n';
       html += `                  <span style="font-size: 16px;">${score.icon}</span>\n`;
       html += `                  <span style="font-weight: 500;">${score.label}</span>\n`;
@@ -178,7 +189,7 @@ export function generateHeroSection(analysisResult, synthesisData = null, option
 
   // Benchmark Comparison (if available)
   if (matched_benchmark) {
-    html += '        <div class="benchmark-comparison-card" style="margin-top: 24px; padding: 20px; background: var(--bg-tertiary); border-radius: 12px; border: 1px solid var(--border-light);">\n';
+    html += '        <div class="benchmark-comparison-card" style="margin-top: 24px; padding: 20px; background: var(--bg-tertiary); border-radius: var(--radius-lg); border: 1px solid var(--border-light);">\n';
     html += '          <h3 style="font-size: 14px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; margin-bottom: 16px;">vs. Industry Leader</h3>\n';
     html += '          <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;">\n';
 

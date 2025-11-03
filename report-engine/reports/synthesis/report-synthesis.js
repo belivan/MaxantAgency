@@ -130,6 +130,7 @@ async function runSynthesisStage(stageId, variables) {
     systemPrompt: prompt.systemPrompt,
     userPrompt: prompt.userPrompt,
     temperature: prompt.temperature,
+    // maxTokens: REMOVED - let models use native capacity (no limits)
     jsonMode: true,
     autoFallback: false
   });

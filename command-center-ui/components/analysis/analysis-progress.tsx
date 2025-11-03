@@ -12,7 +12,8 @@ import { LoadingProgress } from '@/components/shared/loading-spinner';
 import { formatRelativeTime } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import { PriorityBadge, BudgetIndicatorBadge } from '@/components/leads';
-import type { SSEStatus, LeadGrade } from '@/lib/types';
+import type { SSEStatus } from '@/lib/hooks';
+import type { LeadGrade } from '@/lib/types';
 
 interface AnalysisStep {
   name: string;
@@ -119,7 +120,7 @@ function CompletedLeadItem({ lead }: { lead: CompletedLead }) {
             <PriorityBadge priority={lead.lead_priority || 0} size="sm" />
           )}
           {lead.budget_likelihood && (
-            <BudgetIndicatorBadge likelihood={lead.budget_likelihood} size="sm" />
+            <BudgetIndicatorBadge indicator={lead.budget_likelihood} size="sm" />
           )}
         </div>
       </div>

@@ -11,6 +11,12 @@ export type EmailStrategy =
   | 'value-first'
   | 'storytelling';
 
+export interface EmailStrategyObject {
+  id: string;
+  name: string;
+  type: 'email' | 'social';
+}
+
 export type EmailStatus = 'pending' | 'approved' | 'rejected' | 'sent' | 'bounced' | 'replied' | 'opened';
 
 export interface EmailVariants {
@@ -94,6 +100,7 @@ export interface Email {
     industry: string;
     company_name: string;
     contact_email?: string | null;
+    contact_name?: string | null;
     social_profiles?: Record<string, any>;
   };
 }

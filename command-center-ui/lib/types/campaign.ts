@@ -10,6 +10,7 @@ export interface CampaignStep {
   type: 'prospecting' | 'analysis' | 'outreach';
   config: {
     // Prospecting config
+    brief?: any; // ICP brief object for prospecting
     count?: number;
     city?: string;
     model?: string;

@@ -171,11 +171,5 @@ export interface AnalyticsData {
   };
 }
 
-export interface AnalysisOptionsFormData {
-  tier: 'tier1' | 'tier2' | 'tier3';
-  modules: string[];
-  capture_screenshots?: boolean;
-  autoEmail?: boolean;
-  autoAnalyze?: boolean;
-  project_id?: string;
-}
+// AnalysisOptionsFormData moved to lib/utils/validation.ts (Zod-inferred type)
+// Import from: import { type AnalysisOptionsFormData } from '@/lib/utils/validation'

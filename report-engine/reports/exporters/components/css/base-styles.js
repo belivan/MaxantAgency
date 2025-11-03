@@ -1235,12 +1235,12 @@ export function generateCSS() {
                 background: white !important;
             }
 
-            /* Sections - MUCH reduced padding to fix white space issue */
+            /* Sections - Optimized padding for PDF rendering */
             .section {
-                padding: 12px 0 !important; /* Reduced from 48px - this fixes the white space! */
+                padding: 24px 0 !important; /* Balanced: readable but space-efficient */
                 margin-bottom: 0 !important;
                 border-bottom: 1px solid #E5E7EB;
-                page-break-inside: auto; /* Changed from 'avoid' to allow natural breaks */
+                page-break-inside: avoid; /* Prevent sections from splitting across pages */
             }
 
             .section:last-child {
@@ -1350,6 +1350,22 @@ export function generateCSS() {
                 max-width: 100% !important;
                 height: auto !important;
                 border: 1px solid #D1D5DB !important;
+            }
+
+            /* Screenshot Comparison - Optimized for PDF side-by-side layout */
+            #screenshot-comparison {
+                page-break-inside: avoid; /* Keep entire comparison section together */
+            }
+
+            .screenshot-comparison-grid {
+                gap: 12px !important; /* Tighter spacing for PDF */
+                page-break-inside: avoid; /* Prevent grid from splitting */
+            }
+
+            .screenshot-comparison-grid img {
+                max-height: 250px !important; /* Further reduced for PDF: desktop */
+                object-fit: cover !important;
+                object-position: top !important;
             }
 
             /* Badges and labels - ensure visibility */

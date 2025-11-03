@@ -156,8 +156,8 @@ export function useSSE<T = any>(options: UseSSEOptions<T>): UseSSEReturn {
 
             case 'error':
               handleError(
-                message.data?.message || 'An error occurred',
-                message.data?.code
+                (message.data as any)?.message || 'An error occurred',
+                (message.data as any)?.code
               );
               updateStatus('error');
               break;

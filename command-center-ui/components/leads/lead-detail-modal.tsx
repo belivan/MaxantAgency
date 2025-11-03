@@ -55,7 +55,7 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
   const socialProfilesArray = lead.social_profiles && typeof lead.social_profiles === 'object'
     ? Object.entries(lead.social_profiles)
         .filter(([_, url]) => url) // Only include platforms with URLs
-        .map(([platform, url]) => ({ platform, url }))
+        .map(([platform, url]) => ({ platform, url: String(url) }))
     : [];
   const hasSocialProfiles = socialProfilesArray.length > 0;
 
@@ -174,13 +174,13 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="scoring">AI Scoring</TabsTrigger>
             <TabsTrigger value="design">
-              Design {hasDesignIssues && `(${lead.design_issues.length})`}
+              Design {hasDesignIssues && `(${lead.design_issues?.length})`}
             </TabsTrigger>
             <TabsTrigger value="seo">
-              SEO {hasSeoIssues && `(${lead.seo_issues.length})`}
+              SEO {hasSeoIssues && `(${lead.seo_issues?.length})`}
             </TabsTrigger>
             <TabsTrigger value="wins">
-              Quick Wins {hasQuickWins && `(${lead.quick_wins.length})`}
+              Quick Wins {hasQuickWins && `(${lead.quick_wins?.length})`}
             </TabsTrigger>
             <TabsTrigger value="social">
               Social {hasSocialProfiles && `(${socialProfilesArray.length})`}
@@ -280,7 +280,7 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
           <TabsContent value="design">
             {hasDesignIssues ? (
               <div className="space-y-3">
-                {lead.design_issues.map((issue, idx) => (
+                {lead.design_issues!.map((issue, idx) => (
                   <Card key={idx}>
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -329,7 +329,7 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
           <TabsContent value="seo">
             {hasSeoIssues ? (
               <div className="space-y-3">
-                {lead.seo_issues.map((issue, idx) => (
+                {lead.seo_issues!.map((issue, idx) => (
                   <Card key={idx}>
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between">
@@ -378,8 +378,9 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
           <TabsContent value="wins">
             {hasQuickWins ? (
               <div className="space-y-3">
-                {lead.quick_wins.map((win, idx) => {
-                  const winData = typeof win === 'string' ? { title: win } : win;
+                {lead.quick_wins!.map((win, idx) => {
+                  const winData: { title: string; source?: string; description?: string } =
+                    typeof win === 'string' ? { title: win } : win;
                   return (
                     <Card key={idx}>
                       <CardHeader className="pb-3">

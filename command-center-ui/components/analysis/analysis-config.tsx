@@ -258,7 +258,7 @@ export function AnalysisConfig({
     handleSubmit,
     watch,
     formState: { errors }
-  } = useForm<AnalysisOptionsFormData>({
+  } = useForm({
     resolver: zodResolver(analysisOptionsSchema),
     defaultValues: {
       tier: 'tier3',
@@ -274,6 +274,7 @@ export function AnalysisConfig({
       model_selections: activeModelSelections,
       autoEmail: false,
       autoAnalyze: false
+      // max_pages, level_2_sample_rate, max_crawl_time use Zod schema defaults
     }
   });
 

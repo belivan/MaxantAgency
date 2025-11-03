@@ -53,11 +53,62 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
 
     console.log('📄 Setting HTML content...');
     await page.setContent(htmlContent, {
-      waitUntil: 'domcontentloaded',  // Don't wait for network - we have inline content
-      timeout: 30000  // Add 30-second timeout as safety net
+      waitUntil: 'networkidle',  // Wait for network to be idle (better for base64 images)
+      timeout: 60000  // Increased timeout for large reports with many images
     });
 
-    // Emulate screen media to ensure proper CSS rendering
+    // Count total images
+    const imageCount = await page.evaluate(() => document.images.length);
+    console.log(`📊 Total images in HTML: ${imageCount}`);
+
+    // Wait for all images to be loaded (including base64)
+    console.log('⏳ Waiting for all images to load...');
+    await page.evaluate(() => {
+      return Promise.all(
+        Array.from(document.images).map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.addEventListener('load', resolve);
+            img.addEventListener('error', resolve); // Resolve even on error to prevent hanging
+          });
+        })
+      );
+    });
+
+    // Scroll through page to trigger any remaining lazy-loaded content
+    console.log('📜 Scrolling through page to ensure all content loads...');
+    await page.evaluate(() => {
+      return new Promise((resolve) => {
+        let totalHeight = 0;
+        const distance = 200; // Increased scroll distance for faster coverage
+        const timer = setInterval(() => {
+          const scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          totalHeight += distance;
+
+          if (totalHeight >= scrollHeight) {
+            clearInterval(timer);
+            window.scrollTo(0, 0); // Scroll back to top
+            setTimeout(resolve, 1000); // Wait 1 second after scrolling
+          }
+        }, 150); // Slower scrolling for better rendering
+      });
+    });
+
+    // Additional wait for base64 images to fully decode and render
+    // For reports with many images (>10), wait longer
+    const waitTime = imageCount > 10 ? 8000 : 4000;
+    console.log(`⏳ Waiting ${waitTime}ms for ${imageCount} images to render...`);
+    await page.waitForTimeout(waitTime);
+
+    // Verify images are visible in screenshot gallery
+    const galleryImageCount = await page.evaluate(() => {
+      const gallerySection = document.getElementById('screenshot-gallery');
+      return gallerySection ? gallerySection.querySelectorAll('img').length : 0;
+    });
+    console.log(`✅ Screenshot gallery has ${galleryImageCount} images visible`);
+
+    // Emulate print media to ensure proper CSS rendering
     await page.emulateMedia({ media: 'print' });
 
     console.log('📸 Generating PDF with headers and footers...');

@@ -14,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { getProjects, type Project } from '@/lib/api';
+import { getProjects } from '@/lib/api';
+import type { Project } from '@/lib/types';
 
 interface ProjectSelectorProps {
   value: string | null;

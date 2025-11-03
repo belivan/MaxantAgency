@@ -3,35 +3,7 @@
  * Manages project data fetching
  */
 
-import type { APIResponse } from '@/lib/types';
-
-// Simplified Project interface matching database schema + aggregate fields
-export interface Project {
-  id: string;
-  name: string;
-  client_name?: string;
-  description?: string;
-  status: 'active' | 'paused' | 'completed' | 'archived';
-  budget?: number;
-  total_spent?: number;
-  start_date?: string;
-  end_date?: string;
-  created_at: string;
-  updated_at?: string;
-  icp_brief?: any;
-  analysis_config?: any;
-  outreach_config?: any;
-
-  // Aggregate fields (computed by API)
-  prospects_count: number;
-  analyzed_count: number;
-  grade_a_count: number;
-  grade_b_count: number;
-  emails_sent_count: number;
-  total_cost: number;
-  budget_limit: number;
-  email_open_rate?: number;
-}
+import type { APIResponse, Project } from '@/lib/types';
 
 /**
  * Get all projects

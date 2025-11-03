@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import ProspectForm, { ProspectFormValues } from '@/components/prospecting/prospect-form';
 import AnalyzerPanel, { AnalyzerOptions } from '@/components/analysis/analyzer-panel';
-import ProspectTable, { ProspectRow } from '@/components/prospecting/prospect-table';
+import ProspectTable from '@/components/prospecting/prospect-table';
+import type { Prospect } from '@/lib/types';
 
 type ProspectResponse = {
-  companies: ProspectRow[];
+  companies: Prospect[];
   urls: string[];
   runId: string;
 };
@@ -32,7 +33,7 @@ export default function Dashboard() {
   const [loadingProspects, setLoadingProspects] = useState(false);
   const [analysisRunning, setAnalysisRunning] = useState(false);
   const [prospectData, setProspectData] = useState<ProspectResponse | null>(null);
-  const [selectedUrls, setSelectedUrls] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [alert, setAlert] = useState<string | null>(null);
   const [analysisSummary, setAnalysisSummary] = useState<string>('');
   const [analysisLogs, setAnalysisLogs] = useState<any[]>([]);
@@ -98,7 +99,7 @@ export default function Dashboard() {
           runId: json.runId
         };
         setProspectData(payload);
-        setSelectedUrls(payload.urls || []);
+        setSelectedIds(payload.urls || []);
         setAlert(`Generated ${payload.urls.length} verified URLs (Run ID: ${payload.runId}).`);
       } catch (error: any) {
         console.error(error);
@@ -112,7 +113,7 @@ export default function Dashboard() {
 
   const handleAnalyze = useCallback(
     async (options: AnalyzerOptions) => {
-      if (!selectedUrls.length) {
+      if (!selectedIds.length) {
         setAlert('Select at least one prospect before running the analyzer.');
         return;
       }
@@ -129,7 +130,7 @@ export default function Dashboard() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            urls: selectedUrls,
+            urls: selectedIds,
             options
           })
         });
@@ -149,14 +150,14 @@ export default function Dashboard() {
         setAnalysisRunning(false);
       }
     },
-    [selectedUrls]
+    [selectedIds]
   );
 
   const selectionInfo = useMemo(() => {
     const total = prospectData?.urls.length ?? 0;
-    const selected = selectedUrls.length;
+    const selected = selectedIds.length;
     return `${selected} selected of ${total}`;
-  }, [prospectData?.urls.length, selectedUrls.length]);
+  }, [prospectData?.urls.length, selectedIds.length]);
 
   return (
     <div className="space-y-10">
@@ -179,7 +180,7 @@ export default function Dashboard() {
           />
         </div>
         <AnalyzerPanel
-          disabled={!selectedUrls.length || analysisRunning}
+          disabled={!selectedIds.length || analysisRunning}
           selectionSummary={selectionInfo}
           onRun={handleAnalyze}
           loading={analysisRunning}
@@ -195,8 +196,8 @@ export default function Dashboard() {
         </div>
         <ProspectTable
           prospects={prospectData?.companies || []}
-          selectedUrls={selectedUrls}
-          onSelectionChange={setSelectedUrls}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
         />
       </section>
 

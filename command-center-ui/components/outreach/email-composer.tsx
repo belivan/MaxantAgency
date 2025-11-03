@@ -41,7 +41,7 @@ export function EmailComposer({ lead, strategyId, onEmailGenerated }: EmailCompo
 
     try {
       updateTask(taskId, 0, 'Generating personalized email...');
-      const email = await composeEmail(lead.url, strategyId);
+      const email = await composeEmail(lead.url || lead.website, strategyId);
       setComposedEmail(email);
       updateTask(taskId, 1, 'Email generated!');
       onEmailGenerated?.(email);

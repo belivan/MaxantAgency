@@ -110,13 +110,16 @@ export function validateReportData(data) {
     }
   }
 
-  // AI Synthesis data (optional but recommended)
-  if (!data.consolidated_issues) {
-    warnings.push('Missing: consolidated_issues - Report will use raw issues instead of deduplicated ones');
-  }
-  if (!data.executive_summary) {
-    warnings.push('Missing: executive_summary - Report will use basic strategic assessment');
-  }
+  // AI Synthesis data (optional, passed separately as synthesisData parameter)
+  // Note: Synthesis data is NOT stored in analysisResult, it's passed as a separate object
+  // with camelCase field names (consolidatedIssues, executiveSummary)
+  // These checks would always fail, so they're commented out
+  // if (!data.consolidated_issues) {
+  //   warnings.push('Missing: consolidated_issues - Report will use raw issues instead of deduplicated ones');
+  // }
+  // if (!data.executive_summary) {
+  //   warnings.push('Missing: executive_summary - Report will use basic strategic assessment');
+  // }
 
   // Tech stack and infrastructure
   if (!data.tech_stack) warnings.push('Missing: tech_stack');

@@ -21,7 +21,8 @@ import {
 import { ProspectTable } from '@/components/prospecting';
 import { useProspects } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
-import { getProjects, type Project } from '@/lib/api';
+import { getProjects } from '@/lib/api';
+import type { Project } from '@/lib/types';
 import type { ProspectFilters } from '@/lib/types';
 
 interface ProspectSelectorProps {

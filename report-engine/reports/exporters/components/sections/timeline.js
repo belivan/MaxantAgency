@@ -68,7 +68,7 @@ export function generateTimeline(analysisResult, synthesisData = {}, options = {
     }
 
     if (strategicRoadmap.month1.expectedImpact) {
-      html += `            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--success);">\n`;
+      html += `            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); font-size: 13px; color: var(--success);">\n`;
       html += `              <strong>Expected Impact:</strong> ${escapeHtml(strategicRoadmap.month1.expectedImpact)}\n`;
       html += '            </div>\n';
     }
@@ -137,7 +137,7 @@ export function generateTimeline(analysisResult, synthesisData = {}, options = {
     }
 
     if (strategicRoadmap.month2.expectedImpact) {
-      html += `            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--success);">\n`;
+      html += `            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); font-size: 13px; color: var(--success);">\n`;
       html += `              <strong>Expected Impact:</strong> ${escapeHtml(strategicRoadmap.month2.expectedImpact)}\n`;
       html += '            </div>\n';
     }
@@ -219,7 +219,7 @@ export function generateTimeline(analysisResult, synthesisData = {}, options = {
     }
 
     if (strategicRoadmap.month3.expectedImpact) {
-      html += `            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); font-size: 13px; color: var(--success);">\n`;
+      html += `            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light); font-size: 13px; color: var(--success);">\n`;
       html += `              <strong>Expected Impact:</strong> ${escapeHtml(strategicRoadmap.month3.expectedImpact)}\n`;
       html += '            </div>\n';
     }

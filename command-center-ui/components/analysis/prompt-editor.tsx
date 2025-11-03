@@ -129,13 +129,13 @@ export function PromptEditor({
     availablePromptKeys.includes(key as string)
   );
 
-  const toggleExpand = (key: string) => {
-    setExpandedPrompt(expandedPrompt === key ? null : key);
+  const toggleExpand = (key: keyof AnalysisPrompts) => {
+    setExpandedPrompt(expandedPrompt === key ? null : String(key));
   };
 
-  const toggleEdit = (key: string) => {
+  const toggleEdit = (key: keyof AnalysisPrompts) => {
     if (locked) return;
-    setEditingPrompt(editingPrompt === key ? null : key);
+    setEditingPrompt(editingPrompt === key ? null : String(key));
   };
 
   const resetPrompt = (key: string) => {
@@ -164,7 +164,7 @@ export function PromptEditor({
     onChange(updated);
   };
 
-  const isModified = (key: string) => {
+  const isModified = (key: keyof AnalysisPrompts) => {
     if (key === '_meta') return false;
     const defaultVal = defaultPrompts[key] as PromptConfig;
     if (!defaultVal) return false;
@@ -194,11 +194,12 @@ export function PromptEditor({
     setEditingPrompt(null);
   };
 
-  const formatMetaLabel = (key: string) => {
-    const fallback = key
+  const formatMetaLabel = (key: keyof AnalysisPrompts) => {
+    const keyStr = String(key);
+    const fallback = keyStr
       .replace(/([A-Z])/g, ' $1')
       .replace(/^./, (char) => char.toUpperCase());
-    const meta = PROMPT_LABELS[key];
+    const meta = PROMPT_LABELS[keyStr];
     return {
       title: meta?.title || fallback,
       description: meta?.description || (defaultPrompts[key] as PromptConfig | undefined)?.description || ''

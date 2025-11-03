@@ -9,7 +9,7 @@ import {
   getProject,
   createProject as createProjectAPI,
   updateProject as updateProjectAPI,
-  
+  deleteProjects as deleteProjectsAPI
 } from '@/lib/api/projects';
 import type { Project, CreateProjectRequest, UpdateProjectRequest } from '@/lib/types';
 
@@ -91,7 +91,7 @@ export function useProjects(): UseProjectsReturn {
     setError(null);
 
     try {
-      await deleteProjectAPI(id);
+      await deleteProjectsAPI([id]);
 
       // Remove from local state
       setProjects(prev => prev.filter(p => p.id !== id));
@@ -178,7 +178,7 @@ export function useSingleProject(id: string | null): UseSingleProjectReturn {
     setError(null);
 
     try {
-      await deleteProjectAPI(id);
+      await deleteProjectsAPI([id]);
       setProject(null);
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to delete project';

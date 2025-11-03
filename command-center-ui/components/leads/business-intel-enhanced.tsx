@@ -32,16 +32,16 @@ import {
 interface BusinessIntelligence {
   years_in_business?: number;
   founded_year?: number;
-  employee_count?: string;
-  location_count?: number;
+  employee_count?: number | null;
+  location_count?: number | null;
   premium_features?: string[];
   decision_maker_accessible?: boolean;
   owner_name?: string | null;
-  budget_indicator?: string;
+  budget_indicator?: 'high' | 'medium' | 'low';
   pricing_visible?: boolean;
-  pricing_range?: { min?: number; max?: number };
+  pricing_range?: { min?: number; max?: number } | null;
   blog_active?: boolean;
-  content_last_update?: string;
+  content_last_update?: string | null;
 }
 
 interface BusinessIntelEnhancedProps {

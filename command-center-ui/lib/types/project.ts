@@ -8,7 +8,10 @@ export type ProjectStatus = 'active' | 'paused' | 'completed' | 'archived';
 export interface Project {
   id: string;
   name: string;
+  client_name?: string;
   description?: string;
+  start_date?: string;
+  end_date?: string;
 
   // ICP Brief
   icp_brief?: Record<string, any>;
@@ -50,6 +53,8 @@ export interface Project {
   outreach_cost: number;
 
   // Budget
+  budget?: number;
+  total_spent?: number;
   budget_limit?: number;
   budget_alert_threshold?: number;
 

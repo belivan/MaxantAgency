@@ -46,7 +46,7 @@ export function SocialDMComposer({
 
     try {
       updateTask(taskId, 0, `Generating ${platform} message...`);
-      const generatedMessage = await composeSocialMessage(lead.url, platform);
+      const generatedMessage = await composeSocialMessage(lead.url || lead.website, platform);
       setMessage(generatedMessage);
       updateTask(taskId, 1, 'Social message generated!');
       onMessageGenerated?.(generatedMessage);

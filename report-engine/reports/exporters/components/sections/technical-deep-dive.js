@@ -43,13 +43,14 @@ export function generateTechnicalDeepDive(analysisResult) {
     // If parsing fails, treat as plain string
   }
 
-  html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
+  html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: var(--radius-lg); margin-bottom: 24px;">\n';
   html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 16px;">🛠️ Technology Stack</h3>\n';
   html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">\n';
 
   // Display platform/CMS
   if (parsedTechStack) {
-    html += `          <div><strong>Platform:</strong> ${escapeHtml(parsedTechStack.cms || 'Unknown')}</div>\n`;
+    const platformDisplay = parsedTechStack.cms === 'Unknown' ? 'Custom/Proprietary Platform' : parsedTechStack.cms;
+    html += `          <div><strong>Platform:</strong> ${escapeHtml(platformDisplay)}</div>\n`;
     if (parsedTechStack.frameworks && parsedTechStack.frameworks.length > 0) {
       html += `          <div><strong>Frameworks:</strong> ${escapeHtml(parsedTechStack.frameworks.join(', '))}</div>\n`;
     }
@@ -57,7 +58,8 @@ export function generateTechnicalDeepDive(analysisResult) {
       html += `          <div><strong>Analytics:</strong> ${escapeHtml(parsedTechStack.analytics.join(', '))}</div>\n`;
     }
   } else {
-    html += `          <div><strong>Platform:</strong> ${escapeHtml(tech_stack || 'Unknown')}</div>\n`;
+    const platformDisplay = tech_stack === 'Unknown' ? 'Custom/Proprietary Platform' : (tech_stack || 'Custom/Proprietary Platform');
+    html += `          <div><strong>Platform:</strong> ${escapeHtml(platformDisplay)}</div>\n`;
   }
 
   html += `          <div><strong>HTTPS:</strong> ${has_https ? '✅ Enabled' : '❌ Not Enabled'}</div>\n`;

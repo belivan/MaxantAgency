@@ -27,6 +27,14 @@ export interface TaskProgress {
   completedAt?: number;
   logs: TaskLog[];
   abortController?: AbortController;
+  metadata?: {
+    type?: string;
+    details?: {
+      website?: string;
+      [key: string]: any;
+    };
+    [key: string]: any;
+  };
 }
 
 interface TaskProgressContextValue {

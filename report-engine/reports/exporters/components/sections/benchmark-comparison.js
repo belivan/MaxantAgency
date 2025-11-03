@@ -53,7 +53,7 @@ export function generateBenchmarkComparisonChart(analysisResult, synthesisData =
   }
 
   html += `        </div>\n`;
-  html += `        <div style="font-size: 14px; opacity: 0.8; line-height: 1.6;">${escapeHtml(matched_benchmark.match_reasoning || `${Math.round(matched_benchmark.match_score)}% match based on industry, business model, and digital capabilities.`)}</div>\n`;
+  html += `        <div style="font-size: 14px; opacity: 0.8; line-height: 1.6;">${escapeHtml(matched_benchmark.match_reasoning || `Matched based on industry, business model, and digital capabilities.`)}</div>\n`;
   html += `        <div style="margin-top: 12px; font-size: 13px;"><strong>Comparison Tier:</strong> ${matched_benchmark.comparison_tier}</div>\n`;
   html += '      </div>\n';
 
@@ -144,14 +144,15 @@ export function generateBenchmarkComparisonChart(analysisResult, synthesisData =
     }
 
     // Extract technique strings from desktop/mobile strength objects
+    // Allow up to 5 from each device type (display limit applied later)
     if (strengthObj.desktopStrengths && Array.isArray(strengthObj.desktopStrengths)) {
-      strengthObj.desktopStrengths.slice(0, 2).forEach(s => {
+      strengthObj.desktopStrengths.slice(0, 5).forEach(s => {
         if (s.technique) strings.push(`Desktop: ${s.technique}`);
       });
     }
 
     if (strengthObj.mobileStrengths && Array.isArray(strengthObj.mobileStrengths)) {
-      strengthObj.mobileStrengths.slice(0, 2).forEach(s => {
+      strengthObj.mobileStrengths.slice(0, 5).forEach(s => {
         if (s.technique) strings.push(`Mobile: ${s.technique}`);
       });
     }
@@ -163,8 +164,9 @@ export function generateBenchmarkComparisonChart(analysisResult, synthesisData =
     { label: 'Design', strengths: extractStrengthStrings(matched_benchmark.design_strengths), icon: '🎨' },
     { label: 'SEO', strengths: extractStrengthStrings(matched_benchmark.seo_strengths), icon: '🔍' },
     { label: 'Content', strengths: extractStrengthStrings(matched_benchmark.content_strengths), icon: '✍️' },
-    { label: 'Social', strengths: extractStrengthStrings(matched_benchmark.social_strengths), icon: '📱' },
-    { label: 'Accessibility', strengths: extractStrengthStrings(matched_benchmark.accessibility_strengths), icon: '♿' }
+    { label: 'Performance', strengths: extractStrengthStrings(matched_benchmark.performance_strengths), icon: '⚡' },
+    { label: 'Accessibility', strengths: extractStrengthStrings(matched_benchmark.accessibility_strengths), icon: '♿' },
+    { label: 'Social', strengths: extractStrengthStrings(matched_benchmark.social_strengths), icon: '📱' }
   ];
 
   // Filter categories with strengths
@@ -188,7 +190,8 @@ export function generateBenchmarkComparisonChart(analysisResult, synthesisData =
       html += `              <span>${category.label}</span>\n`;
       html += '            </div>\n';
       html += '            <ul style="margin: 0; padding-left: 20px; opacity: 0.9; line-height: 1.6;">\n';
-      category.strengths.slice(0, 4).forEach(strength => {
+      // Display up to 5 strengths per category (increased from 4)
+      category.strengths.slice(0, 5).forEach(strength => {
         html += `              <li style="margin-bottom: 6px; font-size: 14px;">${escapeHtml(strength)}</li>\n`;
       });
       html += '            </ul>\n';

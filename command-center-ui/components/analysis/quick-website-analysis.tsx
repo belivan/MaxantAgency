@@ -114,7 +114,7 @@ export function QuickWebsiteAnalysis({
         time: duration
       });
 
-      addTaskLog(taskId, `Analysis complete! Grade: ${lead.website_grade}`, 'success');
+      addTaskLog(taskId, `Analysis complete! Grade: ${lead.grade}`, 'success');
       completeTask(taskId);
 
       // Call success callback
@@ -292,8 +292,8 @@ export function QuickWebsiteAnalysis({
           <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
             {/* Success Header with Grade */}
             <div className="flex items-start gap-3">
-              <div className={`w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 ${getGradeColor(result.website_grade || 'F')}`}>
-                <span className="text-3xl font-bold">{result.website_grade || 'F'}</span>
+              <div className={`w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 ${getGradeColor(result.grade || 'F')}`}>
+                <span className="text-3xl font-bold">{result.grade || 'F'}</span>
               </div>
               <div className="flex-1 space-y-1">
                 <h3 className="font-semibold text-lg">{result.company_name}</h3>

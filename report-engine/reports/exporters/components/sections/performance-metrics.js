@@ -12,6 +12,22 @@
 import { escapeHtml } from '../utils/helpers.js';
 
 /**
+ * Normalize metrics to handle different field name conventions
+ * Converts milliseconds to seconds for timing metrics
+ */
+function normalizeMetrics(metrics) {
+  if (!metrics) return null;
+
+  return {
+    // Handle both naming conventions and convert ms to seconds
+    firstContentfulPaint: metrics.firstContentfulPaint || (metrics.fcp ? metrics.fcp / 1000 : null),
+    largestContentfulPaint: metrics.largestContentfulPaint || (metrics.lcp ? metrics.lcp / 1000 : null),
+    totalBlockingTime: metrics.totalBlockingTime || metrics.tbt || null,
+    cumulativeLayoutShift: metrics.cumulativeLayoutShift !== undefined ? metrics.cumulativeLayoutShift : metrics.cls
+  };
+}
+
+/**
  * Generate Performance Metrics Section
  * Includes PageSpeed Insights and CrUX data visualization
  */
@@ -23,14 +39,16 @@ export function generatePerformanceMetricsSection(analysisResult) {
 
   let html = '';
 
-  // PageSpeed Insights
+  // PageSpeed Insights - build content first, only add wrapper if we have data
   if (performance_metrics_pagespeed) {
-    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-bottom: 24px;">\n';
-    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 8px;">📊 PageSpeed Insights</h3>\n';
-    html += '        <p style="opacity: 0.7; margin-bottom: 16px; font-size: 0.95rem;">Lab data from simulated tests in controlled environments.</p>\n';
+    let pageSpeedContent = '';
 
     // Helper function to generate visual metric card with bar
     const generateMetricCard = (label, value, unit, thresholds) => {
+      if (!thresholds) {
+        return '';
+      }
+
       const numValue = parseFloat(value);
       let status = 'poor';
       let color = 'var(--danger)'; // Red
@@ -88,7 +106,7 @@ export function generatePerformanceMetricsSection(analysisResult) {
       const offset = circumference - (numScore / 100) * circumference;
 
       return `
-        <div style="text-align: center; padding: 20px; background: var(--bg-primary); border-radius: 12px; border: 1px solid var(--border-light);">
+        <div style="text-align: center; padding: 20px; background: var(--bg-primary); border-radius: var(--radius-lg); border: 1px solid var(--border-light);">
           <svg width="120" height="120" viewBox="0 0 120 120" style="margin: 0 auto 16px;">
             <circle cx="60" cy="60" r="45" fill="none" stroke="#E5E7EB" stroke-width="10"/>
             <circle
@@ -109,19 +127,19 @@ export function generatePerformanceMetricsSection(analysisResult) {
       `;
     };
 
-    html += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px;">\n';
+    pageSpeedContent += '        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 24px;">\n';
 
     // Mobile Performance Score
     if (performance_metrics_pagespeed.mobile) {
-      html += generateScoreGauge(performance_metrics_pagespeed.mobile.performanceScore, 'Mobile', '📱');
+      pageSpeedContent += generateScoreGauge(performance_metrics_pagespeed.mobile.performanceScore, 'Mobile', '📱');
     }
 
     // Desktop Performance Score
     if (performance_metrics_pagespeed.desktop) {
-      html += generateScoreGauge(performance_metrics_pagespeed.desktop.performanceScore, 'Desktop', '💻');
+      pageSpeedContent += generateScoreGauge(performance_metrics_pagespeed.desktop.performanceScore, 'Desktop', '💻');
     }
 
-    html += '        </div>\n';
+    pageSpeedContent += '        </div>\n';
 
     // Core Web Vitals thresholds
     const thresholds = {
@@ -132,66 +150,98 @@ export function generatePerformanceMetricsSection(analysisResult) {
     };
 
     // Mobile Metrics
-    if (performance_metrics_pagespeed.mobile?.metrics) {
-      html += '        <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 16px; border: 1px solid var(--border-light);">\n';
-      html += '          <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">📱 Mobile Metrics</h4>\n';
+    if (performance_metrics_pagespeed.mobile?.metrics || performance_metrics_pagespeed.mobile) {
+      console.log('[PERF-DEBUG] Normalizing mobile metrics...');
+      const m = normalizeMetrics(performance_metrics_pagespeed.mobile.metrics || performance_metrics_pagespeed.mobile);
+      console.log('[PERF-DEBUG] Normalized mobile metrics:', m);
 
-      const m = performance_metrics_pagespeed.mobile.metrics;
-      if (m.firstContentfulPaint) {
-        html += generateMetricCard('First Contentful Paint (FCP)', m.firstContentfulPaint, 's', thresholds.fcp);
-      }
-      if (m.largestContentfulPaint) {
-        html += generateMetricCard('Largest Contentful Paint (LCP)', m.largestContentfulPaint, 's', thresholds.lcp);
-      }
-      if (m.totalBlockingTime) {
-        html += generateMetricCard('Total Blocking Time (TBT)', m.totalBlockingTime, 'ms', thresholds.tbt);
-      }
-      if (m.cumulativeLayoutShift) {
-        html += generateMetricCard('Cumulative Layout Shift (CLS)', m.cumulativeLayoutShift, '', thresholds.cls);
-      }
+      // Only render if we got valid metrics back
+      if (m && (m.firstContentfulPaint || m.largestContentfulPaint || m.totalBlockingTime || m.cumulativeLayoutShift)) {
+        console.log('[PERF-DEBUG] Mobile metrics valid, rendering...');
+        pageSpeedContent += '        <div style="background: var(--bg-primary); padding: 20px; border-radius: var(--radius-lg); margin-bottom: 16px; border: 1px solid var(--border-light);">\n';
+        pageSpeedContent += '          <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">📱 Mobile Metrics</h4>\n';
 
-      html += '        </div>\n';
+        if (m.firstContentfulPaint) {
+          pageSpeedContent += generateMetricCard('First Contentful Paint (FCP)', m.firstContentfulPaint, 's', thresholds.fcp);
+        }
+        if (m.largestContentfulPaint) {
+          pageSpeedContent += generateMetricCard('Largest Contentful Paint (LCP)', m.largestContentfulPaint, 's', thresholds.lcp);
+        }
+        if (m.totalBlockingTime) {
+          pageSpeedContent += generateMetricCard('Total Blocking Time (TBT)', m.totalBlockingTime, 'ms', thresholds.tbt);
+        }
+        if (m.cumulativeLayoutShift !== null && m.cumulativeLayoutShift !== undefined) {
+          pageSpeedContent += generateMetricCard('Cumulative Layout Shift (CLS)', m.cumulativeLayoutShift, '', thresholds.cls);
+        }
+
+        pageSpeedContent += '        </div>\n';
+      }
     }
 
     // Desktop Metrics
-    if (performance_metrics_pagespeed.desktop?.metrics) {
-      html += '        <div style="background: var(--bg-primary); padding: 20px; border-radius: 12px; border: 1px solid var(--border-light);">\n';
-      html += '          <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">💻 Desktop Metrics</h4>\n';
+    if (performance_metrics_pagespeed.desktop?.metrics || performance_metrics_pagespeed.desktop) {
+      const d = normalizeMetrics(performance_metrics_pagespeed.desktop.metrics || performance_metrics_pagespeed.desktop);
 
-      const d = performance_metrics_pagespeed.desktop.metrics;
-      if (d.firstContentfulPaint) {
-        html += generateMetricCard('First Contentful Paint (FCP)', d.firstContentfulPaint, 's', thresholds.fcp);
-      }
-      if (d.largestContentfulPaint) {
-        html += generateMetricCard('Largest Contentful Paint (LCP)', d.largestContentfulPaint, 's', thresholds.lcp);
-      }
-      if (d.totalBlockingTime) {
-        html += generateMetricCard('Total Blocking Time (TBT)', d.totalBlockingTime, 'ms', thresholds.tbt);
-      }
-      if (d.cumulativeLayoutShift) {
-        html += generateMetricCard('Cumulative Layout Shift (CLS)', d.cumulativeLayoutShift, '', thresholds.cls);
-      }
+      // Only render if we got valid metrics back
+      if (d && (d.firstContentfulPaint || d.largestContentfulPaint || d.totalBlockingTime || d.cumulativeLayoutShift)) {
+        pageSpeedContent += '        <div style="background: var(--bg-primary); padding: 20px; border-radius: var(--radius-lg); border: 1px solid var(--border-light);">\n';
+        pageSpeedContent += '          <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text-primary);">💻 Desktop Metrics</h4>\n';
 
-      html += '        </div>\n';
+        if (d.firstContentfulPaint) {
+          pageSpeedContent += generateMetricCard('First Contentful Paint (FCP)', d.firstContentfulPaint, 's', thresholds.fcp);
+        }
+        if (d.largestContentfulPaint) {
+          pageSpeedContent += generateMetricCard('Largest Contentful Paint (LCP)', d.largestContentfulPaint, 's', thresholds.lcp);
+        }
+        if (d.totalBlockingTime) {
+          pageSpeedContent += generateMetricCard('Total Blocking Time (TBT)', d.totalBlockingTime, 'ms', thresholds.tbt);
+        }
+        if (d.cumulativeLayoutShift !== null && d.cumulativeLayoutShift !== undefined) {
+          pageSpeedContent += generateMetricCard('Cumulative Layout Shift (CLS)', d.cumulativeLayoutShift, '', thresholds.cls);
+        }
+
+        pageSpeedContent += '        </div>\n';
+      }
     }
 
-    html += '      </div>\n';
+    // Only add PageSpeed section if we actually have content to show
+    if (pageSpeedContent.trim()) {
+      html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: var(--radius-lg); margin-bottom: 24px;">\n';
+      html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 8px;">📊 PageSpeed Insights</h3>\n';
+      html += '        <p style="opacity: 0.7; margin-bottom: 16px; font-size: 0.95rem;">Lab data from simulated tests in controlled environments.</p>\n';
+      html += pageSpeedContent;
+      html += '      </div>\n';
+    }
   }
 
   // CrUX Data - Real User Performance Metrics
   if (performance_metrics_crux) {
-    html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: 12px; margin-top: 16px;">\n';
-    html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 8px;">🌐 Chrome User Experience (CrUX) - Real User Data</h3>\n';
-    html += '        <p style="opacity: 0.7; margin-bottom: 16px; font-size: 0.95rem;">Performance data from actual Chrome users visiting your website over the past 28 days.</p>\n';
+    // Handle both data structures: .metrics or .mobile
+    const cruxData = performance_metrics_crux.metrics || performance_metrics_crux.mobile || {};
 
-    const metrics = performance_metrics_crux.metrics || {};
-    const hasMetrics = Object.keys(metrics).length > 0;
+    // Normalize metric names from short names (fcp, lcp, cls) to full names
+    const metrics = {};
+    const metricMapping = {
+      'fcp': 'firstContentfulPaint',
+      'lcp': 'largestContentfulPaint',
+      'fid': 'firstInputDelay',
+      'cls': 'cumulativeLayoutShift',
+      'inp': 'interactionToNextPaint'
+    };
 
-    if (!hasMetrics) {
-      html += '        <p style="font-style: italic; opacity: 0.7; padding: 16px; background: var(--bg-primary); border-radius: 8px; border-left: 4px solid var(--warning);">CrUX data is not available for this website. This usually means the site doesn\'t have enough Chrome user traffic yet to generate meaningful statistics. Google\'s Chrome User Experience Report (CrUX) requires a minimum threshold of users before publishing data.</p>\n';
-      html += '      </div>\n';
-      return html; // Exit early if no metrics
-    }
+    Object.entries(cruxData).forEach(([key, value]) => {
+      const normalizedKey = metricMapping[key] || key;
+      metrics[normalizedKey] = value;
+    });
+
+    // Count valid (non-null) metrics
+    const validMetrics = Object.entries(metrics).filter(([key, value]) => value !== null && value !== undefined);
+
+    // Only render CrUX section if we have valid data
+    if (validMetrics.length > 0) {
+      html += '      <div style="background: var(--bg-secondary); padding: 24px; border-radius: var(--radius-lg); margin-top: 16px;">\n';
+      html += '        <h3 style="font-size: 1.3rem; font-weight: 600; margin-bottom: 8px;">🌐 Chrome User Experience (CrUX) - Real User Data</h3>\n';
+      html += '        <p style="opacity: 0.7; margin-bottom: 16px; font-size: 0.95rem;">Performance data from actual Chrome users visiting your website over the past 28 days.</p>\n';
 
     // Helper function to get metric display name
     const getMetricName = (key) => {
@@ -214,10 +264,16 @@ export function generatePerformanceMetricsSection(analysisResult) {
 
     // Display each metric
     Object.entries(metrics).forEach(([metricKey, metricData]) => {
+      // Skip null metrics (e.g., INP might be null in some CrUX data)
+      if (!metricData) {
+        return;
+      }
+
       const good = Math.round((metricData.good || 0) * 100);
       const needsImprovement = Math.round((metricData.needsImprovement || 0) * 100);
       const poor = Math.round((metricData.poor || 0) * 100);
-      const p75Value = metricData.percentiles?.p75;
+      // Handle both data structures for p75 value
+      const p75Value = metricData.percentiles?.p75 || metricData.p75;
 
       html += '        <div style="margin-bottom: 20px; padding: 16px; background: var(--bg-primary); border-radius: 8px; border: 1px solid var(--border-light);">\n';
       html += `          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">\n`;
@@ -252,12 +308,25 @@ export function generatePerformanceMetricsSection(analysisResult) {
       html += '        </div>\n';
     });
 
-    // Data source info
-    if (performance_metrics_crux.origin) {
-      html += `        <p style="font-size: 0.85rem; color: var(--text-secondary); opacity: 0.7; margin-top: 12px;">Data source: ${escapeHtml(performance_metrics_crux.origin)} • Form factor: ${performance_metrics_crux.formFactor || 'All devices'}</p>\n`;
-    }
+      // Data source info
+      if (performance_metrics_crux.origin) {
+        html += `        <p style="font-size: 0.85rem; color: var(--text-secondary); opacity: 0.7; margin-top: 12px;">Data source: ${escapeHtml(performance_metrics_crux.origin)} • Form factor: ${performance_metrics_crux.formFactor || 'All devices'}</p>\n`;
+      }
 
-    html += '      </div>\n';
+      html += '      </div>\n';
+    }
+    // If no valid metrics, the entire CrUX section is skipped
+  }
+
+  // Show empty state if NO performance data was collected
+  if (!html || html.trim() === '') {
+    const { generateEmptyState } = require('../empty-state');
+    return generateEmptyState({
+      icon: '⚡',
+      title: 'Performance Data Not Collected',
+      message: 'PageSpeed Insights data was not collected for this analysis. Performance metrics help identify loading speed and Core Web Vitals issues that impact user experience and SEO rankings.',
+      suggestion: 'Future analyses will include comprehensive performance testing using Google\'s PageSpeed Insights API.'
+    });
   }
 
   return html;

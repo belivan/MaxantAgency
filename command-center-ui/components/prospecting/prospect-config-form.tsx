@@ -46,13 +46,13 @@ export function ProspectConfigForm({
     watch,
     setValue,
     formState: { errors }
-  } = useForm<ProspectGenerationFormData>({
+  } = useForm({
     resolver: zodResolver(prospectGenerationSchema),
     defaultValues: {
       count: 20,
-      model: 'grok-4-fast',
-      visionModel: 'gpt-4o',
-      verify: true
+      model: 'grok-4-fast' as const,
+      visionModel: 'gpt-4o' as const
+      // verify uses Zod's default(true)
     }
   });
 

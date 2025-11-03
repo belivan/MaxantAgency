@@ -53,11 +53,33 @@ async function processScreenshots(analysisResult, registry) {
 
   // Load from screenshots_manifest (NEW)
   const manifest = analysisResult.screenshots_manifest;
-  if (manifest && manifest.pages && manifest.pages.length > 0) {
-    console.log(`📸 Loading ${manifest.total_screenshots} screenshots from manifest...`);
+  if (manifest && manifest.pages) {
+    // Handle both array format and object format
+    let pagesArray = [];
 
-    for (const page of manifest.pages) {
-      const pagePath = page.page_path || '/';
+    if (Array.isArray(manifest.pages)) {
+      // Array format: [{ page: '/', desktop_screenshot: {...}, mobile_screenshot: {...} }]
+      pagesArray = manifest.pages;
+    } else if (typeof manifest.pages === 'object') {
+      // Object format: { '/': { desktop: {...}, mobile: {...} }, '/blog': {...} }
+      pagesArray = Object.entries(manifest.pages).map(([pageUrl, screenshots]) => ({
+        page_path: pageUrl,
+        page_name: pageUrl === '/' ? 'Homepage' : pageUrl.substring(1), // Remove leading slash
+        desktop_screenshot: screenshots.desktop ? { public_url: screenshots.desktop.url } : null,
+        mobile_screenshot: screenshots.mobile ? { public_url: screenshots.mobile.url } : null
+      }));
+    }
+
+    if (pagesArray.length > 0) {
+      console.log(`📸 Loading ${pagesArray.length * 2} screenshots from manifest (${pagesArray.length} pages)...`);
+      console.log('DEBUG: First page structure:', JSON.stringify(pagesArray[0], null, 2));
+      console.log('DEBUG: screenshotData.screenshots before:', screenshotData.screenshots.length);
+
+      for (const page of pagesArray) {
+        const pagePath = page.page_path || '/';
+        console.log(`  📄 Processing page: "${pagePath}"`);
+        console.log(`     desktop_screenshot exists: ${!!page.desktop_screenshot}, has public_url: ${!!page.desktop_screenshot?.public_url}`);
+        console.log(`     mobile_screenshot exists: ${!!page.mobile_screenshot}, has public_url: ${!!page.mobile_screenshot?.public_url}`);
 
       // Desktop screenshot
       if (page.desktop_screenshot && page.desktop_screenshot.public_url) {
@@ -117,6 +139,7 @@ async function processScreenshots(analysisResult, registry) {
         }
       }
     }
+    } // End of if (pagesArray.length > 0)
   }
 
   // FALLBACK: Try old local paths if manifest is empty
@@ -152,10 +175,45 @@ async function processScreenshots(analysisResult, registry) {
     }
   }
 
-  // Benchmark screenshots (unchanged)
+  // Benchmark screenshots - support multiple formats
   const benchmark = analysisResult.matched_benchmark;
+  console.log('📊 Benchmark data check:');
+  console.log('  - Has benchmark:', !!benchmark);
   if (benchmark) {
-    if (benchmark.screenshot_desktop_path && existsSync(benchmark.screenshot_desktop_path)) {
+    console.log('  - Benchmark fields:', Object.keys(benchmark).join(', '));
+    console.log('  - desktop_screenshot_url:', benchmark.desktop_screenshot_url ? 'EXISTS' : 'NULL');
+    console.log('  - mobile_screenshot_url:', benchmark.mobile_screenshot_url ? 'EXISTS' : 'NULL');
+
+    // Desktop screenshot - try URL first, then fall back to local path
+    let desktopLoaded = false;
+
+    // Try URL format (most common)
+    if (benchmark.desktop_screenshot_url) {
+      console.log('  → Fetching desktop screenshot from URL...');
+      try {
+        const response = await fetch(benchmark.desktop_screenshot_url);
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          const dataUri = `data:image/png;base64,${base64}`;
+          screenshotData.benchmarkDesktopScreenshot = {
+            dataUri,
+            device: 'desktop'
+          };
+          screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkDesktopScreenshot);
+          registry.register('benchmark-homepage-desktop', dataUri);
+          desktopLoaded = true;
+          console.log('  ✅ Desktop screenshot loaded successfully');
+        } else {
+          console.log('  ❌ Desktop screenshot fetch returned:', response.status);
+        }
+      } catch (err) {
+        console.warn(`⚠️  Failed to fetch benchmark desktop screenshot from URL: ${err.message}`);
+      }
+    }
+
+    // Fall back to local file path if URL didn't work
+    if (!desktopLoaded && benchmark.screenshot_desktop_path && existsSync(benchmark.screenshot_desktop_path)) {
       try {
         const compressed = await compressImageFromFile(benchmark.screenshot_desktop_path, { quality: 85 });
         screenshotData.benchmarkDesktopScreenshot = {
@@ -169,7 +227,36 @@ async function processScreenshots(analysisResult, registry) {
       }
     }
 
-    if (benchmark.screenshot_mobile_path && existsSync(benchmark.screenshot_mobile_path)) {
+    // Mobile screenshot - try URL first, then fall back to local path
+    let mobileLoaded = false;
+
+    // Try URL format (most common)
+    if (benchmark.mobile_screenshot_url) {
+      console.log('  → Fetching mobile screenshot from URL...');
+      try {
+        const response = await fetch(benchmark.mobile_screenshot_url);
+        if (response.ok) {
+          const buffer = await response.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          const dataUri = `data:image/png;base64,${base64}`;
+          screenshotData.benchmarkMobileScreenshot = {
+            dataUri,
+            device: 'mobile'
+          };
+          screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkMobileScreenshot);
+          registry.register('benchmark-homepage-mobile', dataUri);
+          mobileLoaded = true;
+          console.log('  ✅ Mobile screenshot loaded successfully');
+        } else {
+          console.log('  ❌ Mobile screenshot fetch returned:', response.status);
+        }
+      } catch (err) {
+        console.warn(`⚠️  Failed to fetch benchmark mobile screenshot from URL: ${err.message}`);
+      }
+    }
+
+    // Fall back to local file path if URL didn't work
+    if (!mobileLoaded && benchmark.screenshot_mobile_path && existsSync(benchmark.screenshot_mobile_path)) {
       try {
         const compressed = await compressImageFromFile(benchmark.screenshot_mobile_path, { quality: 85 });
         screenshotData.benchmarkMobileScreenshot = {

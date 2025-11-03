@@ -22,7 +22,8 @@ import { type AnalysisPrompts, type PromptConfig } from '@/components/analysis/p
 import { useSSE, useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { updateProject, getProject } from '@/lib/api';
-import type { AnalysisOptionsFormData, SSEMessage } from '@/lib/types';
+import type { AnalysisOptionsFormData } from '@/lib/utils/validation';
+import type { SSEMessage } from '@/lib/types';
 import {
   Tabs,
   TabsContent,

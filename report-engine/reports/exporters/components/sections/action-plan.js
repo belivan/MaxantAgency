@@ -63,7 +63,7 @@ export function generateActionPlan(analysisResult, synthesisData = {}, options =
 
       // Show ROI estimate and urgency
       if (finding.estimatedValue || finding.urgency) {
-        html += '            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color);">\n';
+        html += '            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-light);">\n';
         if (finding.estimatedValue) {
           html += `              <div style="color: var(--success); font-weight: 500; margin-bottom: 4px;">💰 ${escapeHtml(finding.estimatedValue)}</div>\n`;
         }

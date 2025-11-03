@@ -59,7 +59,7 @@ export function SocialMessagePreview({
   const Icon = config.icon;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.message);
+    navigator.clipboard.writeText(message.message_body);
     setCopied(true);
     onCopy?.();
     setTimeout(() => setCopied(false), 2000);
@@ -107,7 +107,7 @@ export function SocialMessagePreview({
           </label>
           <div className="p-4 border rounded-lg bg-background">
             <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">
-              {message.message}
+              {message.message_body}
             </pre>
           </div>
         </div>
@@ -126,7 +126,7 @@ export function SocialMessagePreview({
               </Badge>
             )}
           </div>
-          <span>{message.message.length} characters</span>
+          <span>{message.message_body.length} characters</span>
         </div>
 
         {/* Copy Instructions */}

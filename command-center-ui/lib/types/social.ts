@@ -39,10 +39,12 @@ export interface SocialMessage {
   has_variants: boolean;
   message_variants?: string[] | null;
   recommended_variant?: number | null;
+  variant_name?: string | null;
   variant_reasoning?: string | null;
 
   // Strategy and quality
   strategy?: string | null;
+  tone?: string | null;
   quality_score?: number | null;
   validation_issues?: string[] | null;
 
@@ -83,6 +85,7 @@ export interface SocialMessage {
     industry: string;
     company_name: string;
     contact_email?: string | null;
+    contact_name?: string | null;
     social_profiles?: Record<string, any>;
   };
 }

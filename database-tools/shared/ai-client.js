@@ -437,16 +437,8 @@ export async function callAI({
 
   const hasImages = normalizedImages && normalizedImages.length > 0;
 
-  // Set maxTokens based on model if not explicitly provided
-  if (maxTokens === null) {
-    if (model && model.includes('claude') && model.includes('haiku')) {
-      maxTokens = 8192;  // Claude Haiku 3.5/4.5 limit
-    } else if (model && model.includes('claude')) {
-      maxTokens = 8192;  // Claude Sonnet/Opus limit
-    } else {
-      maxTokens = 16384;  // GPT models default
-    }
-  }
+  // maxTokens check removed - let models use their full capacity
+  // If not explicitly provided, will be set per-provider later
 
   // Log the AI call for debugging
   // FIX #6: Build caller string from engine, module, and caller parameters
@@ -608,27 +600,29 @@ async function callOpenAICompatible({
       }
     }
 
-    // MAXIMUM token limits for all models - let them generate complete responses!
-    // Each model gets its documented maximum output token limit
-    let adjustedMaxTokens = maxTokens;
-    
+    // ⚠️ DISABLED: Token limits removed to prevent response truncation
+    // Let each model use its native maximum capacity
+    // User requested: "I don't care about token defaults"
+    /*
+    let adjustedMaxTokens;
+
     if (model.startsWith('gpt-5')) {
       // GPT-5 & GPT-5 Mini: 128,000 MAX OUTPUT TOKENS! 🚀
-      // Context window: 400,000 tokens total
-      // Max input: 272,000 tokens
-      // Max output: 128,000 tokens (includes reasoning tokens)
-      // Both gpt-5 and gpt-5-mini have the same limits
-      adjustedMaxTokens = 128000;
+      adjustedMaxTokens = maxTokens || 128000;
     } else if (model.startsWith('gpt-4o')) {
       // GPT-4o and GPT-4o-mini: 16,384 max output tokens
-      adjustedMaxTokens = 16384;
+      adjustedMaxTokens = maxTokens || 16384;
     } else if (model.includes('grok')) {
       // Grok models: 32,768 max output tokens
-      adjustedMaxTokens = 32768;
+      adjustedMaxTokens = maxTokens || 32768;
     } else {
-      // Default: Use provided maxTokens or set to reasonable high limit
-      adjustedMaxTokens = Math.max(maxTokens, 16384);
+      // Default: Use provided maxTokens or model maximum
+      adjustedMaxTokens = maxTokens || 16384;
     }
+    */
+
+    // Only use maxTokens if explicitly provided by caller, otherwise let model use native max
+    const adjustedMaxTokens = maxTokens || undefined;
 
 
     const requestBody = {
@@ -645,12 +639,16 @@ async function callOpenAICompatible({
       ]
     };
 
+    // ⚠️ DISABLED: Only set token limits if explicitly provided
     // GPT-5 uses max_completion_tokens instead of max_tokens
-    if (model.startsWith('gpt-5')) {
-      requestBody.max_completion_tokens = adjustedMaxTokens;
-    } else {
-      requestBody.max_tokens = adjustedMaxTokens;
+    if (adjustedMaxTokens) {
+      if (model.startsWith('gpt-5')) {
+        requestBody.max_completion_tokens = adjustedMaxTokens;
+      } else {
+        requestBody.max_tokens = adjustedMaxTokens;
+      }
     }
+    // Otherwise, let the model use its native maximum capacity
 
     // GPT-5 only supports temperature=1 (default), so skip it for GPT-5
     if (!model.startsWith('gpt-5')) {
@@ -714,10 +712,12 @@ async function callClaude({
   const client = getAnthropicClient();
 
   try {
-    // Set maximum tokens for Claude models
-    // Claude 3.5/4.5 Sonnet/Haiku: 8,192 max output tokens
-    // Claude 3 Opus: 4,096 max output tokens
-    const adjustedMaxTokens = Math.max(maxTokens, 8192);
+    // ⚠️ Claude API REQUIRES max_tokens field - can't be omitted
+    // Use model's native maximum if not explicitly provided
+    // Claude Haiku 4.5: 64,000 max output tokens
+    // Claude Sonnet 3.5/4.5: 64,000 max output tokens
+    // Claude Opus 3: 4,096 max output tokens
+    const adjustedMaxTokens = maxTokens || 64000; // Use native max for Haiku/Sonnet
 
     // Build user message content
     const content = [];
@@ -762,10 +762,10 @@ async function callClaude({
       }
     }
 
-    // Make API call
+    // Make API call - max_tokens is required by Claude API
     const response = await client.messages.create({
       model,
-      max_tokens: adjustedMaxTokens,
+      max_tokens: adjustedMaxTokens, // Required field - using model's native max (64K)
       temperature,
       system: systemPrompt,
       messages: [
@@ -866,12 +866,17 @@ export function parseJSONResponse(content) {
       throw new Error('AI response content is null or empty');
     }
 
-    // Try to extract JSON from markdown code blocks
-    const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) ||
-                     content.match(/```\n([\s\S]*?)\n```/) ||
-                     [null, content];
+    // Ensure content is a string
+    const contentStr = typeof content === 'string' ? content :
+                       typeof content === 'object' ? JSON.stringify(content) :
+                       String(content);
 
-    let jsonText = jsonMatch[1] || content;
+    // Try to extract JSON from markdown code blocks
+    const jsonMatch = contentStr.match(/```json\n([\s\S]*?)\n```/) ||
+                     contentStr.match(/```\n([\s\S]*?)\n```/) ||
+                     [null, contentStr];
+
+    let jsonText = jsonMatch[1] || contentStr;
 
     // If parsing fails, try to extract JSON object from conversational text
     // (handles cases like "I'll analyze... {json here}")
@@ -884,14 +889,65 @@ export function parseJSONResponse(content) {
 
       if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
         const extractedJson = jsonText.substring(firstBrace, lastBrace + 1);
-        return JSON.parse(extractedJson);
+
+        try {
+          return JSON.parse(extractedJson);
+        } catch (secondError) {
+          // JSON is malformed - try to repair common issues
+          console.warn('⚠️  JSON parsing failed, attempting to repair...');
+
+          let repaired = extractedJson;
+
+          // Try to fix truncated strings by closing them
+          const stringPattern = /"([^"]*?)$/;
+          if (stringPattern.test(repaired)) {
+            repaired = repaired.replace(stringPattern, '"$1"');
+            console.log('  → Fixed unclosed string at end');
+          }
+
+          // Try to close unclosed arrays
+          const openBrackets = (repaired.match(/\[/g) || []).length;
+          const closeBrackets = (repaired.match(/\]/g) || []).length;
+          if (openBrackets > closeBrackets) {
+            repaired += ']'.repeat(openBrackets - closeBrackets);
+            console.log(`  → Added ${openBrackets - closeBrackets} closing brackets`);
+          }
+
+          // Try to close unclosed objects
+          const openBraces = (repaired.match(/\{/g) || []).length;
+          const closeBraces = (repaired.match(/\}/g) || []).length;
+          if (openBraces > closeBraces) {
+            repaired += '}'.repeat(openBraces - closeBraces);
+            console.log(`  → Added ${openBraces - closeBraces} closing braces`);
+          }
+
+          try {
+            const parsed = JSON.parse(repaired);
+            console.log('✅ Successfully repaired JSON!');
+            return parsed;
+          } catch (thirdError) {
+            // Still failed - log full response for debugging
+            console.error('❌ JSON repair failed. Response length:', extractedJson.length);
+            console.error('First 500 chars:');
+            console.error(extractedJson.substring(0, 500));
+            console.error('\nLast 500 chars:');
+            console.error(extractedJson.substring(extractedJson.length - 500));
+            throw new Error(`${thirdError.message} | Response length: ${extractedJson.length}`);
+          }
+        }
       }
 
       // If extraction failed, throw the original error
       throw firstError;
     }
   } catch (error) {
-    const preview = content ? content.substring(0, 200) : '[null or empty response]';
+    // Get string representation for preview
+    const contentStr = content ?
+                       (typeof content === 'string' ? content :
+                        typeof content === 'object' ? JSON.stringify(content) :
+                        String(content)) :
+                       null;
+    const preview = contentStr ? contentStr.substring(0, 200) : '[null or empty response]';
     console.error('Failed to parse JSON response:', preview);
     throw new Error(`Invalid JSON response: ${error.message}`);
   }

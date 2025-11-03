@@ -52,7 +52,7 @@ export class AnalysisCoordinator {
       {
         ...context,
         baseUrl,
-        tech_stack: homepage.metadata?.techStack || 'Unknown',
+        tech_stack: homepage.techStack || 'Unknown',
         has_blog: parsedData.content.hasBlog,
 
         // NEW: Benchmark context for all analyzers

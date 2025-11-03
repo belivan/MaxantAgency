@@ -16,6 +16,7 @@ import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { filterUrls } from '../utils/url-filter.js';
+import { detectTechStack } from '../utils/tech-stack-detector.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -835,6 +836,20 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
     // Extract content first (before screenshot to ensure page is ready)
     const htmlContent = await desktopPage.content();
 
+    // Detect tech stack for homepage (only, to save processing time)
+    const isHomepage = pageUrl === '/' || pageUrl === '' || pageUrl === baseUrl;
+    let techStack = null;
+    if (isHomepage) {
+      console.log(`[Targeted Crawler] Detecting tech stack for homepage...`);
+      try {
+        techStack = await detectTechStack(desktopPage, htmlContent, {});
+        console.log(`[Targeted Crawler] Tech stack detected: CMS=${techStack.cms || 'None'}, Frameworks=${techStack.frameworks?.length || 0}`);
+      } catch (error) {
+        console.error(`[Targeted Crawler] Tech stack detection failed:`, error.message);
+        techStack = null;
+      }
+    }
+
     // Extract design tokens from desktop page
     console.log(`[Targeted Crawler] Extracting design tokens (desktop) for ${fullUrl}...`);
     const designTokensDesktop = await extractDesignTokens(desktopPage);
@@ -899,6 +914,7 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
         desktop: designTokensDesktop || { fonts: [], colors: [], extractedAt: new Date().toISOString() },
         mobile: designTokensMobile || { fonts: [], colors: [], extractedAt: new Date().toISOString() }
       },
+      techStack: techStack || null,
       metadata: {
         crawlTime,
         timestamp: new Date().toISOString(),

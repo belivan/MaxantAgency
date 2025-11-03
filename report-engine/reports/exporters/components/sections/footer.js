@@ -43,7 +43,6 @@ export function generateFooter(analysisResult, synthesisData = null, options = {
   html += '          <div class="footer-logo">MaxantAgency</div>\n';
   html += '          <p class="footer-text">\n';
   html += '            Professional website analysis powered by AI-driven insights.\n';
-  html += `            Report generated on ${today}.\n`;
   html += '          </p>\n';
   html += '        </div>\n';
   html += '      </div>\n';

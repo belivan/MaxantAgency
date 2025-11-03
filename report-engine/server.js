@@ -224,6 +224,11 @@ app.post('/api/generate-from-lead', async (req, res) => {
           match_reasoning: matchReasoning,  // CRITICAL: This was missing!
           comparison_tier: comparisonTier,
 
+          // Screenshot data for visual comparison
+          desktop_screenshot_url: benchmark.desktop_screenshot_url,
+          mobile_screenshot_url: benchmark.mobile_screenshot_url,
+          screenshots_manifest: benchmark.screenshots_manifest,
+
           // Create scores object that report sections expect
           scores: {
             overall: benchmark.analysis_results?.overall_score || 0,
@@ -315,6 +320,70 @@ app.post('/api/generate-from-lead', async (req, res) => {
       performance_metrics_crux: lead.performance_metrics_crux,
       performance_score_mobile: lead.performance_score_mobile,
       performance_score_desktop: lead.performance_score_desktop,
+
+      // Design tokens - extracted color palettes and typography
+      design_tokens_desktop: lead.design_tokens_desktop,
+      design_tokens_mobile: lead.design_tokens_mobile,
+
+      // Contact Information (hero-section displays these)
+      contact_email: lead.contact_email,
+      contact_phone: lead.contact_phone,
+      contact_name: lead.contact_name,
+      city: lead.city,
+      state: lead.state,
+
+      // Grading System (score-breakdown needs these)
+      weights: lead.weights,
+      weight_reasoning: lead.weight_reasoning,
+
+      // Desktop/Mobile Specific Design Data
+      design_score_desktop: lead.design_score_desktop,
+      design_score_mobile: lead.design_score_mobile,
+      design_issues_desktop: lead.design_issues_desktop || [],
+      design_issues_mobile: lead.design_issues_mobile || [],
+      desktop_critical_issues: lead.desktop_critical_issues || 0,
+      mobile_critical_issues: lead.mobile_critical_issues || 0,
+
+      // Accessibility Details
+      accessibility_compliance: lead.accessibility_compliance || {},
+      accessibility_wcag_level: lead.accessibility_wcag_level || 'AA',
+
+      // Performance Details
+      performance_issues: lead.performance_issues || [],
+      performance_api_errors: lead.performance_api_errors || [],
+
+      // Lead Scoring Fields
+      lead_priority: lead.lead_priority,
+      lead_priority_reasoning: lead.lead_priority_reasoning,
+      priority_tier: lead.priority_tier,
+      budget_likelihood: lead.budget_likelihood,
+      fit_score: lead.fit_score,
+      quality_gap_score: lead.quality_gap_score,
+      budget_score: lead.budget_score,
+      urgency_score: lead.urgency_score,
+      industry_fit_score: lead.industry_fit_score,
+      company_size_score: lead.company_size_score,
+      engagement_score: lead.engagement_score,
+
+      // Analysis Metadata
+      ai_page_selection: lead.ai_page_selection,
+      analysis_cost: lead.analysis_cost,
+      analysis_time: lead.analysis_time,
+      discovery_log: lead.discovery_log,
+
+      // Content Fields
+      has_blog: lead.has_blog || false,
+      content_insights: lead.content_insights || {},
+      page_title: lead.page_title,
+      meta_description: lead.meta_description,
+
+      // AI Model Tracking (for transparency)
+      seo_analysis_model: lead.seo_analysis_model,
+      content_analysis_model: lead.content_analysis_model,
+      desktop_visual_model: lead.desktop_visual_model,
+      mobile_visual_model: lead.mobile_visual_model,
+      social_analysis_model: lead.social_analysis_model,
+      accessibility_analysis_model: lead.accessibility_analysis_model,
 
       // Crawl metadata
       pages_discovered: lead.pages_discovered,

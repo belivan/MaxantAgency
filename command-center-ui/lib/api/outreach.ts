@@ -164,7 +164,7 @@ export async function getEmail(id: string): Promise<Email> {
  */
 export async function updateEmail(
   id: string,
-  updates: Partial<Pick<Email, 'subject' | 'body' | 'status'>>
+  updates: Partial<Pick<Email, 'email_subject' | 'email_body' | 'status'>>
 ): Promise<Email> {
   const response = await fetch(`${API_BASE}/api/emails/${id}`, {
     method: 'PATCH',

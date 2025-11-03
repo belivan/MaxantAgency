@@ -65,6 +65,7 @@ export class CrawlingService {
           desktop: p.designTokens?.desktop || { fonts: [], colors: [], extractedAt: new Date().toISOString() },
           mobile: p.designTokens?.mobile || { fonts: [], colors: [], extractedAt: new Date().toISOString() }
         },
+        techStack: p.techStack || null,
         success: true,
         isHomepage: p.url === '/' || p.url === ''
       }));

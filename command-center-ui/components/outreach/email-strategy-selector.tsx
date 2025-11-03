@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { getStrategies } from '@/lib/api/outreach';
-import type { EmailStrategy } from '@/lib/types';
+import type { EmailStrategyObject } from '@/lib/types';
 
 interface EmailStrategySelectorProps {
   selectedStrategy?: string;
@@ -38,7 +38,7 @@ export function EmailStrategySelector({
   onStrategyChange,
   disabled
 }: EmailStrategySelectorProps) {
-  const [strategies, setStrategies] = useState<EmailStrategy[]>([]);
+  const [strategies, setStrategies] = useState<EmailStrategyObject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

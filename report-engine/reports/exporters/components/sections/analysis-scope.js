@@ -9,8 +9,7 @@ export function generateAnalysisScope(analysisResult, synthesisData, options) {
     pages_crawled,
     pages_analyzed,
     ai_page_selection_reasoning,
-    screenshots_manifest,
-    analysis_timestamp
+    screenshots_manifest
   } = analysisResult;
 
   // If no scope data available, return empty string
@@ -20,16 +19,6 @@ export function generateAnalysisScope(analysisResult, synthesisData, options) {
 
   const totalScreenshots = screenshots_manifest?.total_screenshots || 0;
   const pagesWithScreenshots = screenshots_manifest?.pages?.length || 0;
-
-  const analysisDate = analysis_timestamp
-    ? new Date(analysis_timestamp).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    : 'Unknown';
 
   return `
     <section class="section" id="analysis-scope">
@@ -122,14 +111,6 @@ export function generateAnalysisScope(analysisResult, synthesisData, options) {
           </div>
         </div>
       ` : ''}
-
-      <!-- Analysis Metadata -->
-      <div style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; margin-top: 24px; border-left: 4px solid var(--border-default);">
-        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; opacity: 0.7;">
-          <span>📅</span>
-          <span>Analysis completed on ${analysisDate}</span>
-        </div>
-      </div>
     </section>
   `;
 }

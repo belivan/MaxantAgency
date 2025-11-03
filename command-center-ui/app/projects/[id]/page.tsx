@@ -20,7 +20,7 @@ import { getLeads } from '@/lib/api/analysis';
 import { ProspectTable } from '@/components/prospecting/prospect-table';
 import { LeadsTable } from '@/components/leads/leads-table';
 import { LeadDetailModal } from '@/components/leads/lead-detail-modal';
-import type { Project } from '@/lib/api/projects';
+import type { Project } from '@/lib/types';
 import type { Prospect, Lead } from '@/lib/types';
 import { EmailsTable } from '@/components/outreach/emails-table';
 import { SocialMessagesTable } from '@/components/outreach/social-messages-table';

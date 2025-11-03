@@ -28,6 +28,7 @@ import { generateAIWeights } from './sections/ai-weights.js';
 import { generateAnalysisScope } from './sections/analysis-scope.js';
 import { generateDesignTokensSection } from './sections/design-tokens.js';
 import { generateFooter } from './sections/footer.js';
+import { generateRequestFullReportCTA } from './sections/request-full-report-cta.js';
 
 /**
  * Section Registry
@@ -80,7 +81,7 @@ export const SECTIONS_REGISTRY = [
     id: 'analysis-scope',
     name: 'Analysis Scope & Methodology',
     component: generateAnalysisScope,
-    order: 4,
+    order: 17,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: false,
@@ -91,7 +92,7 @@ export const SECTIONS_REGISTRY = [
     id: 'design-tokens',
     name: 'Design System Tokens',
     component: generateDesignTokensSection,
-    order: 5,
+    order: 19,  // Moved to end after screenshots
     reportTypes: ['full'],
     required: false,
     showPlaceholder: false,
@@ -142,17 +143,20 @@ export const SECTIONS_REGISTRY = [
     requiredData: [],
     description: 'Strategic implementation timeline'
   },
-  {
-    id: 'business-intelligence',
-    name: 'Business Intelligence',
-    component: generateBusinessIntelligenceSection,
-    order: 10,
-    reportTypes: ['full'],
-    required: false,
-    showPlaceholder: true,
-    requiredData: ['business_intelligence'],
-    description: 'Market analysis, competitor insights, and lead scoring'
-  },
+  // ⚠️ TEMPORARILY DISABLED: Business Intelligence section (employee count, company size, etc.)
+  // User requested: "non-essential right now to try to get people to redo their website"
+  // Uncomment to re-enable in the future
+  // {
+  //   id: 'business-intelligence',
+  //   name: 'Business Intelligence',
+  //   component: generateBusinessIntelligenceSection,
+  //   order: 10,
+  //   reportTypes: ['full'],
+  //   required: false,
+  //   showPlaceholder: true,
+  //   requiredData: ['business_intelligence'],
+  //   description: 'Market analysis, competitor insights, and lead scoring'
+  // },
   {
     id: 'complete-issue-breakdown',
     name: 'Complete Issue Breakdown',
@@ -168,7 +172,7 @@ export const SECTIONS_REGISTRY = [
     id: 'design-system',
     name: 'Design System Analysis',
     component: generateDesignSystemSection,
-    order: 12,
+    order: 20,  // Moved to end after screenshots
     reportTypes: ['full'],
     required: false,
     showPlaceholder: false,
@@ -213,7 +217,7 @@ export const SECTIONS_REGISTRY = [
     name: 'Grading Methodology',
     component: generateScoreBreakdownSection,
     order: 16,
-    reportTypes: ['preview', 'full'],
+    reportTypes: ['full'], // Only in full reports, not preview
     required: false,
     showPlaceholder: true,
     requiredData: [],
@@ -223,7 +227,7 @@ export const SECTIONS_REGISTRY = [
     id: 'ai-weights',
     name: 'AI Category Weights',
     component: generateAIWeights,
-    order: 17,
+    order: 4,
     reportTypes: ['full'],
     required: false,
     showPlaceholder: false,
@@ -240,6 +244,17 @@ export const SECTIONS_REGISTRY = [
     showPlaceholder: false,
     requiredData: [],
     description: 'Screenshots from multiple pages across the site'
+  },
+  {
+    id: 'request-full-report-cta',
+    name: 'Request Full Report CTA',
+    component: generateRequestFullReportCTA,
+    order: 98,
+    reportTypes: ['preview'], // PREVIEW ONLY
+    required: true,
+    showPlaceholder: false,
+    requiredData: [],
+    description: 'Motivational CTA to request full report (preview only)'
   },
   {
     id: 'footer',

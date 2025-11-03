@@ -1,0 +1,191 @@
+{
+  "timestamp": "2025-11-03T01:08:04.625Z",
+  "totalScreenshots": 28,
+  "uniquePages": 14,
+  "pages": [
+    "/",
+    "/location",
+    "/plumber-bucks-county-pa",
+    "/plumber-horsham-pa-19044",
+    "/plumber-abington-pa-19001",
+    "/plumber-bensalem-pa-19020",
+    "/plumber-doylestown-pa-18901",
+    "/plumber-jenkintown-pa-19046",
+    "/plumber-warminster-pa-18974",
+    "/plumber-montgomery-county-pa",
+    "/leaky-pipes-repair-company-blue-bell",
+    "/leaky-pipes-repair-company-norristown",
+    "/leaky-pipes-repair-company-willow-grove",
+    "/leaky-pipes-repair-company-huntingdon-valley"
+  ],
+  "screenshots": [
+    {
+      "page": "/",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 3344566
+    },
+    {
+      "page": "/",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 583486
+    },
+    {
+      "page": "/location",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1366890
+    },
+    {
+      "page": "/location",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 422870
+    },
+    {
+      "page": "/plumber-bucks-county-pa",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1759562
+    },
+    {
+      "page": "/plumber-bucks-county-pa",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 543538
+    },
+    {
+      "page": "/plumber-horsham-pa-19044",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1775554
+    },
+    {
+      "page": "/plumber-horsham-pa-19044",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 553234
+    },
+    {
+      "page": "/plumber-abington-pa-19001",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1796082
+    },
+    {
+      "page": "/plumber-abington-pa-19001",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 560278
+    },
+    {
+      "page": "/plumber-bensalem-pa-19020",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1775678
+    },
+    {
+      "page": "/plumber-bensalem-pa-19020",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 553390
+    },
+    {
+      "page": "/plumber-doylestown-pa-18901",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1874446
+    },
+    {
+      "page": "/plumber-doylestown-pa-18901",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 551946
+    },
+    {
+      "page": "/plumber-jenkintown-pa-19046",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1828302
+    },
+    {
+      "page": "/plumber-jenkintown-pa-19046",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 566658
+    },
+    {
+      "page": "/plumber-warminster-pa-18974",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1841990
+    },
+    {
+      "page": "/plumber-warminster-pa-18974",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 549170
+    },
+    {
+      "page": "/plumber-montgomery-county-pa",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1823478
+    },
+    {
+      "page": "/plumber-montgomery-county-pa",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 566390
+    },
+    {
+      "page": "/leaky-pipes-repair-company-blue-bell",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1611722
+    },
+    {
+      "page": "/leaky-pipes-repair-company-blue-bell",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 658526
+    },
+    {
+      "page": "/leaky-pipes-repair-company-norristown",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1668922
+    },
+    {
+      "page": "/leaky-pipes-repair-company-norristown",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 659462
+    },
+    {
+      "page": "/leaky-pipes-repair-company-willow-grove",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1681510
+    },
+    {
+      "page": "/leaky-pipes-repair-company-willow-grove",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 688042
+    },
+    {
+      "page": "/leaky-pipes-repair-company-huntingdon-valley",
+      "device": "desktop",
+      "hasDataUri": true,
+      "dataUriLength": 1672646
+    },
+    {
+      "page": "/leaky-pipes-repair-company-huntingdon-valley",
+      "device": "mobile",
+      "hasDataUri": true,
+      "dataUriLength": 681206
+    }
+  ]
+}
