@@ -8,12 +8,13 @@ Analyzes websites for design, SEO, content, and social media issues. Generates a
 
 ## Features
 
-- **Multi-dimensional Analysis**: Design (GPT-4o Vision), SEO, Content, Social Media
+- **Multi-dimensional Analysis**: Design (GPT-5 Vision), SEO, Content, Social Media
 - **Intelligent Grading**: Letter grades A-F with weighted scoring
 - **Critique Generation**: Human-readable summaries for outreach emails
 - **Quick Wins Detection**: Identifies easy fixes with high impact
 - **Screenshot Capture**: Full-page screenshots with Playwright
-- **Cost Tracking**: Tracks AI API costs per analysis (~$0.03-0.05 per lead)
+- **Centralized AI Client**: Unified interface for OpenAI, Anthropic (Claude), xAI (Grok)
+- **Cost Tracking**: Automatic logging to `ai_calls` table (~$0.03-0.05 per lead)
 - **Batch Processing**: Analyze multiple websites with SSE progress updates
 - **Database Integration**: Saves results to Supabase `leads` table
 
@@ -26,10 +27,10 @@ analysis-engine/
 ├── server.js                  # Express API server
 ├── orchestrator.js            # Main analysis pipeline coordinator
 ├── analyzers/                 # AI-powered analyzers
-│   ├── design-analyzer.js     # GPT-4o Vision design analysis
-│   ├── seo-analyzer.js        # Technical SEO analysis
-│   ├── content-analyzer.js    # Content quality analysis
-│   ├── social-analyzer.js     # Social media presence analysis
+│   ├── design-analyzer.js     # GPT-5 Vision design analysis
+│   ├── seo-analyzer.js        # Technical SEO analysis (Grok/Claude)
+│   ├── content-analyzer.js    # Content quality analysis (Grok/Claude)
+│   ├── social-analyzer.js     # Social media presence analysis (Grok/Claude)
 │   └── index.js               # Barrel export + runAllAnalyses()
 ├── grading/                   # Grading and critique system
 │   ├── grader.js              # Letter grade calculation (A-F)
@@ -41,11 +42,65 @@ analysis-engine/
 ├── config/                    # Prompt configurations
 │   └── prompts/web-design/    # JSON prompt configs
 ├── shared/                    # Shared utilities
-│   ├── ai-client.js           # OpenAI/Grok API client
 │   └── prompt-loader.js       # Dynamic prompt loading
+├── ../../database-tools/shared/  # Centralized shared modules
+│   ├── ai-client.js           # AI client (OpenAI/Anthropic/xAI) - imported
+│   └── ai-cache.js            # Response caching - imported
 ├── database/                  # Database schemas
 │   └── schemas/leads.json     # Leads table schema
 └── tests/                     # Test suite (60 tests)
+```
+
+---
+
+## Centralized AI Client
+
+The Analysis Engine uses a **centralized AI client** located at `database-tools/shared/ai-client.js`, shared across all MaxantAgency engines.
+
+### Key Features
+
+- **Unified Interface**: Single API for OpenAI, Anthropic (Claude), and xAI (Grok)
+- **Automatic Cost Calculation**: Tracks spend per API call
+- **Response Caching**: Development mode caching to reduce costs
+- **Database Logging**: Optional logging to `ai_calls` table for cost tracking
+
+### Usage in Analysis Engine
+
+```javascript
+import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
+
+const response = await callAI({
+  model: 'gpt-5',
+  systemPrompt: 'You are a web design expert...',
+  userPrompt: 'Analyze this website...',
+  jsonMode: true
+});
+
+const parsed = parseJSONResponse(response);
+```
+
+### Cost Tracking
+
+Enable automatic logging to the `ai_calls` table:
+
+```env
+LOG_AI_CALLS_TO_DB=true
+```
+
+Every AI call is logged with:
+- Engine name (`analysis`)
+- Model used (`gpt-5`, `claude-haiku-4-5`, `grok-4`)
+- Token counts (prompt + completion)
+- USD cost (calculated automatically)
+- Response time (milliseconds)
+- Full request/response data (for debugging)
+
+**Query costs:**
+```sql
+SELECT engine, SUM(cost) as total_cost, COUNT(*) as calls
+FROM ai_calls
+WHERE engine = 'analysis'
+GROUP BY engine;
 ```
 
 ---
@@ -66,9 +121,13 @@ Create a `.env` file:
 SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_KEY=your_service_key
 
-# AI APIs
-OPENAI_API_KEY=your_openai_key
-XAI_API_KEY=your_grok_key
+# AI APIs (at least one required)
+OPENAI_API_KEY=your_openai_key        # GPT-5 models
+XAI_API_KEY=your_grok_key             # Grok models
+ANTHROPIC_API_KEY=your_anthropic_key  # Claude models
+
+# AI Cost Tracking (optional)
+LOG_AI_CALLS_TO_DB=true   # Log all AI calls to ai_calls table
 
 # Server
 PORT=3001
@@ -230,10 +289,10 @@ The orchestrator coordinates the full pipeline:
    ↓ Extracts SEO metadata, content, social links
 
 3. ANALYZE (parallel)
-   ├── Design Analysis (GPT-4o Vision) → $0.015
-   ├── SEO Analysis (Grok-4-fast) → $0.006
-   ├── Content Analysis (Grok-4-fast) → $0.006
-   └── Social Analysis (Grok-4-fast) → $0.006
+   ├── Design Analysis (GPT-5 Vision) → $0.015
+   ├── SEO Analysis (Grok-4/Claude Haiku) → $0.006
+   ├── Content Analysis (Grok-4/Claude Haiku) → $0.006
+   └── Social Analysis (Grok-4/Claude Haiku) → $0.006
 
 4. GRADE
    ↓ Calculate weighted score (design 30%, SEO 30%, content 20%, social 20%)
@@ -425,10 +484,12 @@ npm test
 | Success Rate | ~95% (depends on website accessibility) |
 
 **Cost Breakdown:**
-- Design (GPT-4o Vision): $0.015
-- SEO (Grok-4-fast): $0.006
-- Content (Grok-4-fast): $0.006
-- Social (Grok-4-fast): $0.006
+- Design (GPT-5 Vision): $0.015
+- SEO (Grok-4/Claude Haiku): $0.006
+- Content (Grok-4/Claude Haiku): $0.006
+- Social (Grok-4/Claude Haiku): $0.006
+
+**Note:** Token limits have been removed from AI models. Claude Haiku uses its native 64,000 token maximum. OpenAI and Grok models have no enforced limits.
 
 ---
 

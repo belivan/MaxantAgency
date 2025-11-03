@@ -586,6 +586,7 @@ app.post('/api/analyze', async (req, res) => {
 
     // Accept either prospect_ids OR prospects array directly
     let prospects;
+    let missingIds = []; // Track prospect IDs that weren't found in database
 
     if (providedProspects && providedProspects.length > 0) {
       // Mode 1: Direct prospect data (no database needed)
@@ -610,10 +611,21 @@ app.post('/api/analyze', async (req, res) => {
         });
       }
 
+      // Track which prospect IDs were not found
+      const foundIds = new Set((fetchedProspects || []).map(p => p.id));
+      missingIds = prospect_ids.filter(id => !foundIds.has(id));
+
+      if (missingIds.length > 0) {
+        console.warn(`[Intelligent Analysis] ${missingIds.length} prospect(s) not found in database:`, missingIds);
+      }
+
+      // Only fail if ALL prospects are missing
       if (!fetchedProspects || fetchedProspects.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'No prospects found'
+          error: 'No prospects found',
+          details: `None of the ${prospect_ids.length} requested prospect(s) were found in the database`,
+          missing_prospect_ids: missingIds
         });
       }
 
@@ -676,8 +688,21 @@ app.post('/api/analyze', async (req, res) => {
     // Send start event
     sendEvent('start', {
       total: prospects.length,
+      requested: prospect_ids ? prospect_ids.length : prospects.length,
+      missing: missingIds.length,
       message: `Starting analysis of ${prospects.length} prospects...`
     });
+
+    // Send warning events for any missing prospects
+    if (missingIds.length > 0) {
+      for (const missingId of missingIds) {
+        sendEvent('warning', {
+          type: 'missing_prospect',
+          prospect_id: missingId,
+          message: `Prospect ${missingId} not found in database and will be skipped`
+        });
+      }
+    }
 
     // Analyze each prospect with intelligent multi-page analysis
     const results = [];
@@ -1008,14 +1033,18 @@ app.post('/api/analyze', async (req, res) => {
     }
 
     const successCount = results.filter(r => r.success).length;
-    console.log(`[Intelligent Analysis] Completed: ${successCount}/${prospects.length} successful`);
+    const requestedCount = prospect_ids ? prospect_ids.length : prospects.length;
+    console.log(`[Intelligent Analysis] Completed: ${successCount}/${prospects.length} successful (${missingIds.length} skipped)`);
 
     // Send complete event
     sendEvent('complete', {
       success: true,
+      requested: requestedCount,
       total: prospects.length,
       successful: successCount,
       failed: prospects.length - successCount,
+      missing: missingIds.length,
+      missing_prospect_ids: missingIds,
       results
     });
 

@@ -236,18 +236,26 @@ Check service status.
 
 The ReportEngine includes an optional AI synthesis pipeline that enhances reports with:
 
-### Stage 1: Issue Deduplication (~35s, GPT-5)
+### Stage 1: Issue Deduplication (~35s, Claude Haiku 4.5)
 - Consolidates redundant findings across analyzers
 - Reduces issue count by 40-70%
 - Merges overlapping observations (e.g., "CTA too small" + "CTA not prominent" → "CTA lacks prominence")
+- Uses Claude Haiku 4.5 with 64,000 token output limit
 
-### Stage 2: Executive Insights (~140s, GPT-5)
+### Stage 2: Executive Insights (~140s, Claude Haiku 4.5)
 - Business-friendly summary
 - 30/60/90-day strategic roadmap
 - ROI projection statements
 - Screenshot evidence linking
+- Generates 500-word executive summaries
 
 **Cost**: ~$0.06 per report | **Duration**: ~3.5 minutes
+
+### Token Limits
+
+- **Claude Haiku 4.5**: 64,000 token maximum (API required field)
+- **GPT-5/Grok**: No token limits enforced (optional field)
+- **Configuration**: Token limits removed from prompt configs to allow models to use native capacity
 
 **Enable Synthesis:**
 ```bash
@@ -262,6 +270,40 @@ OPENAI_API_KEY=sk-...
 - ✅ Automated batch generation
 - ❌ Internal testing
 - ❌ Cost-sensitive high-volume operations
+
+---
+
+## Recent Fixes & Improvements
+
+### Performance Metrics - CrUX Null Handling
+**Fixed**: CrUX section crashing when individual metrics (e.g., `inp`) are `null`
+
+- Added null checks before processing CrUX metrics
+- Section only displays if at least one valid metric exists
+- Individual null metrics are silently skipped (not displayed)
+- **Location**: [performance-metrics.js:269-273](reports/exporters/components/sections/performance-metrics.js#L269-L273)
+
+### Benchmark Strengths Display
+**Fixed**: Only showing 2 out of 5 benchmark strengths
+
+- Increased display limit from `slice(0, 2)` to `slice(0, 5)`
+- Now shows up to 5 strengths per device type (desktop/mobile)
+- **Location**: [benchmark-comparison.js:148-156](reports/exporters/components/sections/benchmark-comparison.js#L148-L156)
+
+### Business Intelligence Section
+**Temporarily Disabled**: Company size, employee count, market analysis
+
+- Commented out for now (non-essential for website redesign pitches)
+- Can be re-enabled by uncommenting in sections-registry.js
+- **Location**: [sections-registry.js:146-159](reports/exporters/components/sections-registry.js#L146-L159)
+
+### Validation Warnings
+**Fixed**: False warnings about missing synthesis data
+
+- Removed checks for `consolidated_issues` and `executive_summary`
+- Synthesis data passed separately with camelCase field names
+- Validator was checking wrong object (analysisResult vs synthesisData)
+- **Location**: [report-data-validator.js:117-122](reports/exporters/validators/report-data-validator.js#L117-L122)
 
 ---
 
@@ -521,6 +563,14 @@ const reportResult = await fetch('http://localhost:3003/api/generate', {
 
 - Install Playwright browsers: `npx playwright install chromium`
 - Check system has enough memory (PDF generation is memory-intensive)
+
+### CrUX section showing but empty
+
+**Fixed in latest version**: CrUX section now only displays if valid metrics exist
+
+- If you see empty "rating" or "collection" fields, the section will be hidden entirely
+- Individual null metrics (like `inp: null`) are automatically skipped
+- Ensure you're running the latest version with the CrUX null handling fix
 
 ---
 
