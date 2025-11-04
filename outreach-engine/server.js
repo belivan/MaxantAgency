@@ -498,6 +498,68 @@ app.post('/api/compose-batch', async (req, res) => {
 });
 
 /**
+ * POST /api/compose-all-variations - Generate ALL 12 outreach variations per lead
+ * Body: { lead_ids: string[], project_id?: string }
+ * Returns: Server-Sent Events with detailed progress
+ *
+ * Generates:
+ * - 3 email strategies (free-value, portfolio-building, problem-first)
+ * - 9 social DMs (Instagram/Facebook/LinkedIn × 3 strategies)
+ * - ONE database row per lead with all variations
+ */
+app.post('/api/compose-all-variations', async (req, res) => {
+  try {
+    const { lead_ids, project_id } = req.body;
+
+    if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'lead_ids array is required'
+      });
+    }
+
+    console.log(`\n🎯 Starting all-variations generation...`);
+    console.log(`   Leads: ${lead_ids.length}`);
+    console.log(`   Total variations: ${lead_ids.length * 12}`);
+    console.log(`   Project: ${project_id || 'none'}`);
+
+    // Set up SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Progress callback for streaming updates
+    const progressCallback = (data) => {
+      res.write(`event: ${data.type}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    // Start generation
+    const stats = await batchGenerateConsolidated({
+      leadIds: lead_ids,
+      projectId: project_id,
+      progressCallback
+    });
+
+    // Send final success event
+    res.write(`event: success\ndata: ${JSON.stringify({
+      type: 'complete',
+      stats,
+      message: 'All variations generated successfully'
+    })}\n\n`);
+
+    res.end();
+
+  } catch (error) {
+    console.error('Error in all-variations generation:', error);
+    res.write(`event: error\ndata: ${JSON.stringify({
+      type: 'fatal_error',
+      error: error.message
+    })}\n\n`);
+    res.end();
+  }
+});
+
+/**
  * ═══════════════════════════════════════════════════════════════════
  * EMAIL SENDING ENDPOINTS
  * ═══════════════════════════════════════════════════════════════════
@@ -915,6 +977,7 @@ app.listen(PORT, () => {
   console.log(`   POST   /api/compose`);
   console.log(`   POST   /api/compose-social`);
   console.log(`   POST   /api/compose-batch`);
+  console.log(`   POST   /api/compose-all-variations (SSE)`);
   console.log(`   POST   /api/send-email`);
   console.log(`   POST   /api/send-batch`);
   console.log(`   POST   /api/sync-from-notion`);

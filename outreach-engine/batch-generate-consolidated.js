@@ -136,7 +136,9 @@ export async function batchGenerateConsolidated(options = {}) {
     projectId,
     status,
     limit,
-    dryRun = false
+    dryRun = false,
+    progressCallback = null, // NEW: Optional callback for API/SSE streaming
+    leadIds = null // NEW: Optional specific lead IDs
   } = options;
 
   const stats = {
@@ -149,94 +151,174 @@ export async function batchGenerateConsolidated(options = {}) {
 
   const startTime = Date.now();
 
-  console.log('\n' + '='.repeat(60));
-  console.log('🚀 CONSOLIDATED OUTREACH GENERATION');
-  console.log('   ONE ROW PER LEAD - ALL 12 VARIATIONS');
-  console.log('='.repeat(60) + '\n');
+  const log = (msg) => {
+    if (!progressCallback) console.log(msg);
+  };
+
+  log('\n' + '='.repeat(60));
+  log('🚀 CONSOLIDATED OUTREACH GENERATION');
+  log('   ONE ROW PER LEAD - ALL 12 VARIATIONS');
+  log('='.repeat(60) + '\n');
 
   try {
     // Fetch leads
-    console.log('📥 Fetching leads from database...');
-    const filters = {};
-    if (projectId) filters.project_id = projectId;
-    if (status) filters.status = status;
-    if (limit) filters.limit = limit;
+    log('📥 Fetching leads from database...');
+    let leads;
 
-    const leads = await getLeads(filters);
+    if (leadIds && leadIds.length > 0) {
+      // Fetch specific leads by IDs
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .in('id', leadIds);
+
+      if (error) throw error;
+      leads = data || [];
+    } else {
+      // Fetch with filters
+      const filters = {};
+      if (projectId) filters.project_id = projectId;
+      if (status) filters.status = status;
+      if (limit) filters.limit = limit;
+      leads = await getLeads(filters);
+    }
+
     stats.totalLeads = leads.length;
 
     if (leads.length === 0) {
-      console.log('⚠️  No leads found matching criteria');
-      return;
+      log('⚠️  No leads found matching criteria');
+      if (progressCallback) {
+        progressCallback({ type: 'error', message: 'No leads found' });
+      }
+      return stats;
     }
 
-    console.log(`✅ Found ${leads.length} leads\n`);
-    console.log(`📊 Generation plan:`);
-    console.log(`   - ${leads.length} leads`);
-    console.log(`   - 12 variations per lead (3 email + 9 social)`);
-    console.log(`   - ${leads.length} database rows (one per lead)\n`);
+    log(`✅ Found ${leads.length} leads\n`);
+    log(`📊 Generation plan:`);
+    log(`   - ${leads.length} leads`);
+    log(`   - 12 variations per lead (3 email + 9 social)`);
+    log(`   - ${leads.length} database rows (one per lead)\n`);
+
+    if (progressCallback) {
+      progressCallback({
+        type: 'start',
+        total: leads.length,
+        message: `Starting generation for ${leads.length} leads`
+      });
+    }
 
     if (dryRun) {
-      console.log('🔍 DRY RUN MODE - No content will be generated or saved\n');
-      return;
+      log('🔍 DRY RUN MODE - No content will be generated or saved\n');
+      return stats;
     }
 
     // Process each lead
     for (let i = 0; i < leads.length; i++) {
       const lead = leads[i];
-      console.log(`\n${'─'.repeat(60)}`);
-      console.log(`📍 Lead ${i + 1}/${leads.length}: ${lead.company_name || lead.url}`);
-      console.log(`   Grade: ${lead.website_grade} | Priority: ${lead.priority_tier || 'N/A'}`);
-      console.log(`${'─'.repeat(60)}\n`);
+      log(`\n${'─'.repeat(60)}`);
+      log(`📍 Lead ${i + 1}/${leads.length}: ${lead.company_name || lead.url}`);
+      log(`   Grade: ${lead.website_grade} | Priority: ${lead.priority_tier || 'N/A'}`);
+      log(`${'─'.repeat(60)}\n`);
+
+      if (progressCallback) {
+        progressCallback({
+          type: 'lead_start',
+          leadIndex: i,
+          total: leads.length,
+          lead: {
+            id: lead.id,
+            company_name: lead.company_name,
+            url: lead.url
+          },
+          message: `Processing ${lead.company_name || lead.url}`
+        });
+      }
 
       try {
-        const result = await processLeadConsolidated(lead);
+        const result = await processLeadConsolidated(lead, progressCallback, i, leads.length);
         stats.totalCost += result.totalCost;
         stats.totalTime += result.totalTime;
         stats.processedLeads++;
+
+        if (progressCallback) {
+          progressCallback({
+            type: 'lead_complete',
+            leadIndex: i,
+            total: leads.length,
+            cost: result.totalCost,
+            message: `Completed ${lead.company_name || lead.url}`
+          });
+        }
       } catch (error) {
         console.error(`❌ Failed to process lead: ${error.message}`);
         stats.errors.push({
           lead: lead.company_name || lead.url,
           error: error.message
         });
+
+        if (progressCallback) {
+          progressCallback({
+            type: 'lead_error',
+            leadIndex: i,
+            total: leads.length,
+            error: error.message,
+            message: `Failed: ${lead.company_name || lead.url}`
+          });
+        }
       }
 
       // Progress update
       const progress = ((i + 1) / leads.length * 100).toFixed(1);
-      console.log(`\n📊 Progress: ${progress}% (${i + 1}/${leads.length} leads)`);
+      log(`\n📊 Progress: ${progress}% (${i + 1}/${leads.length} leads)`);
     }
 
     // Final summary
     const totalElapsed = Date.now() - startTime;
-    console.log('\n' + '='.repeat(60));
-    console.log('✨ BATCH GENERATION COMPLETE');
-    console.log('='.repeat(60) + '\n');
-    console.log(`📊 SUMMARY:`);
-    console.log(`   Leads processed: ${stats.processedLeads}/${stats.totalLeads}`);
-    console.log(`   Database rows: ${stats.processedLeads} (one per lead)`);
-    console.log(`   Total variations: ${stats.processedLeads * 12}`);
-    console.log(`\n💰 COST:`);
-    console.log(`   Total API cost: $${stats.totalCost.toFixed(4)}`);
-    console.log(`   Cost per lead: $${(stats.totalCost / stats.processedLeads).toFixed(4)}`);
-    console.log(`   Cost per variation: $${(stats.totalCost / (stats.processedLeads * 12)).toFixed(6)}`);
-    console.log(`\n⏱️  TIME:`);
-    console.log(`   Total generation time: ${(stats.totalTime / 1000).toFixed(1)}s`);
-    console.log(`   Total elapsed time: ${(totalElapsed / 1000).toFixed(1)}s`);
-    console.log(`   Avg time per lead: ${(stats.totalTime / stats.processedLeads / 1000).toFixed(1)}s`);
+    log('\n' + '='.repeat(60));
+    log('✨ BATCH GENERATION COMPLETE');
+    log('='.repeat(60) + '\n');
+    log(`📊 SUMMARY:`);
+    log(`   Leads processed: ${stats.processedLeads}/${stats.totalLeads}`);
+    log(`   Database rows: ${stats.processedLeads} (one per lead)`);
+    log(`   Total variations: ${stats.processedLeads * 12}`);
+    log(`\n💰 COST:`);
+    log(`   Total API cost: $${stats.totalCost.toFixed(4)}`);
+    log(`   Cost per lead: $${(stats.totalCost / stats.processedLeads).toFixed(4)}`);
+    log(`   Cost per variation: $${(stats.totalCost / (stats.processedLeads * 12)).toFixed(6)}`);
+    log(`\n⏱️  TIME:`);
+    log(`   Total generation time: ${(stats.totalTime / 1000).toFixed(1)}s`);
+    log(`   Total elapsed time: ${(totalElapsed / 1000).toFixed(1)}s`);
+    log(`   Avg time per lead: ${(stats.totalTime / stats.processedLeads / 1000).toFixed(1)}s`);
 
     if (stats.errors.length > 0) {
-      console.log(`\n⚠️  ERRORS: ${stats.errors.length}`);
+      log(`\n⚠️  ERRORS: ${stats.errors.length}`);
       stats.errors.forEach(err => {
-        console.log(`   - ${err.lead}: ${err.error}`);
+        log(`   - ${err.lead}: ${err.error}`);
       });
     }
 
-    console.log(`\n✅ All variations saved to Supabase composed_outreach table`);
-    console.log(`📥 Ready to export as CSV\n`);
+    log(`\n✅ All variations saved to Supabase composed_outreach table`);
+    log(`📥 Ready to export as CSV\n`);
+
+    if (progressCallback) {
+      progressCallback({
+        type: 'complete',
+        stats,
+        message: `Generation complete: ${stats.processedLeads}/${stats.totalLeads} leads processed`
+      });
+    }
+
+    return stats;
 
   } catch (error) {
     console.error(`\n❌ Batch generation failed: ${error.message}`);
+    if (progressCallback) {
+      progressCallback({
+        type: 'error',
+        error: error.message,
+        message: 'Batch generation failed'
+      });
+    }
     throw error;
   }
 }
@@ -244,7 +326,7 @@ export async function batchGenerateConsolidated(options = {}) {
 /**
  * Process a single lead - generate all 12 variations and save as ONE ROW
  */
-async function processLeadConsolidated(lead) {
+async function processLeadConsolidated(lead, progressCallback = null, leadIndex = 0, totalLeads = 1) {
   // Check if lead already has outreach generated
   const { data: existing } = await supabase
     .from('composed_outreach')
@@ -254,6 +336,13 @@ async function processLeadConsolidated(lead) {
 
   if (existing) {
     console.log('⏭️  Skipping - already exists in database\n');
+    if (progressCallback) {
+      progressCallback({
+        type: 'variation_skip',
+        leadIndex,
+        message: 'Already exists in database'
+      });
+    }
     return { totalCost: 0, totalTime: 0 };
   }
 
@@ -286,10 +375,24 @@ async function processLeadConsolidated(lead) {
   // Build personalization context once
   const context = buildPersonalizationContext(lead);
 
+  let variationCount = 0;
+  const totalVariations = 12;
+
   // Generate 3 email variations
   console.log('📧 Generating 3 email variations...');
   for (const variation of EMAIL_VARIATIONS) {
     try {
+      if (progressCallback) {
+        progressCallback({
+          type: 'variation_start',
+          leadIndex,
+          variationIndex: variationCount,
+          totalVariations,
+          variation: `email_${variation.type}`,
+          message: `Generating email: ${variation.type}`
+        });
+      }
+
       const result = await generateEmail(lead, context, variation);
       consolidatedRow[variation.field] = {
         subject: result.subject,
@@ -301,9 +404,34 @@ async function processLeadConsolidated(lead) {
       metadata.total_tokens.input += result.metadata.input_tokens;
       metadata.total_tokens.output += result.metadata.output_tokens;
       console.log(`   ✓ ${variation.type} (${result.metadata.duration}ms, $${result.metadata.cost.toFixed(6)})`);
+
+      variationCount++;
+      if (progressCallback) {
+        progressCallback({
+          type: 'variation_complete',
+          leadIndex,
+          variationIndex: variationCount,
+          totalVariations,
+          variation: `email_${variation.type}`,
+          progress: Math.round((variationCount / totalVariations) * 100),
+          message: `Email ${variation.type} complete`
+        });
+      }
     } catch (error) {
       console.error(`   ✗ ${variation.type}: ${error.message}`);
       consolidatedRow[variation.field] = null;
+      variationCount++;
+      if (progressCallback) {
+        progressCallback({
+          type: 'variation_error',
+          leadIndex,
+          variationIndex: variationCount,
+          totalVariations,
+          variation: `email_${variation.type}`,
+          error: error.message,
+          message: `Failed: email ${variation.type}`
+        });
+      }
     }
   }
 
@@ -312,6 +440,17 @@ async function processLeadConsolidated(lead) {
   for (const [platform, variations] of Object.entries(SOCIAL_VARIATIONS)) {
     for (const variation of variations) {
       try {
+        if (progressCallback) {
+          progressCallback({
+            type: 'variation_start',
+            leadIndex,
+            variationIndex: variationCount,
+            totalVariations,
+            variation: `${platform}_${variation.type}`,
+            message: `Generating ${platform} DM: ${variation.type}`
+          });
+        }
+
         const result = await generateSocialDM(lead, platform, variation);
         consolidatedRow[variation.field] = result.body;
 
@@ -326,9 +465,34 @@ async function processLeadConsolidated(lead) {
         metadata.total_tokens.input += result.metadata.input_tokens;
         metadata.total_tokens.output += result.metadata.output_tokens;
         console.log(`   ✓ ${platform} ${variation.type} (${result.body.length} chars, ${result.metadata.duration}ms, $${result.metadata.cost.toFixed(6)})`);
+
+        variationCount++;
+        if (progressCallback) {
+          progressCallback({
+            type: 'variation_complete',
+            leadIndex,
+            variationIndex: variationCount,
+            totalVariations,
+            variation: `${platform}_${variation.type}`,
+            progress: Math.round((variationCount / totalVariations) * 100),
+            message: `${platform} ${variation.type} complete`
+          });
+        }
       } catch (error) {
         console.error(`   ✗ ${platform} ${variation.type}: ${error.message}`);
         consolidatedRow[variation.field] = null;
+        variationCount++;
+        if (progressCallback) {
+          progressCallback({
+            type: 'variation_error',
+            leadIndex,
+            variationIndex: variationCount,
+            totalVariations,
+            variation: `${platform}_${variation.type}`,
+            error: error.message,
+            message: `Failed: ${platform} ${variation.type}`
+          });
+        }
       }
     }
   }
@@ -340,6 +504,14 @@ async function processLeadConsolidated(lead) {
 
   // Save to database as ONE ROW
   console.log('\n💾 Saving consolidated row to database...');
+  if (progressCallback) {
+    progressCallback({
+      type: 'saving',
+      leadIndex,
+      message: 'Saving to database...'
+    });
+  }
+
   const { data, error } = await supabase
     .from('composed_outreach')
     .insert(consolidatedRow)

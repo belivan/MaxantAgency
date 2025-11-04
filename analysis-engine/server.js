@@ -476,8 +476,12 @@ app.post('/api/analyze-url', async (req, res) => {
       // Business Intelligence
       business_intelligence: result.business_intelligence || {},
 
+      // QA Validation Metadata
+      validation_metadata: result.validation_metadata || null,
+
       // Benchmark Comparison Data
       matched_benchmark_id: result.matched_benchmark?.id || null,
+      matched_benchmark: result.matched_benchmark || null,
 
       // Crawl & Analysis Metadata (preserve detailed page data for reports)
       crawl_metadata: result.crawl_metadata
@@ -558,6 +562,18 @@ app.post('/api/analyze-url', async (req, res) => {
 
   } catch (error) {
     console.error('[Intelligent Analysis] Error:', error);
+
+    // Check if error is due to bot protection
+    const isBotProtected = error.message && error.message.toLowerCase().includes('bot protection');
+
+    if (isBotProtected) {
+      return res.status(422).json({
+        error: 'Website is bot-protected and cannot be analyzed',
+        details: error.message,
+        bot_protected: true
+      });
+    }
+
     res.status(500).json({
       error: 'Internal server error',
       details: error.message
@@ -863,8 +879,12 @@ app.post('/api/analyze', async (req, res) => {
             // Business Intelligence
             business_intelligence: result.business_intelligence || {},
 
+            // QA Validation Metadata
+            validation_metadata: result.validation_metadata || null,
+
             // Benchmark Comparison Data
             matched_benchmark_id: result.matched_benchmark?.id || null,
+            matched_benchmark: result.matched_benchmark || null,
 
             // Crawl & Analysis Metadata (simplified to avoid timeout)
             crawl_metadata: result.crawl_metadata
@@ -1012,6 +1032,34 @@ app.post('/api/analyze', async (req, res) => {
         }
       } catch (error) {
         console.error(`[Intelligent Analysis]  ${prospect.company_name}: ${error.message}`);
+
+        // ⚠️ CRITICAL: Check if error is due to bot protection
+        const isBotProtected = error.message && error.message.toLowerCase().includes('bot protection');
+
+        if (isBotProtected && prospect.id) {
+          // Update prospect record to flag as bot-protected
+          console.warn(`[Bot Protection] Flagging prospect ${prospect.company_name} as bot-protected in database...`);
+
+          try {
+            const { error: updateError } = await supabase
+              .from('prospects')
+              .update({
+                website_status: 'bot_protected',
+                status: 'error',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', prospect.id);
+
+            if (updateError) {
+              console.error(`[Bot Protection] Failed to update prospect ${prospect.id}:`, updateError.message);
+            } else {
+              console.log(`[Bot Protection] ✅ Prospect ${prospect.company_name} flagged as bot-protected`);
+            }
+          } catch (updateError) {
+            console.error(`[Bot Protection] Exception updating prospect:`, updateError);
+          }
+        }
+
         // Send error event
         sendEvent('error', {
           current: currentIndex,
@@ -1019,7 +1067,8 @@ app.post('/api/analyze', async (req, res) => {
           company_name: prospect.company_name,
           company: prospect.company_name || prospect.website,
           url: prospect.website,
-          error: error.message
+          error: error.message,
+          bot_protected: isBotProtected || false
         });
         results.push({
           success: false,
@@ -1027,7 +1076,8 @@ app.post('/api/analyze', async (req, res) => {
           url: prospect.website,
           company_name: prospect.company_name,
           company: prospect.company_name || prospect.website,
-          error: error.message
+          error: error.message,
+          bot_protected: isBotProtected || false
         });
       }
     }

@@ -6,6 +6,7 @@ export * from './email-strategy-selector';
 export * from './email-composer';
 export * from './email-preview-card';
 export * from './batch-email-composer';
+export * from './all-variations-composer';
 export * from './emails-table';
 export * from './email-detail-modal';
 export * from './social-platform-selector';

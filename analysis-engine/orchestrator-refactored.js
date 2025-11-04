@@ -94,6 +94,14 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       crawlData = await crawlingService.crawl(url, pageSelection.uniquePages, context.company_name);
       console.log(`[Orchestrator] Crawling:`, crawlingService.getStatistics(crawlData));
 
+      // ⚠️ CRITICAL: Check for bot protection after crawling
+      // If homepage is bot-protected, abort analysis to save AI costs
+      const botProtectionError = checkForBotProtection(crawlData);
+      if (botProtectionError) {
+        console.error(`[Orchestrator] ❌ ${botProtectionError.message}`);
+        throw new Error(botProtectionError.message, { cause: botProtectionError });
+      }
+
     } else {
       // ========================================
       // SINGLE-PAGE MODE (ENABLE_MULTI_PAGE_CRAWL=false)
@@ -109,6 +117,13 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
 
       // Only crawl the homepage
       crawlData = await crawlingService.crawl(url, ['/'], context.company_name);
+
+      // ⚠️ CRITICAL: Check for bot protection after crawling (single-page mode)
+      const botProtectionError = checkForBotProtection(crawlData);
+      if (botProtectionError) {
+        console.error(`[Orchestrator] ❌ ${botProtectionError.message}`);
+        throw new Error(botProtectionError.message, { cause: botProtectionError });
+      }
 
       // Create minimal sitemap/page selection for single page
       sitemap = {
@@ -308,6 +323,49 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     console.error('[Orchestrator] ❌ Analysis failed:', error);
     throw error;
   }
+}
+
+/**
+ * Check if crawl data contains bot protection errors
+ *
+ * @param {object} crawlData - Crawl results from CrawlingService
+ * @returns {object|null} Error object if bot protection detected, null otherwise
+ */
+function checkForBotProtection(crawlData) {
+  if (!crawlData || !crawlData.failedPages) {
+    return null;
+  }
+
+  // Check failed pages for bot protection errors
+  const botProtectedPages = crawlData.failedPages.filter(page => {
+    return page.error && page.error.toLowerCase().includes('bot protection');
+  });
+
+  if (botProtectedPages.length === 0) {
+    return null;
+  }
+
+  // Check if homepage is bot-protected (critical failure)
+  const homepageProtected = botProtectedPages.some(page =>
+    page.url === '/' || page.url === '' || !page.url
+  );
+
+  if (homepageProtected) {
+    const homepageError = botProtectedPages.find(p => p.url === '/' || p.url === '' || !p.url);
+    return {
+      message: `Website is bot-protected and cannot be analyzed: ${homepageError.error}`,
+      botProtected: true,
+      affectedPages: botProtectedPages.map(p => p.url || p.fullUrl),
+      details: botProtectedPages
+    };
+  }
+
+  // If only non-homepage pages are protected, log warning but continue
+  console.warn(`[Orchestrator] ⚠️ ${botProtectedPages.length} pages are bot-protected (not critical):`,
+    botProtectedPages.map(p => p.url || p.fullUrl)
+  );
+
+  return null; // Not critical, continue analysis
 }
 
 // Export services for direct use if needed

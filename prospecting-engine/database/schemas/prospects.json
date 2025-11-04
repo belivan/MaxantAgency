@@ -38,7 +38,8 @@
         "timeout",
         "ssl_error",
         "not_found",
-        "no_website"
+        "no_website",
+        "bot_protected"
       ],
       "default": "active",
       "description": "Website accessibility status"

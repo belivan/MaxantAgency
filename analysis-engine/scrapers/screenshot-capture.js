@@ -65,6 +65,33 @@ export async function captureWebsite(url, options = {}) {
     // Get page load time
     const pageLoadTime = Date.now() - startTime;
 
+    // Get HTML content FIRST (before expensive operations)
+    const html = await page.content();
+
+    // ⚠️ CRITICAL: Check for bot protection BEFORE doing expensive operations
+    // This saves AI costs by aborting early if site is protected
+    const botDetection = await detectBotProtection(html, response, page);
+
+    if (botDetection.botProtected) {
+      console.error(`❌ Bot protection detected (${botDetection.botType}):`, botDetection.indicators);
+
+      await browser.close();
+
+      return {
+        success: false,
+        url: normalizedUrl,
+        error: `Bot protection detected: ${botDetection.botType}`,
+        botProtection: botDetection,
+        screenshot: null,
+        html: null,
+        metadata: null,
+        techStack: null,
+        isMobileFriendly: false,
+        pageLoadTime,
+        capturedAt: new Date().toISOString()
+      };
+    }
+
     // Wait a moment for animations/dynamic content
     await page.waitForTimeout(1000);
 
@@ -82,9 +109,6 @@ export async function captureWebsite(url, options = {}) {
     if (screenshot.length > 5 * 1024 * 1024) {
       console.warn(`⚠️  Screenshot exceeds 5MB limit (${screenshotSizeMB} MB) - may fail Claude API calls`);
     }
-
-    // Get HTML content
-    const html = await page.content();
 
     // Get page metadata
     const metadata = await extractPageMetadata(page);
@@ -285,6 +309,129 @@ async function checkMobileFriendly(page) {
     console.error('Failed to check mobile-friendliness:', error.message);
     return false;
   }
+}
+
+/**
+ * Detect bot protection mechanisms (Cloudflare, reCAPTCHA, rate limiting, etc.)
+ *
+ * @param {string} html - Page HTML content
+ * @param {object} response - Playwright response object
+ * @param {object} page - Playwright page object
+ * @returns {object} Bot protection detection result
+ */
+async function detectBotProtection(html, response, page) {
+  const indicators = [];
+  let botType = null;
+  let confidence = 0;
+
+  // Get response status
+  const status = response?.status();
+  const htmlLower = html?.toLowerCase() || '';
+  const htmlLength = html?.length || 0;
+
+  // 1. Check for Cloudflare challenge pages
+  if (
+    htmlLower.includes('cf-browser-verification') ||
+    htmlLower.includes('ray id') ||
+    htmlLower.includes('__cf_chl_jschl_tk__') ||
+    htmlLower.includes('checking your browser') ||
+    htmlLower.includes('cloudflare')
+  ) {
+    indicators.push('Cloudflare challenge detected');
+    botType = 'cloudflare';
+    confidence = 0.95;
+  }
+
+  // 2. Check for reCAPTCHA
+  if (
+    htmlLower.includes('grecaptcha') ||
+    htmlLower.includes('recaptcha') ||
+    htmlLower.includes('g-recaptcha')
+  ) {
+    indicators.push('reCAPTCHA detected');
+    botType = botType || 'recaptcha';
+    confidence = Math.max(confidence, 0.9);
+  }
+
+  // 3. Check for rate limiting (429, 503)
+  if (status === 429) {
+    indicators.push('HTTP 429 Too Many Requests');
+    botType = botType || 'rate_limit';
+    confidence = Math.max(confidence, 1.0);
+  }
+
+  if (status === 503 && htmlLength < 1000) {
+    indicators.push('HTTP 503 Service Unavailable with minimal content');
+    botType = botType || 'rate_limit';
+    confidence = Math.max(confidence, 0.85);
+  }
+
+  // 4. Check for extremely small HTML (likely a challenge page)
+  if (htmlLength < 500 && status === 200) {
+    indicators.push(`Suspiciously small HTML response (${htmlLength} bytes)`);
+    botType = botType || 'unknown_challenge';
+    confidence = Math.max(confidence, 0.7);
+  }
+
+  // 5. Check for PerimeterX / DataDome
+  if (
+    htmlLower.includes('perimeterx') ||
+    htmlLower.includes('_px') ||
+    htmlLower.includes('datadome')
+  ) {
+    indicators.push('PerimeterX/DataDome bot protection detected');
+    botType = botType || 'perimeterx';
+    confidence = Math.max(confidence, 0.9);
+  }
+
+  // 6. Check for Imperva / Incapsula
+  if (
+    htmlLower.includes('incapsula') ||
+    htmlLower.includes('imperva') ||
+    htmlLower.includes('_incap_')
+  ) {
+    indicators.push('Imperva/Incapsula bot protection detected');
+    botType = botType || 'imperva';
+    confidence = Math.max(confidence, 0.9);
+  }
+
+  // 7. Check for generic "Access Denied" messages
+  if (
+    htmlLower.includes('access denied') ||
+    htmlLower.includes('blocked') && htmlLength < 2000
+  ) {
+    indicators.push('Access denied message detected');
+    botType = botType || 'access_denied';
+    confidence = Math.max(confidence, 0.75);
+  }
+
+  // 8. Check page title for bot protection indicators
+  try {
+    const title = await page.title();
+    const titleLower = title.toLowerCase();
+    if (
+      titleLower.includes('access denied') ||
+      titleLower.includes('attention required') ||
+      titleLower.includes('just a moment')
+    ) {
+      indicators.push(`Bot protection page title: "${title}"`);
+      confidence = Math.max(confidence, 0.85);
+      botType = botType || 'generic_challenge';
+    }
+  } catch (e) {
+    // Ignore title check errors
+  }
+
+  const isProtected = indicators.length > 0 && confidence >= 0.7;
+
+  return {
+    botProtected: isProtected,
+    botType,
+    confidence,
+    indicators,
+    httpStatus: status,
+    htmlSize: htmlLength
+  };
 }
 
 /**

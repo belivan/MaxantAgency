@@ -22,6 +22,7 @@ import { calculateTotalCost } from '../analyzers/index.js';
 // import { runReportSynthesis } from '../reports/synthesis/report-synthesis.js';
 // import { validateReportQuality, generateQAReport } from '../reports/synthesis/qa-validator.js';
 import { gradeWithAI } from '../grading/ai-grader.js';
+import { ValidationService } from './validation-service.js';
 
 export class ResultsAggregator {
   constructor(options = {}) {
@@ -52,7 +53,72 @@ export class ResultsAggregator {
     // PHASE 2: Extract Quick Wins
     const quickWins = this.extractQuickWins(analysisResults);
 
-    // PHASE 3: Grading + Lead Scoring (AI or Manual)
+    // PHASE 3: Generate Lead ID
+    // Generate UUID early so it can be used for screenshot storage paths
+    const leadId = crypto.randomUUID();
+
+    // PHASE 4: Save Screenshots
+    // Screenshots must be saved BEFORE validation (validation needs section paths)
+    const { screenshotPaths, screenshotsManifest } = await this.saveScreenshots(pages, context, baseUrl, leadId);
+
+    // PHASE 5: QA Validation (Optional - filters false positives from visual analysis)
+    let validationMetadata = null;
+    if (process.env.ENABLE_QA_VALIDATION === 'true') {
+      this.onProgress({ step: 'qa-validation', message: 'Validating visual issues with AI...' });
+      console.log('\n[QA Validation] Starting screenshot validation...');
+
+      const validationService = new ValidationService();
+
+      // CRITICAL: Pass unifiedVisual results (has desktopIssues, mobileIssues, etc)
+      // NOT the top-level analysisResults (has desktopVisual.issues, mobileVisual.issues)
+
+      // Collect screenshot paths from unified visual analyzer's _results
+      // The unified visual analyzer stores full individual results (with _screenshot_sections) in _results
+      const screenshotSections = {};
+      if (analysisResults.unifiedVisual?._results) {
+        // Aggregate screenshot sections from all pages
+        analysisResults.unifiedVisual._results.forEach(pageResult => {
+          if (pageResult._screenshot_sections) {
+            Object.assign(screenshotSections, pageResult._screenshot_sections);
+          }
+        });
+        console.log(`[QA Validation] Collected ${Object.keys(screenshotSections).length} screenshot sections for validation`);
+      }
+
+      const { filteredAnalysis, validationMetadata: valMeta } = await validationService.validate({
+        analysisResults: analysisResults.unifiedVisual || analysisResults, // Use unifiedVisual if available
+        screenshotPaths: screenshotSections, // Pass aggregated screenshot sections
+        context
+      });
+
+      // Replace unified visual results with filtered version
+      if (analysisResults.unifiedVisual) {
+        analysisResults.unifiedVisual = filteredAnalysis;
+
+        // Re-split results for backward compatibility (update desktopVisual and mobileVisual)
+        const { getDesktopResults, getMobileResults } = await import('../analyzers/unified-visual-analyzer.js');
+        analysisResults.desktopVisual = getDesktopResults(filteredAnalysis);
+        analysisResults.mobileVisual = getMobileResults(filteredAnalysis);
+      } else {
+        // Fallback: replace entire analysisResults if unifiedVisual not present
+        analysisResults = filteredAnalysis;
+      }
+
+      validationMetadata = valMeta;
+
+      console.log(`[QA Validation] ✅ Complete:`, {
+        verified: valMeta.verified_issues,
+        rejected: valMeta.rejected_issues,
+        rejection_rate: valMeta.rejection_rate,
+        cost: `$${valMeta.validation_cost?.toFixed(4) || '0.0000'}`,
+        duration: `${(valMeta.validation_duration_ms / 1000).toFixed(1)}s`
+      });
+    } else {
+      console.log('[QA Validation] Skipped (ENABLE_QA_VALIDATION=false)');
+    }
+
+    // PHASE 6: Grading + Lead Scoring (AI or Manual)
+    // Uses validated issues (false positives already filtered out)
     const useAIGrading = process.env.USE_AI_GRADING === 'true';
     let gradeResults, leadScoringData;
 
@@ -267,18 +333,12 @@ export class ResultsAggregator {
       });
     }
 
-    // PHASE 4: Generate Critique
+    // PHASE 7: Generate Critique
+    // Uses validated issues (false positives already filtered out)
     this.onProgress({ step: 'critique', message: 'Generating actionable critique...' });
     const critique = generateCritique(analysisResults, gradeResults, enrichedContext);
 
-    // PHASE 5: Generate Lead ID
-    // Generate UUID early so it can be used for screenshot storage paths
-    const leadId = crypto.randomUUID();
-
-    // PHASE 6: Save Screenshots
-    const { screenshotPaths, screenshotsManifest } = await this.saveScreenshots(pages, context, baseUrl, leadId);
-
-    // PHASE 7: Report Synthesis (MOVED TO REPORTENGINE)
+    // PHASE 8: Report Synthesis (MOVED TO REPORTENGINE)
     // NOTE: Report synthesis has been moved to ReportEngine microservice
     // This Analysis Engine now focuses solely on analysis, grading, and data extraction
     // Synthesis happens during report generation in the ReportEngine
@@ -296,15 +356,11 @@ export class ResultsAggregator {
       quickWinStrategy: { topQuickWins: quickWins }
     };
 
-    // PHASE 7.5: QA Validation (MOVED TO REPORTENGINE)
-    const qaValidation = { status: 'SKIPPED', message: 'QA validation handled by ReportEngine' };
-    console.log('[QA Validation] Skipped - handled by ReportEngine microservice');
-
-    // PHASE 8: Calculate Costs & Timing
+    // PHASE 9: Calculate Costs & Timing
     const analysisTime = Date.now() - startTime;
     const analysisCost = calculateTotalCost(analysisResults);
 
-    // PHASE 9: Build Final Results
+    // PHASE 10: Build Final Results
     return this.buildFinalResults({
       analysisResults,
       scores,
@@ -319,7 +375,7 @@ export class ResultsAggregator {
       screenshotsManifest,  // NEW: Pass screenshots manifest
       leadId,  // NEW: Pass pre-generated lead ID
       synthesisResults,
-      qaValidation,
+      validationMetadata,  // NEW: Pass QA validation metadata
       parsedData,
       businessIntel,
       context,
@@ -449,7 +505,7 @@ export class ResultsAggregator {
       screenshotsManifest,  // NEW: Screenshots manifest from Supabase Storage
       leadId,  // NEW: Pre-generated lead ID
       synthesisResults,
-      qaValidation,
+      validationMetadata,  // NEW: QA validation metadata
       parsedData,
       businessIntel,
       context,
@@ -548,7 +604,7 @@ export class ResultsAggregator {
       synthesis_errors: synthesisResults.errors || [],
 
       // QA Validation
-      qa_validation: qaValidation || { status: 'NOT_RUN' },
+      validation_metadata: validationMetadata || { enabled: false },
 
       // Lead scoring
       ...leadScoringData,

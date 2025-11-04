@@ -484,6 +484,18 @@
     },
 
     {
+      "name": "validation_metadata",
+      "type": "jsonb",
+      "description": "QA validation results including verified/rejected issues, rejection rate, validation cost, and duration"
+    },
+
+    {
+      "name": "matched_benchmark",
+      "type": "jsonb",
+      "description": "Full benchmark comparison data including scores, strengths, match metadata, and screenshots for side-by-side comparison"
+    },
+
+    {
       "name": "pages_discovered",
       "type": "integer",
       "description": "Total pages discovered in sitemap (intelligent analysis system)"

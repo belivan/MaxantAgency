@@ -13,7 +13,49 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
-import { readFile } from 'fs/promises';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Save individual screenshot sections to disk for validation
+ * @param {Array} images - Array of screenshot buffers (already split)
+ * @param {Array} imageDescriptions - Descriptions like "Screenshot 1: DESKTOP - TOP SECTION"
+ * @param {string} companyName - Company name for folder organization
+ * @returns {Promise<Object>} Map of screenshot_number -> {filepath, filename, viewport, label, description}
+ */
+async function saveScreenshotSections(images, imageDescriptions, companyName) {
+  const companySlug = companyName.toLowerCase().replace(/\s+/g, '-');
+  const screenshotsDir = join(__dirname, '..', 'screenshots', 'sections', companySlug);
+  await mkdir(screenshotsDir, { recursive: true });
+
+  const sectionPaths = {};
+
+  for (let i = 0; i < images.length; i++) {
+    const screenshotNumber = i + 1;
+    const description = imageDescriptions[i];
+
+    // Parse: "Screenshot 5: DESKTOP - BOTTOM SECTION"
+    const match = description.match(/Screenshot \d+: (\w+)(?: - (\w+) SECTION)?/);
+    const viewport = match ? match[1].toLowerCase() : 'unknown';
+    const label = match && match[2] ? match[2].toLowerCase() : 'full';
+
+    // Filename: stripe-screenshot-5-desktop-bottom.png
+    const filename = `${companySlug}-screenshot-${screenshotNumber}-${viewport}-${label}.png`;
+    const filepath = join(screenshotsDir, filename);
+
+    await writeFile(filepath, images[i]);
+
+    sectionPaths[screenshotNumber] = { filepath, filename, viewport, label, description };
+  }
+
+  console.log(`[Unified Visual] Saved ${Object.keys(sectionPaths).length} screenshot sections to ${screenshotsDir}`);
+
+  return sectionPaths;
+}
 
 /**
  * Analyze visual design using GPT-4o Vision (Multi-page version with both viewports)
@@ -136,6 +178,9 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
 
       const imageContext = '\n\n**' + imageDescriptions.join(' | ') + '**';
 
+      // Save screenshot sections for validation
+      const sectionPaths = await saveScreenshotSections(images, imageDescriptions, context.company_name || 'unknown');
+
       // Call centralized AI client with processed images
       const response = await callAI({
         model: prompt.model,
@@ -161,6 +206,7 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
           model: modelUsed,
           usage: response.usage || null
         },
+        _screenshot_sections: sectionPaths,  // For validation
         ...result
       });
 
@@ -304,7 +350,10 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
             shared: r.sharedIssues?.length || 0
           }
         }))
-      }
+      },
+
+      // NEW: Full individual results WITH screenshot sections (for QA validation)
+      _results: individualResults
     };
 
   } catch (error) {

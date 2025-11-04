@@ -14,6 +14,7 @@ import {
   EmailStrategySelector,
   EmailComposer,
   BatchEmailComposer,
+  AllVariationsComposer,
   SocialPlatformSelector,
   SocialDMComposer
 } from '@/components/outreach';
@@ -241,6 +242,7 @@ export default function OutreachPage() {
             <TabsList>
               <TabsTrigger value="email">Email</TabsTrigger>
               <TabsTrigger value="social-compose">Social DM</TabsTrigger>
+              <TabsTrigger value="all-variations">All Variations</TabsTrigger>
             </TabsList>
 
             {/* Email Composition */}
@@ -394,6 +396,33 @@ export default function OutreachPage() {
               </div>
             </div>
           )}
+            </TabsContent>
+
+            {/* All Variations Tab */}
+            <TabsContent value="all-variations" className="space-y-6 mt-6">
+              {loading ? (
+                <LoadingSection title="Loading Leads" />
+              ) : leads.length === 0 ? (
+                <div className="text-center py-12 border rounded-lg">
+                  <div className="text-muted-foreground">
+                    <p className="font-medium mb-2">No leads selected</p>
+                    <p className="text-sm">
+                      Navigate to the Leads page and select leads to generate all outreach variations
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <AllVariationsComposer
+                  leads={leads}
+                  projectId={selectedProjectId || undefined}
+                  onComplete={() => {
+                    console.log('All variations generated!');
+                    // Optionally refresh emails and social messages
+                    refreshEmails();
+                    refreshSocialMessages();
+                  }}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </TabsContent>

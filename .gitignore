@@ -119,10 +119,11 @@ pid.txt
 
 # Test outputs and results
 test-output.*
-**/test-output.*
+**/*test*
 test-*-results.txt
 batch-test-results.txt
 *-INVESTIGATION-SUMMARY.txt
+**/validation-test
 
 # Root directory test scripts and temporary files
 /*test*
