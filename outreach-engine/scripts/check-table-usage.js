@@ -14,14 +14,14 @@ const supabase = createClient(
 
 console.log('\n📊 Checking table usage...\n');
 
-// Check composed_emails
+// Check composed_outreach
 const { data: emails, error: emailsError } = await supabase
-  .from('composed_emails')
+  .from('composed_outreach')
   .select('id, email_subject, email_body, platform')
   .limit(10);
 
 if (!emailsError) {
-  console.log(`composed_emails table: ${emails.length} records`);
+  console.log(`composed_outreach table: ${emails.length} records`);
   if (emails.length > 0) {
     const platforms = emails.map(e => e.platform).filter(Boolean);
     console.log(`  Sample platforms: ${[...new Set(platforms)].join(', ') || 'none set'}`);
@@ -33,7 +33,7 @@ if (!emailsError) {
     console.log(`  No subject (social?): ${noSubjects}`);
   }
 } else {
-  console.log('composed_emails: ERROR -', emailsError.message);
+  console.log('composed_outreach: ERROR -', emailsError.message);
 }
 
 // Check social_outreach

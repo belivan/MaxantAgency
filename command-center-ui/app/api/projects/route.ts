@@ -74,7 +74,7 @@ export async function GET(request: Request) {
 
       // Get emails per project
       supabase
-        .from('composed_emails')
+        .from('composed_outreach')
         .select('project_id, generation_cost')
         .in('project_id', projectIds)
         .not('project_id', 'is', null)

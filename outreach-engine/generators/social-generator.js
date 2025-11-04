@@ -109,7 +109,7 @@ export async function generateSocialDM(lead, options = {}) {
       platform,
       strategy,
       character_count: message.length,
-      model_used: actualModel,
+      model_used: model,
       generation_time_ms: duration,
       cost,
       usage: response.usage,

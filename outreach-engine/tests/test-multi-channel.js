@@ -148,7 +148,7 @@ async function testMultiChannel() {
     );
 
     const { data: allOutreach, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('id, platform, email_subject, character_count, created_at')
       .eq('lead_id', lead.id)
       .order('created_at', { ascending: true });

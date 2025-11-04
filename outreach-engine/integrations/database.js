@@ -346,7 +346,7 @@ export async function saveComposedEmail(email) {
       usage_output_tokens: usage?.output_tokens || null
     };
 
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('composed_outreach')
       .insert([record])
       .select()

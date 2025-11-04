@@ -88,7 +88,7 @@ export async function generateEmail(lead, options = {}) {
     return {
       body: response.content,
       strategy,
-      model_used: actualModel,
+      model_used: modelToUse,
       generation_time_ms: duration,
       cost,
       usage: response.usage,
@@ -195,7 +195,7 @@ async function generateSubjectLine(lead, options = {}) {
     return {
       subject: subjects[0],
       all_variants: subjects,
-      model_used: actualModel,
+      model_used: modelToUse,
       generation_time_ms: duration,
       cost,
       usage: response.usage

@@ -132,7 +132,8 @@ async function runSynthesisStage(stageId, variables) {
     temperature: prompt.temperature,
     // maxTokens: REMOVED - let models use native capacity (no limits)
     jsonMode: true,
-    autoFallback: false
+    autoFallback: false,
+    timeout: SYNTHESIS_TIMEOUT  // Use synthesis-specific timeout (240s default)
   });
   
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);

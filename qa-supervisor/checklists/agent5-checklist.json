@@ -61,8 +61,8 @@
           "required": false
         },
         {
-          "name": "composed_emails schema template exists",
-          "path": "database-tools/templates/composed_emails.json",
+          "name": "composed_outreach schema template exists",
+          "path": "database-tools/templates/composed_outreach.json",
           "type": "file",
           "validate": "isValidJSON",
           "required": false

@@ -129,7 +129,7 @@ await test('Handles multiple engines with different subdirectories', async () =>
   });
   const outreach = new BackupManager('outreach-engine', {
     projectRoot: tempDir,
-    subdirectories: ['composed_emails', 'social_outreach']
+    subdirectories: ['composed_outreach', 'social_outreach']
   });
 
   await prospecting.saveBackup(createTestData(), createTestMetadata());
@@ -139,7 +139,7 @@ await test('Handles multiple engines with different subdirectories', async () =>
   const backupsDir = path.join(tempDir, 'local-backups');
   assert(fs.existsSync(path.join(backupsDir, 'prospecting-engine', 'prospects')), 'prospecting-engine/prospects should exist');
   assert(fs.existsSync(path.join(backupsDir, 'analysis-engine', 'leads')), 'analysis-engine/leads should exist');
-  assert(fs.existsSync(path.join(backupsDir, 'outreach-engine', 'composed_emails')), 'outreach-engine/composed_emails should exist');
+  assert(fs.existsSync(path.join(backupsDir, 'outreach-engine', 'composed_outreach')), 'outreach-engine/composed_outreach should exist');
 });
 cleanupTempDir();
 

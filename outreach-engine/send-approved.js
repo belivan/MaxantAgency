@@ -57,7 +57,7 @@ async function sendApprovedEmails() {
       } else {
         console.log('📭 No approved emails found');
         console.log('   1. Generate emails with POST /api/compose');
-        console.log('   2. Go to Supabase → composed_emails table');
+        console.log('   2. Go to Supabase → composed_outreach table');
         console.log('   3. Change status to "approved"');
         console.log('   4. Run this script again\n');
       }

@@ -114,7 +114,7 @@ export async function GET(request: Request) {
 
     // Fetch recent sent emails
     const { data: emails, error: emailsError } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('id, company_name, sent_at, status, platform')
       .not('sent_at', 'is', null)
       .order('sent_at', { ascending: false })

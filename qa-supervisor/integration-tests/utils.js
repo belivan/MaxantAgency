@@ -77,7 +77,7 @@ export async function cleanTestData() {
   try {
     // Delete test emails (with TEST_ prefix)
     await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .delete()
       .like('email_subject', '%TEST_%');
 

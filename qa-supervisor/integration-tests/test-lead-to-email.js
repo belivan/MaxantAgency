@@ -104,7 +104,7 @@ export async function testLeadToEmail() {
 
     // STEP 4: Verify email saved to database
     const { data: composedEmails } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*')
       .eq('url', lead.url)
       .order('created_at', { ascending: false })

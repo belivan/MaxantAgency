@@ -4,7 +4,7 @@
  * This script generates:
  * - 3 email variations per lead (free_value, portfolio_building, problem_first)
  * - 9 social DM variations per lead (3 variations × 3 platforms)
- * - Saves everything to Supabase composed_emails table
+ * - Saves everything to Supabase composed_outreach table
  * - Provides detailed progress tracking and cost estimation
  *
  * Usage:
@@ -452,7 +452,7 @@ function printFinalSummary() {
     console.log('');
   }
 
-  console.log('✅ All variations saved to Supabase composed_emails table');
+  console.log('✅ All variations saved to Supabase composed_outreach table');
   console.log('📥 Ready to export as CSV\n');
 }
 

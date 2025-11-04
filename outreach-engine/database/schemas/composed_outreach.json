@@ -135,6 +135,101 @@
     },
 
     {
+      "name": "platform",
+      "type": "text",
+      "enum": ["email", "instagram", "facebook", "linkedin"],
+      "default": "email",
+      "index": true,
+      "description": "Outreach platform"
+    },
+    {
+      "name": "email_subject",
+      "type": "text",
+      "description": "Email subject line"
+    },
+    {
+      "name": "email_body",
+      "type": "text",
+      "description": "Email body content"
+    },
+    {
+      "name": "email_strategy",
+      "type": "text",
+      "description": "Strategy used for generation"
+    },
+    {
+      "name": "character_count",
+      "type": "integer",
+      "description": "Character count (for social DMs)"
+    },
+    {
+      "name": "social_profile_url",
+      "type": "text",
+      "description": "Social media profile URL"
+    },
+    {
+      "name": "has_variants",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether variants were generated"
+    },
+    {
+      "name": "subject_variants",
+      "type": "jsonb",
+      "description": "Subject line variants"
+    },
+    {
+      "name": "body_variants",
+      "type": "jsonb",
+      "description": "Body variants"
+    },
+    {
+      "name": "recommended_variant",
+      "type": "jsonb",
+      "description": "AI-recommended variant"
+    },
+    {
+      "name": "variant_reasoning",
+      "type": "text",
+      "description": "Reasoning for recommended variant"
+    },
+    {
+      "name": "quality_score",
+      "type": "integer",
+      "description": "Quality score (0-100)"
+    },
+    {
+      "name": "validation_issues",
+      "type": "jsonb",
+      "description": "Validation warnings/errors"
+    },
+    {
+      "name": "ai_model",
+      "type": "text",
+      "description": "AI model used for generation"
+    },
+    {
+      "name": "generation_cost",
+      "type": "decimal",
+      "description": "API cost for generation (USD)"
+    },
+    {
+      "name": "generation_time_ms",
+      "type": "integer",
+      "description": "Generation time (milliseconds)"
+    },
+    {
+      "name": "usage_input_tokens",
+      "type": "integer",
+      "description": "Input tokens used"
+    },
+    {
+      "name": "usage_output_tokens",
+      "type": "integer",
+      "description": "Output tokens used"
+    },
+
+    {
       "name": "data_sources_used",
       "type": "jsonb",
       "description": "Which analysis fields were used (executive_summary, consolidated_issues, quick_wins, etc.)"

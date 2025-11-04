@@ -66,7 +66,7 @@ Options:
 
 Examples:
   node scripts/export-tables.js --all
-  node scripts/export-tables.js --tables prospects,leads,composed_emails
+  node scripts/export-tables.js --tables prospects,leads,composed_outreach
   node scripts/export-tables.js --all --output ./my-exports
   `);
 }
@@ -195,7 +195,7 @@ async function main() {
     const knownTables = [
       'prospects',
       'leads',
-      'composed_emails',
+      'composed_outreach',
       'social_outreach',
       'campaigns',
       'campaign_runs',

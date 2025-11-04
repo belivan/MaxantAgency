@@ -191,7 +191,7 @@ async function main() {
     );
 
     const { data: allOutreach, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('id, platform, email_subject, character_count, quality_score, created_at')
       .in('lead_id', leads.map(l => l.id))
       .order('created_at', { ascending: false })
@@ -251,7 +251,7 @@ async function main() {
       console.log('');
     }
 
-    console.log('🎯 All outreach saved to composed_emails table!');
+    console.log('🎯 All outreach saved to composed_outreach table!');
     console.log('   Query by platform: WHERE platform = \'email\' or \'instagram\'');
     console.log('   Multi-channel leads have multiple rows with same lead_id\n');
 

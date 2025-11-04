@@ -4,14 +4,14 @@
  * Provides centralized local backup management for all microservices:
  * - Prospecting Engine: prospects/
  * - Analysis Engine: leads/
- * - Outreach Engine: composed_emails/, social_outreach/
+ * - Outreach Engine: composed_outreach/, social_outreach/
  *
  * Core Pattern: ALWAYS save locally FIRST, then sync to cloud
  *
  * Directory Structure:
  * local-backups/
  * └── {engineName}/
- *     ├── {subdirectory[0]}/  (e.g., prospects/, leads/, composed_emails/)
+ *     ├── {subdirectory[0]}/  (e.g., prospects/, leads/, composed_outreach/)
  *     └── failed-uploads/     (shared failure directory)
  *
  * @module BackupManager

@@ -39,6 +39,10 @@ const RETRY_JITTER_MS = 1000; // Random jitter up to 1 second
 const AI_TIMEOUT = parseInt(process.env.AI_TIMEOUT || '180000'); // 3 minutes default
 const OPENAI_TIMEOUT = parseInt(process.env.OPENAI_TIMEOUT || AI_TIMEOUT); // Use AI_TIMEOUT as fallback
 
+// GPT-5 reasoning effort configuration
+// minimal = fast streaming (10-15x faster), medium = default, high = maximum reasoning
+const GPT5_REASONING_EFFORT = process.env.GPT5_REASONING_EFFORT || 'minimal';
+
 // Supabase client for database logging (initialized lazily)
 let supabase = null;
 function getSupabase() {
@@ -499,6 +503,7 @@ export async function callAI({
   jsonMode = false,
   maxTokens = null,  // Will be set based on model if not provided
   autoFallback = false,
+  timeout = null,  // Optional: custom timeout in ms (defaults to OPENAI_TIMEOUT or ANTHROPIC_TIMEOUT)
   engine = null,  // Optional: which engine is calling (for logging)
   module = null,  // Optional: which module is calling (for logging)
   caller = null   // FIX #6: Optional: specific caller for redundancy tracking (e.g., 'benchmark-visual-strengths-phase-2')
@@ -596,10 +601,10 @@ export async function callAI({
 
       // Make the actual API call
       if (provider === 'anthropic') {
-        response = await callClaude({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, maxTokens });
+        response = await callClaude({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, maxTokens, timeout });
       } else {
         try {
-          response = await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, jsonMode, maxTokens, provider });
+          response = await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, jsonMode, maxTokens, provider, timeout });
         } catch (error) {
           const message = (error?.message || '').toLowerCase();
           // Auto-fallback to GPT-5-mini if GPT-5 hits token limits (only when explicitly enabled)
@@ -613,7 +618,8 @@ export async function callAI({
               images: normalizedImages,
               jsonMode,
               maxTokens,
-              provider: 'openai'
+              provider: 'openai',
+              timeout
             });
           } else {
             throw error;
@@ -746,7 +752,8 @@ async function callOpenAICompatible({
   images,
   jsonMode,
   maxTokens,
-  provider
+  provider,
+  timeout = null  // Optional: custom timeout in ms (defaults to OPENAI_TIMEOUT)
 }) {
   if (!model) {
     throw new Error('[AI Client] Model parameter is required but was undefined');
@@ -848,10 +855,18 @@ async function callOpenAICompatible({
       requestBody.response_format = { type: 'json_object' };
     }
 
+    // Add reasoning_effort for GPT-5 models to speed up response
+    // minimal = 10-15x faster than default medium effort
+    if (model.startsWith('gpt-5')) {
+      requestBody.reasoning_effort = GPT5_REASONING_EFFORT;
+    }
+
     // Make API call with timeout enforcement
+    // Use custom timeout if provided, otherwise fall back to OPENAI_TIMEOUT
+    const effectiveTimeout = timeout || OPENAI_TIMEOUT;
     const response = await withTimeout(
       client.chat.completions.create(requestBody),
-      OPENAI_TIMEOUT,
+      effectiveTimeout,
       `${provider} API call (${model})`
     );
 
@@ -898,7 +913,8 @@ async function callClaude({
   userPrompt,
   temperature,
   images,
-  maxTokens
+  maxTokens,
+  timeout = null  // Optional: custom timeout in ms (defaults to AI_TIMEOUT)
 }) {
   const client = getAnthropicClient();
 
@@ -954,6 +970,8 @@ async function callClaude({
     }
 
     // Make API call with timeout enforcement - max_tokens is required by Claude API
+    // Use custom timeout if provided, otherwise fall back to AI_TIMEOUT
+    const effectiveTimeout = timeout || AI_TIMEOUT;
     const response = await withTimeout(
       client.messages.create({
         model,
@@ -967,7 +985,7 @@ async function callClaude({
           }
         ]
       }),
-      AI_TIMEOUT,
+      effectiveTimeout,
       `Anthropic API call (${model})`
     );
 

@@ -35,7 +35,7 @@ export async function GET(
 
     // Count emails for this project
     const { count: emailsCount } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*', { count: 'exact', head: true })
       .eq('project_id', projectId);
 

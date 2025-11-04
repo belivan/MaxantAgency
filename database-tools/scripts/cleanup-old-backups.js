@@ -55,7 +55,7 @@ const colors = {
 const ENGINE_CONFIG = {
   'prospecting-engine': ['prospects'],
   'analysis-engine': ['leads'],
-  'outreach-engine': ['composed_emails', 'social_outreach'],
+  'outreach-engine': ['composed_outreach', 'social_outreach'],
   'pipeline-orchestrator': ['campaigns', 'campaign_runs']
 };
 

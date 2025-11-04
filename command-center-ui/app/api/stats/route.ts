@@ -50,7 +50,7 @@ export async function GET() {
 
     // Fetch composed emails stats
     const { data: emailsData, error: emailsError } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('status', { count: 'exact' });
 
     if (emailsError) {

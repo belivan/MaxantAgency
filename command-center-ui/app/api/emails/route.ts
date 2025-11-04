@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Build query
     let query = supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);

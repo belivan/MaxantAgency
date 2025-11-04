@@ -8,7 +8,7 @@
  * Scans local-backups directory for all engines:
  * - prospecting-engine: prospects
  * - analysis-engine: leads
- * - outreach-engine: composed_emails, social_outreach (future)
+ * - outreach-engine: composed_outreach, social_outreach (future)
  *
  * For each failed backup:
  * 1. Load the backup file
@@ -133,7 +133,7 @@ const ENGINE_CONFIGS = {
   // Future: outreach-engine configuration
   // 'outreach-engine': {
   //   name: 'Outreach Engine',
-  //   subdirectories: ['composed_emails', 'social_outreach', 'failed-uploads'],
+  //   subdirectories: ['composed_outreach', 'social_outreach', 'failed-uploads'],
   //   uploadFunction: async (backupData) => { ... }
   // }
 };

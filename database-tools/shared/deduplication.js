@@ -47,7 +47,7 @@ export async function checkContactHistory(company, platform = 'email') {
 
   // Get ALL contacts for this company on this platform
   const { data: emails } = await supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('id, status, sent_at, created_at, company_name, platform, email_strategy, email_subject')
     .eq('url', website)
     .eq('platform', platform)
@@ -82,7 +82,7 @@ export async function checkContactHistory(company, platform = 'email') {
  */
 export async function getLastContact(website) {
   const { data: emails } = await supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('*')
     .eq('url', website)
     .order('sent_at', { ascending: false, nullsLast: true })
@@ -144,7 +144,7 @@ export async function checkWebsiteAnalyzed(url) {
  */
 export async function checkLeadContacted(url, platform = 'email') {
   const { data: emails } = await supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('*')
     .eq('url', url)
     .eq('platform', platform)
@@ -235,7 +235,7 @@ export async function getCompanyPresence(company) {
   // Check outreach
   if (website) {
     const { data: emails } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*')
       .eq('url', website)
       .order('created_at', { ascending: false });
@@ -304,11 +304,11 @@ export async function getDeduplicationStats() {
     .select('*', { count: 'exact', head: true });
 
   const { count: emailCount } = await supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('*', { count: 'exact', head: true });
 
   const { count: sentCount } = await supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'sent');
 

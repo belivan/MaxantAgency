@@ -1,7 +1,7 @@
 /**
  * Supabase Client for Outreach Engine
  *
- * Handles database operations for composed_emails and social_outreach tables
+ * Handles database operations for composed_outreach and social_outreach tables
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -33,7 +33,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 export async function saveComposedEmail(email) {
   try {
     const { data, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .insert(email)
       .select()
       .single();
@@ -60,7 +60,7 @@ export async function saveComposedEmail(email) {
 export async function updateComposedEmail(id, updates) {
   try {
     const { data, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .update({
         ...updates,
         updated_at: new Date().toISOString()
@@ -89,7 +89,7 @@ export async function updateComposedEmail(id, updates) {
  */
 export async function getComposedEmails(filters = {}) {
   try {
-    let query = supabase.from('composed_emails').select('*');
+    let query = supabase.from('composed_outreach').select('*');
 
     // Apply filters
     if (filters.status) {
@@ -147,7 +147,7 @@ export async function getComposedEmails(filters = {}) {
 export async function getComposedEmailById(id) {
   try {
     const { data, error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .select('*')
       .eq('id', id)
       .single();
@@ -187,7 +187,7 @@ export async function markEmailAsSent(id, messageId) {
 export async function deleteComposedEmail(id) {
   try {
     const { error } = await supabase
-      .from('composed_emails')
+      .from('composed_outreach')
       .delete()
       .eq('id', id);
 
@@ -395,7 +395,7 @@ export async function deleteSocialOutreach(id) {
 export async function getOutreachStats(filters = {}) {
   try {
     // Fetch emails
-    let emailQuery = supabase.from('composed_emails').select('status, quality_score, generation_cost');
+    let emailQuery = supabase.from('composed_outreach').select('status, quality_score, generation_cost');
 
     if (filters.projectId) {
       emailQuery = emailQuery.eq('project_id', filters.projectId);

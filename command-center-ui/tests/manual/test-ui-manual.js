@@ -118,7 +118,7 @@ console.log('  • XAI_API_KEY          - Check .env\n');
 console.log('Database tables required:');
 console.log('  • prospects');
 console.log('  • leads');
-console.log('  • composed_emails');
+console.log('  • composed_outreach');
 console.log('  • social_outreach');
 console.log('  • campaigns');
 console.log('  • campaign_runs');

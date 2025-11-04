@@ -1,5 +1,5 @@
 /**
- * Check what the actual database constraint is for composed_emails.status
+ * Check what the actual database constraint is for composed_outreach.status
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -12,7 +12,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-console.log('\n🔍 Checking composed_emails status constraint...\n');
+console.log('\n🔍 Checking composed_outreach status constraint...\n');
 
 // Query to get the check constraint definition
 const { data, error } = await supabase
@@ -24,7 +24,7 @@ const { data, error } = await supabase
       FROM pg_constraint con
       INNER JOIN pg_class rel ON rel.oid = con.conrelid
       INNER JOIN pg_namespace nsp ON nsp.oid = connamespace
-      WHERE rel.relname = 'composed_emails'
+      WHERE rel.relname = 'composed_outreach'
         AND con.contype = 'c'
         AND con.conname LIKE '%status%';
     `
@@ -41,7 +41,7 @@ if (error) {
   for (const status of testStatuses) {
     try {
       const { error: insertError } = await supabase
-        .from('composed_emails')
+        .from('composed_outreach')
         .insert([{
           lead_id: null,
           url: 'https://test.com',
@@ -60,7 +60,7 @@ if (error) {
 
         // Clean up test row
         await supabase
-          .from('composed_emails')
+          .from('composed_outreach')
           .delete()
           .eq('company_name', 'Test Company')
           .eq('url', 'https://test.com');

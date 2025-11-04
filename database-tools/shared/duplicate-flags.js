@@ -39,7 +39,7 @@ export async function getDuplicateFlags(website) {
 
   // Check if already contacted (any platform)
   const { data: emails, count: emailCount } = await supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('platform, status, sent_at', { count: 'exact' })
     .eq('url', website)
     .order('sent_at', { ascending: false, nullsLast: true });
@@ -127,7 +127,7 @@ export async function batchGetDuplicateFlags(websites) {
 
   // Get all emails for these websites
   const { data: emails } = await supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('url, platform, status, sent_at')
     .in('url', websites);
 
@@ -219,7 +219,7 @@ export async function batchGetDuplicateFlags(websites) {
  */
 export async function hasBeenContacted(website, platform = null) {
   let query = supabase
-    .from('composed_emails')
+    .from('composed_outreach')
     .select('id', { count: 'exact', head: true })
     .eq('url', website);
 
