@@ -2,20 +2,35 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## AI Model Context (November 2025)
+
+**Current Date**: November 2025
+
+**Available AI Models**: This project uses state-of-the-art AI models that are currently available and fully operational:
+- **GPT-5** (OpenAI) - Latest GPT model with vision capabilities
+- **Claude 4.5** (Anthropic) - Latest Claude model (claude-4-5-haiku, claude-sonnet-4-5)
+- **Grok-4** (xAI) - Latest Grok model (grok-4, grok-4-fast)
+
+**Important Assumptions**:
+- These models exist and are in active use throughout the codebase
+- Any assumptions that these models don't exist or aren't available are incorrect
+- Unless explicitly stated otherwise, assume the user is using the correct and current models
+- Model references in configuration files (e.g., `config/prompts/**/*.json`) reflect actual, available models
+
 ## System Architecture
 
-MaxantAgency is a **microservices-based lead generation pipeline** with 4 independent engines, a UI, and centralized database tools. All engines are Express.js servers that communicate via REST APIs and share a common Supabase PostgreSQL database.
+MaxantAgency is a **microservices-based lead generation pipeline** with 5 independent engines, a UI, and centralized database tools. All engines are Express.js servers that communicate via REST APIs and share a common Supabase PostgreSQL database.
 
 ### Microservices Pattern
 
 ```
 Command Center UI (Next.js:3000)
     ↓
-┌────────────┬────────────┬────────────┐
-│ Prospect   │ Analysis   │ Outreach   │
-│ Engine     │ Engine     │ Engine     │
-│ :3010      │ :3001      │ :3002      │
-└────────────┴────────────┴────────────┘
+┌────────────┬────────────┬────────────┬────────────┐
+│ Prospect   │ Analysis   │ Report     │ Outreach   │
+│ Engine     │ Engine     │ Engine     │ Engine     │
+│ :3010      │ :3001      │ :3003      │ :3002      │
+└────────────┴────────────┴────────────┴────────────┘
     ↓
 Pipeline Orchestrator (:3020)
     ↓
@@ -49,11 +64,15 @@ npm run db:setup
 **Key Tables**:
 - `prospects` - Raw company data from discovery (Prospecting Engine)
 - `leads` - Analyzed websites with A-F grades (Analysis Engine)
-- `composed_emails` - Generated email outreach (Outreach Engine)
-- `social_outreach` - Social media DMs (Outreach Engine)
+- `composed_outreach` - Generated outreach (email + social) variations (Outreach Engine)
 - `campaigns` - Scheduled automation (Pipeline Orchestrator)
 - `campaign_runs` - Execution history (Pipeline Orchestrator)
+- `reports` - Generated PDF reports with metadata (Report Engine)
+- `benchmarks` - Competitive analysis data (Analysis Engine)
+- `page_analyses` - Multi-page crawl results (Analysis Engine)
+- `project_prospects` - Junction table linking projects to prospects (Prospecting Engine)
 - `projects` - Shared table for organizing work (database-tools/shared/schemas/)
+- `ai_calls` - AI API call logging and cost tracking (database-tools/shared/schemas/)
 
 **Critical Pattern**: All engines use the **same environment variable** for database access:
 ```env
@@ -72,6 +91,7 @@ npm run dev
 # Or run individually:
 npm run dev:prospecting    # Port 3010
 npm run dev:analysis       # Port 3001
+npm run dev:reports        # Port 3003
 npm run dev:outreach       # Port 3002
 npm run dev:pipeline       # Port 3020
 npm run dev:ui            # Port 3000
@@ -82,15 +102,13 @@ npm run install:all
 
 ### Testing
 
-Each engine has its own test suite:
+**Note**: Test coverage varies by engine. The Outreach Engine has the most comprehensive test suite.
 
 ```bash
-# Analysis Engine tests (most comprehensive)
-cd analysis-engine
-node tests/test-analyzers.js          # 29 tests - AI analyzer modules
-node tests/test-grading-system.js     # 31 tests - Letter grading
-node tests/test-prompt-loader.js      # 5 tests - Prompt loading
-node tests/test-phase3-integration.js # Full integration test
+# Outreach Engine tests
+cd outreach-engine
+node tests/test-phase1-integration.js  # Full workflow test
+node tests/test-prompt-loading.js      # Prompt loader tests
 
 # Database validation (important before schema changes)
 cd database-tools
@@ -146,17 +164,43 @@ function extractLeadData(result) {
 
 AI prompts are **not hardcoded**. They live in JSON files and are loaded dynamically:
 
-**Analysis Engine** (`config/prompts/web-design/*.json`):
-- `design-critique.json` - GPT-5 Vision for screenshot analysis
+**Analysis Engine** - Multiple prompt categories:
+
+`config/prompts/web-design/*.json` (Visual & Technical Analysis):
+- `desktop-visual-analysis.json` - GPT-5 Vision for desktop screenshot analysis
+- `mobile-visual-analysis.json` - GPT-5 Vision for mobile screenshot analysis
+- `unified-visual-analysis.json` - Combined visual analysis
+- `unified-technical-analysis.json` - Combined SEO + content analysis
 - `seo-analysis.json` - Grok-4-fast for SEO
 - `content-analysis.json` - Grok-4-fast for content
 - `social-analysis.json` - Grok-4-fast for social media
+- `accessibility-analysis.json` - Accessibility checker
 
-**Outreach Engine** (`config/prompts/email-strategies/*.json`):
-- `compliment-sandwich.json`
-- `problem-first.json`
-- `achievement-focused.json`
-- `question-based.json`
+`config/prompts/benchmarking/*.json` (Competitive Analysis):
+- 7 industry-specific benchmark analysis prompts
+
+`config/prompts/grading/*.json`:
+- `ai-comparative-grader.json` - AI-powered grading
+
+`config/prompts/lead-qualification/*.json`:
+- `lead-priority-scorer.json` - Lead scoring system
+
+`config/prompts/report-synthesis/*.json`:
+- `issue-deduplication.json` - Consolidates redundant findings
+- `executive-insights-generator.json` - Business-friendly summaries
+
+**Outreach Engine** - Multiple prompt categories:
+
+`config/prompts/email-strategies/*.json` (Current Active Strategies):
+- `free-value-delivery.json` - Offer free value upfront
+- `portfolio-building.json` - Win-win portfolio building approach
+- `problem-first-urgent.json` - Urgent problem-first messaging
+- `subject-line-generator.json` - Dynamic subject line generation
+
+`config/prompts/social-strategies/*.json`:
+- 13 platform-specific strategies (Facebook, LinkedIn, Instagram, etc.)
+
+**Note**: Older email strategies (`compliment-sandwich.json`, `problem-first.json`, `achievement-focused.json`, `question-based.json`) have been archived to `_archive/` directories.
 
 **Loading Pattern**:
 ```javascript
@@ -196,7 +240,11 @@ Letter grades (A-F) are calculated from **weighted scores**:
 - -10 points for no mobile optimization
 - -10 points for no HTTPS
 
-Located in: `analysis-engine/grading/grading-system.js`
+Located in: `analysis-engine/grading/grader.js`
+
+**Additional Grading Features**:
+- **AI-Powered Grading**: `grading/ai-grader.js` uses GPT-5 for comparative grading alongside rule-based scoring
+- **Critique Generation**: `grading/critique-generator.js` generates actionable critiques
 
 ### 4. Database Client Pattern
 
@@ -254,11 +302,11 @@ eventSource.onmessage = (event) => {
 };
 ```
 
-### 6. AI Report Synthesis Pipeline (Analysis Engine)
+### 6. AI Report Synthesis Pipeline (Report Engine)
 
 **NEW in v2.1**: Intelligent report generation with AI-powered synthesis.
 
-The Analysis Engine now includes a 2-stage AI synthesis pipeline that runs **after** analysis but **before** report generation:
+The Report Engine includes a 2-stage AI synthesis pipeline that runs **after** analysis but **before** report generation:
 
 ```
 Analysis Complete → Synthesis Pipeline → Report Generation
@@ -283,13 +331,13 @@ Analysis Complete → Synthesis Pipeline → Report Generation
 USE_AI_SYNTHESIS=true  # Enable synthesis (default: false)
 ```
 
-**Location**: `analysis-engine/reports/synthesis/report-synthesis.js`
+**Location**: `report-engine/reports/synthesis/report-synthesis.js`
 
 **Prompts**:
-- `config/prompts/report-synthesis/issue-deduplication.json`
-- `config/prompts/report-synthesis/executive-insights-generator.json`
+- `analysis-engine/config/prompts/report-synthesis/issue-deduplication.json`
+- `analysis-engine/config/prompts/report-synthesis/executive-insights-generator.json`
 
-**Integration Point**: `reports/auto-report-generator.js` (lines 45-96)
+**Integration Point**: `report-engine/reports/auto-report-generator.js`
 
 **How It Works**:
 
@@ -316,9 +364,8 @@ USE_AI_SYNTHESIS=true  # Enable synthesis (default: false)
 
 **Testing**:
 ```bash
-cd analysis-engine
-node tests/integration/test-synthesis-integration.js  # Compare with/without
-node reports/synthesis/test-pipeline.js              # Test synthesis alone
+cd report-engine
+node reports/synthesis/test-pipeline.js  # Test synthesis pipeline
 ```
 
 **Quality Metrics**:
@@ -346,7 +393,7 @@ Synthesis metadata tracked in report config:
 }
 ```
 
-**Documentation**: See `analysis-engine/reports/synthesis/SYNTHESIS-INTEGRATION-GUIDE.md` for complete guide.
+**Documentation**: See `report-engine/reports/synthesis/SYNTHESIS-INTEGRATION-GUIDE.md` for complete guide.
 
 ### 7. Centralized AI Client & Cost Tracking
 
@@ -438,6 +485,229 @@ ORDER BY created_at DESC;
 - Errors in logging don't block AI operations
 - For production, consider pruning old ai_calls records periodically
 
+### 8. Rate Limit Management System
+
+**Documentation**: `RATE-LIMIT-SYSTEM-GUIDE.md`
+
+All AI API calls go through a centralized rate limiting system that prevents hitting provider rate limits.
+
+**Location**: `database-tools/shared/rate-limit-tracker.js`
+
+**Key Features**:
+- Token bucket algorithm for rate limit tracking
+- Automatic retry with exponential backoff
+- Respect for Retry-After headers
+- 90% safety margin before hitting limits
+- Real-time rate limit tracking per provider/model
+- Environment-driven model selection (overrides JSON configs)
+
+**Integration**: Automatically integrated into `ai-client.js`. No additional code required.
+
+**Environment Variables for Model Overrides**:
+```env
+# Override specific analyzer models
+DESKTOP_VISUAL_MODEL=gpt-5
+SEO_MODEL=grok-4-fast
+CONTENT_MODEL=grok-4-fast
+```
+
+**Benefits**:
+- Prevents API rate limit errors
+- Automatic fallback and retry logic
+- Cost optimization through intelligent model selection
+- Centralized rate limit state across all engines
+
+### 9. Benchmarking & Competitive Analysis System (Analysis Engine)
+
+The Analysis Engine includes a sophisticated competitive analysis system for comparing leads against industry benchmarks.
+
+**Tables**:
+- `benchmarks` - Stores competitor/industry benchmark data
+  - Schema: `analysis-engine/database/schemas/benchmarks.json`
+
+**Key Files**:
+- `services/benchmark-analyzer.js` - Analyzes competitor websites
+- `services/benchmark-matcher.js` - Matches leads to relevant benchmarks
+- `scripts/populate-benchmarks.js` - Batch populate benchmark data
+- `scripts/backfill-benchmark-strengths.js` - Enhance existing benchmarks
+
+**Prompts**: `config/prompts/benchmarking/*.json` (7 industry-specific prompts)
+
+**How It Works**:
+1. System maintains a database of analyzed competitor websites (benchmarks)
+2. When analyzing a lead, the system finds relevant competitors in the same industry
+3. AI compares the lead against top performers to identify gaps
+4. Generates competitive insights: "Your competitor X has Y feature that you lack"
+
+**Usage**:
+```javascript
+import { analyzeBenchmark } from './services/benchmark-analyzer.js';
+import { findBenchmarks } from './services/benchmark-matcher.js';
+
+// Find relevant benchmarks
+const benchmarks = await findBenchmarks(industry, limit);
+
+// Analyze a competitor
+const analysis = await analyzeBenchmark(url, companyName, industry);
+```
+
+### 10. Multi-Page Crawling System (Analysis Engine)
+
+**Documentation**: `analysis-engine/scrapers/CRAWLER-ARCHITECTURE.md`
+
+The Analysis Engine can crawl multiple pages of a website for comprehensive analysis beyond just the homepage.
+
+**Tables**:
+- `page_analyses` - Stores per-page analysis results
+  - Schema: `analysis-engine/database/schemas/page_analyses.json`
+
+**Key Files**:
+- `scrapers/multi-page-crawler.js` - Main crawler implementation
+- `services/page-analyzer.js` - Per-page analysis logic
+
+**Environment Variable**:
+```env
+ENABLE_MULTI_PAGE_CRAWL=true  # Enable multi-page crawling
+MAX_PAGES_TO_CRAWL=5          # Limit pages per site
+```
+
+**How It Works**:
+1. Crawler discovers internal links from the homepage
+2. Intelligently selects important pages (About, Services, Contact, etc.)
+3. Analyzes each page individually for content, SEO, design
+4. Aggregates findings into the overall lead analysis
+5. Stores per-page results in `page_analyses` table
+
+**Benefits**:
+- More comprehensive analysis beyond homepage
+- Discover hidden issues on interior pages
+- Better understanding of site structure and navigation
+- Enhanced SEO analysis across multiple pages
+
+### 11. Unified Analyzers (Analysis Engine)
+
+The Analysis Engine has evolved to use "unified" analyzers that combine multiple analysis types for efficiency.
+
+**Unified Visual Analyzer**: `analyzers/unified-visual-analyzer.js`
+- Combines desktop and mobile screenshot analysis
+- Single AI call analyzes both device types
+- Uses prompt: `config/prompts/web-design/unified-visual-analysis.json`
+- Replaces separate desktop-visual and mobile-visual analyzers
+
+**Unified Technical Analyzer**: `analyzers/unified-technical-analyzer.js`
+- Combines SEO and content analysis
+- Single AI call for technical assessment
+- Uses prompt: `config/prompts/web-design/unified-technical-analysis.json`
+- Replaces separate seo and content analyzers
+
+**Benefits**:
+- Reduced AI API calls (50% fewer calls)
+- Lower cost per analysis
+- Faster analysis completion
+- Maintains same quality and detail
+
+**Original Analyzers** (still available):
+- `analyzers/desktop-visual-analyzer.js`
+- `analyzers/mobile-visual-analyzer.js`
+- `analyzers/seo-analyzer.js`
+- `analyzers/content-analyzer.js`
+
+## Environment Variables
+
+All engines use environment variables for configuration. Create a `.env` file in each engine's root directory (or use a shared `.env` at the project root).
+
+### Required Variables (All Engines)
+
+```env
+# Supabase Database
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-role-key
+```
+
+**IMPORTANT**: Use `SUPABASE_SERVICE_KEY` (not `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_KEY`)
+
+### AI Provider API Keys
+
+```env
+# OpenAI (GPT models)
+OPENAI_API_KEY=sk-...
+
+# Anthropic (Claude models)
+ANTHROPIC_API_KEY=sk-ant-...
+
+# xAI (Grok models)
+XAI_API_KEY=xai-...
+```
+
+### Feature Toggles
+
+```env
+# AI Call Logging
+LOG_AI_CALLS_TO_DB=true              # Enable AI cost tracking
+
+# Report Synthesis (Report Engine)
+USE_AI_SYNTHESIS=true                # Enable AI-powered report synthesis
+
+# Multi-Page Crawling (Analysis Engine)
+ENABLE_MULTI_PAGE_CRAWL=true         # Enable multi-page website crawling
+MAX_PAGES_TO_CRAWL=5                 # Limit pages per site
+
+# Individual Analyzer Toggles (Analysis Engine)
+ENABLE_DESKTOP_VISUAL_ANALYZER=true
+ENABLE_MOBILE_VISUAL_ANALYZER=true
+ENABLE_SEO_ANALYZER=true
+ENABLE_CONTENT_ANALYZER=true
+ENABLE_SOCIAL_ANALYZER=true
+ENABLE_ACCESSIBILITY_ANALYZER=true
+```
+
+### AI Model Overrides
+
+Override models specified in JSON prompt configs:
+
+```env
+# Analysis Engine Model Overrides
+DESKTOP_VISUAL_MODEL=gpt-5
+MOBILE_VISUAL_MODEL=gpt-5
+SEO_MODEL=grok-4-fast
+CONTENT_MODEL=grok-4-fast
+SOCIAL_MODEL=grok-4-fast
+ACCESSIBILITY_MODEL=claude-4-5-haiku
+
+# Report Synthesis Model Overrides
+SYNTHESIS_MODEL=gpt-5
+EXECUTIVE_INSIGHTS_MODEL=gpt-5
+
+# Outreach Engine Model Overrides
+EMAIL_COMPOSER_MODEL=grok-4-fast
+SUBJECT_LINE_MODEL=grok-4-fast
+```
+
+### Server Ports
+
+```env
+# Engine Ports (optional, defaults shown)
+PORT=3010  # Prospecting Engine
+PORT=3001  # Analysis Engine
+PORT=3003  # Report Engine
+PORT=3002  # Outreach Engine
+PORT=3020  # Pipeline Orchestrator
+PORT=3000  # Command Center UI
+```
+
+### Other Configuration
+
+```env
+# Node Environment
+NODE_ENV=development  # or production
+
+# API Rate Limiting (handled automatically by rate-limit-tracker)
+# No configuration needed - system auto-manages rate limits
+
+# Supabase Storage (Report Engine)
+SUPABASE_STORAGE_BUCKET=reports  # Bucket name for PDF storage
+```
+
 ## Important Gotchas
 
 ### Database Schema Alignment
@@ -481,6 +751,30 @@ Foreign keys must be in the `foreignKeys` array, not inline:
 }
 ```
 
+### Consolidated Outreach Table
+
+The Outreach Engine uses a single `composed_outreach` table to store all outreach variations (email + social) for each lead. This consolidates what used to be separate `composed_emails` and `social_outreach` tables.
+
+**Table Structure**:
+```sql
+composed_outreach (
+  id uuid PRIMARY KEY,
+  lead_id uuid REFERENCES leads(id),
+  email_variations jsonb,      -- Array of email strategy variations
+  social_variations jsonb,      -- Array of social strategy variations
+  selected_email_index integer,
+  selected_social_index integer,
+  created_at timestamptz,
+  updated_at timestamptz
+)
+```
+
+**Benefits**:
+- Single source of truth per lead
+- Easier to manage variations together
+- Simpler foreign key relationships
+- Atomic updates for both email and social content
+
 ### Environment Variables
 
 All engines and database-tools use: `SUPABASE_SERVICE_KEY` (not `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_KEY`)
@@ -513,21 +807,19 @@ Without this, AI models may return `overall_design_score` instead of `overallDes
 ```bash
 cd analysis-engine
 
-# Test specific URL
+# Test specific URL via API
 curl -X POST http://localhost:3001/api/analyze-url \
   -H "Content-Type: application/json" \
   -d '{"url":"https://example.com","company_name":"Example Co"}'
 
-# Run test suite
-node tests/test-analyzers.js
-node tests/test-grading-system.js
-
-# Check database
+# Check database results
 node -e "
-const { getLeads } = require('./database/supabase-client.js');
+import { getLeads } from './database/supabase-client.js';
 getLeads({ limit: 5 }).then(console.log);
 "
 ```
+
+**Note**: Automated test suite is not yet implemented for Analysis Engine.
 
 ### Debugging Pipeline Issues
 
@@ -535,6 +827,7 @@ getLeads({ limit: 5 }).then(console.log);
 # Check health of all services
 curl http://localhost:3010/health  # Prospecting
 curl http://localhost:3001/health  # Analysis
+curl http://localhost:3003/health  # Report
 curl http://localhost:3002/health  # Outreach
 curl http://localhost:3020/health  # Pipeline
 
@@ -611,12 +904,27 @@ All engines follow the same API patterns:
 
 ## Important Files to Reference
 
-- `README.md` - System overview, deployment guides
-- `database-tools/README.md` - Database setup and schema format
-- `SCHEMA-CODE-ALIGNMENT-REPORT.md` - Current schema status across engines
-- `DEPLOYMENT.md` - VPS deployment with PM2
-- `DOCKER-DEPLOY.md` - Docker containerization guide
+**Root Level**:
+- `README.md` - System overview and architecture
+- `SETUP.md` - Setup instructions and first-time configuration
+- `RATE-LIMIT-SYSTEM-GUIDE.md` - Complete rate limiting documentation
 - `package.json` - Root-level npm scripts for dev workflow
+
+**Database Tools**:
+- `database-tools/README.md` - Database setup and schema format
+
+**Analysis Engine**:
+- `analysis-engine/scrapers/CRAWLER-ARCHITECTURE.md` - Multi-page crawling system
+- `analysis-engine/analyzers/VISUAL-ANALYZERS-README.md` - Visual analyzer documentation
+
+**Report Engine**:
+- `report-engine/reports/synthesis/SYNTHESIS-INTEGRATION-GUIDE.md` - AI synthesis pipeline
+
+**QA Supervisor**:
+- `qa-supervisor/QA-REFACTOR-SUMMARY.md` - QA system documentation
+
+**Validation Kit**:
+- `validation-kit/README.md` - Marketing and positioning materials
 
 ## Testing Philosophy
 
@@ -626,18 +934,23 @@ All engines follow the same API patterns:
 - All test files are named `test-*.js`
 - Tests output clear pass/fail counts: `✅ Passed: N`, `❌ Failed: N`
 
+**Note**: Test coverage varies across engines. The Outreach Engine has the most comprehensive test suite, while other engines have limited or no tests currently.
+
 ### Test File Organization
 
 **Standard Pattern**: Place tests in `{engine}/tests/test-*.js`
 
-Examples:
-- `prospecting-engine/tests/test-google-maps.js` - Unit tests for Google Maps discoverer
-- `analysis-engine/tests/test-analyzers.js` - Unit tests for AI analyzers
-- `outreach-engine/tests/test-phase1-integration.js` - Integration tests
+**Outreach Engine** (most complete):
+- `outreach-engine/tests/test-phase1-integration.js` - Full workflow integration test
+- `outreach-engine/tests/test-prompt-loading.js` - Prompt loader tests
+- 15+ additional test files in `outreach-engine/tests/`
 
-**Outreach Engine Exception**: The outreach engine includes convenience test runners in its root directory for quick validation:
+**Root-Level Test Runners** (Outreach Engine convenience):
 - `test-batch-generation.js` - Quick batch testing
 - `test-end-to-end.js` - Full workflow test
 - `test-notion-sync.js` - Notion integration test
 
-These root-level test files complement (not replace) the `tests/` directory and provide easy access to common testing scenarios during development.
+**Database Validation Tests**:
+- `database-tools/` - Schema validation via `npm run db:validate`
+
+**Other Engines**: Test suites are planned but not yet implemented for Prospecting, Analysis, Report, and Pipeline engines.

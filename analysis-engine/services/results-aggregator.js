@@ -14,7 +14,7 @@
 import { calculateGrade, extractQuickWins as extractQuickWinsFromModules, getTopIssue } from '../grading/grader.js';
 import { generateCritique, generateOneLiner } from '../grading/critique-generator.js';
 import { scoreLeadPriority } from '../analyzers/lead-scorer.js';
-import { saveDualScreenshots, generateScreenshotsManifest } from '../utils/screenshot-storage.js';
+import { generateScreenshotsManifest } from '../utils/screenshot-storage.js';
 import { countCriticalDesktopIssues } from '../analyzers/desktop-visual-analyzer.js';
 import { countCriticalMobileIssues } from '../analyzers/mobile-visual-analyzer.js';
 import { calculateTotalCost } from '../analyzers/index.js';
@@ -360,54 +360,34 @@ export class ResultsAggregator {
   /**
    * Save screenshots to local storage and Supabase Storage
    *
-   * @param {Array} pages - Crawled pages with screenshot buffers
+   * @param {Array} pages - Crawled pages with screenshot file paths
    * @param {object} context - Business context (company_name, etc.)
    * @param {string} baseUrl - Base website URL
    * @param {string} leadId - Pre-generated UUID for lead
    * @returns {Promise<object>} { screenshotPaths, screenshotsManifest }
    */
   async saveScreenshots(pages, context, baseUrl, leadId) {
-    const baseScreenshotLabel = (() => {
-      if (context.company_name) return context.company_name;
-      try {
-        return new URL(baseUrl).hostname || 'website';
-      } catch {
-        return 'website';
-      }
-    })();
-
-    const slugify = (value) => {
-      if (!value) return 'page';
-      return value
-        .toString()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '') || 'page';
-    };
-
     const screenshotPaths = {};
 
-    // Save all screenshots to local disk (backward compatibility)
+    // Screenshots are already saved to disk by the crawler (memory optimization)
+    // Just collect the existing file paths
     for (const page of pages) {
       if (!page.screenshots) {
         screenshotPaths[page.url] = { desktop: null, mobile: null };
         continue;
       }
 
-      const pageLabel = slugify(page.url === '/' || page.url === '' ? 'homepage' : page.url);
-      const label = `${slugify(baseScreenshotLabel)}-${pageLabel}`;
-
-      const paths = await saveDualScreenshots(
-        {
-          desktop: ensureBuffer(page.screenshots.desktop),
-          mobile: ensureBuffer(page.screenshots.mobile)
-        },
-        label
-      );
+      // Screenshots are now file paths (strings), not Buffers
+      const paths = {
+        desktop: page.screenshots.desktop || null,
+        mobile: page.screenshots.mobile || null
+      };
 
       screenshotPaths[page.url] = paths;
       page.screenshot_paths = paths;
     }
+
+    console.log(`[Screenshots] Using ${Object.keys(screenshotPaths).length} screenshot paths saved by crawler`);
 
     // Generate screenshots manifest (uploads to Supabase Storage)
     let screenshotsManifest = null;
@@ -416,8 +396,31 @@ export class ResultsAggregator {
     if (storageType !== 'local') {
       try {
         console.log(`[Screenshots] Generating manifest and uploading to Supabase Storage...`);
-        screenshotsManifest = await generateScreenshotsManifest(pages, leadId, storageType);
+
+        // generateScreenshotsManifest expects Buffers, so temporarily load from disk
+        const { readFile } = await import('fs/promises');
+        const pagesWithBuffers = await Promise.all(
+          pages.map(async (page) => {
+            if (!page.screenshots?.desktop && !page.screenshots?.mobile) {
+              return page;
+            }
+
+            const screenshots = {};
+            if (page.screenshots.desktop) {
+              screenshots.desktop = await readFile(page.screenshots.desktop);
+            }
+            if (page.screenshots.mobile) {
+              screenshots.mobile = await readFile(page.screenshots.mobile);
+            }
+
+            return { ...page, screenshots };
+          })
+        );
+
+        screenshotsManifest = await generateScreenshotsManifest(pagesWithBuffers, leadId, storageType);
         console.log(`[Screenshots] ✅ Manifest generated: ${screenshotsManifest.total_screenshots} screenshots, ${(screenshotsManifest.total_size_bytes / 1024 / 1024).toFixed(2)} MB`);
+
+        // Buffers can now be garbage collected
       } catch (error) {
         console.error(`[Screenshots] ⚠️  Failed to generate manifest:`, error.message);
         console.error(`[Screenshots] Falling back to local storage only`);
@@ -768,18 +771,5 @@ function extractScore(moduleResult, primaryKey) {
   return 0;
 }
 
-function ensureBuffer(value) {
-  if (!value) {
-    return null;
-  }
-
-  if (Buffer.isBuffer(value)) {
-    return value;
-  }
-
-  try {
-    return Buffer.from(value, 'base64');
-  } catch {
-    return null;
-  }
-}
+// ensureBuffer() function removed - screenshots are now file paths (strings), not Buffers
+// This is part of the memory optimization to avoid holding large buffers in memory

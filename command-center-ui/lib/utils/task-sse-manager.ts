@@ -292,13 +292,32 @@ export function startTaskWithSSE(config: TaskSSEConfig): TaskSSEConnection {
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
+          // Track current event type for SSE format parsing
+          let currentEventType = 'message';
+
           for (const line of lines) {
             if (line.startsWith('event:')) {
-              continue;
+              // Capture the event type instead of skipping it
+              currentEventType = line.slice(6).trim();
             } else if (line.startsWith('data:')) {
-              const data = line.slice(5).trim();
-              if (data) {
-                handleMessage(data);
+              const dataStr = line.slice(5).trim();
+              if (dataStr) {
+                try {
+                  // Parse the data payload
+                  const dataPayload = JSON.parse(dataStr);
+
+                  // Reconstruct proper SSEMessage format with type and data
+                  // Map 'success' to 'progress' for compatibility with handler
+                  const message: SSEMessage = {
+                    type: currentEventType === 'success' ? 'progress' : currentEventType,
+                    data: dataPayload
+                  };
+
+                  handleMessage(message);
+                  currentEventType = 'message'; // Reset for next event
+                } catch (parseError) {
+                  console.error('[SSE Manager] Failed to parse SSE data:', dataStr, parseError);
+                }
               }
             }
           }

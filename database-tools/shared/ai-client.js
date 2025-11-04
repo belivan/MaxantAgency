@@ -921,10 +921,10 @@ async function callClaude({
   try {
     // ⚠️ Claude API REQUIRES max_tokens field - can't be omitted
     // Use model's native maximum if not explicitly provided
-    // Claude Haiku 4.5: 64,000 max output tokens
-    // Claude Sonnet 3.5/4.5: 64,000 max output tokens
+    // Claude Haiku 3.5: 8,192 max output tokens
+    // Claude Sonnet 3.5: 8,192 max output tokens
     // Claude Opus 3: 4,096 max output tokens
-    const adjustedMaxTokens = maxTokens || 64000; // Use native max for Haiku/Sonnet
+    const adjustedMaxTokens = maxTokens || 8192; // Use reasonable max for Claude 3.5
 
     // Build user message content
     const content = [];
@@ -975,7 +975,7 @@ async function callClaude({
     const response = await withTimeout(
       client.messages.create({
         model,
-        max_tokens: adjustedMaxTokens, // Required field - using model's native max (64K)
+        max_tokens: adjustedMaxTokens, // Required field - using model's native max
         temperature,
         system: systemPrompt,
         messages: [
@@ -1054,11 +1054,11 @@ function calculateCost(modelId, usage) {
     'grok-4': { input: 3, output: 15 },
     'grok-4-fast': { input: 0.20, output: 0.50 },
 
-    // Claude (Anthropic) - Claude 4.5 models (Nov 2025)
+    // Claude (Anthropic) - Claude 4.5 models (2025)
+    'claude-4-5-haiku': { input: 1.00, output: 5.00 },
     'claude-haiku-4-5': { input: 1.00, output: 5.00 },
-    'claude-4-5-haiku': { input: 1.00, output: 5.00 }, // Legacy naming (backward compatibility)
-    'claude-sonnet-4-5': { input: 3, output: 15 },
-    'claude-4-5-sonnet': { input: 3, output: 15 } // Legacy naming (backward compatibility)
+    'claude-4-5-sonnet': { input: 3, output: 15 },
+    'claude-sonnet-4-5': { input: 3, output: 15 }
   };
 
   const modelPricing = pricing[modelId] || { input: 0, output: 0 };

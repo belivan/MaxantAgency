@@ -13,6 +13,7 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
+import { readFile } from 'fs/promises';
 
 /**
  * Analyze visual design using GPT-4o Vision (Multi-page version with both viewports)
@@ -20,9 +21,9 @@ import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client
  * @param {array} pages - Array of page objects
  * @param {string} pages[].url - Page URL (relative path)
  * @param {string} pages[].fullUrl - Full URL
- * @param {object} pages[].screenshots - Screenshot buffers
- * @param {Buffer} pages[].screenshots.desktop - Desktop screenshot buffer (1920x1080)
- * @param {Buffer} pages[].screenshots.mobile - Mobile screenshot buffer (375x812)
+ * @param {object} pages[].screenshots - Screenshot file paths (memory optimization)
+ * @param {string} pages[].screenshots.desktop - Desktop screenshot file path (1920x1080)
+ * @param {string} pages[].screenshots.mobile - Mobile screenshot file path (375x812)
  * @param {object} context - Additional context
  * @param {string} context.company_name - Company name
  * @param {string} context.industry - Industry type
@@ -35,13 +36,13 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
   try {
     console.log(`[Unified Visual Analyzer] Analyzing ${pages.length} pages (desktop + mobile screenshots)...`);
 
-    // Validate all screenshots (must have BOTH viewports)
+    // Validate all screenshots (must have BOTH viewports as file paths)
     for (const page of pages) {
-      if (!page.screenshots?.desktop || !Buffer.isBuffer(page.screenshots.desktop)) {
-        throw new Error(`Missing or invalid desktop screenshot for page: ${page.url}`);
+      if (!page.screenshots?.desktop || typeof page.screenshots.desktop !== 'string') {
+        throw new Error(`Missing or invalid desktop screenshot path for page: ${page.url}`);
       }
-      if (!page.screenshots?.mobile || !Buffer.isBuffer(page.screenshots.mobile)) {
-        throw new Error(`Missing or invalid mobile screenshot for page: ${page.url}`);
+      if (!page.screenshots?.mobile || typeof page.screenshots.mobile !== 'string') {
+        throw new Error(`Missing or invalid mobile screenshot path for page: ${page.url}`);
       }
     }
 
@@ -92,8 +93,15 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
       // Import compression function to handle sections
       const { compressImageIfNeeded } = await import('../../database-tools/shared/ai-client.js');
 
-      const desktopProcessed = await compressImageIfNeeded(page.screenshots.desktop);
-      const mobileProcessed = await compressImageIfNeeded(page.screenshots.mobile);
+      // Lazy-load screenshots from disk (memory optimization)
+      // Screenshots are loaded only when needed for AI processing
+      console.log(`[Unified Visual Analyzer] Loading screenshots from disk for ${page.url}...`);
+      const desktopBuffer = await readFile(page.screenshots.desktop);
+      const mobileBuffer = await readFile(page.screenshots.mobile);
+      console.log(`[Unified Visual Analyzer] Screenshots loaded (Desktop: ${desktopBuffer.length} bytes, Mobile: ${mobileBuffer.length} bytes)`);
+
+      const desktopProcessed = await compressImageIfNeeded(desktopBuffer);
+      const mobileProcessed = await compressImageIfNeeded(mobileBuffer);
 
       // Build images array and description
       const images = [];

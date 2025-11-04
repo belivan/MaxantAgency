@@ -19,30 +19,32 @@ export class CrawlingService {
 
   /**
    * Crawl selected pages with desktop + mobile screenshots
-   * 
+   *
    * @param {string} baseUrl - Base website URL
    * @param {Array<string>} pages - Pages to crawl (from PageSelectionService)
+   * @param {string} companyName - Company name for screenshot file naming
    * @returns {Promise<object>} Crawl results
    * @returns {Array<object>} .pages - Successfully crawled pages
    * @returns {object} .homepage - Homepage data
    * @returns {object} .businessIntel - Extracted business intelligence
    * @returns {number} .crawlTime - Time taken (ms)
    */
-  async crawl(baseUrl, pages) {
+  async crawl(baseUrl, pages, companyName = null) {
     const startTime = Date.now();
 
-    this.onProgress({ 
-      step: 'crawl', 
-      message: `Crawling ${pages.length} selected pages with desktop + mobile screenshots...` 
+    this.onProgress({
+      step: 'crawl',
+      message: `Crawling ${pages.length} selected pages with desktop + mobile screenshots...`
     });
 
     const crawledPages = await crawlSelectedPagesWithScreenshots(baseUrl, pages, {
       timeout: this.timeout,
       concurrency: this.concurrency,
+      companyName: companyName,  // Pass company name for screenshot file naming
       onProgress: (crawlProgress) => {
-        this.onProgress({ 
-          step: 'crawl', 
-          message: `Crawled ${crawlProgress.completed}/${pages.length} pages...` 
+        this.onProgress({
+          step: 'crawl',
+          message: `Crawled ${crawlProgress.completed}/${pages.length} pages...`
         });
       }
     });
@@ -58,8 +60,9 @@ export class CrawlingService {
         html: p.html,
         metadata: p.metadata || {},
         screenshots: {
-          desktop: ensureBuffer(p.screenshots?.desktop),
-          mobile: ensureBuffer(p.screenshots?.mobile)
+          // Screenshots are now file paths (strings), not Buffers
+          desktop: p.screenshots?.desktop || null,
+          mobile: p.screenshots?.mobile || null
         },
         designTokens: {
           desktop: p.designTokens?.desktop || { fonts: [], colors: [], extractedAt: new Date().toISOString() },
@@ -167,14 +170,5 @@ export class CrawlingService {
   }
 }
 
-function ensureBuffer(value) {
-  if (!value) return null;
-  if (Buffer.isBuffer(value)) {
-    return value;
-  }
-  try {
-    return Buffer.from(value, 'base64');
-  } catch {
-    return null;
-  }
-}
+// ensureBuffer() function removed - screenshots are now file paths (strings), not Buffers
+// This is part of the memory optimization to avoid holding large buffers in memory

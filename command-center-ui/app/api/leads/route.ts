@@ -25,11 +25,15 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50', 10);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
+    // Parse sorting params (default to updated_at for most recently analyzed)
+    const sortBy = searchParams.get('sort') || 'updated_at';
+    const sortOrder = searchParams.get('order') === 'asc';
+
     // Build query with project name join
     let query = supabase
       .from('leads')
       .select('*, projects(name)', { count: 'exact' })
-      .order('created_at', { ascending: false })
+      .order(sortBy, { ascending: sortOrder })
       .range(offset, offset + limit - 1);
 
     // Apply filters

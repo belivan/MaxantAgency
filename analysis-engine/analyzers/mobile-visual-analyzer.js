@@ -7,6 +7,7 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
+import { readFile } from 'fs/promises';
 
 /**
  * Analyze mobile visual design using GPT-4o Vision (Multi-page version)
@@ -14,8 +15,8 @@ import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client
  * @param {array} pages - Array of page objects
  * @param {string} pages[].url - Page URL (relative path)
  * @param {string} pages[].fullUrl - Full URL
- * @param {object} pages[].screenshots - Screenshot buffers
- * @param {Buffer} pages[].screenshots.mobile - Mobile screenshot buffer
+ * @param {object} pages[].screenshots - Screenshot file paths (memory optimization)
+ * @param {string} pages[].screenshots.mobile - Mobile screenshot file path
  * @param {object} context - Additional context
  * @param {string} context.company_name - Company name
  * @param {string} context.industry - Industry type
@@ -28,10 +29,10 @@ export async function analyzeMobileVisual(pages, context = {}, customPrompt = nu
   try {
     console.log(`[Mobile Visual Analyzer] Analyzing ${pages.length} mobile screenshots...`);
 
-    // Validate all screenshots
+    // Validate all screenshots (must be file paths)
     for (const page of pages) {
-      if (!page.screenshots?.mobile || !Buffer.isBuffer(page.screenshots.mobile)) {
-        throw new Error(`Missing or invalid mobile screenshot for page: ${page.url}`);
+      if (!page.screenshots?.mobile || typeof page.screenshots.mobile !== 'string') {
+        throw new Error(`Missing or invalid mobile screenshot path for page: ${page.url}`);
       }
     }
 
@@ -73,13 +74,18 @@ export async function analyzeMobileVisual(pages, context = {}, customPrompt = nu
         prompt = await loadPrompt('web-design/mobile-visual-analysis', variables);
       }
 
+      // Lazy-load screenshot from disk (memory optimization)
+      console.log(`[Mobile Visual Analyzer] Loading screenshot from disk for ${page.url}...`);
+      const mobileBuffer = await readFile(page.screenshots.mobile);
+      console.log(`[Mobile Visual Analyzer] Screenshot loaded (${mobileBuffer.length} bytes)`);
+
       // Call GPT-4o Vision API with screenshot
       const response = await callAI({
         model: prompt.model,
         systemPrompt: prompt.systemPrompt,
         userPrompt: prompt.userPrompt,
         temperature: prompt.temperature,
-        image: page.screenshots.mobile,
+        image: mobileBuffer,
         jsonMode: true
       });
 

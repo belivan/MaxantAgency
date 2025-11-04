@@ -24,7 +24,7 @@
       "name": "model",
       "type": "text",
       "notNull": true,
-      "comment": "AI model used: gpt-4o, claude-3-5-sonnet, grok-beta, etc."
+      "comment": "AI model used: gpt-5, gpt-4o, claude-4-5-haiku, claude-4-5-sonnet, grok-4, grok-4-fast, etc."
     },
     {
       "name": "provider",

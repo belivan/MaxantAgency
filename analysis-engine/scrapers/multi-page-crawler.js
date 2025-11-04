@@ -17,11 +17,12 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { filterUrls } from '../utils/url-filter.js';
 import { detectTechStack } from '../utils/tech-stack-detector.js';
+import { saveDualScreenshots } from '../utils/screenshot-storage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const SCREENSHOT_DELAY_MS = Number(process.env.SCREENSHOT_DELAY_MS || 5000);
+const SCREENSHOT_DELAY_MS = Number(process.env.SCREENSHOT_DELAY_MS || 8000);
 
 // Load scraper configuration
 let config;
@@ -689,19 +690,90 @@ async function extractDesignTokens(page) {
 }
 
 /**
+ * Wait for all images on the page to finish loading
+ * Waits for entire page (not just above the fold) to ensure bottom-half images load
+ * Each image has a 5-second timeout to prevent blocking on broken images
+ *
+ * @param {Page} page - Playwright page object
+ * @returns {Promise<void>}
+ */
+async function waitForImagesToLoad(page) {
+  try {
+    await page.evaluate(() => {
+      return Promise.all(
+        Array.from(document.images)
+          .filter(img => {
+            // Wait for all images on the page (not just above the fold)
+            // This ensures bottom-half images are loaded too
+            return true;
+          })
+          .map(img => {
+            // If image already loaded, resolve immediately
+            if (img.complete && img.naturalHeight !== 0) {
+              return Promise.resolve();
+            }
+            // Wait for image to load or error out
+            return new Promise((resolve) => {
+              img.addEventListener('load', resolve);
+              img.addEventListener('error', resolve); // Resolve even on error to not block
+              setTimeout(resolve, 5000); // 5s timeout per image
+            });
+          })
+      );
+    });
+    console.log('[Screenshot] All images on page loaded');
+  } catch (error) {
+    console.warn('[Screenshot] Image load detection failed, continuing:', error.message);
+  }
+}
+
+/**
+ * Trigger lazy loading by scrolling through the page
+ * Activates Intersection Observer-based lazy loading frameworks
+ *
+ * @param {Page} page - Playwright page object
+ * @returns {Promise<void>}
+ */
+async function triggerLazyLoading(page) {
+  try {
+    await page.evaluate(async () => {
+      const scrollHeight = document.documentElement.scrollHeight;
+      const viewportHeight = window.innerHeight;
+      const scrollStep = viewportHeight / 2; // Scroll half viewport at a time
+
+      // Scroll down entire page in chunks to trigger lazy loading
+      const maxScroll = scrollHeight; // Scroll full page to trigger all lazy-loaded images
+      for (let i = 0; i < maxScroll; i += scrollStep) {
+        window.scrollTo(0, i);
+        await new Promise(r => setTimeout(r, 200)); // 200ms per scroll step
+      }
+
+      // Scroll back to top for screenshot
+      window.scrollTo(0, 0);
+      await new Promise(r => setTimeout(r, 500)); // 500ms to settle after scroll
+    });
+    console.log('[Screenshot] Lazy loading triggered via full page scroll');
+  } catch (error) {
+    console.warn('[Screenshot] Lazy loading trigger failed, continuing:', error.message);
+  }
+}
+
+/**
  * Crawl selected pages with both desktop and mobile screenshots
  * Used by intelligent analysis system for targeted page analysis
  *
  * @param {string} baseUrl - Website base URL
  * @param {array} pageUrls - Array of page URLs to crawl (from AI selection)
  * @param {object} options - Crawl options
+ * @param {string} options.companyName - Company name for screenshot file naming
  * @returns {Promise<array>} Array of page data with screenshots
  */
 export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, options = {}) {
   const {
     timeout = 60000,  // Increased from 30s to 60s for slow websites
     concurrency = 3,  // Parallel contexts within shared browser
-    onProgress = null
+    onProgress = null,
+    companyName = null  // Company name for screenshot storage
   } = options;
 
   console.log(`[Targeted Crawler] Crawling ${pageUrls.length} selected pages for ${baseUrl}...`);
@@ -755,7 +827,7 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
 
       // Crawl batch in parallel using shared browser with separate contexts
       const batchResults = await Promise.allSettled(
-        batch.map(pageUrl => crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout))
+        batch.map(pageUrl => crawlPageWithScreenshots(browser, baseUrl, pageUrl, timeout, companyName))
       );
 
       for (let j = 0; j < batchResults.length; j++) {
@@ -764,7 +836,7 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
 
         if (result.status === 'fulfilled') {
           results.push(result.value);
-          console.log(`[Targeted Crawler] ✓ ${result.value.url} (Desktop: ${result.value.screenshots.desktop ? 'captured' : 'failed'}, Mobile: ${result.value.screenshots.mobile ? 'captured' : 'failed'})`);
+          console.log(`[Targeted Crawler] ✓ ${result.value.url} (Desktop: ${result.value.screenshots.desktop ? 'saved' : 'failed'}, Mobile: ${result.value.screenshots.mobile ? 'saved' : 'failed'})`);
         } else {
           console.log(`[Targeted Crawler] ✗ Failed ${pageUrl}: ${result.reason.message}`);
           results.push({
@@ -807,8 +879,15 @@ export async function crawlSelectedPagesWithScreenshots(baseUrl, pageUrls, optio
 /**
  * Crawl a single page with both desktop and mobile screenshots
  * Uses shared browser with dedicated contexts to avoid resource exhaustion
+ *
+ * @param {object} sharedBrowser - Playwright browser instance
+ * @param {string} baseUrl - Base website URL
+ * @param {string} pageUrl - Page URL to crawl
+ * @param {number} timeout - Timeout in milliseconds
+ * @param {string} companyName - Company name for screenshot file naming
+ * @returns {Promise<object>} Page data with screenshot file paths (not Buffers)
  */
-async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout) {
+async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout, companyName = null) {
   const fullUrl = new URL(pageUrl, baseUrl).href;
   const startTime = Date.now();
 
@@ -828,6 +907,10 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
 
     // Navigate and screenshot desktop
     const desktopWaitStrategy = await navigateWithFallback(desktopPage, fullUrl, timeout);
+
+    // Trigger lazy loading and wait for images to load
+    await triggerLazyLoading(desktopPage);
+    await waitForImagesToLoad(desktopPage);
 
     if (SCREENSHOT_DELAY_MS > 0) {
       await desktopPage.waitForTimeout(SCREENSHOT_DELAY_MS);
@@ -879,6 +962,10 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
     // Navigate mobile page
     const mobileWaitStrategy = await navigateWithFallback(mobilePage, fullUrl, timeout);
 
+    // Trigger lazy loading and wait for images to load
+    await triggerLazyLoading(mobilePage);
+    await waitForImagesToLoad(mobilePage);
+
     if (SCREENSHOT_DELAY_MS > 0) {
       await mobilePage.waitForTimeout(SCREENSHOT_DELAY_MS);
     }
@@ -898,6 +985,17 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
     await mobileContext.close();
     mobileContext = null;
 
+    // Save screenshots immediately to disk (memory optimization)
+    // Returns file paths instead of keeping Buffers in memory
+    const screenshotPaths = await saveDualScreenshots(
+      { desktop: desktopScreenshot, mobile: mobileScreenshot },
+      companyName || new URL(baseUrl).hostname
+    );
+
+    console.log(`[Targeted Crawler] 💾 Screenshots saved to disk for ${pageUrl}`);
+    console.log(`[Targeted Crawler]    Desktop: ${screenshotPaths.desktop ? 'saved' : 'failed'}`);
+    console.log(`[Targeted Crawler]    Mobile: ${screenshotPaths.mobile ? 'saved' : 'failed'}`);
+
     const crawlTime = Date.now() - startTime;
 
     return {
@@ -907,8 +1005,8 @@ async function crawlPageWithScreenshots(sharedBrowser, baseUrl, pageUrl, timeout
       html: htmlContent,
       htmlContent,
       screenshots: {
-        desktop: desktopScreenshot || null,
-        mobile: mobileScreenshot || null
+        desktop: screenshotPaths.desktop || null,  // File path, not Buffer
+        mobile: screenshotPaths.mobile || null      // File path, not Buffer
       },
       designTokens: {
         desktop: designTokensDesktop || { fonts: [], colors: [], extractedAt: new Date().toISOString() },

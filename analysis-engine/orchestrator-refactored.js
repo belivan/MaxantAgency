@@ -91,7 +91,7 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
         onProgress: progress
       });
 
-      crawlData = await crawlingService.crawl(url, pageSelection.uniquePages);
+      crawlData = await crawlingService.crawl(url, pageSelection.uniquePages, context.company_name);
       console.log(`[Orchestrator] Crawling:`, crawlingService.getStatistics(crawlData));
 
     } else {
@@ -108,7 +108,7 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       });
 
       // Only crawl the homepage
-      crawlData = await crawlingService.crawl(url, ['/']);
+      crawlData = await crawlingService.crawl(url, ['/'], context.company_name);
 
       // Create minimal sitemap/page selection for single page
       sitemap = {
@@ -185,7 +185,11 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
                   onProgress: () => {} // Silent progress for benchmark
                 });
 
-                const benchmarkCrawlData = await benchmarkCrawler.crawl(benchmark.website_url, ['/']);
+                const benchmarkCrawlData = await benchmarkCrawler.crawl(
+                  benchmark.website_url,
+                  ['/'],
+                  benchmark.company_name || 'benchmark'
+                );
 
                 if (benchmarkCrawlData.homepage) {
                   benchmark.screenshot_desktop_url = benchmarkCrawlData.homepage.screenshotDesktop;

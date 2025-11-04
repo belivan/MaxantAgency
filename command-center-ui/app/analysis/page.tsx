@@ -296,9 +296,10 @@ export default function AnalysisPage() {
         }
       },
       onComplete: (data, taskId) => {
-        addLog(taskId, `Analysis complete!`, 'success');
+        const successCount = (data as any).successful || 0;
+        addLog(taskId, `Analysis complete! ${successCount} leads analyzed`, 'success');
         // Refresh leads data after completion
-        // Note: You may want to call a refresh function here
+        refreshLeads();
       },
       onError: (error, taskId) => {
         console.error('Analysis failed:', error);

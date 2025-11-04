@@ -38,18 +38,24 @@ const RATE_LIMITS = {
     }
   },
   anthropic: {
+    'claude-4-5-sonnet': {
+      tier1: { itpm: 30000, otpm: 8000, rpm: 50 },
+      tier2: { itpm: 450000, otpm: 90000, rpm: 100 },
+      tier3: { itpm: 800000, otpm: 160000, rpm: 200 },
+      tier4: { itpm: 2000000, otpm: 400000, rpm: 400 }
+    },
     'claude-sonnet-4-5': {
       tier1: { itpm: 30000, otpm: 8000, rpm: 50 },
       tier2: { itpm: 450000, otpm: 90000, rpm: 100 },
       tier3: { itpm: 800000, otpm: 160000, rpm: 200 },
       tier4: { itpm: 2000000, otpm: 400000, rpm: 400 }
     },
-    'claude-haiku-4-5': {
+    'claude-4-5-haiku': {
       tier1: { itpm: 50000, otpm: 10000, rpm: 50 },
       tier2: { itpm: 450000, otpm: 90000, rpm: 100 }
     },
-    'claude-opus-4': {
-      tier1: { itpm: 30000, otpm: 8000, rpm: 50 },
+    'claude-haiku-4-5': {
+      tier1: { itpm: 50000, otpm: 10000, rpm: 50 },
       tier2: { itpm: 450000, otpm: 90000, rpm: 100 }
     }
   },

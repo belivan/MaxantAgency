@@ -17,6 +17,9 @@ import { generateEmail, generateCompleteEmail } from './generators/email-generat
 import { generateEmailVariants } from './generators/variant-generator.js';
 import { generateSocialDM } from './generators/social-generator.js';
 
+// Batch Generator
+import { batchGenerateConsolidated } from './batch-generate-consolidated.js';
+
 // Validators
 import { validateEmail } from './validators/email-validator.js';
 import { validateSocialDM } from './validators/social-validator.js';

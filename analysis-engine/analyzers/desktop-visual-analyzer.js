@@ -7,6 +7,7 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
+import { readFile } from 'fs/promises';
 
 /**
  * Analyze desktop visual design using GPT-4o Vision (Multi-page version)
@@ -14,8 +15,8 @@ import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client
  * @param {array} pages - Array of page objects
  * @param {string} pages[].url - Page URL (relative path)
  * @param {string} pages[].fullUrl - Full URL
- * @param {object} pages[].screenshots - Screenshot buffers
- * @param {Buffer} pages[].screenshots.desktop - Desktop screenshot buffer
+ * @param {object} pages[].screenshots - Screenshot file paths (memory optimization)
+ * @param {string} pages[].screenshots.desktop - Desktop screenshot file path
  * @param {object} context - Additional context
  * @param {string} context.company_name - Company name
  * @param {string} context.industry - Industry type
@@ -28,10 +29,10 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
   try {
     console.log(`[Desktop Visual Analyzer] Analyzing ${pages.length} desktop screenshots...`);
 
-    // Validate all screenshots
+    // Validate all screenshots (must be file paths)
     for (const page of pages) {
-      if (!page.screenshots?.desktop || !Buffer.isBuffer(page.screenshots.desktop)) {
-        throw new Error(`Missing or invalid desktop screenshot for page: ${page.url}`);
+      if (!page.screenshots?.desktop || typeof page.screenshots.desktop !== 'string') {
+        throw new Error(`Missing or invalid desktop screenshot path for page: ${page.url}`);
       }
     }
 
@@ -73,13 +74,18 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
         prompt = await loadPrompt('web-design/desktop-visual-analysis', variables);
       }
 
+      // Lazy-load screenshot from disk (memory optimization)
+      console.log(`[Desktop Visual Analyzer] Loading screenshot from disk for ${page.url}...`);
+      const desktopBuffer = await readFile(page.screenshots.desktop);
+      console.log(`[Desktop Visual Analyzer] Screenshot loaded (${desktopBuffer.length} bytes)`);
+
       // Call GPT-4o Vision API with screenshot
       const response = await callAI({
         model: prompt.model,
         systemPrompt: prompt.systemPrompt,
         userPrompt: prompt.userPrompt,
         temperature: prompt.temperature,
-        image: page.screenshots.desktop,
+        image: desktopBuffer,
         jsonMode: true
       });
 

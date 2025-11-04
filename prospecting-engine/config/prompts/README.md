@@ -36,7 +36,7 @@ Each JSON file follows this schema:
 - **version**: Prompt version for tracking changes
 - **name**: Unique identifier for this prompt
 - **description**: Human-readable explanation
-- **model**: AI model to use (grok-4-fast, grok-beta, claude-3-5-sonnet-20241022, gpt-4o)
+- **model**: AI model to use (grok-4-fast, grok-4, claude-4-5-haiku, claude-4-5-sonnet, gpt-5, gpt-4o)
 - **temperature**: Sampling temperature (0.0-1.0)
   - 0.0-0.3: Deterministic, focused (good for extraction)
   - 0.4-0.7: Balanced (good for analysis)
