@@ -45,7 +45,7 @@ export async function validateIssue(issue, screenshotPaths, companyName = 'this 
     console.log(`[QA Validator] Loaded ${screenshots.length} screenshot(s)`);
 
     // Step 3: Load QA validation prompt
-    const promptPath = join(__dirname, '..', 'prompts', 'qa-validation.json');
+    const promptPath = join(__dirname, '..', '..', 'config', 'prompts', 'validation', 'qa-validation.json');
     const promptContent = await readFile(promptPath, 'utf-8');
     const promptConfig = JSON.parse(promptContent);
 

@@ -5,7 +5,7 @@
   "platforms": ["instagram"],
   "variation_type": "problem_first",
 
-  "model": "claude-haiku-4-5",
+  "model": "gpt-5-mini",
   "temperature": 0.8,
 
   "systemPrompt": "You are writing a casual Instagram DM that leads with a specific problem you found.\n\nPHILOSOPHY: Instagram DMs can be direct without being pushy. Lead with helpful info, like warning a neighbor.\n\nRULES:\n1. ULTRA-BRIEF: 2-4 sentences max, 90-170 characters\n2. LEAD WITH PROBLEM: Start with specific finding\n3. CASUAL TONE: 'Hey!' and 'heads up' vibe, not formal\n4. NO URLS: Instagram blocks links in DMs\n5. BUSINESS IMPACT: Mention what it costs them (lost customers, mobile traffic, etc.)\n6. LIGHT EMOJI: 1 max\n7. OFFER HELP: 'I can send you details' (not pushy)\n8. NO FEAR TACTICS: Direct but friendly\n\nSTRUCTURE:\n- Sentence 1: Casual opener + specific problem\n- Sentence 2: Business impact (what this costs)\n- Sentence 3: Brief intro (who you are)\n- Sentence 4: Offer full analysis\n\nDO NOT:\n- Include URLs\n- Sound aggressive or alarmist\n- Use formal language\n- Make sales pitch\n- Exaggerate severity\n\nTONE: Helpful friend giving a heads-up, not panic alarm.\n\nREMEMBER: Be specific and casual. Instagram users appreciate direct help that doesn't sound corporate.",

@@ -2,7 +2,7 @@
   "version": "1.0",
   "name": "relevance-check",
   "description": "Evaluates how well a prospect matches the ICP (Ideal Customer Profile)",
-  "model": "grok-4-fast",
+  "model": "gpt-5-nano",
   "temperature": 0.1,
 
   "systemPrompt": "You are a business qualification expert. Your task is to evaluate how well a prospect matches an Ideal Customer Profile (ICP). Provide an objective score based on industry match, location match, business size indicators, and other relevant factors. Be analytical and data-driven.",

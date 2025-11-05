@@ -1111,6 +1111,31 @@ export function parseJSONResponse(content) {
 
           let repaired = extractedJson;
 
+          // Fix text words used for numeric values (e.g., "score": fifty → "score": 50)
+          const numberWords = {
+            'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
+            'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19,
+            'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
+            'hundred': 100
+          };
+
+          // Match patterns like: "score": fifty or "score": "fifty" or "score":  fifty
+          for (const [word, num] of Object.entries(numberWords)) {
+            const patterns = [
+              new RegExp(`:\\s*"${word}"`, 'gi'),  // "score": "fifty"
+              new RegExp(`:\\s*${word}([,\\s}\\]])`, 'gi')  // "score": fifty, or fifty} or fifty]
+            ];
+
+            for (const pattern of patterns) {
+              if (pattern.test(repaired)) {
+                repaired = repaired.replace(pattern, (match, suffix) => {
+                  return suffix ? `: ${num}${suffix}` : `: ${num}`;
+                });
+                console.log(`  → Fixed text number: "${word}" → ${num}`);
+              }
+            }
+          }
+
           // Try to fix truncated strings by closing them
           const stringPattern = /"([^"]*?)$/;
           if (stringPattern.test(repaired)) {

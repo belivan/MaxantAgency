@@ -7,8 +7,6 @@
 
 import { useState, useEffect } from 'react';
 import { ProspectConfigForm } from './prospect-config-form';
-import { ProspectingModelSelector } from './model-selector';
-import { ProspectingPromptEditor } from './prompt-editor';
 import { ProjectSelector } from '@/components/shared';
 import { PROSPECTING_MODULES, PROSPECTING_MODELS } from '@/lib/constants/prospecting';
 import type { ProspectGenerationFormData } from '@/lib/utils/validation';
@@ -119,31 +117,6 @@ export function EnhancedProspectConfigForm(props: EnhancedProspectConfigFormProp
             </p>
           )}
         </div>
-      )}
-
-      {/* Model Selection (Advanced) - Always editable, even during generation */}
-      {!isLoadingPrompts && (
-        <ProspectingModelSelector
-          modules={PROSPECTING_MODULES}
-          models={PROSPECTING_MODELS}
-          selectedModels={selectedModels}
-          onChange={setSelectedModels}
-          disabled={props.disabled}
-          showForkWarning={props.showForkWarning}
-          prospectCount={props.prospectCount}
-        />
-      )}
-
-      {/* Prompt Editor (Expert) - Always editable, even during generation */}
-      {!isLoadingPrompts && Object.keys(defaultPrompts).length > 0 && (
-        <ProspectingPromptEditor
-          prompts={customPrompts}
-          defaultPrompts={defaultPrompts}
-          onChange={setCustomPrompts}
-          disabled={props.disabled}
-          showForkWarning={props.showForkWarning}
-          prospectCount={props.prospectCount}
-        />
       )}
     </ProspectConfigForm>
   );

@@ -17,8 +17,8 @@ import { Slider } from '@/components/ui/slider';
 import { analysisOptionsSchema, type AnalysisOptionsFormData } from '@/lib/utils/validation';
 import { formatCurrency } from '@/lib/utils/format';
 import { Badge } from '@/components/ui/badge';
-import { ModelSelector, type ModuleModelSelection, type AIModel } from './model-selector';
-import { PromptEditor, type AnalysisPrompts, type PromptConfig } from './prompt-editor';
+import { type ModuleModelSelection, type AIModel } from './model-selector';
+import { type AnalysisPrompts, type PromptConfig } from './prompt-editor';
 
 interface AnalysisConfigProps {
   prospectCount: number;
@@ -324,25 +324,6 @@ export function AnalysisConfig({
 
       <CardContent>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-          <ModelSelector
-            modules={CORE_MODULES}
-            models={AI_MODELS}
-            selectedModels={activeModelSelections}
-            onChange={handleModelSelectionChange}
-            disabled={disabled || isLoading}
-            defaultSelections={defaultSelectionsForReset}
-          />
-
-          {!isLoadingPrompts && Object.keys(defaultPrompts).length > 0 && (
-            <PromptEditor
-              prompts={customPrompts}
-              defaultPrompts={defaultPrompts}
-              onChange={handlePromptsChange}
-              locked={promptsLocked}
-              leadsCount={leadsCount}
-            />
-          )}
-
           <div className="space-y-4">
             <Label className="flex items-center space-x-2">
               <span>Intelligent Analysis Features</span>

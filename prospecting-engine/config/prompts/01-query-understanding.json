@@ -2,7 +2,7 @@
   "version": "1.0",
   "name": "query-understanding",
   "description": "Converts ICP brief into an optimized Google Maps search query",
-  "model": "grok-4-fast",
+  "model": "gpt-5-nano",
   "temperature": 0.2,
 
   "systemPrompt": "You are a search query optimization expert. Your task is to convert business target descriptions into highly effective Google Maps search queries that will find the most relevant businesses. Focus on clarity, specificity, and search intent.",
