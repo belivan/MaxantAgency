@@ -148,7 +148,9 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
         description: `Unable to analyze accessibility: ${error.message}`,
         impact: 'Cannot provide accessibility recommendations',
         recommendation: 'Manual accessibility audit recommended',
-        priority: 'high'
+        priority: 'high',
+      source: 'accessibility-analyzer',
+      source_type: 'accessibility'
       }],
       quickFixes: [],
       _meta: {
@@ -289,7 +291,9 @@ function detectSiteWideAccessibilityIssues(pagesData) {
       description: 'The <html> tag is missing the lang attribute on all pages, which is required for screen readers to pronounce content correctly.',
       impact: 'Screen readers cannot determine the language, resulting in incorrect pronunciation for visually impaired users.',
       recommendation: 'Add lang="en" (or appropriate language code) to the <html> tag on all pages',
-      priority: 'critical'
+      priority: 'critical',
+      source: 'accessibility-analyzer',
+      source_type: 'accessibility'
     });
   }
 
@@ -307,7 +311,9 @@ function detectSiteWideAccessibilityIssues(pagesData) {
       description: 'Alt text provides text alternatives for images, allowing screen readers to describe images to visually impaired users.',
       impact: 'Visually impaired users cannot understand image content, missing critical information.',
       recommendation: 'Add descriptive alt text to all images. For decorative images, use alt=""',
-      priority: 'high'
+      priority: 'high',
+      source: 'accessibility-analyzer',
+      source_type: 'accessibility'
     });
   }
 
@@ -325,7 +331,9 @@ function detectSiteWideAccessibilityIssues(pagesData) {
       description: 'Form inputs must have associated labels so screen readers can identify what information to enter.',
       impact: 'Users with visual impairments cannot complete forms, blocking conversions.',
       recommendation: 'Add <label> elements or aria-label attributes to all form inputs',
-      priority: 'critical'
+      priority: 'critical',
+      source: 'accessibility-analyzer',
+      source_type: 'accessibility'
     });
   }
 
@@ -340,7 +348,9 @@ function detectSiteWideAccessibilityIssues(pagesData) {
       description: 'Skip links allow keyboard users to bypass repetitive navigation and jump directly to main content.',
       impact: 'Keyboard users must tab through entire navigation on every page, wasting time.',
       recommendation: 'Add a "Skip to main content" link at the top of each page',
-      priority: 'medium'
+      priority: 'medium',
+      source: 'accessibility-analyzer',
+      source_type: 'accessibility'
     });
   }
 
@@ -355,7 +365,9 @@ function detectSiteWideAccessibilityIssues(pagesData) {
       description: 'While not always required, ARIA attributes improve accessibility for custom widgets and dynamic content.',
       impact: 'Custom UI components may not be accessible to screen reader users.',
       recommendation: 'Add ARIA labels, roles, and states to interactive components where appropriate',
-      priority: 'low'
+      priority: 'low',
+      source: 'accessibility-analyzer',
+      source_type: 'accessibility'
     });
   }
 
@@ -386,7 +398,9 @@ function detectSiteWideAccessibilityIssues(pagesData) {
       description: 'Positive tabindex values (tabindex="1", "2", etc.) disrupt natural tab order and are considered an anti-pattern.',
       impact: 'Keyboard navigation becomes confusing and unpredictable for keyboard users.',
       recommendation: 'Remove positive tabindex values. Use tabindex="0" for focusable elements or tabindex="-1" for programmatic focus only.',
-      priority: 'medium'
+      priority: 'medium',
+      source: 'accessibility-analyzer',
+      source_type: 'accessibility'
     });
   }
 

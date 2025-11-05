@@ -247,6 +247,12 @@ export async function runReportSynthesis({
   const errors = [];
   const stageMetadata = {};
 
+  // Build screenshot references upfront (needed by both stages)
+  // Ensure crawlPages is an array before passing it
+  const safeCrawlPages = Array.isArray(crawlPages) ? crawlPages : [];
+  const screenshotReferences = buildScreenshotReferences(safeCrawlPages);
+  console.log(`[Report Synthesis] Built ${screenshotReferences.length} screenshot references`);
+
   const consolidatedContext = {
     company_name: companyName || 'Unknown Company',
     industry: industry || 'Unknown',
@@ -257,14 +263,9 @@ export async function runReportSynthesis({
     seo_issues_json: safeStringify(issuesByModule?.seo),
     content_issues_json: safeStringify(issuesByModule?.content),
     social_issues_json: safeStringify(issuesByModule?.social),
-    accessibility_issues_json: safeStringify(issuesByModule?.accessibility)
+    accessibility_issues_json: safeStringify(issuesByModule?.accessibility),
+    screenshot_references_json: safeStringify(screenshotReferences)
   };
-
-  // Build screenshot references upfront (needed by both stages)
-  // Ensure crawlPages is an array before passing it
-  const safeCrawlPages = Array.isArray(crawlPages) ? crawlPages : [];
-  const screenshotReferences = buildScreenshotReferences(safeCrawlPages);
-  console.log(`[Report Synthesis] Built ${screenshotReferences.length} screenshot references`);
 
   // ⚡ SEQUENTIAL SYNTHESIS: Run stages with dynamic timeout budget
   console.log('[Report Synthesis] Running synthesis stages sequentially...');

@@ -95,6 +95,22 @@ export function generateCompleteIssueBreakdown(analysisResult) {
             html += `            <p style="margin-top: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-sm); font-size: 0.95rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">💡 Recommendation:</strong> ${escapeHtml(issue.recommendation)}</p>\n`;
           }
 
+          // Add subtle source label
+          if (issue.source) {
+            const sourceLabels = {
+              'seo-analyzer': 'SEO',
+              'content-analyzer': 'Content',
+              'accessibility-analyzer': 'Accessibility',
+              'social-analyzer': 'Social',
+              'desktop-visual-analyzer': 'Desktop Visual',
+              'mobile-visual-analyzer': 'Mobile Visual',
+              'unified-visual-analyzer': 'Visual',
+              'unified-technical-analyzer': 'Technical'
+            };
+            const sourceLabel = sourceLabels[issue.source] || issue.source;
+            html += `            <div style="margin-top: 8px; text-align: right;"><span style="font-size: 0.7rem; color: #999; opacity: 0.6;">Source: ${escapeHtml(sourceLabel)}</span></div>\n`;
+          }
+
           html += '          </div>\n';
         });
         html += '        </div>\n';
@@ -139,6 +155,22 @@ export function generateCompleteIssueBreakdown(analysisResult) {
         if (issue.recommendation) {
           // Minimal recommendation styling - just subtle background, no colored border
           html += `            <p style="margin-top: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-sm); font-size: 0.95rem; color: var(--text-secondary);"><strong style="color: var(--text-primary);">💡 Recommendation:</strong> ${escapeHtml(issue.recommendation)}</p>\n`;
+        }
+
+        // Add subtle source label
+        if (issue.source) {
+          const sourceLabels = {
+            'seo-analyzer': 'SEO',
+            'content-analyzer': 'Content',
+            'accessibility-analyzer': 'Accessibility',
+            'social-analyzer': 'Social',
+            'desktop-visual-analyzer': 'Desktop Visual',
+            'mobile-visual-analyzer': 'Mobile Visual',
+            'unified-visual-analyzer': 'Visual',
+            'unified-technical-analyzer': 'Technical'
+          };
+          const sourceLabel = sourceLabels[issue.source] || issue.source;
+          html += `            <div style="margin-top: 8px; text-align: right;"><span style="font-size: 0.7rem; color: #999; opacity: 0.6;">Source: ${escapeHtml(sourceLabel)}</span></div>\n`;
         }
 
         html += '          </div>\n';

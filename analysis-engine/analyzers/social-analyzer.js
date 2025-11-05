@@ -158,7 +158,9 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
         description: `Unable to analyze social media: ${error.message}`,
         impact: 'Cannot provide social media recommendations',
         recommendation: 'Manual social media audit recommended',
-        priority: 'medium'
+        priority: 'medium',
+      source: 'social-analyzer',
+      source_type: 'social'
       }],
       quickWins: [],
       strengths: [],
@@ -196,7 +198,9 @@ function createNoSocialProfilesResponse() {
       description: 'Business has no visible social media profiles on major platforms (Instagram, Facebook, LinkedIn, Twitter). In 2024, social media is critical for brand awareness, customer engagement, and trust building.',
       impact: 'Missing opportunities to reach customers where they spend time, build community, showcase work, and generate word-of-mouth marketing. Competitors with active social media appear more established and trustworthy.',
       recommendation: 'Start with 1-2 platforms relevant to industry. For local businesses: Facebook + Instagram. For B2B: LinkedIn. Create profiles with complete information, post 2-3 times per week, engage with followers.',
-      priority: 'high'
+      priority: 'high',
+      source: 'social-analyzer',
+      source_type: 'social'
     }],
     quickWins: [
       'Create Instagram business profile with logo and bio',

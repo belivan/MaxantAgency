@@ -23,7 +23,9 @@
           "description": "string (detailed mobile observation with measurements)",
           "impact": "string (mobile user behavior consequence)",
           "difficulty": "quick-win|medium|major",
-          "priority": "high|medium|low"
+          "priority": "high|medium|low",
+          "source": "mobile-visual-analyzer",
+          "source_type": "visual"
         }
       ],
       "quickWins": [

@@ -279,6 +279,28 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         console.log(`🤖 Running AI synthesis for ${reportData.company_name}...`);
         const synthesisStartTime = Date.now();
 
+        // Transform screenshots_manifest.pages object to array format expected by buildScreenshotReferences
+        const pagesObject = reportData.screenshots_manifest?.pages || {};
+        const crawlPages = Object.entries(pagesObject).map(([pageUrl, screenshots]) => {
+          // Generate page title from URL
+          let title = pageUrl === '/' ? 'Homepage' : pageUrl.substring(1).replace(/[-_]/g, ' ').replace(/\//g, ' - ');
+          title = title.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+
+          return {
+            url: pageUrl,
+            fullUrl: reportData.url + (pageUrl === '/' ? '' : pageUrl),
+            title: title,
+            screenshot_paths: {
+              desktop: screenshots.desktop?.path,
+              mobile: screenshots.mobile?.path
+            },
+            analyzed_for: {
+              'desktop-visual': !!screenshots.desktop,
+              'mobile-visual': !!screenshots.mobile
+            }
+          };
+        });
+
         synthesisData = await runReportSynthesis({
           companyName: reportData.company_name,
           industry: reportData.industry,
@@ -305,7 +327,7 @@ export async function autoGenerateReport(analysisResult, options = {}) {
           socialPlatforms: reportData.social_platforms_present || [],
           isMobileFriendly: reportData.is_mobile_friendly,
           hasHttps: reportData.has_https,
-          crawlPages: reportData.crawl_metadata?.pages_analyzed || []
+          crawlPages: crawlPages
         });
 
         const synthesisDuration = ((Date.now() - synthesisStartTime) / 1000).toFixed(1);

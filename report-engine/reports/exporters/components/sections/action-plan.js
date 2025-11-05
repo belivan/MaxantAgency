@@ -6,6 +6,32 @@
 import { escapeHtml, extractTopIssues } from '../utils/helpers.js';
 
 /**
+ * Format screenshot references from SS-X IDs to human-readable format
+ * @param {Array<string>} evidenceIds - Array of screenshot IDs like ["SS-1", "SS-3"]
+ * @param {Array<Object>} screenshotReferences - Array of screenshot metadata
+ * @returns {string} Formatted evidence string like "Homepage (Desktop), About Page (Mobile)"
+ */
+function formatScreenshotEvidence(evidenceIds, screenshotReferences = []) {
+  if (!evidenceIds || evidenceIds.length === 0) return '';
+  if (!screenshotReferences || screenshotReferences.length === 0) {
+    // Fallback: just show the IDs if references aren't available
+    return evidenceIds.join(', ');
+  }
+
+  const formatted = evidenceIds.map(id => {
+    const ref = screenshotReferences.find(r => r.id === id);
+    if (!ref) return id; // Fallback to ID if not found
+
+    // Format as "Page Title (Viewport)"
+    const title = ref.title || 'Page';
+    const viewport = ref.viewport ? ref.viewport.charAt(0).toUpperCase() + ref.viewport.slice(1) : '';
+    return viewport ? `${title} (${viewport})` : title;
+  });
+
+  return formatted.join(', ');
+}
+
+/**
  * Generate action plan section HTML
  * @param {Object} analysisResult - Full analysis result data
  * @param {Object} synthesisData - Optional AI synthesis data with consolidated issues
@@ -49,9 +75,12 @@ export function generateActionPlan(analysisResult, synthesisData = {}, options =
         html += `            <p class="action-description">${escapeHtml(finding.impact)}</p>\n`;
       }
 
-      // Show evidence references if available
+      // Show evidence references if available (transformed from SS-X to readable format)
       if (finding.evidence && finding.evidence.length > 0) {
-        html += `            <div style="margin: 8px 0; font-size: 13px; color: var(--text-secondary);">📸 Evidence: ${finding.evidence.join(', ')}</div>\n`;
+        const formattedEvidence = formatScreenshotEvidence(finding.evidence, synthesisData.screenshotReferences);
+        if (formattedEvidence) {
+          html += `            <div style="margin: 8px 0; font-size: 13px; color: var(--text-secondary);">📸 Evidence: ${escapeHtml(formattedEvidence)}</div>\n`;
+        }
       }
 
       // Show recommendation
@@ -71,6 +100,22 @@ export function generateActionPlan(analysisResult, synthesisData = {}, options =
           html += `              <div style="color: var(--warning); font-size: 13px;">⚠️ ${escapeHtml(finding.urgency)}</div>\n`;
         }
         html += '            </div>\n';
+      }
+
+      // Add subtle source label (if available from the original issue)
+      if (finding.source) {
+        const sourceLabels = {
+          'seo-analyzer': 'SEO',
+          'content-analyzer': 'Content',
+          'accessibility-analyzer': 'Accessibility',
+          'social-analyzer': 'Social',
+          'desktop-visual-analyzer': 'Desktop Visual',
+          'mobile-visual-analyzer': 'Mobile Visual',
+          'unified-visual-analyzer': 'Visual',
+          'unified-technical-analyzer': 'Technical'
+        };
+        const sourceLabel = sourceLabels[finding.source] || finding.source;
+        html += `            <div style="margin-top: 8px; text-align: right;"><span style="font-size: 0.7rem; color: #999; opacity: 0.6;">Source: ${escapeHtml(sourceLabel)}</span></div>\n`;
       }
 
       html += '          </div>\n';
@@ -112,6 +157,22 @@ export function generateActionPlan(analysisResult, synthesisData = {}, options =
         html += '            <div class="action-recommendation">\n';
         html += `              <span>→ ${escapeHtml(issue.recommendation)}</span>\n`;
         html += '            </div>\n';
+      }
+
+      // Add subtle source label
+      if (issue.source) {
+        const sourceLabels = {
+          'seo-analyzer': 'SEO',
+          'content-analyzer': 'Content',
+          'accessibility-analyzer': 'Accessibility',
+          'social-analyzer': 'Social',
+          'desktop-visual-analyzer': 'Desktop Visual',
+          'mobile-visual-analyzer': 'Mobile Visual',
+          'unified-visual-analyzer': 'Visual',
+          'unified-technical-analyzer': 'Technical'
+        };
+        const sourceLabel = sourceLabels[issue.source] || issue.source;
+        html += `            <div style="margin-top: 8px; text-align: right;"><span style="font-size: 0.7rem; color: #999; opacity: 0.6;">Source: ${escapeHtml(sourceLabel)}</span></div>\n`;
       }
 
       html += '          </div>\n';

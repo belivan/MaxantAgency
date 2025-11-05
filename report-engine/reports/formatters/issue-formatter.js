@@ -5,10 +5,30 @@
 import { formatPriority, formatDifficulty } from './score-formatter.js';
 
 /**
+ * Format source analyzer name to human-readable label
+ */
+function formatSource(source) {
+  if (!source) return '';
+
+  const sourceLabels = {
+    'seo-analyzer': 'SEO',
+    'content-analyzer': 'Content',
+    'accessibility-analyzer': 'Accessibility',
+    'social-analyzer': 'Social',
+    'desktop-visual-analyzer': 'Desktop Visual',
+    'mobile-visual-analyzer': 'Mobile Visual',
+    'unified-visual-analyzer': 'Visual',
+    'unified-technical-analyzer': 'Technical'
+  };
+
+  return sourceLabels[source] || source;
+}
+
+/**
  * Format a single issue for markdown
  */
 export function formatIssue(issue, index) {
-  const { title, description, impact, fix, priority, difficulty, category, wcagCriterion } = issue;
+  const { title, description, impact, fix, priority, difficulty, category, wcagCriterion, source, source_type } = issue;
 
   let output = `### ${index}. ${title}\n`;
 
@@ -29,6 +49,7 @@ export function formatIssue(issue, index) {
   if (priority) metadata.push(`**Priority:** ${formatPriority(priority)}`);
   if (category) metadata.push(`**Category:** ${category}`);
   if (wcagCriterion) metadata.push(`**WCAG:** ${wcagCriterion}`);
+  if (source) metadata.push(`**Source:** ${formatSource(source)}`);
 
   if (metadata.length > 0) {
     output += metadata.join(' | ') + '\n';

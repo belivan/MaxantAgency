@@ -169,7 +169,9 @@ export async function analyzeContent(pages, context = {}, customPrompt = null) {
         description: `Unable to analyze content: ${error.message}`,
         impact: 'Cannot provide content recommendations',
         recommendation: 'Manual content audit recommended',
-        priority: 'high'
+        priority: 'high',
+      source: 'content-analyzer',
+      source_type: 'technical'
       }],
       engagementHooks: [],
       _meta: {
@@ -430,7 +432,9 @@ function detectSiteWideContentPatterns(pagesData) {
       description: 'Testimonials build trust and credibility',
       impact: 'Missed opportunity to leverage social proof',
       recommendation: 'Add customer testimonials, reviews, or case studies',
-      priority: 'medium'
+      priority: 'medium',
+      source: 'content-analyzer',
+      source_type: 'technical'
     });
   }
 
@@ -444,7 +448,9 @@ function detectSiteWideContentPatterns(pagesData) {
       description: 'About pages help visitors understand who you are',
       impact: 'Lower trust, harder to connect with potential customers',
       recommendation: 'Create an About page with your story, team, and mission',
-      priority: 'medium'
+      priority: 'medium',
+      source: 'content-analyzer',
+      source_type: 'technical'
     });
   }
 
@@ -458,7 +464,9 @@ function detectSiteWideContentPatterns(pagesData) {
       description: 'Visitors need to quickly understand what you offer',
       impact: 'Confusion about offerings, lost conversions',
       recommendation: 'Create clear Services or Products page/section',
-      priority: 'high'
+      priority: 'high',
+      source: 'content-analyzer',
+      source_type: 'technical'
     });
   }
 

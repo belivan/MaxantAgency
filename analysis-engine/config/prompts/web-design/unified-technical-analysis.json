@@ -33,7 +33,9 @@
           "description": "string (what's wrong)",
           "fix": "string (how to fix)",
           "priority": "high|medium|low",
-          "impact": "string (SEO consequence)"
+          "impact": "string (SEO consequence)",
+          "source": "unified-technical-analyzer",
+          "source_type": "technical"
         }
       ],
       "contentIssues": [
@@ -43,7 +45,9 @@
           "description": "string (what's wrong)",
           "impact": "string (business consequence)",
           "recommendation": "string (what to create/improve)",
-          "priority": "high|medium|low"
+          "priority": "high|medium|low",
+          "source": "unified-technical-analyzer",
+          "source_type": "technical"
         }
       ],
       "crossCuttingIssues": [
@@ -53,7 +57,9 @@
           "seoImpact": "string",
           "contentImpact": "string",
           "fix": "string (addresses both)",
-          "priority": "high|medium|low"
+          "priority": "high|medium|low",
+          "source": "unified-technical-analyzer",
+          "source_type": "technical"
         }
       ],
       "seoOpportunities": [

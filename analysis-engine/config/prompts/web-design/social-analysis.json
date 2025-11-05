@@ -30,7 +30,9 @@
           "description": "string",
           "impact": "string",
           "recommendation": "string",
-          "priority": "high|medium|low"
+          "priority": "high|medium|low",
+          "source": "social-analyzer",
+          "source_type": "social"
         }
       ],
       "quickWins": [

@@ -201,7 +201,9 @@ export async function analyzeUnifiedTechnical(pages, context = {}, customPrompt 
         category: 'error',
         title: 'Technical analysis failed',
         description: `Unable to analyze: ${error.message}`,
-        priority: 'high'
+        priority: 'high',
+      source: 'unified-technical-analyzer',
+      source_type: 'technical'
       }],
       contentIssues: [],
       crossCuttingIssues: [],

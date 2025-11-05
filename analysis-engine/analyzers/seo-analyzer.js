@@ -153,7 +153,9 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
         description: `Unable to analyze SEO: ${error.message}`,
         impact: 'Cannot provide SEO recommendations',
         recommendation: 'Manual SEO audit recommended',
-        priority: 'high'
+        priority: 'high',
+      source: 'seo-analyzer',
+      source_type: 'technical'
       }],
       opportunities: [],
       quickWins: [],
@@ -383,7 +385,9 @@ function detectSiteWideIssues(pagesData, context = {}) {
       description: 'Schema markup helps search engines understand your content better',
       impact: 'Missing rich snippets in search results (reviews, ratings, prices)',
       recommendation: 'Add JSON-LD structured data appropriate for your business type',
-      priority: 'medium'
+      priority: 'medium',
+      source: 'seo-analyzer',
+      source_type: 'technical'
     });
   }
 
@@ -397,7 +401,9 @@ function detectSiteWideIssues(pagesData, context = {}) {
       description: 'OG tags control how your pages appear when shared on social media',
       impact: 'Poor social media previews when pages are shared',
       recommendation: 'Add og:title, og:description, and og:image tags',
-      priority: 'medium'
+      priority: 'medium',
+      source: 'seo-analyzer',
+      source_type: 'technical'
     });
   }
 
@@ -411,7 +417,9 @@ function detectSiteWideIssues(pagesData, context = {}) {
       description: 'No viewport meta tag found on any page',
       impact: 'Poor mobile experience, lower rankings in mobile search',
       recommendation: 'Add <meta name="viewport" content="width=device-width, initial-scale=1.0">',
-      priority: 'critical'
+      priority: 'critical',
+      source: 'seo-analyzer',
+      source_type: 'technical'
     });
   }
 
@@ -458,7 +466,9 @@ function detectSiteWideIssues(pagesData, context = {}) {
       description: 'Alt text improves accessibility and helps images rank in search',
       impact: 'Poor accessibility, missed image SEO opportunities',
       recommendation: 'Add descriptive alt text to all images',
-      priority: 'medium'
+      priority: 'medium',
+      source: 'seo-analyzer',
+      source_type: 'technical'
     });
   }
 

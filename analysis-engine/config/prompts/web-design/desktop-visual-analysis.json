@@ -23,7 +23,9 @@
           "description": "string (detailed visual observation)",
           "impact": "string (business consequence for desktop users)",
           "difficulty": "quick-win|medium|major",
-          "priority": "high|medium|low"
+          "priority": "high|medium|low",
+          "source": "desktop-visual-analyzer",
+          "source_type": "visual"
         }
       ],
       "quickWins": [
