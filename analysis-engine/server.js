@@ -430,6 +430,15 @@ app.post('/api/analyze-url', async (req, res) => {
       call_to_action: result.call_to_action || null,
       outreach_angle: result.outreach_angle || null,
 
+      // Top Issues Selection (AI-powered pyramid filtering)
+      top_issues: result.top_issues || [],
+      top_issues_summary: result.top_issues_summary || null,
+      top_issues_selection_strategy: result.top_issues_selection_strategy || null,
+      top_issues_selection_cost: result.top_issues_selection_cost || 0,
+      top_issues_selection_model: result.top_issues_selection_model || null,
+      total_issues_count: result.total_issues_count || 0,
+      high_critical_issues_count: result.high_critical_issues_count || 0,
+
       // AI Models Used
       seo_analysis_model: result.seo_analysis_model || null,
       content_analysis_model: result.content_analysis_model || null,

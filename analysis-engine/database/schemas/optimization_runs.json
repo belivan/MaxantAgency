@@ -1,0 +1,162 @@
+{
+  "table": "optimization_runs",
+  "description": "Logs each optimization session with before/after metrics and decisions made",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "run_number",
+      "type": "integer",
+      "notNull": true,
+      "comment": "Sequential run number (1, 2, 3...)"
+    },
+    {
+      "name": "analyzer_name",
+      "type": "text",
+      "notNull": true,
+      "comment": "Which analyzer was optimized"
+    },
+    {
+      "name": "trigger_reason",
+      "type": "text",
+      "notNull": true,
+      "comment": "scheduled, manual, accuracy_drop, cost_spike, performance_degradation"
+    },
+    {
+      "name": "data_points_analyzed",
+      "type": "integer",
+      "comment": "Number of analyses included in this optimization run"
+    },
+    {
+      "name": "current_variant_id",
+      "type": "uuid",
+      "comment": "Variant that was active before optimization"
+    },
+    {
+      "name": "suggested_variant_id",
+      "type": "uuid",
+      "comment": "New variant suggested by AI optimizer"
+    },
+    {
+      "name": "metrics_before",
+      "type": "jsonb",
+      "comment": "Performance metrics before optimization"
+    },
+    {
+      "name": "metrics_after",
+      "type": "jsonb",
+      "comment": "Performance metrics after optimization (null if not applied yet)"
+    },
+    {
+      "name": "improvement_summary",
+      "type": "jsonb",
+      "comment": "Calculated improvements: accuracy +5%, cost -12%, speed +8%"
+    },
+    {
+      "name": "optimization_insights",
+      "type": "text",
+      "comment": "AI-generated insights about patterns found in the data"
+    },
+    {
+      "name": "changes_proposed",
+      "type": "jsonb",
+      "comment": "List of specific changes AI suggested"
+    },
+    {
+      "name": "change_reasoning",
+      "type": "text",
+      "comment": "AI explanation for why these changes were suggested"
+    },
+    {
+      "name": "decision",
+      "type": "text",
+      "notNull": true,
+      "comment": "auto_applied, pending_review, rejected, ab_testing, reverted"
+    },
+    {
+      "name": "decision_reasoning",
+      "type": "text",
+      "comment": "Why this decision was made (met thresholds, failed safety check, etc.)"
+    },
+    {
+      "name": "ab_test_started",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "name": "ab_test_completed",
+      "type": "boolean",
+      "default": false
+    },
+    {
+      "name": "ab_test_results",
+      "type": "jsonb",
+      "comment": "A/B test winner, confidence level, sample sizes"
+    },
+    {
+      "name": "applied_at",
+      "type": "timestamptz",
+      "comment": "When the optimized variant was applied (null if not applied)"
+    },
+    {
+      "name": "reverted_at",
+      "type": "timestamptz",
+      "comment": "When the change was reverted (null if not reverted)"
+    },
+    {
+      "name": "reviewed_by",
+      "type": "text",
+      "comment": "User who reviewed this optimization (for human-approved changes)"
+    },
+    {
+      "name": "cost_of_optimization",
+      "type": "decimal(10,6)",
+      "comment": "Cost of running the meta-AI optimizer"
+    },
+    {
+      "name": "duration_ms",
+      "type": "integer",
+      "comment": "How long the optimization run took"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_optimization_runs_analyzer",
+      "columns": ["analyzer_name"]
+    },
+    {
+      "name": "idx_optimization_runs_decision",
+      "columns": ["decision"]
+    },
+    {
+      "name": "idx_optimization_runs_created",
+      "columns": ["created_at"]
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "current_variant_id",
+      "references": "prompt_variants.id",
+      "onDelete": "SET NULL"
+    },
+    {
+      "column": "suggested_variant_id",
+      "references": "prompt_variants.id",
+      "onDelete": "SET NULL"
+    }
+  ]
+}

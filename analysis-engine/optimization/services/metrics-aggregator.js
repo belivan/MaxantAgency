@@ -9,7 +9,7 @@
  * Used by prompt optimizer to understand what's working and what needs improvement.
  */
 
-import { supabase } from '../../../database/supabase-client.js';
+import { supabase } from '../../database/supabase-client.js';
 import dotenv from 'dotenv';
 
 dotenv.config();

@@ -1,5 +1,5 @@
 {
-  "tableName": "prompt_variants",
+  "table": "prompt_variants",
   "description": "Tracks different versions of AI prompts for A/B testing and optimization history",
   "columns": [
     {
@@ -25,11 +25,6 @@
       "type": "text",
       "notNull": true,
       "comment": "Original prompt filename (desktop-visual-analysis.json)"
-    },
-    {
-      "name": "file_path",
-      "type": "text",
-      "comment": "Relative path to variant file (web-design/desktop-visual-analysis/v2-optimized.json)"
     },
     {
       "name": "version_number",
@@ -94,7 +89,7 @@
     {
       "name": "created_by",
       "type": "text",
-      "default": "'system'",
+      "default": "system",
       "comment": "system, human, or specific user email"
     },
     {

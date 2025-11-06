@@ -27,7 +27,8 @@
   },
 
   "autoApproval": {
-    "enabled": true,
+    "enabled": false,
+    "comment": "DISABLED for initial rollout - all changes require human approval",
     "safeChanges": [
       "temperature_adjustment",
       "example_addition",

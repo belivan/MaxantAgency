@@ -11,9 +11,9 @@
  * 6. Decide on next steps (auto-apply, A/B test, human review)
  */
 
-import { callAI, parseJSONResponse } from '../../../../database-tools/shared/ai-client.js';
+import { callAI, parseJSONResponse } from '../../../database-tools/shared/ai-client.js';
 import { getAnalyzerMetrics } from './metrics-aggregator.js';
-import { supabase } from '../../../database/supabase-client.js';
+import { supabase } from '../../database/supabase-client.js';
 import fs from 'fs/promises';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -60,7 +60,8 @@ async function loadCurrentPrompt(analyzerName) {
     throw new Error(`No prompt file mapping for analyzer: ${analyzerName}`);
   }
 
-  const promptPath = path.join(process.cwd(), '..', promptFile);
+  // Adjust path relative to analysis-engine root
+  const promptPath = path.join(process.cwd(), promptFile);
   const promptData = await fs.readFile(promptPath, 'utf-8');
   return JSON.parse(promptData);
 }
@@ -139,14 +140,38 @@ export async function optimizeAnalyzer(analyzerName, options = {}) {
     });
 
     // 7. Parse AI response
-    const suggestions = parseJSONResponse(optimizationResult.content);
+    console.log('\n📝 AI response type:', typeof optimizationResult.content);
+    console.log('📝 AI response length:', optimizationResult.content?.length);
+    console.log('📝 Raw AI response (first 500 chars):', optimizationResult.content?.substring(0, 500));
+
+    // Try direct JSON parse first
+    let suggestions;
+    try {
+      suggestions = typeof optimizationResult.content === 'string'
+        ? JSON.parse(optimizationResult.content)
+        : optimizationResult.content;
+      console.log('\n✅ Direct JSON parse successful');
+    } catch (e) {
+      console.log('\n⚠️  Direct parse failed, using parseJSONResponse:', e.message);
+      suggestions = parseJSONResponse(optimizationResult.content);
+    }
+
+    console.log('\n✅ Parsed suggestions:', {
+      hasAnalysis: !!suggestions.analysis,
+      recommendationCount: suggestions.recommendations?.length || 0,
+      hasProposedPrompt: !!suggestions.proposedPrompt,
+      keys: Object.keys(suggestions)
+    });
 
     // 8. Validate suggestions
     if (!suggestions.recommendations || suggestions.recommendations.length === 0) {
+      console.log('\n⚠️  No recommendations found. Full parsed object:');
+      console.log(JSON.stringify(suggestions, null, 2));
       return {
         success: false,
         message: 'Meta-AI provided no recommendations',
-        analysis: suggestions.analysis
+        analysis: suggestions.analysis,
+        rawResponse: optimizationResult.content
       };
     }
 
