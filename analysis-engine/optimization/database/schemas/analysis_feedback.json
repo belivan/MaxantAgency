@@ -1,0 +1,127 @@
+{
+  "tableName": "analysis_feedback",
+  "description": "Tracks human and system feedback on analysis quality for prompt optimization",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "lead_id",
+      "type": "uuid",
+      "notNull": true,
+      "comment": "Which lead this feedback relates to"
+    },
+    {
+      "name": "analyzer_name",
+      "type": "text",
+      "notNull": true,
+      "comment": "Which analyzer produced this result"
+    },
+    {
+      "name": "prompt_variant_id",
+      "type": "uuid",
+      "comment": "Which prompt variant was used (if tracked)"
+    },
+    {
+      "name": "feedback_type",
+      "type": "text",
+      "notNull": true,
+      "comment": "issue_accuracy, overall_quality, issue_relevance, issue_actionability, conversion_outcome"
+    },
+    {
+      "name": "feedback_source",
+      "type": "text",
+      "notNull": true,
+      "default": "'system'",
+      "comment": "system, human, qa_validator, client_response"
+    },
+    {
+      "name": "issue_id",
+      "type": "text",
+      "comment": "Specific issue being rated (if feedback is issue-specific)"
+    },
+    {
+      "name": "rating",
+      "type": "integer",
+      "comment": "Numeric rating (1-5 scale, or 0-100)"
+    },
+    {
+      "name": "is_accurate",
+      "type": "boolean",
+      "comment": "Was this issue/analysis accurate?"
+    },
+    {
+      "name": "is_relevant",
+      "type": "boolean",
+      "comment": "Was this issue relevant to the client's needs?"
+    },
+    {
+      "name": "is_actionable",
+      "type": "boolean",
+      "comment": "Was this issue actionable (clear next steps)?"
+    },
+    {
+      "name": "led_to_conversion",
+      "type": "boolean",
+      "comment": "Did this analysis/issue contribute to a conversion?"
+    },
+    {
+      "name": "false_positive",
+      "type": "boolean",
+      "comment": "Was this a false positive (issue reported but doesn't actually exist)?"
+    },
+    {
+      "name": "feedback_text",
+      "type": "text",
+      "comment": "Free-form feedback from human or system"
+    },
+    {
+      "name": "metadata",
+      "type": "jsonb",
+      "comment": "Additional context: email_opened, reply_received, specific_issue_mentioned, etc."
+    },
+    {
+      "name": "submitted_by",
+      "type": "text",
+      "comment": "User email or system identifier"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_analysis_feedback_lead",
+      "columns": ["lead_id"]
+    },
+    {
+      "name": "idx_analysis_feedback_analyzer",
+      "columns": ["analyzer_name"]
+    },
+    {
+      "name": "idx_analysis_feedback_variant",
+      "columns": ["prompt_variant_id"]
+    },
+    {
+      "name": "idx_analysis_feedback_type",
+      "columns": ["feedback_type", "feedback_source"]
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "lead_id",
+      "references": "leads.id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "column": "prompt_variant_id",
+      "references": "prompt_variants.id",
+      "onDelete": "SET NULL"
+    }
+  ]
+}

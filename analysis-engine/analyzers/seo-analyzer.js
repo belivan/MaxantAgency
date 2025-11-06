@@ -112,7 +112,7 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
     });
 
     // Parse JSON response
-    const result = parseJSONResponse(response.content);
+    const result = await parseJSONResponse(response.content);
 
     // Validate response
     validateSEOResponse(result);

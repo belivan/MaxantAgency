@@ -1,0 +1,137 @@
+{
+  "tableName": "prompt_variants",
+  "description": "Tracks different versions of AI prompts for A/B testing and optimization history",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "analyzer_name",
+      "type": "text",
+      "notNull": true,
+      "comment": "Which analyzer this prompt belongs to (desktop-visual-analyzer, seo-analyzer, etc.)"
+    },
+    {
+      "name": "prompt_category",
+      "type": "text",
+      "notNull": true,
+      "comment": "Prompt category (web-design, benchmarking, grading, etc.)"
+    },
+    {
+      "name": "prompt_file",
+      "type": "text",
+      "notNull": true,
+      "comment": "Original prompt filename (desktop-visual-analysis.json)"
+    },
+    {
+      "name": "version_number",
+      "type": "integer",
+      "notNull": true,
+      "comment": "Sequential version number (1, 2, 3...)"
+    },
+    {
+      "name": "variant_type",
+      "type": "text",
+      "notNull": true,
+      "comment": "control, experimental, optimized, or archived"
+    },
+    {
+      "name": "is_active",
+      "type": "boolean",
+      "default": false,
+      "comment": "Is this the currently active version?"
+    },
+    {
+      "name": "prompt_content",
+      "type": "jsonb",
+      "notNull": true,
+      "comment": "Full prompt JSON (systemPrompt, userPromptTemplate, model, temperature, etc.)"
+    },
+    {
+      "name": "changes_made",
+      "type": "jsonb",
+      "comment": "List of specific changes from previous version"
+    },
+    {
+      "name": "change_reasoning",
+      "type": "text",
+      "comment": "AI-generated or human explanation for why this variant was created"
+    },
+    {
+      "name": "performance_metrics",
+      "type": "jsonb",
+      "comment": "Aggregated metrics: accuracy, cost, speed, issue_count, etc."
+    },
+    {
+      "name": "sample_size",
+      "type": "integer",
+      "default": 0,
+      "comment": "Number of analyses run with this variant"
+    },
+    {
+      "name": "composite_score",
+      "type": "decimal(5,4)",
+      "comment": "Weighted score based on accuracy, cost, speed"
+    },
+    {
+      "name": "ab_test_id",
+      "type": "uuid",
+      "comment": "Link to A/B test if this was part of an experiment"
+    },
+    {
+      "name": "parent_variant_id",
+      "type": "uuid",
+      "comment": "ID of the variant this was derived from"
+    },
+    {
+      "name": "created_by",
+      "type": "text",
+      "default": "'system'",
+      "comment": "system, human, or specific user email"
+    },
+    {
+      "name": "applied_at",
+      "type": "timestamptz",
+      "comment": "When this variant was made active (null if never applied)"
+    },
+    {
+      "name": "archived_at",
+      "type": "timestamptz",
+      "comment": "When this variant was archived (null if still active/experimental)"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_prompt_variants_analyzer",
+      "columns": ["analyzer_name"]
+    },
+    {
+      "name": "idx_prompt_variants_active",
+      "columns": ["is_active", "analyzer_name"]
+    },
+    {
+      "name": "idx_prompt_variants_ab_test",
+      "columns": ["ab_test_id"]
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "parent_variant_id",
+      "references": "prompt_variants.id",
+      "onDelete": "SET NULL"
+    }
+  ]
+}

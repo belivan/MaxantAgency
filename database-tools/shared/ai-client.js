@@ -1048,7 +1048,7 @@ function calculateCost(modelId, usage) {
     'gpt-5': { input: 1.25, output: 10 },
     'gpt-5-2025-08-07': { input: 1.25, output: 10 }, // Alias for backward compatibility
     'gpt-5-mini': { input: 0.25, output: 2 },
-    'gpt-5-nano': { input: 0.10, output: 0.80 }, // Ultra budget model
+    'gpt-5-nano': { input: 0.05, output: 0.40 }, // Ultra budget model - perfect for JSON recovery
 
     // Grok (xAI) - Latest models (Nov 2025)
     'grok-4': { input: 3, output: 15 },
@@ -1070,9 +1070,84 @@ function calculateCost(modelId, usage) {
 }
 
 /**
- * Parse JSON response with error handling
+ * AI-powered JSON recovery using GPT-5-nano
+ * Used as a fallback when rule-based repairs fail
+ * @param {string} brokenJSON - The malformed JSON string
+ * @param {object} expectedSchema - Expected JSON structure (optional)
+ * @param {string} errorMessage - The specific error message from JSON.parse (optional)
+ * @returns {Promise<object|null>}
  */
-export function parseJSONResponse(content) {
+async function recoverJSONWithAI(brokenJSON, expectedSchema = null, errorMessage = null) {
+  const startTime = Date.now();
+
+  try {
+    const systemPrompt = `You are a JSON repair specialist. Your job is to fix malformed JSON and return valid, parseable JSON.
+
+Rules:
+1. Fix syntax errors (missing brackets, unclosed strings, trailing commas, etc.)
+2. Preserve the original data intent as much as possible
+3. If field names are inconsistent (camelCase vs snake_case), use camelCase
+4. Convert quoted numbers to actual numbers if they should be numeric
+5. Return ONLY the fixed JSON, no explanations or markdown
+6. If the JSON is completely unrecoverable, return an error object: {"error": "reason"}`;
+
+    let userPrompt = `Fix this malformed JSON:\n\n`;
+
+    // Add error message if available (helps AI target the fix)
+    if (errorMessage) {
+      userPrompt += `**Parse Error:**\n${errorMessage}\n\n`;
+    }
+
+    userPrompt += `**Broken JSON:**\n${brokenJSON}`;
+
+    if (expectedSchema) {
+      userPrompt += `\n\n**Expected schema:**\n${JSON.stringify(expectedSchema, null, 2)}`;
+    }
+
+    console.log('🤖 Attempting AI-powered JSON recovery with gpt-5-nano...');
+
+    const response = await callAI({
+      model: 'gpt-5-nano',
+      systemPrompt,
+      userPrompt,
+      temperature: 0.1, // Low temperature for consistent repairs
+      jsonMode: false // We'll manually parse the response
+    });
+
+    const elapsed = Date.now() - startTime;
+
+    // Try to parse the AI's response
+    let content = response.content.trim();
+
+    // Remove markdown code blocks if present
+    if (content.startsWith('```')) {
+      const match = content.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+      if (match) {
+        content = match[1];
+      }
+    }
+
+    const repairedJSON = JSON.parse(content);
+
+    // Check if AI returned an error object
+    if (repairedJSON.error) {
+      console.log(`❌ AI recovery failed: ${repairedJSON.error} (cost: $${response.cost?.toFixed(6) || 0}, time: ${elapsed}ms)`);
+      return null;
+    }
+
+    console.log(`✅ AI recovery successful! (cost: $${response.cost?.toFixed(6) || 0}, time: ${elapsed}ms)`);
+    return repairedJSON;
+
+  } catch (error) {
+    console.log(`❌ AI recovery failed: ${error.message}`);
+    return null;
+  }
+}
+
+/**
+ * Parse JSON response with error handling and AI-powered fallback
+ */
+export async function parseJSONResponse(content, options = {}) {
   try {
     // Handle null or undefined content
     if (!content) {
@@ -1116,8 +1191,88 @@ export function parseJSONResponse(content) {
             'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
             'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16, 'seventeen': 17, 'eighteen': 18, 'nineteen': 19,
             'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
-            'hundred': 100
+            'hundred': 100,
+            // Extended: 21-100
+            'twenty-one': 21, 'twenty_one': 21, 'twentyone': 21,
+            'twenty-two': 22, 'twenty_two': 22, 'twentytwo': 22,
+            'twenty-three': 23, 'twenty_three': 23, 'twentythree': 23,
+            'twenty-four': 24, 'twenty_four': 24, 'twentyfour': 24,
+            'twenty-five': 25, 'twenty_five': 25, 'twentyfive': 25,
+            'twenty-six': 26, 'twenty_six': 26, 'twentysix': 26,
+            'twenty-seven': 27, 'twenty_seven': 27, 'twentyseven': 27,
+            'twenty-eight': 28, 'twenty_eight': 28, 'twentyeight': 28,
+            'twenty-nine': 29, 'twenty_nine': 29, 'twentynine': 29,
+            'thirty-one': 31, 'thirty_one': 31, 'thirtyone': 31,
+            'thirty-two': 32, 'thirty_two': 32, 'thirtytwo': 32,
+            'thirty-three': 33, 'thirty_three': 33, 'thirtythree': 33,
+            'thirty-four': 34, 'thirty_four': 34, 'thirtyfour': 34,
+            'thirty-five': 35, 'thirty_five': 35, 'thirtyfive': 35,
+            'thirty-six': 36, 'thirty_six': 36, 'thirtysix': 36,
+            'thirty-seven': 37, 'thirty_seven': 37, 'thirtyseven': 37,
+            'thirty-eight': 38, 'thirty_eight': 38, 'thirtyeight': 38,
+            'thirty-nine': 39, 'thirty_nine': 39, 'thirtynine': 39,
+            'forty-one': 41, 'forty_one': 41, 'fortyone': 41,
+            'forty-two': 42, 'forty_two': 42, 'fortytwo': 42,
+            'forty-three': 43, 'forty_three': 43, 'fortythree': 43,
+            'forty-four': 44, 'forty_four': 44, 'fortyfour': 44,
+            'forty-five': 45, 'forty_five': 45, 'fortyfive': 45,
+            'forty-six': 46, 'forty_six': 46, 'fortysix': 46,
+            'forty-seven': 47, 'forty_seven': 47, 'fortyseven': 47,
+            'forty-eight': 48, 'forty_eight': 48, 'fortyeight': 48,
+            'forty-nine': 49, 'forty_nine': 49, 'fortynine': 49,
+            'fifty-one': 51, 'fifty_one': 51, 'fiftyone': 51,
+            'fifty-two': 52, 'fifty_two': 52, 'fiftytwo': 52,
+            'fifty-three': 53, 'fifty_three': 53, 'fiftythree': 53,
+            'fifty-four': 54, 'fifty_four': 54, 'fiftyfour': 54,
+            'fifty-five': 55, 'fifty_five': 55, 'fiftyfive': 55,
+            'fifty-six': 56, 'fifty_six': 56, 'fiftysix': 56,
+            'fifty-seven': 57, 'fifty_seven': 57, 'fiftyseven': 57,
+            'fifty-eight': 58, 'fifty_eight': 58, 'fiftyeight': 58,
+            'fifty-nine': 59, 'fifty_nine': 59, 'fiftynine': 59,
+            'sixty-one': 61, 'sixty_one': 61, 'sixtyone': 61,
+            'sixty-two': 62, 'sixty_two': 62, 'sixtytwo': 62,
+            'sixty-three': 63, 'sixty_three': 63, 'sixtythree': 63,
+            'sixty-four': 64, 'sixty_four': 64, 'sixtyfour': 64,
+            'sixty-five': 65, 'sixty_five': 65, 'sixtyfive': 65,
+            'sixty-six': 66, 'sixty_six': 66, 'sixtysix': 66,
+            'sixty-seven': 67, 'sixty_seven': 67, 'sixtyseven': 67,
+            'sixty-eight': 68, 'sixty_eight': 68, 'sixtyeight': 68,
+            'sixty-nine': 69, 'sixty_nine': 69, 'sixtynine': 69,
+            'seventy-one': 71, 'seventy_one': 71, 'seventyone': 71,
+            'seventy-two': 72, 'seventy_two': 72, 'seventytwo': 72,
+            'seventy-three': 73, 'seventy_three': 73, 'seventythree': 73,
+            'seventy-four': 74, 'seventy_four': 74, 'seventyfour': 74,
+            'seventy-five': 75, 'seventy_five': 75, 'seventyfive': 75,
+            'seventy-six': 76, 'seventy_six': 76, 'seventysix': 76,
+            'seventy-seven': 77, 'seventy_seven': 77, 'seventyseven': 77,
+            'seventy-eight': 78, 'seventy_eight': 78, 'seventyeight': 78,
+            'seventy-nine': 79, 'seventy_nine': 79, 'seventynine': 79,
+            'eighty-one': 81, 'eighty_one': 81, 'eightyone': 81,
+            'eighty-two': 82, 'eighty_two': 82, 'eightytwo': 82,
+            'eighty-three': 83, 'eighty_three': 83, 'eightythree': 83,
+            'eighty-four': 84, 'eighty_four': 84, 'eightyfour': 84,
+            'eighty-five': 85, 'eighty_five': 85, 'eightyfive': 85,
+            'eighty-six': 86, 'eighty_six': 86, 'eightysix': 86,
+            'eighty-seven': 87, 'eighty_seven': 87, 'eightyseven': 87,
+            'eighty-eight': 88, 'eighty_eight': 88, 'eightyeight': 88,
+            'eighty-nine': 89, 'eighty_nine': 89, 'eightynine': 89,
+            'ninety-one': 91, 'ninety_one': 91, 'ninetyone': 91,
+            'ninety-two': 92, 'ninety_two': 92, 'ninetytwo': 92,
+            'ninety-three': 93, 'ninety_three': 93, 'ninetythree': 93,
+            'ninety-four': 94, 'ninety_four': 94, 'ninetyfour': 94,
+            'ninety-five': 95, 'ninety_five': 95, 'ninetyfive': 95,
+            'ninety-six': 96, 'ninety_six': 96, 'ninetysix': 96,
+            'ninety-seven': 97, 'ninety_seven': 97, 'ninetyseven': 97,
+            'ninety-eight': 98, 'ninety_eight': 98, 'ninetyeight': 98,
+            'ninety-nine': 99, 'ninety_nine': 99, 'ninetynine': 99
           };
+
+          // Fix quoted numeric strings: "72" → 72
+          const quotedNumberPattern = /:\s*"(\d+)"/g;
+          if (quotedNumberPattern.test(repaired)) {
+            repaired = repaired.replace(quotedNumberPattern, ': $1');
+            console.log('  → Fixed quoted numbers (e.g., "72" → 72)');
+          }
 
           // Match patterns like: "score": fifty or "score": "fifty" or "score":  fifty
           for (const [word, num] of Object.entries(numberWords)) {
@@ -1128,7 +1283,7 @@ export function parseJSONResponse(content) {
 
             for (const pattern of patterns) {
               if (pattern.test(repaired)) {
-                repaired = repaired.replace(pattern, (match, suffix) => {
+                repaired = repaired.replace(pattern, (_match, suffix) => {
                   return suffix ? `: ${num}${suffix}` : `: ${num}`;
                 });
                 console.log(`  → Fixed text number: "${word}" → ${num}`);
@@ -1164,6 +1319,20 @@ export function parseJSONResponse(content) {
             console.log('✅ Successfully repaired JSON!');
             return parsed;
           } catch (thirdError) {
+            // Rule-based repair failed - try AI recovery if enabled
+            const enableAIRecovery = process.env.ENABLE_AI_JSON_RECOVERY === 'true';
+
+            if (enableAIRecovery) {
+              console.log('⚠️  Rule-based JSON repair failed, trying AI recovery...');
+              const aiRecovered = await recoverJSONWithAI(extractedJson, options.expectedSchema, thirdError.message);
+
+              if (aiRecovered) {
+                return aiRecovered;
+              }
+
+              console.log('❌ AI recovery also failed, giving up.');
+            }
+
             // Still failed - log full response for debugging
             console.error('❌ JSON repair failed. Response length:', extractedJson.length);
             console.error('First 500 chars:');
@@ -1175,7 +1344,24 @@ export function parseJSONResponse(content) {
         }
       }
 
-      // If extraction failed, throw the original error
+      // If extraction failed - try AI recovery if enabled
+      const enableAIRecovery = process.env.ENABLE_AI_JSON_RECOVERY === 'true';
+
+      if (enableAIRecovery) {
+        console.log('⚠️  JSON extraction failed, trying AI recovery...');
+        const contentStr = typeof content === 'string' ? content :
+                          typeof content === 'object' ? JSON.stringify(content) :
+                          String(content);
+
+        const aiRecovered = await recoverJSONWithAI(contentStr, options.expectedSchema, firstError.message);
+
+        if (aiRecovered) {
+          return aiRecovered;
+        }
+
+        console.log('❌ AI recovery also failed, giving up.');
+      }
+
       throw firstError;
     }
   } catch (error) {

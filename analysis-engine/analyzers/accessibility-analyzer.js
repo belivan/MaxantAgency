@@ -103,7 +103,7 @@ export async function analyzeAccessibility(pages, context = {}, customPrompt = n
     });
 
     // Parse JSON response
-    const result = parseJSONResponse(response.content);
+    const result = await parseJSONResponse(response.content);
 
     // Validate response
     validateAccessibilityResponse(result);

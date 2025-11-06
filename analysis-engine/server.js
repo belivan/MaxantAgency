@@ -497,6 +497,7 @@ app.post('/api/analyze-url', async (req, res) => {
 
       // Performance
       analysis_cost: result.analysis_cost || 0,
+      cost_breakdown: result.cost_breakdown || null,
       analysis_time: result.analysis_time || 0,
 
       // Discovery Log (simplified - full data is in backup)
@@ -900,6 +901,7 @@ app.post('/api/analyze', async (req, res) => {
 
             // Performance
             analysis_cost: result.analysis_cost || 0,
+            cost_breakdown: result.cost_breakdown || null,
             analysis_time: result.analysis_time || 0,
 
             // Discovery Log (simplified - full data is in backup)
@@ -1083,8 +1085,35 @@ app.post('/api/analyze', async (req, res) => {
     }
 
     const successCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
     const requestedCount = prospect_ids ? prospect_ids.length : prospects.length;
-    console.log(`[Intelligent Analysis] Completed: ${successCount}/${prospects.length} successful (${missingIds.length} skipped)`);
+    console.log(
+      `[Intelligent Analysis] Completed: ${successCount}/${results.length} successful` +
+      `${failedCount > 0 ? `, ${failedCount} failed` : ''}` +
+      `${missingIds.length > 0 ? ` (${missingIds.length} skipped)` : ''}`
+    );
+
+    // Calculate batch cost summary
+    const batchCosts = results
+      .filter(r => r.success && r.data?.analysis_cost)
+      .map(r => r.data.analysis_cost);
+
+    if (batchCosts.length > 0) {
+      const totalBatchCost = batchCosts.reduce((sum, cost) => sum + cost, 0);
+      const avgCostPerLead = totalBatchCost / batchCosts.length;
+      const minCost = Math.min(...batchCosts);
+      const maxCost = Math.max(...batchCosts);
+
+      console.log('\n' + '='.repeat(56));
+      console.log('[Batch Analysis] COST SUMMARY');
+      console.log('='.repeat(56));
+      console.log(`Total Leads Analyzed:  ${batchCosts.length}`);
+      console.log(`Total Cost:            $${totalBatchCost.toFixed(4)}`);
+      console.log(`Average Cost/Lead:     $${avgCostPerLead.toFixed(4)}`);
+      console.log(`Min Cost:              $${minCost.toFixed(4)}`);
+      console.log(`Max Cost:              $${maxCost.toFixed(4)}`);
+      console.log('='.repeat(56) + '\n');
+    }
 
     // Send complete event
     sendEvent('complete', {
@@ -1092,7 +1121,7 @@ app.post('/api/analyze', async (req, res) => {
       requested: requestedCount,
       total: prospects.length,
       successful: successCount,
-      failed: prospects.length - successCount,
+      failed: results.length - successCount,
       missing: missingIds.length,
       missing_prospect_ids: missingIds,
       results

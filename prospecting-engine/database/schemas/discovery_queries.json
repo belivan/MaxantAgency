@@ -1,0 +1,99 @@
+{
+  "table": "discovery_queries",
+  "description": "Tracks all search queries executed for prospect discovery to enable intelligent iteration and prevent duplicates",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "default": "gen_random_uuid()",
+      "primaryKey": true,
+      "description": "Unique identifier for the query record"
+    },
+    {
+      "name": "project_id",
+      "type": "uuid",
+      "nullable": true,
+      "description": "Associated project (null for non-project searches)"
+    },
+    {
+      "name": "query",
+      "type": "text",
+      "nullable": false,
+      "description": "The actual search query executed (e.g., 'family dentistry in Philadelphia')"
+    },
+    {
+      "name": "search_location",
+      "type": "text",
+      "nullable": true,
+      "description": "Primary location from the query (e.g., 'Philadelphia')"
+    },
+    {
+      "name": "total_results",
+      "type": "integer",
+      "default": 0,
+      "description": "Total raw results returned from Google Maps"
+    },
+    {
+      "name": "unique_results",
+      "type": "integer",
+      "default": 0,
+      "description": "Unique results after deduplication"
+    },
+    {
+      "name": "new_prospects_added",
+      "type": "integer",
+      "default": 0,
+      "description": "Number of truly new prospects added to project"
+    },
+    {
+      "name": "iteration",
+      "type": "integer",
+      "default": 1,
+      "description": "Which discovery iteration this query belongs to (1, 2, 3, etc.)"
+    },
+    {
+      "name": "strategy",
+      "type": "text",
+      "nullable": true,
+      "description": "Strategy used (specialty, service, demographic, geographic, etc.)"
+    },
+    {
+      "name": "executed_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When the query was executed"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When the record was created"
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "CASCADE",
+      "description": "Link to project (cascades on project deletion)"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_discovery_queries_project_id",
+      "columns": ["project_id"],
+      "description": "Fast lookup of queries by project"
+    },
+    {
+      "name": "idx_discovery_queries_executed_at",
+      "columns": ["executed_at"],
+      "description": "Chronological query history"
+    },
+    {
+      "name": "idx_discovery_queries_project_query",
+      "columns": ["project_id", "query"],
+      "unique": true,
+      "description": "Prevent exact duplicate queries within a project"
+    }
+  ]
+}

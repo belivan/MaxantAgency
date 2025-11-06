@@ -104,7 +104,7 @@ export async function checkRelevance(prospect, brief, options = {}) {
     }
 
     // Parse JSON response
-    const parsedResult = parseJSONResponse(result.content);
+    const parsedResult = await parseJSONResponse(result.content);
 
     // Validate result
     if (typeof parsedResult.score !== 'number' || typeof parsedResult.is_relevant !== 'boolean') {

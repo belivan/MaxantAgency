@@ -143,7 +143,7 @@ export async function analyzeUnifiedTechnical(pages, context = {}, customPrompt 
     console.log(`[Unified Technical Analyzer] AI response (${duration}ms, ${response.usage?.total_tokens || 0} tokens, $${response.cost?.toFixed(4) || '0.0000'})`);
 
     // Parse JSON response
-    const result = parseJSONResponse(response.content);
+    const result = await parseJSONResponse(response.content);
     validateUnifiedTechnicalResponse(result);
 
     // Return unified results

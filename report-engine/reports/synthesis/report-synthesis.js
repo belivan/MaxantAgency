@@ -149,7 +149,7 @@ async function runSynthesisStage(stageId, variables) {
     console.log(`[Report Synthesis] [DEBUG] Response length: ${typeof response.content === 'string' ? response.content.length : 'N/A'} chars`);
   }
 
-  const parsed = parseJSONResponse(response.content);
+  const parsed = await parseJSONResponse(response.content);
 
   return {
     data: parsed,
@@ -239,13 +239,20 @@ export async function runReportSynthesis({
   socialPlatforms,
   isMobileFriendly,
   hasHttps,
-  crawlPages
+  crawlPages,
+  topIssues  // NEW: Pre-selected top issues from Analysis Engine
 }) {
   console.log('[Report Synthesis] runReportSynthesis called');
   console.log(`[Report Synthesis] Company: ${companyName}, Industry: ${industry}, Grade: ${grade}`);
-  
+
   const errors = [];
   const stageMetadata = {};
+
+  // NEW: Check if top issues already exist (from Analysis Engine)
+  const hasPreSelectedTopIssues = topIssues && Array.isArray(topIssues) && topIssues.length > 0;
+  if (hasPreSelectedTopIssues) {
+    console.log(`[Report Synthesis] ⚡ Top ${topIssues.length} issues pre-selected by Analysis Engine - skipping deduplication`);
+  }
 
   // Build screenshot references upfront (needed by both stages)
   // Ensure crawlPages is an array before passing it
@@ -294,48 +301,75 @@ export async function runReportSynthesis({
     screenshot_references_json: safeStringify(screenshotReferences)
   };
 
-  // STAGE 1: Issue Deduplication (CRITICAL - Always run first)
-  console.log('[Report Synthesis] Stage 1: Running issue deduplication...');
+  // STAGE 1: Issue Deduplication (CRITICAL - Skip if top issues pre-selected)
+  console.log('[Report Synthesis] Stage 1: Issue deduplication...');
   const dedupStartTime = Date.now();
   let dedupResult = null;
 
-  try {
-    const dedupResponse = await runSynthesisStageWithTimeout(STAGES.DEDUP, consolidatedContext, SYNTHESIS_TIMEOUT);
+  if (hasPreSelectedTopIssues) {
+    // Use pre-selected top issues from Analysis Engine
+    console.log('[Report Synthesis] ✓ Using pre-selected top issues (deduplication skipped)');
     const dedupDuration = Date.now() - dedupStartTime;
 
-    dedupResult = dedupResponse.data;
+    dedupResult = {
+      consolidatedIssues: topIssues,
+      mergeLog: [],
+      statistics: {
+        preSelected: true,
+        source: 'analysis-engine',
+        totalIssues: topIssues.length
+      }
+    };
 
-    // Validate dedup response structure
-    if (!dedupResult || !dedupResult.consolidatedIssues) {
-      console.error('[Report Synthesis] ✗ Invalid dedup response structure:', {
-        hasData: !!dedupResult,
-        dataKeys: dedupResult ? Object.keys(dedupResult) : [],
-        hasConsolidatedIssues: dedupResult?.consolidatedIssues !== undefined
-      });
-      throw new Error('Deduplication returned invalid structure - missing consolidatedIssues array');
-    }
-
-    stageMetadata.issueDeduplication = dedupResponse.meta;
     telemetry.stages.deduplication = {
-      status: 'success',
+      status: 'skipped',
+      reason: 'pre_selected_top_issues',
       duration_ms: dedupDuration,
-      tokens: dedupResponse.meta.usage?.total_tokens || 0,
-      cost: dedupResponse.meta.cost || 0,
-      model: dedupResponse.meta.model
+      tokens: 0,
+      cost: 0,
+      model: 'n/a'
     };
-    console.log(`[Report Synthesis] ✓ Deduplication complete: ${dedupResult?.consolidatedIssues?.length || 0} consolidated issues (${(dedupDuration / 1000).toFixed(1)}s)`);
-  } catch (error) {
-    const dedupDuration = Date.now() - dedupStartTime;
-    const errorMessage = error?.message || 'Unknown error';
-    const isTimeout = errorMessage.includes('timed out');
-    telemetry.stages.deduplication = {
-      status: 'failed',
-      error: errorMessage,
-      timeout: isTimeout,
-      duration_ms: dedupDuration
-    };
-    console.error('[Report Synthesis] ✗ Issue deduplication failed:', error);
-    errors.push({ stage: STAGES.DEDUP, message: errorMessage });
+  } else {
+    // Run AI deduplication
+    console.log('[Report Synthesis] Running AI-powered deduplication...');
+    try {
+      const dedupResponse = await runSynthesisStageWithTimeout(STAGES.DEDUP, consolidatedContext, SYNTHESIS_TIMEOUT);
+      const dedupDuration = Date.now() - dedupStartTime;
+
+      dedupResult = dedupResponse.data;
+
+      // Validate dedup response structure
+      if (!dedupResult || !dedupResult.consolidatedIssues) {
+        console.error('[Report Synthesis] ✗ Invalid dedup response structure:', {
+          hasData: !!dedupResult,
+          dataKeys: dedupResult ? Object.keys(dedupResult) : [],
+          hasConsolidatedIssues: dedupResult?.consolidatedIssues !== undefined
+        });
+        throw new Error('Deduplication returned invalid structure - missing consolidatedIssues array');
+      }
+
+      stageMetadata.issueDeduplication = dedupResponse.meta;
+      telemetry.stages.deduplication = {
+        status: 'success',
+        duration_ms: dedupDuration,
+        tokens: dedupResponse.meta.usage?.total_tokens || 0,
+        cost: dedupResponse.meta.cost || 0,
+        model: dedupResponse.meta.model
+      };
+      console.log(`[Report Synthesis] ✓ Deduplication complete: ${dedupResult?.consolidatedIssues?.length || 0} consolidated issues (${(dedupDuration / 1000).toFixed(1)}s)`);
+    } catch (error) {
+      const dedupDuration = Date.now() - dedupStartTime;
+      const errorMessage = error?.message || 'Unknown error';
+      const isTimeout = errorMessage.includes('timed out');
+      telemetry.stages.deduplication = {
+        status: 'failed',
+        error: errorMessage,
+        timeout: isTimeout,
+        duration_ms: dedupDuration
+      };
+      console.error('[Report Synthesis] ✗ Issue deduplication failed:', error);
+      errors.push({ stage: STAGES.DEDUP, message: errorMessage });
+    }
   }
 
   // Early return if deduplication failed completely
@@ -440,6 +474,11 @@ export async function runReportSynthesis({
       console.log(`  Tokens: ${telemetry.stages.deduplication.tokens}`);
       console.log(`  Cost: $${telemetry.stages.deduplication.cost?.toFixed(4) || '0.0000'}`);
       console.log(`  Model: ${telemetry.stages.deduplication.model}`);
+    } else if (telemetry.stages.deduplication.status === 'skipped') {
+      console.log(`  ⚡ Status: ${telemetry.stages.deduplication.status}`);
+      console.log(`  Reason: ${telemetry.stages.deduplication.reason}`);
+      console.log(`  Duration: ${(telemetry.stages.deduplication.duration_ms / 1000).toFixed(1)}s`);
+      console.log(`  Cost: $${telemetry.stages.deduplication.cost?.toFixed(4) || '0.0000'} (saved)`);
     } else {
       console.log(`  ✗ Status: ${telemetry.stages.deduplication.status}`);
       console.log(`  Error: ${telemetry.stages.deduplication.error}`);

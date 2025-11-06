@@ -13,6 +13,7 @@
 
 import { loadPrompt } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
+import { sanitizeForFilePath } from '../../database-tools/shared/path-utils.js';
 import { readFile, writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -28,7 +29,7 @@ const __dirname = dirname(__filename);
  * @returns {Promise<Object>} Map of screenshot_number -> {filepath, filename, viewport, label, description}
  */
 async function saveScreenshotSections(images, imageDescriptions, companyName) {
-  const companySlug = companyName.toLowerCase().replace(/\s+/g, '-');
+  const companySlug = sanitizeForFilePath(companyName);
   const screenshotsDir = join(__dirname, '..', 'screenshots', 'sections', companySlug);
   await mkdir(screenshotsDir, { recursive: true });
 
@@ -197,7 +198,7 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
       lastPromptModel = modelUsed;
 
       // Parse JSON response
-      const result = parseJSONResponse(response.content);
+      const result = await parseJSONResponse(response.content);
       validateUnifiedVisualResponse(result);
 
       individualResults.push({

@@ -93,7 +93,7 @@ export async function analyzeMobileVisual(pages, context = {}, customPrompt = nu
       lastPromptModel = modelUsed;
 
       // Parse JSON response
-      const result = parseJSONResponse(response.content);
+      const result = await parseJSONResponse(response.content);
       validateMobileVisualResponse(result);
 
       individualResults.push({

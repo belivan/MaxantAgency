@@ -93,7 +93,7 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
       lastPromptModel = modelUsed;
 
       // Parse JSON response
-      const result = parseJSONResponse(response.content);
+      const result = await parseJSONResponse(response.content);
       validateDesktopVisualResponse(result);
 
       individualResults.push({

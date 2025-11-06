@@ -17,6 +17,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { discoverCompanies } from './discoverers/google-maps.js';
+import { runIterativeDiscovery } from './services/iterative-discovery.js';
 import { verifyWebsite, understandQuery, checkRelevance } from './validators/index.js';
 import { scrapeWebsite, closeBrowser as closeScraperBrowser } from './extractors/website-scraper.js';
 import { extractWebsiteData } from './extractors/grok-extractor.js';
@@ -165,11 +166,47 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
       });
     }
 
-    const companies = await discoverCompanies(query, {
-      minRating: options.minRating || 3.5,
-      maxResults: brief.count || 20,
-      projectId: options.projectId // Pass project ID for smart filtering
-    });
+    let companies = [];
+
+    // Use iterative discovery if enabled and projectId is provided
+    if (options.useIterativeDiscovery && options.projectId) {
+      logInfo('Using iterative multi-query discovery', {
+        targetCount: brief.count || 50,
+        projectId: options.projectId
+      });
+
+      const discoveryResult = await runIterativeDiscovery(query, {
+        projectId: options.projectId,
+        targetCount: brief.count || 50,
+        maxIterations: options.maxIterations || 5,
+        maxVariationsPerIteration: options.maxVariationsPerIteration || 7,
+        minRating: options.minRating || 3.5,
+        onProgress: (progressData) => {
+          if (onProgress) {
+            onProgress({
+              type: 'discovery_progress',
+              step: 2,
+              ...progressData
+            });
+          }
+        }
+      });
+
+      companies = discoveryResult.prospects;
+      logInfo('Iterative discovery complete', {
+        found: companies.length,
+        iterations: discoveryResult.iterations,
+        queriesExecuted: discoveryResult.queriesExecuted,
+        success: discoveryResult.success
+      });
+    } else {
+      // Use single-query discovery (backward compatible)
+      companies = await discoverCompanies(query, {
+        minRating: options.minRating || 3.5,
+        maxResults: brief.count || 20,
+        projectId: options.projectId // Pass project ID for smart filtering
+      });
+    }
 
     results.found = companies.length;
     logStepComplete(2, 'Google Maps Discovery', Date.now() - step2Start, {

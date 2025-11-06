@@ -43,7 +43,6 @@ export function ProspectSelector({
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<ProspectFilters>({
     status: 'ready_for_analysis',
-    verified: true,
     limit: 10,
     offset: 0,
     project_id: projectId || undefined

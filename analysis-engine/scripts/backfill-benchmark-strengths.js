@@ -27,10 +27,10 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   };
 
   // Helper to parse AI JSON responses
-  function parseAIResponse(aiResult) {
+  async function parseAIResponse(aiResult) {
     const jsonContent = aiResult.content || aiResult;
     if (typeof jsonContent === 'string') {
-      return parseJSONResponse(jsonContent);
+      return await parseJSONResponse(jsonContent);
     }
     return jsonContent;
   }
@@ -56,7 +56,7 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
       jsonMode: true
     });
 
-    strengths.design = parseAIResponse(visualResult);
+    strengths.design = await parseAIResponse(visualResult);
     console.log(`     ✅ Design strengths extracted`);
 
   } catch (error) {
@@ -86,7 +86,7 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
       jsonMode: true
     });
 
-    const technicalData = parseAIResponse(technicalResult);
+    const technicalData = await parseAIResponse(technicalResult);
     strengths.seo = technicalData.seoStrengths || technicalData.seo_strengths || null;
     strengths.content = technicalData.contentStrengths || technicalData.content_strengths || null;
     console.log(`     ✅ SEO + Content strengths extracted`);
@@ -120,7 +120,7 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
       jsonMode: true
     });
 
-    strengths.social = parseAIResponse(socialResult);
+    strengths.social = await parseAIResponse(socialResult);
     console.log(`     ✅ Social strengths extracted`);
 
   } catch (error) {
@@ -151,7 +151,7 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
       jsonMode: true
     });
 
-    strengths.accessibility = parseAIResponse(accessibilityResult);
+    strengths.accessibility = await parseAIResponse(accessibilityResult);
     console.log(`     ✅ Accessibility strengths extracted`);
 
   } catch (error) {

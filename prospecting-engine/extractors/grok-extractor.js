@@ -81,7 +81,7 @@ export async function extractWebsiteData(url, screenshot, companyName, options =
     // Parse JSON response
     let extractedData;
     try {
-      extractedData = parseJSONResponse(result.content);
+      extractedData = await parseJSONResponse(result.content);
     } catch (e) {
       logError('Failed to parse Vision AI response as JSON', e, {
         content: result.content.slice(0, 200)

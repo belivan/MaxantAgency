@@ -369,10 +369,24 @@ Identify the technologies being used.`,
       temperature: 0.3
     });
 
-    return parseJSONResponse(response);
+    const parsed = await parseJSONResponse(response.content);
+
+    // Return parsed result with cost metadata
+    return {
+      identified: parsed.identified || [],
+      guesses: parsed.guesses || [],
+      _meta: {
+        cost: response.cost || 0,
+        tokens: response.total_tokens || response.tokens || 0,
+        prompt_tokens: response.prompt_tokens || 0,
+        completion_tokens: response.completion_tokens || 0,
+        model: response.model || 'gpt-5',
+        provider: response.provider || 'openai'
+      }
+    };
   } catch (error) {
     console.error('AI tech detection failed:', error);
-    return { identified: [], guesses: [] };
+    return { identified: [], guesses: [], _meta: { cost: 0, tokens: 0 } };
   }
 }
 

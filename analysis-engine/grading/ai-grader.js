@@ -112,7 +112,7 @@ export async function gradeWithAI(analysisResults, metadata) {
     });
 
     // Parse JSON response from content field (handles markdown/prose wrapping)
-    const parsedGrading = parseJSONResponse(gradingResult.content);
+    const parsedGrading = await parseJSONResponse(gradingResult.content);
 
     // DIAGNOSTIC: Log what AI returned
     console.log(`[AI Grader Debug] Raw AI response keys: ${Object.keys(parsedGrading).join(', ')}`);
@@ -236,7 +236,17 @@ export async function gradeWithAI(analysisResults, metadata) {
 
       // Metadata
       graded_at: new Date().toISOString(),
-      grading_method: 'ai-comparative'
+      grading_method: 'ai-comparative',
+
+      // Cost tracking
+      _meta: {
+        cost: gradingResult.cost || 0,
+        tokens: gradingResult.total_tokens || gradingResult.tokens || 0,
+        prompt_tokens: gradingResult.prompt_tokens || 0,
+        completion_tokens: gradingResult.completion_tokens || 0,
+        model: gradingResult.model || promptConfig.model,
+        provider: gradingResult.provider || 'openai'
+      }
     };
 
   } catch (error) {

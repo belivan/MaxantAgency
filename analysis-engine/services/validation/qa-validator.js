@@ -69,7 +69,7 @@ export async function validateIssue(issue, screenshotPaths, companyName = 'this 
     console.log(`[QA Validator] Cost: $${response.cost?.toFixed(4) || '0.0000'}`);
 
     // Step 6: Parse validation result
-    const validation = parseJSONResponse(response.content);
+    const validation = await parseJSONResponse(response.content);
 
     // Step 7: Combine with artifact detection
     const result = {

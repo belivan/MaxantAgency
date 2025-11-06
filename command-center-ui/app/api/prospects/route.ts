@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const projectId = searchParams.get('project_id');
-    const verified = searchParams.get('verified');
     const industry = searchParams.get('industry');
     const city = searchParams.get('city');
     const minRating = searchParams.get('min_rating');
@@ -80,9 +79,6 @@ export async function GET(request: NextRequest) {
       if (status) {
         query = query.eq('status', status);
       }
-      if (verified) {
-        query = query.eq('verified', verified === 'true');
-      }
       if (industry) {
         query = query.ilike('industry', `%${industry}%`);
       }
@@ -90,7 +86,7 @@ export async function GET(request: NextRequest) {
         query = query.ilike('city', `%${city}%`);
       }
       if (minRating) {
-        query = query.gte('rating', parseFloat(minRating));
+        query = query.gte('google_rating', parseFloat(minRating));
       }
 
       // Only add ordering for full record fetches (not for ID-only)
@@ -112,9 +108,6 @@ export async function GET(request: NextRequest) {
       if (status) {
         query = query.eq('status', status);
       }
-      if (verified) {
-        query = query.eq('verified', verified === 'true');
-      }
       if (industry) {
         query = query.ilike('industry', `%${industry}%`);
       }
@@ -122,7 +115,7 @@ export async function GET(request: NextRequest) {
         query = query.ilike('city', `%${city}%`);
       }
       if (minRating) {
-        query = query.gte('rating', parseFloat(minRating));
+        query = query.gte('google_rating', parseFloat(minRating));
       }
     }
 

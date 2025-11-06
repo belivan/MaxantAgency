@@ -32,6 +32,10 @@ const RATE_LIMITS = {
       tier1: { tpm: 500000, rpm: 1000 },
       tier2: { tpm: 1000000, rpm: 2000 }
     },
+    'gpt-5-nano': {
+      tier1: { tpm: 500000, rpm: 1000 },
+      tier2: { tpm: 1000000, rpm: 2000 }
+    },
     'gpt-4o': {
       tier1: { tpm: 500000, rpm: 1000 },
       tier2: { tpm: 1000000, rpm: 2000 }

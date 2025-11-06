@@ -225,6 +225,43 @@
     },
 
     {
+      "name": "top_issues",
+      "type": "jsonb",
+      "default": "[]",
+      "description": "AI-selected top 5 issues for outreach messaging (filtered from high/critical severity)"
+    },
+    {
+      "name": "top_issues_summary",
+      "type": "text",
+      "description": "Comma-separated summary of top 5 issue titles (for quick reference)"
+    },
+    {
+      "name": "top_issues_selection_strategy",
+      "type": "text",
+      "description": "AI-generated explanation for top issues selection approach"
+    },
+    {
+      "name": "top_issues_selection_cost",
+      "type": "decimal",
+      "description": "Cost of AI top issues selection in USD"
+    },
+    {
+      "name": "top_issues_selection_model",
+      "type": "text",
+      "description": "AI model used for top issues selection (e.g., gpt-5-mini)"
+    },
+    {
+      "name": "total_issues_count",
+      "type": "integer",
+      "description": "Total count of all issues found across all analyzers (pyramid base)"
+    },
+    {
+      "name": "high_critical_issues_count",
+      "type": "integer",
+      "description": "Count of high/critical severity issues (AI selection pool)"
+    },
+
+    {
       "name": "performance_metrics_pagespeed",
       "type": "jsonb",
       "description": "PageSpeed Insights data (mobile + desktop metrics, Core Web Vitals, opportunities)"
@@ -528,6 +565,11 @@
       "description": "Cost of analysis in USD"
     },
     {
+      "name": "cost_breakdown",
+      "type": "jsonb",
+      "description": "Detailed cost breakdown by component (analyzers, page_selection, grading, validation, tech_stack, top_issues_selection)"
+    },
+    {
       "name": "analysis_time",
       "type": "integer",
       "description": "Analysis time in milliseconds"
@@ -669,6 +711,21 @@
       "type": "check",
       "name": "chk_fit_score_range",
       "expression": "fit_score IS NULL OR (fit_score >= 0 AND fit_score <= 100)"
+    },
+    {
+      "type": "check",
+      "name": "chk_total_issues_count_positive",
+      "expression": "total_issues_count IS NULL OR total_issues_count >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_high_critical_issues_count_positive",
+      "expression": "high_critical_issues_count IS NULL OR high_critical_issues_count >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_top_issues_selection_cost_positive",
+      "expression": "top_issues_selection_cost IS NULL OR top_issues_selection_cost >= 0"
     }
   ]
 }

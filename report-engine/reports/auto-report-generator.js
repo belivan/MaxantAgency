@@ -327,7 +327,8 @@ export async function autoGenerateReport(analysisResult, options = {}) {
           socialPlatforms: reportData.social_platforms_present || [],
           isMobileFriendly: reportData.is_mobile_friendly,
           hasHttps: reportData.has_https,
-          crawlPages: crawlPages
+          crawlPages: crawlPages,
+          topIssues: reportData.top_issues || []  // NEW: Pre-selected top issues from Analysis Engine
         });
 
         const synthesisDuration = ((Date.now() - synthesisStartTime) / 1000).toFixed(1);

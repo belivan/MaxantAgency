@@ -170,7 +170,7 @@ export async function scoreLeadPriority(leadData) {
     });
 
     // Parse JSON response (extract content from response object)
-    const result = parseJSONResponse(response.content);
+    const result = await parseJSONResponse(response.content);
     const modelUsed = response.model || prompt.model;
 
     // Validate and normalize result
@@ -203,7 +203,11 @@ export async function scoreLeadPriority(leadData) {
         version: '2.0',
         model: modelUsed,
         usage: response.usage || null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        cost: response.cost || 0,
+        tokens: response.total_tokens || response.tokens || 0,
+        prompt_tokens: response.prompt_tokens || 0,
+        completion_tokens: response.completion_tokens || 0
       }
     };
 

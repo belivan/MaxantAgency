@@ -29,7 +29,6 @@ export interface Prospect {
   project_id?: string;
   project_name?: string;
   run_id?: string;
-  verified: boolean;
   created_at: string;
   updated_at?: string;
 
@@ -47,7 +46,6 @@ export interface ProspectFilters {
   industry?: string | string[];
   city?: string | string[];
   min_rating?: number;
-  verified?: boolean;
   has_email?: boolean;
   project_id?: string;
   limit?: number;

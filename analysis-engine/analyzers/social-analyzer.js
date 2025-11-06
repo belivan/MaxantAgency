@@ -114,7 +114,7 @@ export async function analyzeSocial(pages, socialProfiles, socialMetadata, conte
     });
 
     // Parse JSON response
-    const result = parseJSONResponse(response.content);
+    const result = await parseJSONResponse(response.content);
 
     // Validate response
     validateSocialResponse(result);

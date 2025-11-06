@@ -1,0 +1,94 @@
+{
+  "version": "1.0.0",
+  "description": "Configuration for self-tuning analysis engine optimization system",
+
+  "optimization": {
+    "enabled": true,
+    "triggerFrequency": 25,
+    "minimumDataPoints": 10,
+    "comment": "Run optimization every N analyses, require at least M data points"
+  },
+
+  "metrics": {
+    "weights": {
+      "accuracy": 0.6,
+      "cost": 0.2,
+      "speed": 0.2
+    },
+    "comment": "Composite score = (accuracy * 0.6) + ((1 - normalized_cost) * 0.2) + ((1 - normalized_speed) * 0.2)"
+  },
+
+  "abTesting": {
+    "enabled": true,
+    "splitRatio": 0.5,
+    "minimumSampleSize": 20,
+    "confidenceLevel": 0.95,
+    "comment": "50/50 split, require 20 samples each, 95% confidence for winner selection"
+  },
+
+  "autoApproval": {
+    "enabled": true,
+    "safeChanges": [
+      "temperature_adjustment",
+      "example_addition",
+      "example_modification",
+      "minor_wording_change",
+      "category_definition_clarification"
+    ],
+    "requiresHumanApproval": [
+      "major_rewrite",
+      "schema_change",
+      "model_change",
+      "system_prompt_overhaul"
+    ],
+    "safetyThresholds": {
+      "minimumAccuracy": 0.80,
+      "maximumCostIncrease": 0.15,
+      "maximumSpeedDecrease": 0.25,
+      "comment": "Don't auto-apply if accuracy drops below 80%, cost increases >15%, or speed decreases >25%"
+    }
+  },
+
+  "analyzers": {
+    "pilot": "desktop-visual-analyzer",
+    "enabled": [
+      "desktop-visual-analyzer",
+      "mobile-visual-analyzer",
+      "unified-visual-analyzer",
+      "seo-analyzer",
+      "content-analyzer",
+      "unified-technical-analyzer",
+      "social-analyzer",
+      "accessibility-analyzer"
+    ],
+    "comment": "Start optimization with desktop-visual as pilot, then expand to others"
+  },
+
+  "metaPrompt": {
+    "model": "gpt-5",
+    "temperature": 0.3,
+    "maxTokens": 4000,
+    "comment": "Meta-AI that optimizes other prompts uses GPT-5 for best reasoning"
+  },
+
+  "logging": {
+    "logAllOptimizations": true,
+    "logMetricsCalculations": true,
+    "logABTestResults": true,
+    "verboseMode": false
+  },
+
+  "rollback": {
+    "enabled": true,
+    "keepVersionHistory": 10,
+    "comment": "Keep last 10 prompt versions for rollback capability"
+  },
+
+  "notifications": {
+    "notifyOnOptimization": true,
+    "notifyOnAutoApply": true,
+    "notifyOnHumanReviewNeeded": true,
+    "webhookUrl": null,
+    "comment": "Set webhook URL to receive Slack/Discord notifications"
+  }
+}

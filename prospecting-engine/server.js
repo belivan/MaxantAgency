@@ -62,6 +62,11 @@ app.use((req, res, next) => {
 //     minRating: number (optional)
 //     checkRelevance: boolean (optional, default: true)
 //     filterIrrelevant: boolean (optional, default: false)
+//
+//     // Iterative Discovery Options (requires projectId)
+//     useIterativeDiscovery: boolean (optional, default: false) - Enable intelligent multi-query discovery
+//     maxIterations: number (optional, default: 5) - Maximum discovery iterations
+//     maxVariationsPerIteration: number (optional, default: 7) - Query variations per iteration
 //   }
 // ═══════════════════════════════════════════════════════════════════
 

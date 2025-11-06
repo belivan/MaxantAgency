@@ -23,6 +23,7 @@ import { calculateTotalCost } from '../analyzers/index.js';
 // import { validateReportQuality, generateQAReport } from '../reports/synthesis/qa-validator.js';
 import { gradeWithAI } from '../grading/ai-grader.js';
 import { ValidationService } from './validation-service.js';
+import { selectTopIssues } from './top-issues-selector.js';
 
 export class ResultsAggregator {
   constructor(options = {}) {
@@ -116,6 +117,34 @@ export class ResultsAggregator {
     } else {
       console.log('[QA Validation] Skipped (ENABLE_QA_VALIDATION=false)');
     }
+
+    // PHASE 5.5: Select Top 5 Issues for Outreach (NEW)
+    this.onProgress({ step: 'selecting-top-issues', message: 'Selecting top 5 issues for outreach...' });
+    console.log('\n[Results Aggregator] Selecting top 5 issues for outreach...');
+
+    const allIssues = this.collectAllIssues(analysisResults);
+    console.log(`[Results Aggregator]   Total issues collected: ${allIssues.length}`);
+
+    // Estimate grade before AI grading runs (for top issues selection context)
+    const preliminaryGrade = this.estimateGrade(scores);
+    const preliminaryScore = Math.round(
+      (scores.design_score * 0.30) +
+      (scores.seo_score * 0.30) +
+      (scores.performance_score * 0.20) +
+      (scores.content_score * 0.10) +
+      (scores.accessibility_score * 0.05) +
+      (scores.social_score * 0.05)
+    );
+
+    const topIssuesResult = await selectTopIssues(allIssues, {
+      company_name: context.company_name,
+      industry: context.industry,
+      grade: preliminaryGrade,
+      overall_score: preliminaryScore
+    }, 5);
+
+    console.log(`[Results Aggregator] ✅ Selected ${topIssuesResult.topIssues.length} top issues`);
+    console.log(`[Results Aggregator]    Cost: $${topIssuesResult.cost.toFixed(4)}, Duration: ${topIssuesResult.duration}ms`);
 
     // PHASE 6: Grading + Lead Scoring (AI or Manual)
     // Uses validated issues (false positives already filtered out)
@@ -213,7 +242,10 @@ export class ResultsAggregator {
           _meta: {
             grader: 'ai-comparative-v1',
             timestamp: new Date().toISOString(),
-            benchmark_id: aiGradingResult.comparison?.benchmark_id
+            benchmark_id: aiGradingResult.comparison?.benchmark_id,
+            cost: aiGradingResult._meta?.cost || 0,
+            tokens: aiGradingResult._meta?.tokens || 0,
+            model: aiGradingResult._meta?.model || 'gpt-5'
           }
         };
 
@@ -358,7 +390,91 @@ export class ResultsAggregator {
 
     // PHASE 9: Calculate Costs & Timing
     const analysisTime = Date.now() - startTime;
-    const analysisCost = calculateTotalCost(analysisResults);
+
+    // Calculate total cost from all AI calls
+    const analyzersCost = calculateTotalCost(analysisResults);
+    const pageSelectionCost = pageSelection?.meta?.cost || 0;
+    const gradingCost = gradeResults?._meta?.cost || leadScoringData?._metadata?.cost || 0;
+    const validationCost = validationMetadata?.validation_cost || 0;
+    const techStackCost = crawlData?.techStack?._meta?.cost || 0;
+    const topIssuesCost = topIssuesResult?.cost || 0;  // NEW: Top issues selection cost
+
+    const analysisCost = analyzersCost + pageSelectionCost + gradingCost + validationCost + techStackCost + topIssuesCost;
+
+    // Cost breakdown for telemetry and database
+    const costBreakdown = {
+      analyzers: analyzersCost,
+      page_selection: pageSelectionCost,
+      grading: gradingCost,
+      validation: validationCost,
+      tech_stack: techStackCost,
+      top_issues_selection: topIssuesCost,  // NEW
+      total: analysisCost
+    };
+
+    // Display cost telemetry (like Report Engine)
+    console.log('\n' + '='.repeat(56));
+    console.log('[Analysis Engine] COST TELEMETRY');
+    console.log('='.repeat(56));
+
+    // Core analyzers breakdown
+    if (analyzersCost > 0) {
+      console.log('Core Analyzers:');
+      if (analysisResults.desktopVisual?._meta?.cost) {
+        const meta = analysisResults.desktopVisual._meta;
+        console.log(`  Desktop Visual:  $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      }
+      if (analysisResults.mobileVisual?._meta?.cost) {
+        const meta = analysisResults.mobileVisual._meta;
+        console.log(`  Mobile Visual:   $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      }
+      if (analysisResults.seo?._meta?.cost) {
+        const meta = analysisResults.seo._meta;
+        console.log(`  SEO:             $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      }
+      if (analysisResults.content?._meta?.cost) {
+        const meta = analysisResults.content._meta;
+        console.log(`  Content:         $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      }
+      if (analysisResults.social?._meta?.cost) {
+        const meta = analysisResults.social._meta;
+        console.log(`  Social:          $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      }
+      if (analysisResults.accessibility?._meta?.cost) {
+        const meta = analysisResults.accessibility._meta;
+        console.log(`  Accessibility:   $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      }
+      console.log(`  Subtotal:        $${analyzersCost.toFixed(4)}`);
+    }
+
+    // Additional AI costs
+    if (pageSelectionCost > 0 || gradingCost > 0 || validationCost > 0 || techStackCost > 0 || topIssuesCost > 0) {
+      console.log('\nAdditional AI:');
+      if (pageSelectionCost > 0) {
+        console.log(`  Page Selector:   $${pageSelectionCost.toFixed(4)}`);
+      }
+      if (topIssuesCost > 0) {
+        const topIssuesCount = topIssuesResult?.topIssues?.length || 0;
+        console.log(`  Top Issues:      $${topIssuesCost.toFixed(4)}  (${topIssuesCount} issues selected)`);
+      }
+      if (gradingCost > 0) {
+        const graderName = gradeResults?._meta?.grader === 'ai-comparative-v1' ? 'AI Grader' : 'Lead Scorer';
+        console.log(`  ${graderName}:    $${gradingCost.toFixed(4)}  (${gradeResults?._meta?.tokens || 0} tokens)`);
+      }
+      if (validationCost > 0) {
+        const validatedCount = validationMetadata?.stats?.total_issues_validated || 0;
+        console.log(`  QA Validator:    $${validationCost.toFixed(4)}  (${validatedCount} issues validated)`);
+      }
+      if (techStackCost > 0) {
+        console.log(`  Tech Detector:   $${techStackCost.toFixed(4)}`);
+      }
+      console.log(`  Subtotal:        $${(pageSelectionCost + topIssuesCost + gradingCost + validationCost + techStackCost).toFixed(4)}`);
+    }
+
+    console.log('\n' + '-'.repeat(56));
+    console.log(`Total Analysis Cost: $${analysisCost.toFixed(4)}`);
+    console.log(`Total Duration:      ${(analysisTime / 1000).toFixed(1)}s`);
+    console.log('='.repeat(56) + '\n');
 
     // PHASE 10: Build Final Results
     return this.buildFinalResults({
@@ -382,8 +498,11 @@ export class ResultsAggregator {
       homepage,
       analysisTime,
       analysisCost,
+      costBreakdown,  // NEW: Pass cost breakdown
       benchmark,  // NEW: Pass benchmark data
-      benchmarkMatchMetadata  // NEW: Pass benchmark match metadata
+      benchmarkMatchMetadata,  // NEW: Pass benchmark match metadata
+      topIssuesResult,  // NEW: Pass top 5 issues selection result
+      allIssues  // NEW: Pass all collected issues for metrics
     });
   }
 
@@ -488,6 +607,70 @@ export class ResultsAggregator {
   }
 
   /**
+   * Collect all issues from all analyzers into single array
+   */
+  collectAllIssues(analysisResults) {
+    const allIssues = [];
+
+    // Unified visual issues
+    if (analysisResults.unifiedVisual) {
+      allIssues.push(
+        ...(analysisResults.unifiedVisual.desktopIssues || []).map(i => ({ ...i, source: 'desktop-visual' })),
+        ...(analysisResults.unifiedVisual.mobileIssues || []).map(i => ({ ...i, source: 'mobile-visual' })),
+        ...(analysisResults.unifiedVisual.responsiveIssues || []).map(i => ({ ...i, source: 'responsive-visual' })),
+        ...(analysisResults.unifiedVisual.sharedIssues || []).map(i => ({ ...i, source: 'shared-visual' }))
+      );
+    }
+
+    // Technical issues (SEO + Content)
+    if (analysisResults.unifiedTechnical) {
+      allIssues.push(
+        ...(analysisResults.unifiedTechnical.seoIssues || []).map(i => ({ ...i, source: 'seo' })),
+        ...(analysisResults.unifiedTechnical.contentIssues || []).map(i => ({ ...i, source: 'content' }))
+      );
+    }
+
+    // Social issues
+    if (analysisResults.social?.issues) {
+      allIssues.push(...analysisResults.social.issues.map(i => ({ ...i, source: 'social' })));
+    }
+
+    // Accessibility issues
+    if (analysisResults.accessibility?.issues) {
+      allIssues.push(...analysisResults.accessibility.issues.map(i => ({ ...i, source: 'accessibility' })));
+    }
+
+    // Add unique ID to each issue if not present
+    allIssues.forEach((issue, index) => {
+      if (!issue.id) {
+        issue.id = `${issue.source}-${index}`;
+      }
+    });
+
+    return allIssues;
+  }
+
+  /**
+   * Estimate grade from scores (used before AI grading runs)
+   */
+  estimateGrade(scores) {
+    const overallScore = Math.round(
+      (scores.design_score * 0.30) +
+      (scores.seo_score * 0.30) +
+      (scores.performance_score * 0.20) +
+      (scores.content_score * 0.10) +
+      (scores.accessibility_score * 0.05) +
+      (scores.social_score * 0.05)
+    );
+
+    if (overallScore >= 85) return 'A';
+    if (overallScore >= 70) return 'B';
+    if (overallScore >= 55) return 'C';
+    if (overallScore >= 40) return 'D';
+    return 'F';
+  }
+
+  /**
    * Build final results object
    */
   buildFinalResults(data) {
@@ -512,8 +695,11 @@ export class ResultsAggregator {
       homepage,
       analysisTime,
       analysisCost,
+      costBreakdown,  // NEW: Cost breakdown
       benchmark,  // NEW: Benchmark data
-      benchmarkMatchMetadata  // NEW: Benchmark match metadata
+      benchmarkMatchMetadata,  // NEW: Benchmark match metadata
+      topIssuesResult,  // NEW: Top 5 issues selection result
+      allIssues  // NEW: All collected issues
     } = data;
 
     // DIAGNOSTIC: Log gradeResults before returning
@@ -592,6 +778,17 @@ export class ResultsAggregator {
       one_liner: critique.one_liner,
       call_to_action: critique.callToAction,
       outreach_angle: critique.outreachAngle,
+
+      // NEW: Top 5 Issues for Outreach (AI-selected from high/critical issues)
+      top_issues: topIssuesResult?.topIssues || [],
+      top_issues_summary: topIssuesResult?.topIssues?.map(i => i.title).join(', ') || null,
+      top_issues_selection_strategy: topIssuesResult?.selectionStrategy || null,
+      top_issues_selection_cost: topIssuesResult?.cost || 0,
+      top_issues_selection_model: topIssuesResult?.modelUsed || 'gpt-5-mini',
+
+      // NEW: Pyramid Metrics (track issue volume)
+      total_issues_count: allIssues?.length || 0,
+      high_critical_issues_count: allIssues?.filter(i => i.severity === 'critical' || i.severity === 'high').length || 0,
 
       // Synthesis outputs
       consolidated_issues: synthesisResults.consolidatedIssues || [],
@@ -725,6 +922,7 @@ export class ResultsAggregator {
       // Performance metrics
       analyzed_at: new Date().toISOString(),
       analysis_cost: analysisCost,
+      cost_breakdown: costBreakdown,  // NEW: Detailed cost breakdown
       analysis_time: analysisTime,
 
       // Discovery log (complete audit trail)

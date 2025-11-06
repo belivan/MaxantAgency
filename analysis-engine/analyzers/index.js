@@ -210,6 +210,7 @@ export function calculateTotalCost(results) {
   if (results.seo?._meta?.cost) total += results.seo._meta.cost;
   if (results.content?._meta?.cost) total += results.content._meta.cost;
   if (results.social?._meta?.cost) total += results.social._meta.cost;
+  if (results.accessibility?._meta?.cost) total += results.accessibility._meta.cost;
 
   return total;
 }
