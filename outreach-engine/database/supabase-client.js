@@ -321,6 +321,98 @@ export async function getSocialOutreach(filters = {}) {
 }
 
 /**
+ * Get social messages from composed_outreach table
+ * Extracts social variations and returns them as individual message objects
+ *
+ * @param {object} filters - Query filters
+ * @returns {Promise<Array>} Array of social messages
+ */
+export async function getSocialMessages(filters = {}) {
+  try {
+    let query = supabase.from('composed_outreach').select('*');
+
+    // Apply filters
+    if (filters.status) {
+      query = query.eq('status', filters.status);
+    }
+
+    if (filters.projectId) {
+      query = query.eq('project_id', filters.projectId);
+    }
+
+    // Pagination
+    const limit = filters.limit || 50;
+    const offset = filters.offset || 0;
+    query = query.limit(limit).range(offset, offset + limit - 1);
+
+    // Order
+    query = query.order('created_at', { ascending: false });
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Failed to fetch social messages:', error);
+      throw error;
+    }
+
+    // Extract social variations from each row
+    const messages = [];
+    const platforms = ['instagram', 'facebook', 'linkedin'];
+    const strategies = ['free_value', 'portfolio_building', 'problem_first'];
+
+    for (const row of data) {
+      for (const platform of platforms) {
+        // Apply platform filter if specified
+        if (filters.platform && filters.platform !== platform) {
+          continue;
+        }
+
+        for (const strategy of strategies) {
+          // Apply strategy filter if specified
+          if (filters.strategy && filters.strategy !== strategy.replace('_', '-')) {
+            continue;
+          }
+
+          const fieldName = `${platform}_${strategy}`;
+          const messageContent = row[fieldName];
+
+          // Only include if message exists
+          if (messageContent) {
+            messages.push({
+              id: `${row.id}_${platform}_${strategy}`,
+              composed_outreach_id: row.id,
+              lead_id: row.lead_id,
+              url: row.url,
+              company_name: row.company_name,
+              platform,
+              strategy: strategy.replace('_', '-'),
+              message_content: messageContent,
+              character_count: messageContent.length,
+              social_profile_url: row[`${platform}_profile_url`],
+              status: row.status,
+              project_id: row.project_id,
+              created_at: row.created_at,
+              updated_at: row.updated_at
+            });
+          }
+        }
+      }
+    }
+
+    // Apply quality filter if specified
+    if (filters.minQuality) {
+      // Note: quality_score is at row level, not per variation
+      // This is a limitation of the current schema
+    }
+
+    console.log(`✅ Fetched ${messages.length} social messages from ${data.length} outreach rows`);
+    return messages;
+  } catch (error) {
+    throw error;
+  }
+}
+
+/**
  * Get a single social outreach message by ID
  *
  * @param {string} id - Message ID

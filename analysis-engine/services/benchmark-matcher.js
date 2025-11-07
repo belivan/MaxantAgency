@@ -138,9 +138,9 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
 
     // Step 4: Validate AI response and get full benchmark data
 
-    // Check if AI returned a benchmark_id
-    if (!matchResult.benchmark_id) {
-      console.warn(`⚠️ AI did not return a benchmark_id, using fallback selection`);
+    // Check if AI returned a benchmark_company_name
+    if (!matchResult.benchmark_company_name) {
+      console.warn(`⚠️ AI did not return a benchmark_company_name, using fallback selection`);
       console.warn(`   AI response:`, JSON.stringify(matchResult, null, 2));
 
       // Fallback: Select highest-scored benchmark
@@ -155,7 +155,7 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
         benchmark: fallbackBenchmark,
         match_metadata: {
           match_score: 0,
-          match_reasoning: 'Fallback selection - AI did not return valid benchmark_id',
+          match_reasoning: 'Fallback selection - AI did not return valid benchmark_company_name',
           comparison_tier: fallbackBenchmark.benchmark_tier,
           key_similarities: [],
           key_differences: [],
@@ -165,11 +165,37 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
       };
     }
 
-    const selectedBenchmark = candidateBenchmarks.find(b => b.id === matchResult.benchmark_id);
+    // Try exact match first
+    let selectedBenchmark = candidateBenchmarks.find(b =>
+      b.company_name === matchResult.benchmark_company_name
+    );
+
+    // If no exact match, try case-insensitive match
+    if (!selectedBenchmark) {
+      selectedBenchmark = candidateBenchmarks.find(b =>
+        b.company_name.toLowerCase() === matchResult.benchmark_company_name.toLowerCase()
+      );
+
+      if (selectedBenchmark) {
+        console.log(`  ℹ️ Matched using case-insensitive comparison`);
+      }
+    }
+
+    // If still no match, try fuzzy matching (contains)
+    if (!selectedBenchmark) {
+      selectedBenchmark = candidateBenchmarks.find(b =>
+        b.company_name.toLowerCase().includes(matchResult.benchmark_company_name.toLowerCase()) ||
+        matchResult.benchmark_company_name.toLowerCase().includes(b.company_name.toLowerCase())
+      );
+
+      if (selectedBenchmark) {
+        console.log(`  ℹ️ Matched using fuzzy matching (contains)`);
+      }
+    }
 
     if (!selectedBenchmark) {
-      console.error(`❌ AI selected invalid benchmark ID: ${matchResult.benchmark_id}`);
-      console.error(`   Available IDs:`, candidateBenchmarks.map(b => b.id).slice(0, 5));
+      console.error(`❌ AI selected invalid benchmark name: "${matchResult.benchmark_company_name}"`);
+      console.error(`   Available companies:`, candidateBenchmarks.map(b => b.company_name));
 
       // Fallback: Select highest-scored benchmark
       const fallbackBenchmark = candidateBenchmarks.reduce((best, current) =>
@@ -183,7 +209,7 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
         benchmark: fallbackBenchmark,
         match_metadata: {
           match_score: 0,
-          match_reasoning: 'Fallback selection - AI returned invalid benchmark_id',
+          match_reasoning: 'Fallback selection - AI returned invalid benchmark_company_name',
           comparison_tier: fallbackBenchmark.benchmark_tier,
           key_similarities: [],
           key_differences: [],

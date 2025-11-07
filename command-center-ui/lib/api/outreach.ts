@@ -304,8 +304,8 @@ export async function composeSocialMessages(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to start social composition');
+    const errorMessage = await parseErrorMessage(response, 'Failed to start social composition');
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
@@ -356,8 +356,8 @@ export async function getSocialMessages(filters?: SocialMessageFilters): Promise
   const response = await fetch(`${API_BASE}/api/social-messages?${params.toString()}`);
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to fetch social messages');
+    const errorMessage = await parseErrorMessage(response, 'Failed to fetch social messages');
+    throw new Error(errorMessage);
   }
 
   const data: any = await response.json();
@@ -378,8 +378,8 @@ export async function updateSocialMessageStatus(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to update social message');
+    const errorMessage = await parseErrorMessage(response, 'Failed to update social message');
+    throw new Error(errorMessage);
   }
 
   const data: APIResponse<SocialMessage> = await response.json();

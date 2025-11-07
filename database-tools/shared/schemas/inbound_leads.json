@@ -53,6 +53,13 @@
       "comment": "Whether the report download was successfully completed"
     },
     {
+      "name": "report_requested",
+      "type": "boolean",
+      "default": false,
+      "notNull": true,
+      "comment": "Whether the lead requested the full report to be sent via email"
+    },
+    {
       "name": "calendly_scheduled",
       "type": "boolean",
       "default": false,

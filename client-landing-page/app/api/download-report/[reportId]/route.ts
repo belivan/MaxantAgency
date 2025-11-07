@@ -116,14 +116,21 @@ export async function GET(
     }
 
     // STEP 5: Return PDF file with proper headers
-    // Convert Buffer to Uint8Array for Next.js 16 compatibility
-    return new NextResponse(new Uint8Array(pdfBuffer), {
+    // Stream the PDF directly as bytes for maximum compatibility
+    const stream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(pdfBuffer)
+        controller.close()
+      }
+    })
+
+    return new Response(stream, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
         'Content-Length': pdfBuffer.length.toString(),
-        'Cache-Control': 'no-cache',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
       },
     })
   } catch (error) {

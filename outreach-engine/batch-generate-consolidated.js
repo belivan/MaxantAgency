@@ -138,7 +138,8 @@ export async function batchGenerateConsolidated(options = {}) {
     limit,
     dryRun = false,
     progressCallback = null, // NEW: Optional callback for API/SSE streaming
-    leadIds = null // NEW: Optional specific lead IDs
+    leadIds = null, // NEW: Optional specific lead IDs
+    forceRegenerate = false // NEW: Force regeneration even if row exists
   } = options;
 
   const stats = {
@@ -235,7 +236,7 @@ export async function batchGenerateConsolidated(options = {}) {
       }
 
       try {
-        const result = await processLeadConsolidated(lead, progressCallback, i, leads.length);
+        const result = await processLeadConsolidated(lead, progressCallback, i, leads.length, forceRegenerate);
         stats.totalCost += result.totalCost;
         stats.totalTime += result.totalTime;
         stats.processedLeads++;
@@ -326,7 +327,7 @@ export async function batchGenerateConsolidated(options = {}) {
 /**
  * Process a single lead - generate all 12 variations and save as ONE ROW
  */
-async function processLeadConsolidated(lead, progressCallback = null, leadIndex = 0, totalLeads = 1) {
+async function processLeadConsolidated(lead, progressCallback = null, leadIndex = 0, totalLeads = 1, forceRegenerate = false) {
   // Check if lead already has outreach generated
   const { data: existing } = await supabase
     .from('composed_outreach')
@@ -334,8 +335,8 @@ async function processLeadConsolidated(lead, progressCallback = null, leadIndex 
     .eq('lead_id', lead.id)
     .single();
 
-  if (existing) {
-    console.log('⏭️  Skipping - already exists in database\n');
+  if (existing && !forceRegenerate) {
+    console.log('⏭️  Skipping - already exists in database (use forceRegenerate=true to override)\n');
     if (progressCallback) {
       progressCallback({
         type: 'variation_skip',
@@ -344,6 +345,14 @@ async function processLeadConsolidated(lead, progressCallback = null, leadIndex 
       });
     }
     return { totalCost: 0, totalTime: 0 };
+  }
+
+  if (existing && forceRegenerate) {
+    console.log('🔄 Force regenerating - deleting existing row...\n');
+    await supabase
+      .from('composed_outreach')
+      .delete()
+      .eq('lead_id', lead.id);
   }
 
   const consolidatedRow = {

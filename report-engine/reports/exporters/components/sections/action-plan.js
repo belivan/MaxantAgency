@@ -75,13 +75,7 @@ export function generateActionPlan(analysisResult, synthesisData = {}, options =
         html += `            <p class="action-description">${escapeHtml(finding.impact)}</p>\n`;
       }
 
-      // Show evidence references if available (transformed from SS-X to readable format)
-      if (finding.evidence && finding.evidence.length > 0) {
-        const formattedEvidence = formatScreenshotEvidence(finding.evidence, synthesisData.screenshotReferences);
-        if (formattedEvidence) {
-          html += `            <div style="margin: 8px 0; font-size: 13px; color: var(--text-secondary);">📸 Evidence: ${escapeHtml(formattedEvidence)}</div>\n`;
-        }
-      }
+      // Evidence references removed per client request
 
       // Show recommendation
       if (finding.recommendation) {

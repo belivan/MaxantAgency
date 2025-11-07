@@ -18,12 +18,12 @@ export function generateCSS() {
         }
 
         :root {
-            /* Professional Light Color Palette */
-            --primary: #4F46E5;           /* Indigo */
-            --primary-light: #818CF8;
-            --primary-lighter: #C7D2FE;
-            --primary-lightest: #E0E7FF;
-            --primary-dark: #3730A3;
+            /* Minty Design Co - Mint Green Color Palette */
+            --primary: #10B981;           /* Mint Green */
+            --primary-light: #34D399;
+            --primary-lighter: #6EE7B7;
+            --primary-lightest: #D1FAE5;
+            --primary-dark: #059669;
 
             --secondary: #0891B2;          /* Cyan */
             --secondary-light: #22D3EE;
@@ -59,9 +59,9 @@ export function generateCSS() {
 
             /* Background Colors - Lighter & More Minimal */
             --bg-primary: #FFFFFF;
-            --bg-secondary: #F9FAFB;        /* Ultra-subtle light gray for cards */
-            --bg-tertiary: #FAFAFA;          /* Changed from #F4F4F5 to lighter gray */
-            --bg-accent: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+            --bg-secondary: #F9FDFB;        /* Ultra-subtle mint tint for cards */
+            --bg-tertiary: #F0FDF9;          /* Light mint tint */
+            --bg-accent: linear-gradient(135deg, #10B981 0%, #059669 100%);  /* Mint gradient */
 
             /* Text Colors */
             --text-primary: #18181B;
@@ -69,10 +69,10 @@ export function generateCSS() {
             --text-tertiary: #71717A;
             --text-inverse: #FFFFFF;
 
-            /* Border Colors */
-            --border-light: #E4E4E7;
-            --border-default: #D4D4D8;
-            --border-dark: #A1A1AA;
+            /* Border Colors - Mint-tinted */
+            --border-light: #E7F3EF;        /* Light mint-gray */
+            --border-default: #D1FAE5;      /* Subtle mint border */
+            --border-dark: #10B981;         /* Mint green for emphasis */
 
             /* Shadows - Ultra subtle for Notion style */
             --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.02);

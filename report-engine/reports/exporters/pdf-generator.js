@@ -11,7 +11,43 @@
  */
 
 import { chromium } from 'playwright';
-import { writeFile } from 'fs/promises';
+import { writeFile, stat, readFile } from 'fs/promises';
+import { existsSync } from 'fs';
+
+/**
+ * Validate that a PDF file is valid and not corrupted
+ * @param {string} pdfPath - Path to PDF file
+ * @returns {Promise<{valid: boolean, error?: string, size?: number}>}
+ */
+async function validatePDF(pdfPath) {
+  try {
+    // Check file exists
+    if (!existsSync(pdfPath)) {
+      return { valid: false, error: 'PDF file does not exist' };
+    }
+
+    // Check file size
+    const stats = await stat(pdfPath);
+    if (stats.size === 0) {
+      return { valid: false, error: 'PDF file is empty (0 bytes)', size: 0 };
+    }
+
+    // Check PDF magic bytes (should start with %PDF)
+    const buffer = await readFile(pdfPath);
+    const header = buffer.slice(0, 4).toString('utf-8');
+    if (!header.startsWith('%PDF')) {
+      return {
+        valid: false,
+        error: `Invalid PDF header: expected "%PDF", got "${header}"`,
+        size: stats.size
+      };
+    }
+
+    return { valid: true, size: stats.size };
+  } catch (error) {
+    return { valid: false, error: `PDF validation error: ${error.message}` };
+  }
+}
 
 /**
  * Generate PDF from HTML content using Playwright
@@ -43,10 +79,18 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
   try {
     console.log('🚀 Launching Chromium browser for PDF generation...');
 
-    browser = await chromium.launch({
-      headless: true,
-      timeout: 30000  // 30 second timeout for browser launch
-    });
+    try {
+      browser = await chromium.launch({
+        headless: true,
+        timeout: 30000  // 30 second timeout for browser launch
+      });
+    } catch (launchError) {
+      throw new Error(
+        `Failed to launch Chromium browser: ${launchError.message}. ` +
+        `This may be due to missing browser installation or insufficient system resources. ` +
+        `Try running: npx playwright install chromium`
+      );
+    }
 
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -63,17 +107,35 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
 
     // Wait for all images to be loaded (including base64)
     console.log('⏳ Waiting for all images to load...');
-    await page.evaluate(() => {
+    const imageLoadResults = await page.evaluate(() => {
       return Promise.all(
-        Array.from(document.images).map(img => {
-          if (img.complete) return Promise.resolve();
+        Array.from(document.images).map((img, index) => {
+          if (img.complete && img.naturalWidth > 0) {
+            return Promise.resolve({ index, loaded: true, width: img.naturalWidth, height: img.naturalHeight });
+          }
           return new Promise((resolve) => {
-            img.addEventListener('load', resolve);
-            img.addEventListener('error', resolve); // Resolve even on error to prevent hanging
+            img.addEventListener('load', () => {
+              resolve({ index, loaded: true, width: img.naturalWidth, height: img.naturalHeight });
+            });
+            img.addEventListener('error', () => {
+              resolve({ index, loaded: false, error: 'Failed to load image' });
+            });
+            // Timeout individual images after 10 seconds
+            setTimeout(() => {
+              resolve({ index, loaded: false, error: 'Image load timeout' });
+            }, 10000);
           });
         })
       );
     });
+
+    // Count and report failed images
+    const failedImages = imageLoadResults.filter(r => !r.loaded);
+    if (failedImages.length > 0) {
+      console.warn(`⚠️  ${failedImages.length}/${imageCount} images failed to load`);
+    } else {
+      console.log(`✅ All ${imageCount} images loaded successfully`);
+    }
 
     // Scroll through page to trigger any remaining lazy-loaded content
     console.log('📜 Scrolling through page to ensure all content loads...');
@@ -121,36 +183,38 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
       day: 'numeric'
     });
 
-    // Header template with branding
+    // Header template with Minty Design Co branding
     const headerTemplate = `
       <html>
         <head>
           <style>
+            body { margin: 0; padding: 0; }
             .pdf-header {
               width: 100%;
               font-size: 9pt;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
               color: #6B7280;
-              padding: 8px 24px;
-              border-bottom: 1px solid #E5E7EB;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
+              padding: 10px 24px;
+              border-bottom: 2px solid #10B981;
               -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .pdf-header-brand {
-              font-weight: 600;
-              color: #111827;
+              font-weight: 700;
+              color: #10B981;
+              font-size: 10pt;
+              float: left;
             }
             .pdf-header-type {
-              font-style: italic;
-              color: #9CA3AF;
+              font-weight: 500;
+              color: #6B7280;
+              float: right;
             }
           </style>
         </head>
         <body>
           <div class="pdf-header">
-            <span class="pdf-header-brand">MaxantAgency</span>
+            <span class="pdf-header-brand">Minty Design Co</span>
             <span class="pdf-header-type">Website Analysis Report</span>
           </div>
         </body>
@@ -162,34 +226,37 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
       <html>
         <head>
           <style>
+            body { margin: 0; padding: 0; }
             .pdf-footer {
               width: 100%;
               font-size: 8pt;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-              color: #9CA3AF;
-              padding: 8px 24px;
-              border-top: 1px solid #E5E7EB;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+              color: #6B7280;
+              padding: 10px 24px;
+              border-top: 2px solid #10B981;
               -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
             .pdf-footer-left {
-              text-align: left;
+              float: left;
             }
             .pdf-footer-right {
-              text-align: right;
+              float: right;
             }
             .pdf-footer-company {
-              font-weight: 500;
-              color: #6B7280;
+              font-weight: 600;
+              color: #18181B;
+            }
+            .pdf-footer-divider {
+              color: #10B981;
+              font-weight: 600;
             }
           </style>
         </head>
         <body>
           <div class="pdf-footer">
             <div class="pdf-footer-left">
-              <span class="pdf-footer-company">${companyName}</span> • Generated: ${dateString}
+              <span class="pdf-footer-company">${companyName}</span> <span class="pdf-footer-divider">•</span> Generated: ${dateString}
             </div>
             <div class="pdf-footer-right">
               Page <span class="pageNumber"></span> of <span class="totalPages"></span>
@@ -216,7 +283,10 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
     await Promise.race([
       pdfPromise,
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('PDF generation timeout after 60s')), 60000)
+        setTimeout(() => reject(new Error(
+          `PDF generation timeout after 60 seconds. ` +
+          `Report may be too large or complex. Consider reducing image sizes or page count.`
+        )), 60000)
       )
     ]);
 
@@ -224,7 +294,23 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
 
     await browser.close();
 
+    // Validate PDF file was created correctly
+    console.log('🔍 Validating generated PDF...');
+    const validation = await validatePDF(outputPath);
+
+    if (!validation.valid) {
+      console.error(`❌ PDF validation failed: ${validation.error}`);
+      return {
+        success: false,
+        method: 'playwright',
+        path: outputPath,
+        message: `PDF generation appeared successful but validation failed: ${validation.error}`,
+        error: validation.error
+      };
+    }
+
     console.log(`✅ PDF generated successfully: ${outputPath}`);
+    console.log(`📄 File size: ${(validation.size / 1024 / 1024).toFixed(2)} MB`);
     console.log(`⏱️  Generation time: ${generationTime}ms`);
 
     return {
@@ -238,7 +324,7 @@ export async function generatePDFFromContent(htmlContent, outputPath, options = 
         companyName,
         generationTime,
         generatedAt: now.toISOString(),
-        fileSize: null  // Could add fs.stat to get file size
+        fileSize: validation.size
       },
       message: `PDF generated successfully in ${generationTime}ms`
     };

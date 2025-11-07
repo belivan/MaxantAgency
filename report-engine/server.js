@@ -227,6 +227,8 @@ app.post('/api/generate-from-lead', async (req, res) => {
           // Screenshot data for visual comparison
           desktop_screenshot_url: benchmark.desktop_screenshot_url,
           mobile_screenshot_url: benchmark.mobile_screenshot_url,
+          screenshot_desktop_url: benchmark.desktop_screenshot_url,  // Alternative naming for report compatibility
+          screenshot_mobile_url: benchmark.mobile_screenshot_url,    // Alternative naming for report compatibility
           screenshots_manifest: benchmark.screenshots_manifest,
 
           // Create scores object that report sections expect
@@ -299,6 +301,8 @@ app.post('/api/generate-from-lead', async (req, res) => {
       screenshot_mobile: lead.screenshot_mobile,
       screenshot_desktop_path: lead.screenshot_desktop_path || lead.screenshot_desktop_url,
       screenshot_mobile_path: lead.screenshot_mobile_path || lead.screenshot_mobile_url,
+      screenshot_desktop_url: lead.screenshot_desktop_url,  // Supabase Storage URLs
+      screenshot_mobile_url: lead.screenshot_mobile_url,    // Supabase Storage URLs
       screenshots_manifest: lead.screenshots_manifest,
 
       // Raw analyzer outputs

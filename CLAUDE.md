@@ -612,6 +612,77 @@ The Analysis Engine has evolved to use "unified" analyzers that combine multiple
 - `analyzers/seo-analyzer.js`
 - `analyzers/content-analyzer.js`
 
+### 12. Issue Deduplication System (Analysis Engine)
+
+The Analysis Engine includes an AI-powered deduplication system that identifies and merges duplicate issues across all analyzers.
+
+**Location**: `analysis-engine/services/issue-deduplication-service.js`
+
+**How It Works**:
+- Uses AI (GPT-5-mini) to identify semantic duplicates
+- Merges issues that describe the same underlying problem from different perspectives
+- Preserves ALL metadata including screenshot references
+- Runs BEFORE top issues selection to ensure clean issue pool
+
+**Configuration**:
+```env
+ENABLE_ISSUE_DEDUPLICATION=false     # Default off for backward compatibility
+DEDUPLICATION_MODEL=gpt-5-mini       # Can use different model if needed
+```
+
+**Cost**: ~$0.036 per analysis | **Reduction**: 40-60% fewer issues
+
+**Preservation Rules**:
+- Keeps most specific/quantified title
+- Merges descriptions from all perspectives
+- Preserves ALL screenshot references and metadata
+- Uses highest severity/priority from merged issues
+
+### 13. Top Issues Selection System (Analysis Engine)
+
+The Analysis Engine includes an AI-powered system to select the most compelling issues for cold outreach.
+
+**Location**: `analysis-engine/services/top-issues-selector.js`
+
+**How It Works**:
+
+```
+All Issues (20-40) → [Optional: AI Dedup] → Severity Filter → AI Selection → Post-Dedup → Top N Issues
+                     (if enabled)            (critical, high)   (GPT-5-mini)   (similarity)  (default: 5)
+```
+
+**Selection Criteria**:
+1. **Business Impact**: Issues affecting revenue, conversions, or customer trust
+2. **Outreach Appeal**: Issues that make compelling email hooks
+3. **Credibility**: Issues backed by data/screenshots
+4. **Quick Win Balance**: Mix of easy fixes and major improvements
+5. **Non-Technical Language**: Business owner-friendly descriptions
+
+**Deduplication**:
+- AI prompt includes explicit instructions to avoid duplicates
+- Post-processing uses Levenshtein distance (70% similarity threshold)
+- Prefers quantified versions: "280 of 856 images missing alt text (33%)" over "Many images missing alt text"
+- Automatically selects more specific/actionable versions
+
+**Configuration**:
+```env
+TOP_ISSUES_LIMIT=5                        # Number of issues to select (default: 5)
+TOP_ISSUES_SEVERITY_FILTER=critical,high  # Severities to include (default: critical,high)
+```
+
+**Cost**: ~$0.0015 per analysis (GPT-5-mini)
+
+**Integration**: Called by `services/results-aggregator.js` after all analyzers complete, before grading
+
+**Output**: Stored in `leads.top_issues` (JSONB array) with metadata:
+- `top_issues_summary`: Comma-separated titles
+- `top_issues_selection_strategy`: AI's selection approach
+- `top_issues_selection_cost`: API call cost
+- `total_issues_count`: Total issues before filtering
+- `high_critical_issues_count`: Issues after severity filter
+
+**Fallback**: If AI fails, uses rule-based sorting by severity + priority with deduplication
+
 ## Environment Variables
 
 All engines use environment variables for configuration. Create a `.env` file in each engine's root directory (or use a shared `.env` at the project root).
@@ -651,6 +722,15 @@ USE_AI_SYNTHESIS=true                # Enable AI-powered report synthesis
 # Multi-Page Crawling (Analysis Engine)
 ENABLE_MULTI_PAGE_CRAWL=true         # Enable multi-page website crawling
 MAX_PAGES_TO_CRAWL=5                 # Limit pages per site
+
+# Top Issues Selection (Analysis Engine)
+TOP_ISSUES_LIMIT=5                   # Number of top issues to select for outreach (default: 5)
+TOP_ISSUES_SEVERITY_FILTER=critical,high  # Severity levels to include (default: critical,high)
+                                          # Options: critical, high, medium, low (comma-separated)
+
+# Issue Deduplication (Analysis Engine)
+ENABLE_ISSUE_DEDUPLICATION=false     # Enable AI deduplication before top issues selection (default: false)
+DEDUPLICATION_MODEL=gpt-5-mini       # AI model for deduplication (default: gpt-5-mini)
 
 # Individual Analyzer Toggles (Analysis Engine)
 ENABLE_DESKTOP_VISUAL_ANALYZER=true

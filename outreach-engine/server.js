@@ -24,6 +24,11 @@ import { batchGenerateConsolidated } from './batch-generate-consolidated.js';
 import { validateEmail } from './validators/email-validator.js';
 import { validateSocialDM } from './validators/social-validator.js';
 
+// Database functions
+import {
+  getSocialMessages
+} from './database/supabase-client.js';
+
 // Integrations
 import {
   getRegularLeads,
@@ -373,6 +378,71 @@ app.post('/api/compose-social', async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+});
+
+/**
+ * POST /api/compose-social-batch - Compose social DMs for multiple leads
+ * Body: { lead_ids, options: { platform, strategy }, project_id? }
+ * Returns: Server-Sent Events
+ *
+ * NOTE: This uses the consolidated generation system which generates ALL variations
+ * (3 email + 9 social) and stores them in the composed_outreach table.
+ */
+app.post('/api/compose-social-batch', async (req, res) => {
+  try {
+    const {
+      lead_ids,
+      options = {},
+      project_id = null
+    } = req.body;
+
+    if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'lead_ids array is required'
+      });
+    }
+
+    console.log(`\n📦 Starting batch social DM composition (consolidated)...`);
+    console.log(`   Leads: ${lead_ids.length}`);
+    console.log(`   Project: ${project_id || 'none'}`);
+    console.log(`   NOTE: Generating ALL 12 variations per lead (3 email + 9 social)`);
+
+    // Set up SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Progress callback for streaming updates
+    const progressCallback = (data) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    // Use the consolidated batch generator which generates ALL variations
+    const stats = await batchGenerateConsolidated({
+      leadIds: lead_ids,
+      projectId: project_id,
+      progressCallback,
+      forceRegenerate: options.force_regenerate || false
+    });
+
+    // Send final success event
+    res.write(`data: ${JSON.stringify({
+      type: 'complete',
+      stats,
+      message: 'All variations generated successfully (including social DMs)'
+    })}\n\n`);
+
+    res.end();
+
+  } catch (error) {
+    console.error('Error in batch social composition:', error);
+    res.write(`data: ${JSON.stringify({
+      type: 'fatal_error',
+      error: error.message
+    })}\n\n`);
+    res.end();
   }
 });
 
@@ -820,6 +890,52 @@ app.get('/api/emails', async (req, res) => {
 });
 
 /**
+ * GET /api/social-messages - Get social messages with filters
+ */
+app.get('/api/social-messages', async (req, res) => {
+  try {
+    const {
+      platform,
+      status,
+      strategy,
+      min_quality_score,
+      project_id,
+      sort_by,
+      sort_order,
+      limit = '50',
+      offset = '0'
+    } = req.query;
+
+    // Build filters object
+    const filters = {
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    };
+
+    if (platform) filters.platform = platform;
+    if (status) filters.status = status;
+    if (strategy) filters.strategy = strategy;
+    if (min_quality_score) filters.minQuality = parseInt(min_quality_score);
+    if (project_id) filters.projectId = project_id;
+
+    // Get social messages
+    const messages = await getSocialMessages(filters);
+
+    res.json({
+      success: true,
+      count: messages.length,
+      messages: messages || []
+    });
+  } catch (error) {
+    console.error('Error fetching social messages:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+/**
  * POST /api/sync-from-notion - Sync status changes from Notion
  * Auto-sends emails marked "Approved"
  */
@@ -977,6 +1093,7 @@ app.listen(PORT, () => {
   console.log(`   POST   /api/compose`);
   console.log(`   POST   /api/compose-social`);
   console.log(`   POST   /api/compose-batch`);
+  console.log(`   POST   /api/compose-social-batch (SSE)`);
   console.log(`   POST   /api/compose-all-variations (SSE)`);
   console.log(`   POST   /api/send-email`);
   console.log(`   POST   /api/send-batch`);
@@ -984,6 +1101,7 @@ app.listen(PORT, () => {
   console.log(`   GET    /api/strategies`);
   console.log(`   GET    /api/leads/ready`);
   console.log(`   GET    /api/emails`);
+  console.log(`   GET    /api/social-messages`);
   console.log(`   GET    /api/stats`);
   console.log(`   GET    /health`);
   console.log(`\n💡 Tip: Use http://localhost:${PORT}/health to check status\n`);

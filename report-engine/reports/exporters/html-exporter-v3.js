@@ -37,6 +37,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 /**
+ * Check if a URL is absolute (starts with http:// or https://)
+ * @param {string} url - URL to check
+ * @returns {boolean} True if URL is absolute
+ */
+function isAbsoluteUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
+/**
  * Process screenshots for embedding in report
  * NEW: Loads from screenshots_manifest (Supabase Storage URLs)
  * Fetches images and converts to base64 dataURIs
@@ -184,11 +194,11 @@ async function processScreenshots(analysisResult, registry) {
     console.log('  - desktop_screenshot_url:', benchmark.desktop_screenshot_url ? 'EXISTS' : 'NULL');
     console.log('  - mobile_screenshot_url:', benchmark.mobile_screenshot_url ? 'EXISTS' : 'NULL');
 
-    // Desktop screenshot - try URL first, then fall back to local path
+    // Desktop screenshot - try URL first (if absolute HTTP URL), then fall back to local path
     let desktopLoaded = false;
 
-    // Try URL format (most common)
-    if (benchmark.desktop_screenshot_url) {
+    // Try URL format (only if it's an absolute HTTP/HTTPS URL)
+    if (benchmark.desktop_screenshot_url && isAbsoluteUrl(benchmark.desktop_screenshot_url)) {
       console.log('  → Fetching desktop screenshot from URL...');
       try {
         const response = await fetch(benchmark.desktop_screenshot_url);
@@ -227,11 +237,11 @@ async function processScreenshots(analysisResult, registry) {
       }
     }
 
-    // Mobile screenshot - try URL first, then fall back to local path
+    // Mobile screenshot - try URL first (if absolute HTTP URL), then fall back to local path
     let mobileLoaded = false;
 
-    // Try URL format (most common)
-    if (benchmark.mobile_screenshot_url) {
+    // Try URL format (only if it's an absolute HTTP/HTTPS URL)
+    if (benchmark.mobile_screenshot_url && isAbsoluteUrl(benchmark.mobile_screenshot_url)) {
       console.log('  → Fetching mobile screenshot from URL...');
       try {
         const response = await fetch(benchmark.mobile_screenshot_url);

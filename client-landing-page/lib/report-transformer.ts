@@ -23,6 +23,8 @@ interface DatabaseLead {
   quick_wins?: any[]
   analysis_summary?: string
   top_issue?: string
+  screenshot_desktop_url?: string
+  screenshot_mobile_url?: string
 }
 
 /**
@@ -180,7 +182,9 @@ export function transformDatabaseReport(report: DatabaseReport): MockReport {
     top_priority: generateTopPriority(report, lead),
     top_issues: extractStringArray(lead?.top_issues, 'issue').slice(0, 5),
     quick_wins: extractStringArray(lead?.quick_wins, 'title'),
-    analyzed_at: report.generated_at
+    analyzed_at: report.generated_at,
+    screenshot_desktop_url: lead?.screenshot_desktop_url,
+    screenshot_mobile_url: lead?.screenshot_mobile_url
   }
 }
 

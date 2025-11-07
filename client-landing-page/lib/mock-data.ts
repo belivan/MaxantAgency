@@ -13,6 +13,8 @@ export interface MockReport {
   top_issues: string[];
   quick_wins: string[];
   analyzed_at: string;
+  screenshot_desktop_url?: string;
+  screenshot_mobile_url?: string;
 }
 
 export const mockReports: MockReport[] = [

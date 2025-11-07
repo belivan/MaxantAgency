@@ -147,6 +147,21 @@ export function DownloadGateModal({
 
       // Store leadId for Calendly integration
       setLeadId(data.leadId)
+
+      // Mark report as requested (for email delivery tracking)
+      if (data.leadId) {
+        try {
+          await fetch('/api/mark-report-requested', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ leadId: data.leadId })
+          })
+        } catch (error) {
+          console.error('Failed to mark report as requested:', error)
+          // Non-critical error, continue with success flow
+        }
+      }
+
       setIsSuccess(true)
 
       // After 1.5 seconds, show Calendly option
@@ -166,11 +181,9 @@ export function DownloadGateModal({
     }
   }
 
-  const handleDownload = () => {
-    // Trigger the download
-    onDownloadReady(leadId)
-
-    // Close modal after a short delay
+  const handleCalendlyScheduled = () => {
+    console.log('✅ Consultation scheduled!')
+    // Close modal after scheduling
     setTimeout(() => {
       onClose()
       // Reset form after modal closes
@@ -181,16 +194,6 @@ export function DownloadGateModal({
         setLeadId(undefined)
       }, 300)
     }, 500)
-  }
-
-  const handleSkipToDownload = () => {
-    handleDownload()
-  }
-
-  const handleCalendlyScheduled = () => {
-    console.log('✅ Consultation scheduled!')
-    // Still trigger download after scheduling
-    handleDownload()
   }
 
   return (
@@ -234,58 +237,44 @@ export function DownloadGateModal({
                   </div>
                   <h3 className="text-2xl font-bold">Thank You!</h3>
 
-                  {!showCalendlyOption ? (
-                    // Initial loading state
+                  <p className="text-lg text-muted-foreground mb-2">
+                    Your report request has been received!
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    We'll send the complete analysis to <strong>{formData.email}</strong> within 24 hours.
+                  </p>
+
+                  {showCalendlyOption && (
                     <>
-                      <p className="text-muted-foreground">
-                        Your report is ready...
-                      </p>
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Preparing download</span>
-                      </div>
-                    </>
-                  ) : (
-                    // Show download + Calendly options
-                    <>
-                      <p className="text-muted-foreground">
-                        Your report is ready to download!
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Want to discuss the findings? Schedule a free consultation.
-                      </p>
+                      <div className="border-t pt-6 mt-6">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Want to discuss your website's potential? Schedule a free consultation with our team.
+                        </p>
 
-                      <div className="flex flex-col gap-3 mt-6">
-                        {/* Primary: Download Report */}
-                        <Button
-                          size="lg"
-                          className="w-full"
-                          onClick={handleDownload}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download Report
-                        </Button>
+                        <div className="flex flex-col gap-3">
+                          {/* Primary: Schedule Consultation */}
+                          <CalendlyButton
+                            calendlyUrl={process.env.NEXT_PUBLIC_CALENDLY_URL || 'https://calendly.com/your-username/consultation'}
+                            leadName={formData.name}
+                            leadEmail={formData.email}
+                            leadId={leadId}
+                            variant="default"
+                            size="lg"
+                            buttonText="Schedule Free Consultation"
+                            className="w-full"
+                            onScheduled={handleCalendlyScheduled}
+                          />
 
-                        {/* Secondary: Schedule Consultation */}
-                        <CalendlyButton
-                          calendlyUrl={process.env.NEXT_PUBLIC_CALENDLY_URL || 'https://calendly.com/your-username/consultation'}
-                          leadName={formData.name}
-                          leadEmail={formData.email}
-                          leadId={leadId}
-                          variant="outline"
-                          size="lg"
-                          buttonText="Schedule Free Consultation"
-                          className="w-full"
-                          onScheduled={handleCalendlyScheduled}
-                        />
-
-                        {/* Skip link */}
-                        <button
-                          onClick={handleSkipToDownload}
-                          className="text-sm text-muted-foreground hover:text-foreground transition-colors underline"
-                        >
-                          Skip, just download the report
-                        </button>
+                          {/* Close button */}
+                          <Button
+                            variant="outline"
+                            size="lg"
+                            className="w-full"
+                            onClick={onClose}
+                          >
+                            Close
+                          </Button>
+                        </div>
                       </div>
                     </>
                   )}
@@ -295,13 +284,13 @@ export function DownloadGateModal({
                   {/* Header */}
                   <div className="text-center mb-6">
                     <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <Download className="w-8 h-8 text-primary" />
+                      <Mail className="w-8 h-8 text-primary" />
                     </div>
                     <h3 className="text-2xl font-bold mb-2">
-                      Download Your Full Report
+                      Request Your Full Report
                     </h3>
                     <p className="text-muted-foreground">
-                      Enter your details to get instant access to your complete website analysis
+                      Enter your details and we'll email you the complete analysis within 24 hours
                     </p>
                   </div>
 
@@ -392,19 +381,19 @@ export function DownloadGateModal({
                       {isSubmitting ? (
                         <>
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Processing...
+                          Submitting...
                         </>
                       ) : (
                         <>
-                          <Download className="mr-2 h-5 w-5" />
-                          Get My Free Report
+                          <Mail className="mr-2 h-5 w-5" />
+                          Request My Free Report
                         </>
                       )}
                     </Button>
 
                     {/* Privacy note */}
                     <p className="text-xs text-center text-muted-foreground">
-                      We respect your privacy. Your information will only be used to deliver your report
+                      We respect your privacy. Your information will only be used to email you the report
                       and provide relevant updates.
                     </p>
                   </form>

@@ -40,9 +40,9 @@ export function generateFooter(analysisResult, synthesisData = null, options = {
   html += '    <div class="report-footer">\n';
   html += '      <div class="container">\n';
   html += '        <div class="footer-content">\n';
-  html += '          <div class="footer-logo">MaxantAgency</div>\n';
+  html += '          <div class="footer-logo">Minty Design Co</div>\n';
   html += '          <p class="footer-text">\n';
-  html += '            Professional website analysis powered by AI-driven insights.\n';
+  html += '            AI-powered website analysis and design insights.\n';
   html += '          </p>\n';
   html += '        </div>\n';
   html += '      </div>\n';

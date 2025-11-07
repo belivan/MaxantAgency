@@ -24,6 +24,7 @@ import { calculateTotalCost } from '../analyzers/index.js';
 import { gradeWithAI } from '../grading/ai-grader.js';
 import { ValidationService } from './validation-service.js';
 import { selectTopIssues } from './top-issues-selector.js';
+import { deduplicateIssues } from './issue-deduplication-service.js';
 
 export class ResultsAggregator {
   constructor(options = {}) {
@@ -118,9 +119,10 @@ export class ResultsAggregator {
       console.log('[QA Validation] Skipped (ENABLE_QA_VALIDATION=false)');
     }
 
-    // PHASE 5.5: Select Top 5 Issues for Outreach (NEW)
-    this.onProgress({ step: 'selecting-top-issues', message: 'Selecting top 5 issues for outreach...' });
-    console.log('\n[Results Aggregator] Selecting top 5 issues for outreach...');
+    // PHASE 5.5: Select Top N Issues for Outreach (configurable via TOP_ISSUES_LIMIT)
+    const topIssuesLimit = parseInt(process.env.TOP_ISSUES_LIMIT || '5', 10);
+    this.onProgress({ step: 'selecting-top-issues', message: `Selecting top ${topIssuesLimit} issues for outreach...` });
+    console.log(`\n[Results Aggregator] Selecting top ${topIssuesLimit} issues for outreach...`);
 
     const allIssues = this.collectAllIssues(analysisResults);
     console.log(`[Results Aggregator]   Total issues collected: ${allIssues.length}`);
@@ -136,12 +138,35 @@ export class ResultsAggregator {
       (scores.social_score * 0.05)
     );
 
-    const topIssuesResult = await selectTopIssues(allIssues, {
+    // PHASE 5.5a: AI Deduplication (Optional - before top issues selection)
+    let issuesForSelection = allIssues;
+    let deduplicationResult = null;
+
+    if (process.env.ENABLE_ISSUE_DEDUPLICATION === 'true') {
+      this.onProgress({ step: 'deduplicating-issues', message: 'Deduplicating issues with AI...' });
+      console.log('\n[Results Aggregator] Running AI deduplication on all issues...');
+
+      deduplicationResult = await deduplicateIssues({
+        allIssues,
+        context,
+        grade: preliminaryGrade,
+        overall_score: preliminaryScore
+      });
+
+      issuesForSelection = deduplicationResult.consolidatedIssues;
+
+      console.log(`[Results Aggregator] ✅ Deduplication complete:`);
+      console.log(`[Results Aggregator]    Reduced: ${deduplicationResult.statistics.originalCount} → ${deduplicationResult.statistics.consolidatedCount} issues`);
+      console.log(`[Results Aggregator]    Reduction: ${deduplicationResult.statistics.reductionPercentage}%`);
+      console.log(`[Results Aggregator]    Cost: $${deduplicationResult.cost.toFixed(4)}`);
+    }
+
+    const topIssuesResult = await selectTopIssues(issuesForSelection, {
       company_name: context.company_name,
       industry: context.industry,
       grade: preliminaryGrade,
       overall_score: preliminaryScore
-    }, 5);
+    }, topIssuesLimit);
 
     console.log(`[Results Aggregator] ✅ Selected ${topIssuesResult.topIssues.length} top issues`);
     console.log(`[Results Aggregator]    Cost: $${topIssuesResult.cost.toFixed(4)}, Duration: ${topIssuesResult.duration}ms`);
@@ -397,9 +422,10 @@ export class ResultsAggregator {
     const gradingCost = gradeResults?._meta?.cost || leadScoringData?._metadata?.cost || 0;
     const validationCost = validationMetadata?.validation_cost || 0;
     const techStackCost = crawlData?.techStack?._meta?.cost || 0;
+    const deduplicationCost = deduplicationResult?.cost || 0;  // NEW: Deduplication cost
     const topIssuesCost = topIssuesResult?.cost || 0;  // NEW: Top issues selection cost
 
-    const analysisCost = analyzersCost + pageSelectionCost + gradingCost + validationCost + techStackCost + topIssuesCost;
+    const analysisCost = analyzersCost + pageSelectionCost + gradingCost + validationCost + techStackCost + deduplicationCost + topIssuesCost;
 
     // Cost breakdown for telemetry and database
     const costBreakdown = {
@@ -408,6 +434,7 @@ export class ResultsAggregator {
       grading: gradingCost,
       validation: validationCost,
       tech_stack: techStackCost,
+      issue_deduplication: deduplicationCost,  // NEW
       top_issues_selection: topIssuesCost,  // NEW
       total: analysisCost
     };
@@ -471,10 +498,14 @@ export class ResultsAggregator {
     }
 
     // Additional AI costs
-    if (pageSelectionCost > 0 || gradingCost > 0 || validationCost > 0 || techStackCost > 0 || topIssuesCost > 0) {
+    if (pageSelectionCost > 0 || gradingCost > 0 || validationCost > 0 || techStackCost > 0 || deduplicationCost > 0 || topIssuesCost > 0) {
       console.log('\nAdditional AI:');
       if (pageSelectionCost > 0) {
         console.log(`  Page Selector:   $${pageSelectionCost.toFixed(4)}`);
+      }
+      if (deduplicationCost > 0) {
+        const reduction = deduplicationResult?.statistics?.reductionPercentage || 0;
+        console.log(`  Issue Dedup:     $${deduplicationCost.toFixed(4)}  (${reduction}% reduction)`);
       }
       if (topIssuesCost > 0) {
         const topIssuesCount = topIssuesResult?.topIssues?.length || 0;
@@ -491,7 +522,7 @@ export class ResultsAggregator {
       if (techStackCost > 0) {
         console.log(`  Tech Detector:   $${techStackCost.toFixed(4)}`);
       }
-      console.log(`  Subtotal:        $${(pageSelectionCost + topIssuesCost + gradingCost + validationCost + techStackCost).toFixed(4)}`);
+      console.log(`  Subtotal:        $${(pageSelectionCost + deduplicationCost + topIssuesCost + gradingCost + validationCost + techStackCost).toFixed(4)}`);
     }
 
     console.log('\n' + '-'.repeat(56));
@@ -525,7 +556,8 @@ export class ResultsAggregator {
       benchmark,  // NEW: Pass benchmark data
       benchmarkMatchMetadata,  // NEW: Pass benchmark match metadata
       topIssuesResult,  // NEW: Pass top 5 issues selection result
-      allIssues  // NEW: Pass all collected issues for metrics
+      allIssues,  // NEW: Pass all collected issues for metrics
+      deduplicationResult  // NEW: Pass deduplication results
     });
   }
 
@@ -722,7 +754,8 @@ export class ResultsAggregator {
       benchmark,  // NEW: Benchmark data
       benchmarkMatchMetadata,  // NEW: Benchmark match metadata
       topIssuesResult,  // NEW: Top 5 issues selection result
-      allIssues  // NEW: All collected issues
+      allIssues,  // NEW: All collected issues
+      deduplicationResult  // NEW: Deduplication results
     } = data;
 
     // DIAGNOSTIC: Log gradeResults before returning
@@ -812,6 +845,12 @@ export class ResultsAggregator {
       // NEW: Pyramid Metrics (track issue volume)
       total_issues_count: allIssues?.length || 0,
       high_critical_issues_count: allIssues?.filter(i => i.severity === 'critical' || i.severity === 'high').length || 0,
+
+      // NEW: Issue Deduplication Metadata
+      issue_deduplication_enabled: process.env.ENABLE_ISSUE_DEDUPLICATION === 'true',
+      issue_deduplication_stats: deduplicationResult?.statistics || null,
+      issue_deduplication_cost: deduplicationResult?.cost || 0,
+      issue_deduplication_merge_log: deduplicationResult?.mergeLog || [],
 
       // Synthesis outputs
       consolidated_issues: synthesisResults.consolidatedIssues || [],

@@ -45,7 +45,7 @@ async function prepareScreenshotData(reportData) {
     benchmarkScreenshots: []
   };
 
-  // PRIORITY: Try local file paths first (faster, no network calls)
+  // PRIORITY 1: Try local file paths first (faster, no network calls)
   if (reportData.screenshot_desktop_path || reportData.screenshot_mobile_path) {
     console.log(`📸 Loading screenshots from local file paths`);
 
@@ -75,7 +75,33 @@ async function prepareScreenshotData(reportData) {
       }
     }
   }
-  // FALLBACK: Use screenshots_manifest with Supabase Storage URLs (legacy mode)
+  // PRIORITY 2: Try screenshot URLs (Supabase Storage)
+  else if (reportData.screenshot_desktop_url || reportData.screenshot_mobile_url) {
+    console.log(`📸 Loading screenshots from Supabase Storage URLs`);
+
+    if (reportData.screenshot_desktop_url) {
+      const dataUri = await fetchScreenshotAsDataUri(reportData.screenshot_desktop_url);
+      if (dataUri) {
+        screenshotData.screenshots.push({
+          page: '/',
+          device: 'desktop',
+          dataUri
+        });
+      }
+    }
+
+    if (reportData.screenshot_mobile_url) {
+      const dataUri = await fetchScreenshotAsDataUri(reportData.screenshot_mobile_url);
+      if (dataUri) {
+        screenshotData.screenshots.push({
+          page: '/',
+          device: 'mobile',
+          dataUri
+        });
+      }
+    }
+  }
+  // PRIORITY 3: Use screenshots_manifest with multiple pages (legacy mode)
   else if (reportData.screenshots_manifest && reportData.screenshots_manifest.pages) {
     console.log(`📸 Loading screenshots from manifest (${reportData.screenshots_manifest.total_screenshots} total) - legacy mode`);
 
@@ -141,7 +167,33 @@ async function prepareScreenshotData(reportData) {
         }
       }
     }
-    // FALLBACK: Use benchmark screenshots manifest (legacy mode)
+    // PRIORITY 2: Try screenshot URLs (Supabase Storage)
+    else if (benchmark.screenshot_desktop_url || benchmark.screenshot_mobile_url) {
+      console.log(`📸 Loading benchmark screenshots from Supabase Storage URLs`);
+
+      if (benchmark.screenshot_desktop_url) {
+        const dataUri = await fetchScreenshotAsDataUri(benchmark.screenshot_desktop_url);
+        if (dataUri) {
+          screenshotData.benchmarkScreenshots.push({
+            page: '/',
+            device: 'desktop',
+            dataUri
+          });
+        }
+      }
+
+      if (benchmark.screenshot_mobile_url) {
+        const dataUri = await fetchScreenshotAsDataUri(benchmark.screenshot_mobile_url);
+        if (dataUri) {
+          screenshotData.benchmarkScreenshots.push({
+            page: '/',
+            device: 'mobile',
+            dataUri
+          });
+        }
+      }
+    }
+    // PRIORITY 3: Use benchmark screenshots manifest (legacy mode)
     else if (benchmark.screenshots_manifest && benchmark.screenshots_manifest.pages) {
       console.log(`📸 Loading benchmark screenshots from manifest - legacy mode`);
 
@@ -384,13 +436,13 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     const localFilename = generateReportFilename(reportData, format);
     const localReportPath = join(reportsDir, localFilename);
 
-    // If format is HTML, generate full report only (PREVIEW generation disabled)
+    // If format is HTML, generate comprehensive report only
     let previewPath = null; // Kept for backward compatibility
     let fullPath = null;
     let fullPdfPath = null; // Track full PDF path for Supabase upload
 
     if (format === 'html') {
-      console.log('📊 Generating FULL HTML report (PREVIEW generation disabled)...');
+      console.log('📊 Generating comprehensive HTML report...');
 
       // Load screenshots as base64 dataURIs for embedding
       const screenshotData = await prepareScreenshotData(reportData);

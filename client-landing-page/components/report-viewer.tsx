@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Download, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Lock } from 'lucide-react'
+import { Download, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Lock, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DownloadGateModal } from '@/components/download-gate-modal'
@@ -74,7 +74,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
             <span className="text-primary font-semibold">{report.company_name}</span>
           </p>
 
-          {/* Prominent Download Button */}
+          {/* Prominent Request Button */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -85,11 +85,11 @@ export function ReportViewer({ report }: ReportViewerProps) {
               onClick={handleDownloadClick}
               className="text-lg shadow-lg hover:shadow-xl transition-shadow"
             >
-              <Download className="mr-2 h-5 w-5" />
-              Download Full Report (Free)
+              <Mail className="mr-2 h-5 w-5" />
+              Request Full Report (Free)
             </Button>
             <p className="text-sm text-muted-foreground mt-2">
-              Get complete analysis with detailed recommendations
+              We'll email you the complete analysis within 24 hours
             </p>
           </motion.div>
         </motion.div>
@@ -110,6 +110,61 @@ export function ReportViewer({ report }: ReportViewerProps) {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Homepage Screenshots - Desktop & Mobile Side by Side */}
+        {(report.screenshot_desktop_url || report.screenshot_mobile_url) && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28, duration: 0.6 }}
+          >
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl">Your Homepage</CardTitle>
+                <CardDescription>How your website looks across devices</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Desktop Screenshot */}
+                  {report.screenshot_desktop_url && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+                        <div className="w-2 h-2 rounded-full bg-primary"></div>
+                        Desktop View
+                      </div>
+                      <div className="relative rounded-lg overflow-hidden border border-border bg-muted h-[400px] md:h-[500px]">
+                        <img
+                          src={report.screenshot_desktop_url}
+                          alt={`${report.company_name} desktop homepage`}
+                          className="w-full h-full object-cover object-top"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Mobile Screenshot - Hidden on mobile devices */}
+                  {report.screenshot_mobile_url && (
+                    <div className="hidden md:block space-y-2">
+                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
+                        <div className="w-2 h-2 rounded-full bg-primary"></div>
+                        Mobile View
+                      </div>
+                      <div className="relative rounded-lg overflow-hidden border border-border bg-muted h-[500px] max-w-[300px] mx-auto">
+                        <img
+                          src={report.screenshot_mobile_url}
+                          alt={`${report.company_name} mobile homepage`}
+                          className="w-full h-full object-cover object-top"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Top Priority Alert */}
         <motion.div
@@ -319,7 +374,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
                       <div className="flex items-center gap-2">
                         <Lock className="w-4 h-4 text-green-600 dark:text-green-400" />
                         <span className="font-semibold text-sm text-green-900 dark:text-green-100">
-                          Full report includes detailed action plan and prioritized roadmap
+                          Request the full report for detailed action plan and prioritized roadmap
                         </span>
                       </div>
                     </div>
@@ -330,7 +385,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
           </Card>
         </motion.div>
 
-        {/* Download Full Report CTA */}
+        {/* Request Full Report CTA */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -338,17 +393,17 @@ export function ReportViewer({ report }: ReportViewerProps) {
           className="text-center space-y-6"
         >
           <Card className="p-8 shadow-xl border-2 border-primary/20">
-            <Download className="w-16 h-16 mx-auto mb-4 text-primary" />
+            <Mail className="w-16 h-16 mx-auto mb-4 text-primary" />
             <h4 className="text-2xl font-bold mb-2">Ready for the Full Analysis?</h4>
             <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto">
-              The complete report includes detailed analysis, visual screenshots,
-              competitive benchmarks, and a step-by-step action plan to transform your website.
+              Request the complete report with detailed analysis, visual screenshots,
+              competitive benchmarks, and a step-by-step action plan. Delivered to your inbox within 24 hours.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button size="xl" onClick={handleDownloadClick} className="text-lg">
-                <Download className="mr-2 h-5 w-5" />
-                Download Full Report (Free)
+                <Mail className="mr-2 h-5 w-5" />
+                Request Full Report (Free)
               </Button>
               <Button size="xl" variant="outline" onClick={scrollToCTA} className="text-lg">
                 Schedule a Consultation
@@ -357,7 +412,7 @@ export function ReportViewer({ report }: ReportViewerProps) {
 
             <div className="mt-6 pt-6 border-t">
               <p className="text-sm text-muted-foreground">
-                ✓ Complete analysis • ✓ Visual evidence • ✓ Action plan • ✓ 100% Free
+                ✓ Complete analysis • ✓ Visual evidence • ✓ Action plan • ✓ 100% Free • ✓ Email delivery
               </p>
             </div>
           </Card>

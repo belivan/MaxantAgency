@@ -20,6 +20,7 @@ export interface InboundLead {
   report_id: string
   source?: string
   download_completed?: boolean
+  report_requested?: boolean
   calendly_scheduled?: boolean
   calendly_event_id?: string
   consultation_scheduled_at?: string
@@ -61,6 +62,23 @@ export async function markDownloadComplete(leadId: string) {
 
   if (error) {
     console.error('Error updating download status:', error)
+    throw error
+  }
+
+  return data
+}
+
+// Mark report as requested (for email delivery)
+export async function markReportRequested(leadId: string) {
+  const { data, error } = await supabase
+    .from('inbound_leads')
+    .update({ report_requested: true, updated_at: new Date().toISOString() })
+    .eq('id', leadId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating report requested status:', error)
     throw error
   }
 
@@ -130,7 +148,9 @@ export async function getReportWithLead(reportId: string) {
         top_issues,
         quick_wins,
         analysis_summary,
-        top_issue
+        top_issue,
+        screenshot_desktop_url,
+        screenshot_mobile_url
       )
     `)
     .eq('id', reportId)
@@ -168,7 +188,9 @@ export async function findReportByCompanyName(companyName: string) {
         top_issues,
         quick_wins,
         analysis_summary,
-        top_issue
+        top_issue,
+        screenshot_desktop_url,
+        screenshot_mobile_url
       )
     `)
     .ilike('company_name', `%${companyName}%`)

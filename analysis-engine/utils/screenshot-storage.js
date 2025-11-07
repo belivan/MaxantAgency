@@ -203,6 +203,45 @@ export async function uploadScreenshotToSupabase(screenshotBuffer, leadId, pageU
 }
 
 /**
+ * Check if a URL is absolute (starts with http:// or https://)
+ * @param {string} url - URL to check
+ * @returns {boolean} True if URL is absolute
+ */
+export function isAbsoluteUrl(url) {
+  if (!url || typeof url !== 'string') return false;
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
+/**
+ * Convert storage path to absolute Supabase URL
+ * If already absolute, returns as-is
+ * @param {string} pathOrUrl - Storage path or URL
+ * @param {string} bucket - Storage bucket name (default: 'screenshots')
+ * @returns {string|null} Absolute URL or null if invalid
+ */
+export function ensureAbsoluteUrl(pathOrUrl, bucket = 'screenshots') {
+  if (!pathOrUrl || typeof pathOrUrl !== 'string') return null;
+
+  // Already absolute - return as-is
+  if (isAbsoluteUrl(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  // Convert storage path to absolute URL
+  const supabaseUrl = process.env.SUPABASE_URL;
+  if (!supabaseUrl) {
+    console.warn('[Screenshot Storage] Cannot convert storage path to URL: SUPABASE_URL not set');
+    return null;
+  }
+
+  // Remove leading slash if present
+  const cleanPath = pathOrUrl.startsWith('/') ? pathOrUrl.substring(1) : pathOrUrl;
+
+  // Build absolute URL
+  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+}
+
+/**
  * Sleep utility for rate limiting
  */
 function sleep(ms) {
