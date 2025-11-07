@@ -493,6 +493,144 @@ async function withTimeout(promise, timeoutMs, operationName = 'Operation') {
   ]);
 }
 
+/**
+ * Generate simulated AI responses for testing without real API calls
+ * Returns realistic mock data based on prompt context
+ */
+function generateSimulatedResponse(model, systemPrompt, userPrompt, jsonMode, hasImages) {
+  const provider = getProvider(model);
+
+  // Simulate processing delay
+  const mockDelay = Math.random() * 100 + 50; // 50-150ms
+
+  // Generate mock usage stats
+  const promptLength = (systemPrompt?.length || 0) + (userPrompt?.length || 0);
+  const mockPromptTokens = Math.ceil(promptLength / 4);
+  const mockCompletionTokens = jsonMode ? Math.floor(Math.random() * 1000) + 500 : Math.floor(Math.random() * 500) + 200;
+
+  // Calculate mock cost
+  const costPer1kTokens = {
+    'openai': { input: 0.01, output: 0.03 },
+    'anthropic': { input: 0.008, output: 0.024 },
+    'xai': { input: 0.005, output: 0.015 }
+  };
+  const rates = costPer1kTokens[provider] || costPer1kTokens['openai'];
+  const mockCost = (mockPromptTokens / 1000 * rates.input) + (mockCompletionTokens / 1000 * rates.output);
+
+  let mockContent;
+
+  if (jsonMode) {
+    // Detect what type of analysis this is based on prompt keywords
+    const promptText = (systemPrompt + ' ' + userPrompt).toLowerCase();
+
+    if (promptText.includes('design') || promptText.includes('visual') || hasImages) {
+      // Visual/Design analysis
+      mockContent = JSON.stringify({
+        overallDesignScore: Math.floor(Math.random() * 30) + 60, // 60-90
+        designIssues: [
+          { issue: "Hero section lacks visual hierarchy", severity: "medium", page: "Homepage" },
+          { issue: "CTA buttons could be more prominent", severity: "low", page: "Homepage" },
+          { issue: "Color contrast needs improvement", severity: "high", page: "Multiple pages" }
+        ],
+        positives: [
+          "Clean, modern layout",
+          "Good use of whitespace",
+          "Consistent branding"
+        ],
+        quickWins: [
+          "Increase CTA button size",
+          "Add hover effects to links",
+          "Improve image loading speed"
+        ],
+        quickWinCount: 3
+      });
+    } else if (promptText.includes('seo') || promptText.includes('technical')) {
+      // SEO/Technical analysis
+      mockContent = JSON.stringify({
+        overallSeoScore: Math.floor(Math.random() * 30) + 65, // 65-95
+        seoIssues: [
+          { issue: "Missing meta descriptions", severity: "high", page: "Multiple pages" },
+          { issue: "Slow page load time", severity: "medium", page: "Homepage" },
+          { issue: "No structured data markup", severity: "low", page: "All pages" }
+        ],
+        positives: [
+          "Mobile-responsive design",
+          "HTTPS enabled",
+          "Clean URL structure"
+        ],
+        quickWins: [
+          "Add meta descriptions to key pages",
+          "Optimize image compression",
+          "Implement basic schema markup"
+        ],
+        quickWinCount: 3
+      });
+    } else if (promptText.includes('content')) {
+      // Content analysis
+      mockContent = JSON.stringify({
+        overallContentScore: Math.floor(Math.random() * 25) + 70, // 70-95
+        contentIssues: [
+          { issue: "About page lacks compelling story", severity: "medium", page: "About" },
+          { issue: "Service descriptions too technical", severity: "low", page: "Services" },
+          { issue: "No clear value proposition on homepage", severity: "high", page: "Homepage" }
+        ],
+        positives: [
+          "Clear service offerings",
+          "Professional tone",
+          "Good testimonials"
+        ],
+        quickWins: [
+          "Add customer success stories",
+          "Simplify service descriptions",
+          "Create FAQ section"
+        ],
+        quickWinCount: 3
+      });
+    } else if (promptText.includes('email') || promptText.includes('outreach')) {
+      // Email/Outreach composition
+      mockContent = JSON.stringify({
+        subject: "Quick wins to improve your website performance",
+        body: "Hi [Name],\n\nI noticed your website at [URL] and was impressed by [positive aspect]. However, I spotted a few quick improvements that could boost your results:\n\n• [Issue 1]\n• [Issue 2]\n• [Issue 3]\n\nThese changes typically take less than a day to implement but can significantly impact conversions.\n\nWould you be interested in a brief call to discuss?\n\nBest,\n[Your name]",
+        tone: "professional yet friendly",
+        strategy: "value-first approach"
+      });
+    } else {
+      // Generic analysis
+      mockContent = JSON.stringify({
+        overallScore: Math.floor(Math.random() * 30) + 65, // 65-95
+        issues: [
+          { issue: "Generic issue 1", severity: "medium" },
+          { issue: "Generic issue 2", severity: "low" }
+        ],
+        positives: [
+          "Good foundation",
+          "Professional appearance"
+        ],
+        recommendations: [
+          "Recommendation 1",
+          "Recommendation 2"
+        ]
+      });
+    }
+  } else {
+    // Non-JSON mode - return text
+    mockContent = "This is a simulated AI response for testing purposes. In production, this would contain detailed analysis based on the provided prompts.";
+  }
+
+  return {
+    content: mockContent,
+    usage: {
+      prompt_tokens: mockPromptTokens,
+      completion_tokens: mockCompletionTokens,
+      total_tokens: mockPromptTokens + mockCompletionTokens
+    },
+    cost: mockCost,
+    provider: provider,
+    model: model,
+    simulated: true
+  };
+}
+
 export async function callAI({
   model,
   systemPrompt,
@@ -546,6 +684,13 @@ export async function callAI({
   }
 
   const hasImages = normalizedImages && normalizedImages.length > 0;
+
+  // 🎭 SIMULATION MODE: Return mock responses without calling real APIs
+  if (process.env.SIMULATE_AI_CALLS === 'true') {
+    const simulatedResponse = generateSimulatedResponse(model, systemPrompt, userPrompt, jsonMode, hasImages);
+    console.log(`[AI Client] 🎭 SIMULATION MODE: Returning mock response for ${model}`);
+    return simulatedResponse;
+  }
 
   // maxTokens check removed - let models use their full capacity
   // If not explicitly provided, will be set per-provider later
