@@ -13,7 +13,7 @@
 
 import { analyzeWebsiteIntelligent } from '../orchestrator-refactored.js';
 import { saveBenchmark, getBenchmarkByUrl, updateBenchmark } from '../database/supabase-client.js';
-import { loadPrompt } from '../shared/prompt-loader.js';
+import { loadPrompt, substituteVariables } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 
 /**
@@ -239,14 +239,19 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 1. Visual Strengths (Design/UI)
     console.log(`   - Running visual-strengths-extractor...`);
-    const visualPrompt = await loadPrompt('benchmarking/visual-strengths-extractor', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      google_rating: benchmarkData.google_rating || 'N/A',
-      google_review_count: benchmarkData.google_review_count || 'N/A',
-      awards: benchmarkData.awards || []
-    });
+    const visualPrompt = await loadPrompt('benchmarking/visual-strengths-extractor');
+
+    const visualUserPrompt = await substituteVariables(
+      visualPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        google_rating: benchmarkData.google_rating || 'N/A',
+        google_review_count: benchmarkData.google_review_count || 'N/A',
+        awards: benchmarkData.awards || []
+      }
+    );
 
     // FIX #1: Use screenshot Buffers from crawlPages if available (avoids re-fetch + re-compression)
     // Fall back to URLs only if Buffers not available (backward compatibility)
@@ -269,7 +274,7 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
       model: visualPrompt.model,
       temperature: visualPrompt.temperature,
       systemPrompt: visualPrompt.systemPrompt,
-      userPrompt: visualPrompt.userPrompt,
+      userPrompt: visualUserPrompt,
       images: screenshotImages,
       jsonMode: true,
       caller: 'benchmark-visual-strengths-phase-2'  // FIX #6: Track caller for redundancy detection
@@ -295,23 +300,28 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
     const sitemapUrls = analysisResult.discoveredPages?.slice(0, 20).map(p => p.url).join('\n') ||
                         'Sitemap data not available';
 
-    const technicalPrompt = await loadPrompt('benchmarking/technical-strengths-extractor', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      google_rating: benchmarkData.google_rating,
-      google_review_count: benchmarkData.google_review_count,
-      html_content: homepageHtml.substring(0, 15000), // Limit to 15k chars to avoid token limits
-      meta_title: analysisResult.page_title || '',
-      meta_description: analysisResult.meta_description || '',
-      sitemap_urls: sitemapUrls
-    });
+    const technicalPrompt = await loadPrompt('benchmarking/technical-strengths-extractor');
+
+    const technicalUserPrompt = await substituteVariables(
+      technicalPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        google_rating: benchmarkData.google_rating,
+        google_review_count: benchmarkData.google_review_count,
+        html_content: homepageHtml.substring(0, 15000), // Limit to 15k chars to avoid token limits
+        meta_title: analysisResult.page_title || '',
+        meta_description: analysisResult.meta_description || '',
+        sitemap_urls: sitemapUrls
+      }
+    );
 
     const technicalResult = await callAI({
       model: technicalPrompt.model,
       temperature: technicalPrompt.temperature,
       systemPrompt: technicalPrompt.systemPrompt,
-      userPrompt: technicalPrompt.userPrompt,
+      userPrompt: technicalUserPrompt,
       jsonMode: true
     });
 
@@ -338,21 +348,26 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
                         JSON.stringify(analysisResult.social_profiles, null, 2) :
                         'No social links found';
 
-    const socialPrompt = await loadPrompt('benchmarking/social-strengths-extractor', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      google_rating: benchmarkData.google_rating,
-      google_review_count: benchmarkData.google_review_count,
-      html_content: homepageHtml.substring(0, 10000), // Limit to 10k chars
-      social_links: socialLinks
-    });
+    const socialPrompt = await loadPrompt('benchmarking/social-strengths-extractor');
+
+    const socialUserPrompt = await substituteVariables(
+      socialPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        google_rating: benchmarkData.google_rating,
+        google_review_count: benchmarkData.google_review_count,
+        html_content: homepageHtml.substring(0, 10000), // Limit to 10k chars
+        social_links: socialLinks
+      }
+    );
 
     const socialResult = await callAI({
       model: socialPrompt.model,
       temperature: socialPrompt.temperature,
       systemPrompt: socialPrompt.systemPrompt,
-      userPrompt: socialPrompt.userPrompt,
+      userPrompt: socialUserPrompt,
       jsonMode: true
     });
 
@@ -382,20 +397,25 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
                         analysisResult.crawlPages[0].designTokens.desktop.colors.slice(0, 10).join(', ') :
                         'Color palette not extracted';
 
-    const accessibilityPrompt = await loadPrompt('benchmarking/accessibility-strengths-extractor', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      html_content: homepageHtml.substring(0, 10000), // Limit to 10k chars
-      aria_attributes: ariaAttributes,
-      color_palette: colorPalette
-    });
+    const accessibilityPrompt = await loadPrompt('benchmarking/accessibility-strengths-extractor');
+
+    const accessibilityUserPrompt = await substituteVariables(
+      accessibilityPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        html_content: homepageHtml.substring(0, 10000), // Limit to 10k chars
+        aria_attributes: ariaAttributes,
+        color_palette: colorPalette
+      }
+    );
 
     const accessibilityResult = await callAI({
       model: accessibilityPrompt.model,
       temperature: accessibilityPrompt.temperature,
       systemPrompt: accessibilityPrompt.systemPrompt,
-      userPrompt: accessibilityPrompt.userPrompt,
+      userPrompt: accessibilityUserPrompt,
       jsonMode: true
     });
 

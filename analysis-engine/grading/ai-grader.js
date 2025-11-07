@@ -11,7 +11,7 @@
  * Also performs lead scoring in the same AI call for efficiency.
  */
 
-import { loadPrompt } from '../shared/prompt-loader.js';
+import { loadPrompt, substituteVariables } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 import { findBestBenchmark } from '../services/benchmark-matcher.js';
 import { calculateGrade } from './grader.js';
@@ -101,13 +101,18 @@ export async function gradeWithAI(analysisResults, metadata) {
     // Step 3: Load prompt and call AI
     console.log(`  ├─ Calling AI grader (GPT-5)...`);
 
-    const promptConfig = await loadPrompt('grading/ai-comparative-grader', gradingData);
+    const promptConfig = await loadPrompt('grading/ai-comparative-grader');
+
+    const userPrompt = await substituteVariables(
+      promptConfig.userPromptTemplate,
+      gradingData
+    );
 
     const gradingResult = await callAI({
       model: promptConfig.model,
       temperature: promptConfig.temperature,
       systemPrompt: promptConfig.systemPrompt,
-      userPrompt: promptConfig.userPrompt,
+      userPrompt: userPrompt,
       responseFormat: 'json'
     });
 

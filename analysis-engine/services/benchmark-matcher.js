@@ -5,7 +5,7 @@
  * Considers company profile, business intelligence, and ICP criteria.
  */
 
-import { loadPrompt } from '../shared/prompt-loader.js';
+import { loadPrompt, substituteVariables } from '../shared/prompt-loader.js';
 import { getBenchmarksByIndustry, getBenchmarks } from '../database/supabase-client.js';
 import { callAI } from '../../database-tools/shared/ai-client.js';
 
@@ -95,13 +95,18 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
     // Step 3: Load prompt and call AI
     console.log(`  └─ Calling AI matcher (GPT-5 Mini)...`);
 
-    const promptConfig = await loadPrompt('benchmark-matching/find-best-comparison', matchingData);
+    const promptConfig = await loadPrompt('benchmark-matching/find-best-comparison');
+
+    const userPrompt = await substituteVariables(
+      promptConfig.userPromptTemplate,
+      matchingData
+    );
 
     const result = await callAI({
       model: promptConfig.model,
       temperature: promptConfig.temperature,
       systemPrompt: promptConfig.systemPrompt,
-      userPrompt: promptConfig.userPrompt,
+      userPrompt: userPrompt,
       responseFormat: 'json'
     });
 

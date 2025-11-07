@@ -186,7 +186,11 @@ export default function ProspectingPage() {
     const options = {
       model: config.model,
       verify: config.verify,
-      projectId: selectedProjectId
+      projectId: selectedProjectId,
+      // Always enable iterative discovery for smarter, multi-query prospecting
+      useIterativeDiscovery: true,
+      maxIterations: 5,
+      maxVariationsPerIteration: 7
     };
 
     // Start non-blocking SSE operation

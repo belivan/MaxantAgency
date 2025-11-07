@@ -89,6 +89,11 @@ export interface ProspectGenerationOptions {
   // Phase 2: Model Selection & Custom Prompts
   model_selections?: Record<string, string>;
   custom_prompts?: ProspectingPrompts;
+
+  // Iterative Discovery Options
+  useIterativeDiscovery?: boolean;
+  maxIterations?: number;
+  maxVariationsPerIteration?: number;
 }
 
 export interface ProspectGenerationResponse {
