@@ -45,9 +45,39 @@ async function prepareScreenshotData(reportData) {
     benchmarkScreenshots: []
   };
 
-  // NEW: Check for screenshots_manifest first (Supabase Storage URLs)
-  if (reportData.screenshots_manifest && reportData.screenshots_manifest.pages) {
-    console.log(`📸 Loading screenshots from manifest (${reportData.screenshots_manifest.total_screenshots} total)`);
+  // PRIORITY: Try local file paths first (faster, no network calls)
+  if (reportData.screenshot_desktop_path || reportData.screenshot_mobile_path) {
+    console.log(`📸 Loading screenshots from local file paths`);
+
+    if (reportData.screenshot_desktop_path && existsSync(reportData.screenshot_desktop_path)) {
+      try {
+        const buffer = await readFile(reportData.screenshot_desktop_path);
+        screenshotData.screenshots.push({
+          page: '/',
+          device: 'desktop',
+          dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+        });
+      } catch (err) {
+        console.warn(`⚠️ Could not load desktop screenshot: ${err.message}`);
+      }
+    }
+
+    if (reportData.screenshot_mobile_path && existsSync(reportData.screenshot_mobile_path)) {
+      try {
+        const buffer = await readFile(reportData.screenshot_mobile_path);
+        screenshotData.screenshots.push({
+          page: '/',
+          device: 'mobile',
+          dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+        });
+      } catch (err) {
+        console.warn(`⚠️ Could not load mobile screenshot: ${err.message}`);
+      }
+    }
+  }
+  // FALLBACK: Use screenshots_manifest with Supabase Storage URLs (legacy mode)
+  else if (reportData.screenshots_manifest && reportData.screenshots_manifest.pages) {
+    console.log(`📸 Loading screenshots from manifest (${reportData.screenshots_manifest.total_screenshots} total) - legacy mode`);
 
     for (const [pageUrl, viewports] of Object.entries(reportData.screenshots_manifest.pages)) {
       // Load desktop screenshot
@@ -77,43 +107,43 @@ async function prepareScreenshotData(reportData) {
       }
     }
   }
-  // FALLBACK: Legacy path-based loading (local files)
-  else if (reportData.screenshot_desktop_path || reportData.screenshot_mobile_path) {
-    console.log(`📸 Loading screenshots from local file paths (legacy mode)`);
-
-    if (reportData.screenshot_desktop_path && existsSync(reportData.screenshot_desktop_path)) {
-      try {
-        const buffer = await readFile(reportData.screenshot_desktop_path);
-        screenshotData.screenshots.push({
-          page: '/',
-          device: 'desktop',
-          dataUri: `data:image/png;base64,${buffer.toString('base64')}`
-        });
-      } catch (err) {
-        console.warn(`⚠️ Could not load desktop screenshot: ${err.message}`);
-      }
-    }
-
-    if (reportData.screenshot_mobile_path && existsSync(reportData.screenshot_mobile_path)) {
-      try {
-        const buffer = await readFile(reportData.screenshot_mobile_path);
-        screenshotData.screenshots.push({
-          page: '/',
-          device: 'mobile',
-          dataUri: `data:image/png;base64,${buffer.toString('base64')}`
-        });
-      } catch (err) {
-        console.warn(`⚠️ Could not load mobile screenshot: ${err.message}`);
-      }
-    }
-  }
 
   // Load benchmark screenshots
   const benchmark = reportData.matched_benchmark;
   if (benchmark) {
-    // NEW: Check for benchmark screenshots manifest
-    if (benchmark.screenshots_manifest && benchmark.screenshots_manifest.pages) {
-      console.log(`📸 Loading benchmark screenshots from manifest`);
+    // PRIORITY: Try local file paths first (faster, no network calls)
+    if (benchmark.screenshot_desktop_path || benchmark.screenshot_mobile_path) {
+      console.log(`📸 Loading benchmark screenshots from local file paths`);
+
+      if (benchmark.screenshot_desktop_path && existsSync(benchmark.screenshot_desktop_path)) {
+        try {
+          const buffer = await readFile(benchmark.screenshot_desktop_path);
+          screenshotData.benchmarkScreenshots.push({
+            page: '/',
+            device: 'desktop',
+            dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+          });
+        } catch (err) {
+          console.warn(`⚠️ Could not load benchmark desktop screenshot: ${err.message}`);
+        }
+      }
+
+      if (benchmark.screenshot_mobile_path && existsSync(benchmark.screenshot_mobile_path)) {
+        try {
+          const buffer = await readFile(benchmark.screenshot_mobile_path);
+          screenshotData.benchmarkScreenshots.push({
+            page: '/',
+            device: 'mobile',
+            dataUri: `data:image/png;base64,${buffer.toString('base64')}`
+          });
+        } catch (err) {
+          console.warn(`⚠️ Could not load benchmark mobile screenshot: ${err.message}`);
+        }
+      }
+    }
+    // FALLBACK: Use benchmark screenshots manifest (legacy mode)
+    else if (benchmark.screenshots_manifest && benchmark.screenshots_manifest.pages) {
+      console.log(`📸 Loading benchmark screenshots from manifest - legacy mode`);
 
       for (const [pageUrl, viewports] of Object.entries(benchmark.screenshots_manifest.pages)) {
         if (viewports.desktop?.url) {
@@ -138,34 +168,6 @@ async function prepareScreenshotData(reportData) {
               metadata: viewports.mobile
             });
           }
-        }
-      }
-    }
-    // FALLBACK: Legacy path-based benchmark screenshots
-    else {
-      if (benchmark.screenshot_desktop_path && existsSync(benchmark.screenshot_desktop_path)) {
-        try {
-          const buffer = await readFile(benchmark.screenshot_desktop_path);
-          screenshotData.benchmarkScreenshots.push({
-            page: '/',
-            device: 'desktop',
-            dataUri: `data:image/png;base64,${buffer.toString('base64')}`
-          });
-        } catch (err) {
-          console.warn(`⚠️ Could not load benchmark desktop screenshot: ${err.message}`);
-        }
-      }
-
-      if (benchmark.screenshot_mobile_path && existsSync(benchmark.screenshot_mobile_path)) {
-        try {
-          const buffer = await readFile(benchmark.screenshot_mobile_path);
-          screenshotData.benchmarkScreenshots.push({
-            page: '/',
-            device: 'mobile',
-            dataUri: `data:image/png;base64,${buffer.toString('base64')}`
-          });
-        } catch (err) {
-          console.warn(`⚠️ Could not load benchmark mobile screenshot: ${err.message}`);
         }
       }
     }
@@ -382,22 +384,16 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     const localFilename = generateReportFilename(reportData, format);
     const localReportPath = join(reportsDir, localFilename);
 
-    // If format is HTML, also generate both preview AND full versions
-    let previewPath = null;
+    // If format is HTML, generate full report only (PREVIEW generation disabled)
+    let previewPath = null; // Kept for backward compatibility
     let fullPath = null;
+    let fullPdfPath = null; // Track full PDF path for Supabase upload
+
     if (format === 'html') {
-      console.log('📊 Generating BOTH preview and full HTML reports...');
+      console.log('📊 Generating FULL HTML report (PREVIEW generation disabled)...');
 
       // Load screenshots as base64 dataURIs for embedding
       const screenshotData = await prepareScreenshotData(reportData);
-
-      // Generate preview (concise) report
-      const { generateHTMLReportV3 } = await import('./exporters/html-exporter-v3.js');
-      const previewContent = await generateHTMLReportV3(reportData, synthesisData, screenshotData);
-      const previewFilename = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-PREVIEW.html`;
-      previewPath = join(reportsDir, previewFilename);
-      await writeFile(previewPath, previewContent, 'utf8');
-      console.log(`📄 Preview report saved: ${previewFilename}`);
 
       // Generate full (comprehensive) report
       const { generateHTMLReportV3Full } = await import('./exporters/html-exporter-v3.js');
@@ -407,30 +403,16 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       await writeFile(fullPath, fullContent, 'utf8');
       console.log(`📄 Full report saved: ${fullFilename}`);
 
-      // Generate PDF versions if enabled
+      // Generate PDF version if enabled
       if (process.env.AUTO_GENERATE_PDF === 'true') {
-        console.log('📄 Generating PDF versions from HTML...');
+        console.log('📄 Generating PDF from HTML...');
 
         try {
           const { generatePDFFromContent } = await import('./exporters/pdf-generator.js');
 
-          // Generate preview PDF
-          const previewPdfFilename = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-PREVIEW.pdf`;
-          const previewPdfPath = join(reportsDir, previewPdfFilename);
-          const previewPdfResult = await generatePDFFromContent(previewContent, previewPdfPath, {
-            companyName: reportData.company_name,
-            reportType: 'preview'
-          });
-
-          if (previewPdfResult.success) {
-            console.log(`   ✅ Preview PDF saved: ${previewPdfFilename}`);
-          } else {
-            console.warn(`   ⚠️  Preview PDF generation failed: ${previewPdfResult.error || 'Unknown error'}`);
-          }
-
-          // Generate full PDF
+          // Generate full PDF only
           const fullPdfFilename = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-FULL.pdf`;
-          const fullPdfPath = join(reportsDir, fullPdfFilename);
+          fullPdfPath = join(reportsDir, fullPdfFilename);
           const fullPdfResult = await generatePDFFromContent(fullContent, fullPdfPath, {
             companyName: reportData.company_name,
             reportType: 'full'
@@ -440,22 +422,41 @@ export async function autoGenerateReport(analysisResult, options = {}) {
             console.log(`   ✅ Full PDF saved: ${fullPdfFilename}`);
           } else {
             console.warn(`   ⚠️  Full PDF generation failed: ${fullPdfResult.error || 'Unknown error'}`);
+            fullPdfPath = null; // Clear path if generation failed
           }
         } catch (pdfError) {
           console.warn(`   ⚠️  PDF generation error: ${pdfError.message}`);
-          console.warn('   Continuing without PDFs...');
+          console.warn('   Continuing without PDF...');
+          fullPdfPath = null;
         }
       }
     }
 
-    // For HTML format, we've already generated Preview and Full reports above
-    // No need for additional backup/audit report
+    // For HTML format, we've already generated Full HTML+PDF report above
+    // Now we'll upload the PDF to Supabase Storage
     let localPath = null;
     let contentForUpload = null;
     let uploadResult = { path: null, fullPath: null };
 
+    // Upload FULL PDF to Supabase Storage (if generated)
+    if (format === 'html' && fullPdfPath) {
+      try {
+        console.log('📤 Uploading FULL PDF to Supabase Storage...');
+        const { readFile: fsReadFile } = await import('fs/promises');
+        const pdfBuffer = await fsReadFile(fullPdfPath);
+
+        const storagePath = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/FULL.pdf`;
+
+        uploadResult = await uploadReport(pdfBuffer, storagePath, 'application/pdf');
+        console.log(`✅ PDF uploaded to Supabase Storage: ${storagePath}`);
+      } catch (uploadError) {
+        console.warn(`⚠️  Supabase upload failed: ${uploadError.message}`);
+        console.warn('   PDF available locally at: ' + fullPdfPath);
+        // Continue without upload - local backup is enough
+      }
+    }
     // Only handle non-HTML formats (markdown, json, etc.)
-    if (format !== 'html') {
+    else if (format !== 'html') {
       localPath = localReportPath;
       contentForUpload = report.content;
 
@@ -480,7 +481,7 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       }
     }
 
-    const shouldUpload = format !== 'html';
+    const shouldUpload = format !== 'html' && contentForUpload;
 
     if (shouldUpload) {
       const storagePath = generateStoragePath(reportData, format);
@@ -502,8 +503,6 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         }
         // Continue without upload - local backup is enough
       }
-    } else {
-      console.log('Skipping Supabase upload for HTML reports (already generated as Preview and Full versions)');
     }
 
     // Save metadata to database if requested

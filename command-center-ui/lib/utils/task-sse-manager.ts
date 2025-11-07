@@ -296,6 +296,9 @@ export function startTaskWithSSE(config: TaskSSEConfig): TaskSSEConnection {
           let currentEventType = 'message';
 
           for (const line of lines) {
+            // Break immediately if connection is closed
+            if (isClosed) break;
+
             if (line.startsWith('event:')) {
               // Capture the event type instead of skipping it
               currentEventType = line.slice(6).trim();
@@ -306,15 +309,38 @@ export function startTaskWithSSE(config: TaskSSEConfig): TaskSSEConnection {
                   // Parse the data payload
                   const dataPayload = JSON.parse(dataStr);
 
-                  // Reconstruct proper SSEMessage format with type and data
-                  // Map 'success' to 'progress' for compatibility with handler
-                  const message: SSEMessage = {
-                    type: currentEventType === 'success' ? 'progress' : currentEventType,
-                    data: dataPayload
-                  };
+                  // Check if dataPayload is already a complete SSEMessage
+                  // (contains type field), or if we need to wrap it
+                  let message: SSEMessage;
+                  if (dataPayload.type) {
+                    // dataPayload contains a type field
+                    if (dataPayload.data !== undefined) {
+                      // Already a properly formatted SSEMessage with separate data property
+                      message = dataPayload as SSEMessage;
+                    } else {
+                      // Has type but data is mixed in (legacy format)
+                      // Use the entire payload as the data
+                      message = {
+                        type: dataPayload.type,
+                        data: dataPayload,
+                        timestamp: dataPayload.timestamp || new Date().toISOString()
+                      };
+                    }
+                  } else {
+                    // Wrap payload with event type from SSE format
+                    // Map 'success' to 'progress' for compatibility with handler
+                    message = {
+                      type: currentEventType === 'success' ? 'progress' : currentEventType,
+                      data: dataPayload,
+                      timestamp: new Date().toISOString()
+                    };
+                  }
 
                   handleMessage(message);
                   currentEventType = 'message'; // Reset for next event
+
+                  // Break immediately if handleMessage closed the connection
+                  if (isClosed) break;
                 } catch (parseError) {
                   console.error('[SSE Manager] Failed to parse SSE data:', dataStr, parseError);
                 }

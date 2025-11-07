@@ -240,6 +240,20 @@ export default function ProspectingPage() {
           }
         }
 
+        // Handle discovery_progress type (from iterative discovery)
+        if (event.type === 'discovery_progress') {
+          if (event.message) {
+            const messageText = typeof event.message === 'string'
+              ? event.message
+              : JSON.stringify(event.message);
+            addTaskLog(taskId, messageText, 'info');
+          }
+          // Update progress if current/target are provided
+          if (event.currentCount !== undefined && event.target !== undefined) {
+            updateTask(taskId, event.currentCount, event.message || 'Discovering prospects...');
+          }
+        }
+
         if (event.type === 'progress') {
           const msg = event.company
             ? `Processing ${event.company} (${event.current}/${event.total})`
@@ -260,13 +274,18 @@ export default function ProspectingPage() {
           }
         }
 
-        if (event.message) {
-          addTaskLog(taskId, event.message, 'info');
+        // Catch-all for any other messages
+        if (event.message && event.type !== 'discovery_progress' && event.type !== 'progress') {
+          // Ensure message is a string, not an object
+          const messageText = typeof event.message === 'string'
+            ? event.message
+            : JSON.stringify(event.message);
+          addTaskLog(taskId, messageText, 'info');
         }
       },
       onComplete: (data, taskId) => {
-        const event = data as any;
-        const count = event.results?.prospects?.length || event.results?.count || 0;
+        const results = data as any;
+        const count = results?.prospects?.length || results?.saved || 0;
         setGeneratedCount(count);
 
         // Reload prospect count

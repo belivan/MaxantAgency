@@ -285,6 +285,15 @@ app.post('/api/generate-from-lead', async (req, res) => {
       top_issue: lead.top_issue,
       one_liner: lead.one_liner,
 
+      // Top Issues Selection (AI-powered pyramid filtering) - CRITICAL for synthesis bypass
+      top_issues: lead.top_issues || [],
+      top_issues_summary: lead.top_issues_summary,
+      top_issues_selection_strategy: lead.top_issues_selection_strategy,
+      top_issues_selection_cost: lead.top_issues_selection_cost,
+      top_issues_selection_model: lead.top_issues_selection_model,
+      total_issues_count: lead.total_issues_count,
+      high_critical_issues_count: lead.high_critical_issues_count,
+
       // Screenshots
       screenshot_desktop: lead.screenshot_desktop,
       screenshot_mobile: lead.screenshot_mobile,

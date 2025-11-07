@@ -95,6 +95,7 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
     // Analyze each page (both viewports in a SINGLE AI call)
     const individualResults = [];
     let totalCost = 0;
+    let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
     let lastPromptModel = null;
 
     for (const page of pagesToAnalyze) {
@@ -116,9 +117,9 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
       };
 
       // Use custom prompt if provided, otherwise load default
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
       let prompt;
       if (customPrompt) {
-        const { substituteVariables } = await import('../shared/prompt-loader.js');
         prompt = {
           name: customPrompt.name,
           model: customPrompt.model,
@@ -128,7 +129,15 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
           outputFormat: customPrompt.outputFormat
         };
       } else {
-        prompt = await loadPrompt('web-design/unified-visual-analysis', variables);
+        const loadedPrompt = await loadPrompt('unified-visual-analyzer');
+        prompt = {
+          name: loadedPrompt.name,
+          model: loadedPrompt.model,
+          temperature: loadedPrompt.temperature,
+          systemPrompt: loadedPrompt.systemPrompt,
+          userPrompt: await substituteVariables(loadedPrompt.userPromptTemplate, variables, loadedPrompt.variables),
+          outputFormat: loadedPrompt.outputFormat
+        };
       }
 
       // Call centralized AI client with both desktop and mobile screenshots
@@ -212,6 +221,11 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
       });
 
       totalCost += response.cost || 0;
+      if (response.usage) {
+        totalUsage.prompt_tokens += response.usage.prompt_tokens || 0;
+        totalUsage.completion_tokens += response.usage.completion_tokens || 0;
+        totalUsage.total_tokens += response.usage.total_tokens || 0;
+      }
     }
 
     // Detect cross-page consistency issues
@@ -334,6 +348,7 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
         analyzer: 'unified-visual',
         model: resolvedModel,
         cost: totalCost,
+        usage: totalUsage,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pagesToAnalyze.length,
         totalScreenshotSize: pages.reduce((sum, p) =>

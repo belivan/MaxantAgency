@@ -708,7 +708,8 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
     if (onProgress) {
       onProgress({
         type: 'complete',
-        ...results
+        data: results,
+        timestamp: new Date().toISOString()
       });
     }
 

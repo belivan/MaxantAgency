@@ -168,7 +168,7 @@ app.post('/api/prospect', async (req, res) => {
     // Send final results
     onProgress({
       type: 'complete',
-      results,
+      data: results,
       timestamp: new Date().toISOString()
     });
 

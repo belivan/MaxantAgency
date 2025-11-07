@@ -15,7 +15,7 @@ import { getBenchmarks, updateBenchmark, getBenchmarkById, supabase } from '../d
 // Import the strength extraction function (not exported by default, so we need to import the module)
 async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   // Import dependencies
-  const { loadPrompt } = await import('../shared/prompt-loader.js');
+  const { loadPrompt, substituteVariables } = await import('../shared/prompt-loader.js');
   const { callAI, parseJSONResponse } = await import('../../database-tools/shared/ai-client.js');
 
   const strengths = {
@@ -38,20 +38,25 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 1. Visual Strengths (Design/UI)
     console.log(`   - Running visual-strengths-extractor...`);
-    const visualPrompt = await loadPrompt('benchmarking/visual-strengths-extractor', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      google_rating: benchmarkData.google_rating || 'N/A',
-      google_review_count: benchmarkData.google_review_count || 'N/A',
-      awards: benchmarkData.awards || []
-    });
+    const visualPrompt = await loadPrompt('benchmarking/visual-strengths-extractor');
+
+    const visualUserPrompt = await substituteVariables(
+      visualPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        google_rating: benchmarkData.google_rating || 'N/A',
+        google_review_count: benchmarkData.google_review_count || 'N/A',
+        awards: benchmarkData.awards || []
+      }
+    );
 
     const visualResult = await callAI({
       model: visualPrompt.model,
       temperature: visualPrompt.temperature,
       systemPrompt: visualPrompt.systemPrompt,
-      userPrompt: visualPrompt.userPrompt,
+      userPrompt: visualUserPrompt,
       images: [analysisResult.screenshot_desktop_url, analysisResult.screenshot_mobile_url].filter(Boolean),
       jsonMode: true
     });
@@ -66,23 +71,28 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 2. Technical Strengths (SEO + Content)
     console.log(`   - Running technical-strengths-extractor...`);
-    const technicalPrompt = await loadPrompt('benchmarking/technical-strengths-extractor', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      google_rating: benchmarkData.google_rating,
-      google_review_count: benchmarkData.google_review_count,
-      html_content: 'N/A',
-      meta_title: analysisResult.page_title || '',
-      meta_description: analysisResult.meta_description || '',
-      sitemap_urls: 'N/A'
-    });
+    const technicalPrompt = await loadPrompt('benchmarking/technical-strengths-extractor');
+
+    const technicalUserPrompt = await substituteVariables(
+      technicalPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        google_rating: benchmarkData.google_rating,
+        google_review_count: benchmarkData.google_review_count,
+        html_content: 'N/A',
+        meta_title: analysisResult.page_title || '',
+        meta_description: analysisResult.meta_description || '',
+        sitemap_urls: 'N/A'
+      }
+    );
 
     const technicalResult = await callAI({
       model: technicalPrompt.model,
       temperature: technicalPrompt.temperature,
       systemPrompt: technicalPrompt.systemPrompt,
-      userPrompt: technicalPrompt.userPrompt,
+      userPrompt: technicalUserPrompt,
       jsonMode: true
     });
 
@@ -98,25 +108,30 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 3. Social Strengths (v2 - uses analysis data)
     console.log(`   - Running social-strengths-extractor-v2...`);
-    const socialPrompt = await loadPrompt('benchmarking/social-strengths-extractor-v2', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      google_rating: benchmarkData.google_rating || 0,
-      google_review_count: benchmarkData.google_review_count || 0,
-      social_score: analysisResult.social_score || 0,
-      social_issues: analysisResult.social_issues || [],
-      social_platforms_present: analysisResult.social_platforms_present || [],
-      social_profiles: analysisResult.social_profiles || {},
-      screenshot_desktop_url: analysisResult.screenshot_desktop_url || '',
-      screenshot_mobile_url: analysisResult.screenshot_mobile_url || ''
-    });
+    const socialPrompt = await loadPrompt('benchmarking/social-strengths-extractor-v2');
+
+    const socialUserPrompt = await substituteVariables(
+      socialPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        google_rating: benchmarkData.google_rating || 0,
+        google_review_count: benchmarkData.google_review_count || 0,
+        social_score: analysisResult.social_score || 0,
+        social_issues: analysisResult.social_issues || [],
+        social_platforms_present: analysisResult.social_platforms_present || [],
+        social_profiles: analysisResult.social_profiles || {},
+        screenshot_desktop_url: analysisResult.screenshot_desktop_url || '',
+        screenshot_mobile_url: analysisResult.screenshot_mobile_url || ''
+      }
+    );
 
     const socialResult = await callAI({
       model: socialPrompt.model,
       temperature: socialPrompt.temperature,
       systemPrompt: socialPrompt.systemPrompt,
-      userPrompt: socialPrompt.userPrompt,
+      userPrompt: socialUserPrompt,
       jsonMode: true
     });
 
@@ -130,24 +145,29 @@ async function extractBenchmarkStrengths(analysisResult, benchmarkData) {
   try {
     // 4. Accessibility Strengths (v2 - uses analysis data)
     console.log(`   - Running accessibility-strengths-extractor-v2...`);
-    const accessibilityPrompt = await loadPrompt('benchmarking/accessibility-strengths-extractor-v2', {
-      company_name: benchmarkData.company_name,
-      industry: benchmarkData.industry,
-      url: benchmarkData.website_url,
-      accessibility_score: analysisResult.accessibility_score || 0,
-      accessibility_compliance: analysisResult.accessibility_compliance || 'Unknown',
-      accessibility_issues: analysisResult.accessibility_issues || [],
-      design_tokens_desktop: analysisResult.design_tokens_desktop || {},
-      design_tokens_mobile: analysisResult.design_tokens_mobile || {},
-      screenshot_desktop_url: analysisResult.screenshot_desktop_url || '',
-      screenshot_mobile_url: analysisResult.screenshot_mobile_url || ''
-    });
+    const accessibilityPrompt = await loadPrompt('benchmarking/accessibility-strengths-extractor-v2');
+
+    const accessibilityUserPrompt = await substituteVariables(
+      accessibilityPrompt.userPromptTemplate,
+      {
+        company_name: benchmarkData.company_name,
+        industry: benchmarkData.industry,
+        url: benchmarkData.website_url,
+        accessibility_score: analysisResult.accessibility_score || 0,
+        accessibility_compliance: analysisResult.accessibility_compliance || 'Unknown',
+        accessibility_issues: analysisResult.accessibility_issues || [],
+        design_tokens_desktop: analysisResult.design_tokens_desktop || {},
+        design_tokens_mobile: analysisResult.design_tokens_mobile || {},
+        screenshot_desktop_url: analysisResult.screenshot_desktop_url || '',
+        screenshot_mobile_url: analysisResult.screenshot_mobile_url || ''
+      }
+    );
 
     const accessibilityResult = await callAI({
       model: accessibilityPrompt.model,
       temperature: accessibilityPrompt.temperature,
       systemPrompt: accessibilityPrompt.systemPrompt,
-      userPrompt: accessibilityPrompt.userPrompt,
+      userPrompt: accessibilityUserPrompt,
       jsonMode: true
     });
 

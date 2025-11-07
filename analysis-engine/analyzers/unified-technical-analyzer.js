@@ -126,7 +126,16 @@ export async function analyzeUnifiedTechnical(pages, context = {}, customPrompt 
         outputFormat: customPrompt.outputFormat
       };
     } else {
-      prompt = await loadPrompt('web-design/unified-technical-analysis', variables);
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      const loadedPrompt = await loadPrompt('unified-technical-analyzer');
+      prompt = {
+        name: loadedPrompt.name,
+        model: loadedPrompt.model,
+        temperature: loadedPrompt.temperature,
+        systemPrompt: loadedPrompt.systemPrompt,
+        userPrompt: await substituteVariables(loadedPrompt.userPromptTemplate, variables, loadedPrompt.variables),
+        outputFormat: loadedPrompt.outputFormat
+      };
     }
 
     // Call AI with unified technical analysis prompt
@@ -181,6 +190,7 @@ export async function analyzeUnifiedTechnical(pages, context = {}, customPrompt 
         analyzer: 'unified-technical',
         model: response.model || prompt.model,
         cost: response.cost || 0,
+        usage: response.usage || null,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pages.length,
         blogPostsFound: uniqueBlogPosts.length

@@ -307,7 +307,9 @@ export function FloatingTaskIndicator() {
                           {/* Current Message */}
                           {task.message && (
                             <p className="text-xs text-muted-foreground mt-1 truncate">
-                              {task.message}
+                              {typeof task.message === 'string'
+                                ? task.message
+                                : JSON.stringify(task.message)}
                             </p>
                           )}
                         </div>
@@ -357,7 +359,11 @@ export function FloatingTaskIndicator() {
                                   {new Date(log.timestamp).toLocaleTimeString()}
                                 </span>
                                 {' - '}
-                                <span>{log.message}</span>
+                                <span>
+                                  {typeof log.message === 'string'
+                                    ? log.message
+                                    : JSON.stringify(log.message)}
+                                </span>
                               </div>
                             ))}
                           </div>

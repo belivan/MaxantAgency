@@ -99,7 +99,16 @@ export async function analyzeSEO(pages, context = {}, customPrompt = null) {
         outputFormat: customPrompt.outputFormat
       };
     } else {
-      prompt = await loadPrompt('web-design/seo-analysis', variables);
+      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      const loadedPrompt = await loadPrompt('seo-analyzer');
+      prompt = {
+        name: loadedPrompt.name,
+        model: loadedPrompt.model,
+        temperature: loadedPrompt.temperature,
+        systemPrompt: loadedPrompt.systemPrompt,
+        userPrompt: await substituteVariables(loadedPrompt.userPromptTemplate, variables, loadedPrompt.variables),
+        outputFormat: loadedPrompt.outputFormat
+      };
     }
 
     // Call Grok-4-fast API

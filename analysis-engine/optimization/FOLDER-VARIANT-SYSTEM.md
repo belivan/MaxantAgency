@@ -94,6 +94,104 @@ export async function loadPrompt(analyzerName) {
 }
 ```
 
+## Which Analyzers Are Optimized?
+
+The optimization system supports **8 analyzers**, but not all are actively used in production:
+
+### Primary Analyzers (Active in Production)
+
+These are the analyzers actually being optimized and improved:
+
+- **`unified-visual-analyzer`** - Combines desktop + mobile visual analysis in ONE AI call
+  - Prompt: `config/prompts/web-design/unified-visual-analysis/`
+  - Replaces: desktop-visual + mobile-visual analyzers
+  - Cost savings: 50% fewer AI calls
+
+- **`unified-technical-analyzer`** - Combines SEO + content analysis in ONE AI call
+  - Prompt: `config/prompts/web-design/unified-technical-analysis/`
+  - Replaces: seo + content analyzers
+  - Cost savings: 50% fewer AI calls
+
+- **`social-analyzer`** - Social media presence analysis
+  - Prompt: `config/prompts/web-design/social-analysis/`
+  - Always runs separately
+
+- **`accessibility-analyzer`** - WCAG compliance and accessibility
+  - Prompt: `config/prompts/web-design/accessibility-analysis/`
+  - Always runs separately
+
+### Legacy Analyzers (Fallback Only)
+
+These analyzers are **still supported** but only used when unified analyzers are disabled:
+
+- `desktop-visual-analyzer` - Desktop screenshot analysis (legacy)
+- `mobile-visual-analyzer` - Mobile screenshot analysis (legacy)
+- `seo-analyzer` - SEO analysis (legacy)
+- `content-analyzer` - Content analysis (legacy)
+
+**Why keep legacy analyzers?**
+- Backward compatibility
+- Flexibility for different optimization strategies
+- A/B testing unified vs separate approaches
+
+### Environment Configuration
+
+Control which analyzers run via `.env`:
+
+```env
+# Use unified analyzers (recommended for production)
+USE_UNIFIED_VISUAL_ANALYZER=true
+USE_UNIFIED_TECHNICAL_ANALYZER=true
+
+# Legacy fallbacks (only used if unified is disabled)
+ENABLE_DESKTOP_VISUAL_ANALYZER=true
+ENABLE_MOBILE_VISUAL_ANALYZER=true
+ENABLE_SEO_ANALYZER=true
+ENABLE_CONTENT_ANALYZER=true
+
+# Always-active analyzers
+ENABLE_SOCIAL_ANALYZER=true
+ENABLE_ACCESSIBILITY_ANALYZER=true
+```
+
+## Preventing Template Literal Corruption
+
+### The Problem
+
+Template literals can get corrupted during copy/paste operations:
+- `` ` `` becomes `\`` (escaped backtick)
+- `${variable}` becomes `\${variable}` (escaped dollar sign)
+
+This breaks the JavaScript syntax and prevents the engine from starting.
+
+### The Solution: Syntax Validation
+
+Use the syntax validator before committing changes:
+
+```bash
+cd analysis-engine/optimization
+
+# Validate a single file
+node validate-syntax.js ../shared/prompt-loader.js
+
+# Validate multiple files
+node validate-syntax.js services/*.js
+
+# Validate all optimization files
+node validate-syntax.js *.js services/*.js
+```
+
+The validator checks for:
+- ✅ Valid JavaScript syntax (`node --check`)
+- ✅ Escaped backticks (`\``)
+- ✅ Escaped template literal syntax (`\${`)
+
+**Prevention Best Practices:**
+1. Always run syntax validation after editing files
+2. Use a proper code editor (VS Code, WebStorm) with syntax highlighting
+3. Avoid copy/pasting from rich text editors (Word, Google Docs)
+4. Test imports: `node -e "import('./file.js').then(() => console.log('OK'))"`
+
 ## Migration Guide
 
 ### First Time Setup

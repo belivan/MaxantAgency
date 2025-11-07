@@ -251,7 +251,9 @@ export async function runReportSynthesis({
   // NEW: Check if top issues already exist (from Analysis Engine)
   const hasPreSelectedTopIssues = topIssues && Array.isArray(topIssues) && topIssues.length > 0;
   if (hasPreSelectedTopIssues) {
-    console.log(`[Report Synthesis] ⚡ Top ${topIssues.length} issues pre-selected by Analysis Engine - skipping deduplication`);
+    console.log(`[Report Synthesis] ⚡ Top ${topIssues.length} issues pre-selected by Analysis Engine`);
+    console.log(`[Report Synthesis] ⚡ Skipping deduplication stage (saving ~$0.036)`);
+    console.log(`[Report Synthesis] ⚡ Executive summary will focus on these ${topIssues.length} pre-selected issues`);
   }
 
   // Build screenshot references upfront (needed by both stages)
@@ -285,6 +287,11 @@ export async function runReportSynthesis({
     executionMode: 'sequential'
   };
 
+  // Use pre-selected top issues if available (from Analysis Engine), otherwise use fallback
+  const issuesForExecutiveSummary = hasPreSelectedTopIssues
+    ? topIssues
+    : formatConsolidatedFallback(issuesByModule);
+
   const execSummaryContext = {
     company_name: companyName || 'Unknown Company',
     industry: industry || 'Unknown',
@@ -296,7 +303,7 @@ export async function runReportSynthesis({
     budget_likelihood: leadScoring?.budget_likelihood || 'unknown',
     tech_stack: techStack || 'Unknown',
     pages_crawled: String(Array.isArray(crawlPages) ? crawlPages.length : 0),
-    consolidated_issues_json: safeStringify(formatConsolidatedFallback(issuesByModule)), // Use fallback for parallel execution
+    consolidated_issues_json: safeStringify(issuesForExecutiveSummary), // Use pre-selected top issues or fallback
     balanced_quick_wins_json: safeStringify(formatQuickWinFallback(quickWins)),
     screenshot_references_json: safeStringify(screenshotReferences)
   };

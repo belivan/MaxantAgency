@@ -22,6 +22,7 @@ import { analyzeWebsiteIntelligent } from './orchestrator-refactored.js';
 import { collectAnalysisPrompts } from './shared/prompt-loader.js';
 import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
 import { analyzeBenchmark } from './services/benchmark-analyzer.js';
+import { incrementAnalysisCount } from './optimization/services/optimization-scheduler.js';
 
 // Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
@@ -556,6 +557,16 @@ app.post('/api/analyze-url', async (req, res) => {
       await markAsUploaded(backupPath, savedLead.id);
     }
 
+    // Track analysis counts for optimization system (non-blocking)
+    Promise.all([
+      incrementAnalysisCount('unified-visual-analyzer'),
+      incrementAnalysisCount('unified-technical-analyzer'),
+      incrementAnalysisCount('social-analyzer'),
+      incrementAnalysisCount('accessibility-analyzer')
+    ]).catch(error => {
+      console.warn('[Optimization] Failed to increment analysis counts:', error.message);
+    });
+
     // NOTE: Auto-report generation has been moved to ReportEngine microservice
     // To generate a report, make a POST request to http://localhost:3003/api/generate
     let reportInfo = null;
@@ -730,25 +741,38 @@ app.post('/api/analyze', async (req, res) => {
       }
     }
 
-    // Analyze each prospect with intelligent multi-page analysis
+    // Analyze prospects with batched concurrent processing
     const results = [];
     let currentIndex = 0;
-    for (const prospect of prospects) {
-      currentIndex++;
-      try {
-        console.log(`[Intelligent Analysis] Analyzing ${prospect.company_name || prospect.website}...`);
 
-        // Send progress event
-        sendEvent('analyzing', {
-          current: currentIndex,
-          total: prospects.length,
-          company_name: prospect.company_name,
-          company: prospect.company_name || prospect.website,
-          url: prospect.website
-        });
+    // Get concurrency setting from environment (defaults to 3)
+    const CONCURRENT_ANALYSES = parseInt(process.env.CONCURRENT_ANALYSES || '3');
+    console.log(`[Intelligent Analysis] Processing prospects with concurrency: ${CONCURRENT_ANALYSES}`);
 
-        const assignment = prospect.project_assignment || {};
-        const result = await analyzeWebsiteIntelligent(prospect.website, {
+    // Process prospects in batches
+    for (let i = 0; i < prospects.length; i += CONCURRENT_ANALYSES) {
+      const batch = prospects.slice(i, i + CONCURRENT_ANALYSES);
+      console.log(`[Intelligent Analysis] Starting batch ${Math.floor(i / CONCURRENT_ANALYSES) + 1}/${Math.ceil(prospects.length / CONCURRENT_ANALYSES)} (${batch.length} prospects)`);
+
+      // Process batch concurrently using Promise.allSettled for error isolation
+      const batchResults = await Promise.allSettled(
+        batch.map(async (prospect, batchIndex) => {
+          const prospectIndex = i + batchIndex + 1;
+
+          try {
+            console.log(`[Intelligent Analysis] Analyzing ${prospect.company_name || prospect.website}...`);
+
+            // Send progress event
+            sendEvent('analyzing', {
+              current: prospectIndex,
+              total: prospects.length,
+              company_name: prospect.company_name,
+              company: prospect.company_name || prospect.website,
+              url: prospect.website
+            });
+
+            const assignment = prospect.project_assignment || {};
+            const result = await analyzeWebsiteIntelligent(prospect.website, {
           company_name: prospect.company_name || 'Unknown Company',
           industry: prospect.industry || 'unknown',
           project_id: project_id,  // Required, validation above ensures it exists
@@ -842,6 +866,15 @@ app.post('/api/analyze', async (req, res) => {
             analysis_summary: result.analysis_summary || null,
             call_to_action: result.call_to_action || null,
             outreach_angle: result.outreach_angle || null,
+
+            // Top Issues Selection (AI-powered pyramid filtering)
+            top_issues: result.top_issues || [],
+            top_issues_summary: result.top_issues_summary || null,
+            top_issues_selection_strategy: result.top_issues_selection_strategy || null,
+            top_issues_selection_cost: result.top_issues_selection_cost || 0,
+            top_issues_selection_model: result.top_issues_selection_model || null,
+            total_issues_count: result.total_issues_count || 0,
+            high_critical_issues_count: result.high_critical_issues_count || 0,
 
             // AI Models Used
             seo_analysis_model: result.seo_analysis_model || null,
@@ -937,14 +970,14 @@ app.post('/api/analyze', async (req, res) => {
           if (!leadData.project_id) {
             console.error(`[Intelligent Analysis] CRITICAL: project_id is missing for ${prospect.company_name || prospect.website}`);
             sendEvent('error', {
-              current: currentIndex,
+              current: prospectIndex,
               total: prospects.length,
               company_name: prospect.company_name,
               company: prospect.company_name || prospect.website,
               url: prospect.website,
               error: 'Missing project_id - lead not saved to database'
             });
-            continue; // Skip this prospect, move to next
+            return { success: false, prospect_id: prospect.id, url: prospect.website, error: 'Missing project_id' };
           }
 
           // Fix overall_score if it's NaN, null, or undefined
@@ -981,13 +1014,22 @@ app.post('/api/analyze', async (req, res) => {
 
             // Send error event
             sendEvent('error', {
-              current: currentIndex,
+              current: prospectIndex,
               total: prospects.length,
               company_name: prospect.company_name,
               company: prospect.company_name || prospect.website,
               url: prospect.website,
               error: `Database save failed: ${saveError.message}`
             });
+
+            return {
+              success: false,
+              prospect_id: prospect.id,
+              url: prospect.website,
+              company_name: prospect.company_name,
+              company: prospect.company_name || prospect.website,
+              error: `Database save failed: ${saveError.message}`
+            };
           } else {
             console.log(`[Intelligent Analysis]  ${prospect.company_name}: Grade ${result.grade} (${result.overall_score}/100)`);
 
@@ -997,12 +1039,22 @@ app.post('/api/analyze', async (req, res) => {
               console.log(`[Intelligent Analysis] Backup marked as uploaded for ${prospect.company_name}`);
             }
 
+            // Track analysis counts for optimization system (non-blocking)
+            Promise.all([
+              incrementAnalysisCount('unified-visual-analyzer'),
+              incrementAnalysisCount('unified-technical-analyzer'),
+              incrementAnalysisCount('social-analyzer'),
+              incrementAnalysisCount('accessibility-analyzer')
+            ]).catch(error => {
+              console.warn('[Optimization] Failed to increment analysis counts:', error.message);
+            });
+
             // NOTE: Auto-report generation has been moved to ReportEngine microservice
             // To generate reports, call POST http://localhost:3003/api/generate
 
             // Send success event
             sendEvent('success', {
-              current: currentIndex,
+              current: prospectIndex,
               total: prospects.length,
               company_name: prospect.company_name,
               company: prospect.company_name || prospect.website,
@@ -1010,36 +1062,37 @@ app.post('/api/analyze', async (req, res) => {
               grade: result.grade,
               score: result.overall_score
             });
-          }
 
-          results.push({
-            success: true,
-            prospect_id: prospect.id,
-            url: prospect.website,
-            company_name: prospect.company_name,
-            company: prospect.company_name || prospect.website,
-            grade: result.grade,
-            score: result.overall_score
-          });
+            return {
+              success: true,
+              prospect_id: prospect.id,
+              url: prospect.website,
+              company_name: prospect.company_name,
+              company: prospect.company_name || prospect.website,
+              grade: result.grade,
+              score: result.overall_score
+            };
+          }
         } else {
           console.error(`[Intelligent Analysis]  ${prospect.company_name}: ${result.error}`);
           // Send error event
           sendEvent('error', {
-            current: currentIndex,
+            current: prospectIndex,
             total: prospects.length,
             company_name: prospect.company_name,
             company: prospect.company_name || prospect.website,
             url: prospect.website,
             error: result.error
           });
-          results.push({
+
+          return {
             success: false,
             prospect_id: prospect.id,
             url: prospect.website,
             company_name: prospect.company_name,
             company: prospect.company_name || prospect.website,
             error: result.error
-          });
+          };
         }
       } catch (error) {
         console.error(`[Intelligent Analysis]  ${prospect.company_name}: ${error.message}`);
@@ -1073,7 +1126,7 @@ app.post('/api/analyze', async (req, res) => {
 
         // Send error event
         sendEvent('error', {
-          current: currentIndex,
+          current: prospectIndex,
           total: prospects.length,
           company_name: prospect.company_name,
           company: prospect.company_name || prospect.website,
@@ -1081,7 +1134,8 @@ app.post('/api/analyze', async (req, res) => {
           error: error.message,
           bot_protected: isBotProtected || false
         });
-        results.push({
+
+        return {
           success: false,
           prospect_id: prospect.id,
           url: prospect.website,
@@ -1089,8 +1143,30 @@ app.post('/api/analyze', async (req, res) => {
           company: prospect.company_name || prospect.website,
           error: error.message,
           bot_protected: isBotProtected || false
-        });
+        };
       }
+    })
+  );
+
+  // Process batch results and add to main results array
+  batchResults.forEach((promiseResult, batchIndex) => {
+    if (promiseResult.status === 'fulfilled' && promiseResult.value) {
+      results.push(promiseResult.value);
+    } else if (promiseResult.status === 'rejected') {
+      const prospect = batch[batchIndex];
+      console.error(`[Intelligent Analysis] Promise rejected for ${prospect.company_name}:`, promiseResult.reason);
+      results.push({
+        success: false,
+        prospect_id: prospect.id,
+        url: prospect.website,
+        company_name: prospect.company_name,
+        company: prospect.company_name || prospect.website,
+        error: promiseResult.reason?.message || 'Unknown error'
+      });
+    }
+  });
+
+  console.log(`[Intelligent Analysis] Batch complete: ${results.length}/${prospects.length} processed so far`);
     }
 
     const successCount = results.filter(r => r.success).length;

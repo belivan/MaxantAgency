@@ -5,7 +5,7 @@
  * Evaluates: quality gap, budget likelihood, urgency, industry fit, company size, engagement
  */
 
-import { loadPrompt } from '../shared/prompt-loader.js';
+import { loadPrompt, substituteVariables } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 
 /**
@@ -106,65 +106,71 @@ export async function scoreLeadPriority(leadData) {
     const formattedWebsiteStatus = `${websiteStatusText} ${websiteStatusEmoji[websiteStatusText] || ''}`;
 
     // Load lead priority scoring prompt
-    const prompt = await loadPrompt('lead-qualification/lead-priority-scorer', {
-      company_name: leadData.company_name || 'Unknown Company',
-      industry: leadData.industry || 'Unknown',
-      url: leadData.url || '',
-      city: leadData.city || 'Unknown',
-      state: leadData.state || 'Unknown',
+    const prompt = await loadPrompt('lead-qualification/lead-priority-scorer');
 
-      // Website Quality
-      website_grade: leadData.website_grade || 'N/A',
-      overall_score: String(leadData.overall_score || 0),
-      design_score: String(leadData.design_score || 0),
-      seo_score: String(leadData.seo_score || 0),
-      content_score: String(leadData.content_score || 0),
-      social_score: String(leadData.social_score || 0),
-      is_mobile_friendly: leadData.is_mobile_friendly ? 'Yes' : 'No',
-      has_https: leadData.has_https ? 'Yes' : 'No',
-      page_load_time: String(leadData.page_load_time || 0),
-      tech_stack: leadData.tech_stack || 'Unknown',
+    // Substitute variables in the user prompt template
+    const userPrompt = await substituteVariables(
+      prompt.userPromptTemplate,
+      {
+        company_name: leadData.company_name || 'Unknown Company',
+        industry: leadData.industry || 'Unknown',
+        url: leadData.url || '',
+        city: leadData.city || 'Unknown',
+        state: leadData.state || 'Unknown',
 
-      // Issues & Opportunities
-      top_issue: topIssueText,
-      quick_wins_count: String(Array.isArray(leadData.quick_wins) ? leadData.quick_wins.length : 0),
-      design_issues_count: String(Array.isArray(leadData.design_issues) ? leadData.design_issues.length : 0),
+        // Website Quality
+        website_grade: leadData.website_grade || 'N/A',
+        overall_score: String(leadData.overall_score || 0),
+        design_score: String(leadData.design_score || 0),
+        seo_score: String(leadData.seo_score || 0),
+        content_score: String(leadData.content_score || 0),
+        social_score: String(leadData.social_score || 0),
+        is_mobile_friendly: leadData.is_mobile_friendly ? 'Yes' : 'No',
+        has_https: leadData.has_https ? 'Yes' : 'No',
+        page_load_time: String(leadData.page_load_time || 0),
+        tech_stack: leadData.tech_stack || 'Unknown',
 
-      // Business Intelligence
-      years_in_business: leadData.years_in_business ? String(leadData.years_in_business) : 'Unknown',
-      founded_year: leadData.founded_year ? String(leadData.founded_year) : 'Unknown',
-      employee_count: leadData.employee_count ? String(leadData.employee_count) : 'Unknown',
-      location_count: leadData.location_count ? String(leadData.location_count) : 'Unknown',
-      pricing_visible: leadData.pricing_visible ? 'Yes' : 'No',
-      pricing_range: pricingRangeText,
-      blog_active: leadData.blog_active ? 'Yes' : 'No',
-      content_last_update: leadData.content_last_update || 'Unknown',
-      decision_maker_email: leadData.decision_maker_email ? 'Yes' : 'No',
-      decision_maker_phone: leadData.decision_maker_phone ? 'Yes' : 'No',
-      owner_name: leadData.owner_name || 'Unknown',
-      premium_features: premiumFeaturesText,
-      budget_indicator: leadData.budget_indicator || 'Unknown',
-      pages_crawled: String(leadData.pages_crawled || 1),
+        // Issues & Opportunities
+        top_issue: topIssueText,
+        quick_wins_count: String(Array.isArray(leadData.quick_wins) ? leadData.quick_wins.length : 0),
+        design_issues_count: String(Array.isArray(leadData.design_issues) ? leadData.design_issues.length : 0),
 
-      // Contact Info
-      contact_email: leadData.contact_email || 'Not found',
-      social_platforms_present: socialPresenceText,
+        // Business Intelligence
+        years_in_business: leadData.years_in_business ? String(leadData.years_in_business) : 'Unknown',
+        founded_year: leadData.founded_year ? String(leadData.founded_year) : 'Unknown',
+        employee_count: leadData.employee_count ? String(leadData.employee_count) : 'Unknown',
+        location_count: leadData.location_count ? String(leadData.location_count) : 'Unknown',
+        pricing_visible: leadData.pricing_visible ? 'Yes' : 'No',
+        pricing_range: pricingRangeText,
+        blog_active: leadData.blog_active ? 'Yes' : 'No',
+        content_last_update: leadData.content_last_update || 'Unknown',
+        decision_maker_email: leadData.decision_maker_email ? 'Yes' : 'No',
+        decision_maker_phone: leadData.decision_maker_phone ? 'Yes' : 'No',
+        owner_name: leadData.owner_name || 'Unknown',
+        premium_features: premiumFeaturesText,
+        budget_indicator: leadData.budget_indicator || 'Unknown',
+        pages_crawled: String(leadData.pages_crawled || 1),
 
-      // Prospect Intelligence (NEW)
-      google_rating: leadData.google_rating ? String(leadData.google_rating) : 'Not available',
-      google_review_count: leadData.google_review_count ? String(leadData.google_review_count) : '0',
-      icp_match_score: leadData.icp_match_score ? String(leadData.icp_match_score) : 'Not available',
-      most_recent_review: reviewRecencyText,
-      website_status: formattedWebsiteStatus,
-      description: leadData.description || 'Not available',
-      services: servicesText
-    });
+        // Contact Info
+        contact_email: leadData.contact_email || 'Not found',
+        social_platforms_present: socialPresenceText,
+
+        // Prospect Intelligence (NEW)
+        google_rating: leadData.google_rating ? String(leadData.google_rating) : 'Not available',
+        google_review_count: leadData.google_review_count ? String(leadData.google_review_count) : '0',
+        icp_match_score: leadData.icp_match_score ? String(leadData.icp_match_score) : 'Not available',
+        most_recent_review: reviewRecencyText,
+        website_status: formattedWebsiteStatus,
+        description: leadData.description || 'Not available',
+        services: servicesText
+      }
+    );
 
     // Call AI API
     const response = await callAI({
       model: prompt.model,
       systemPrompt: prompt.systemPrompt,
-      userPrompt: prompt.userPrompt,
+      userPrompt: userPrompt,
       temperature: prompt.temperature,
       jsonMode: true
     });

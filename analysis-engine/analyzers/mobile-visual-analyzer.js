@@ -71,7 +71,16 @@ export async function analyzeMobileVisual(pages, context = {}, customPrompt = nu
           outputFormat: customPrompt.outputFormat
         };
       } else {
-        prompt = await loadPrompt('web-design/mobile-visual-analysis', variables);
+        const { substituteVariables } = await import('../shared/prompt-loader.js');
+        const loadedPrompt = await loadPrompt('mobile-visual-analyzer');
+        prompt = {
+          name: loadedPrompt.name,
+          model: loadedPrompt.model,
+          temperature: loadedPrompt.temperature,
+          systemPrompt: loadedPrompt.systemPrompt,
+          userPrompt: await substituteVariables(loadedPrompt.userPromptTemplate, variables, loadedPrompt.variables),
+          outputFormat: loadedPrompt.outputFormat
+        };
       }
 
       // Lazy-load screenshot from disk (memory optimization)

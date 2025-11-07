@@ -43,27 +43,9 @@ async function loadMetaPrompt() {
  * Load current prompt for an analyzer
  */
 async function loadCurrentPrompt(analyzerName) {
-  // Map analyzer name to prompt file
-  const promptMap = {
-    'desktop-visual-analyzer': 'config/prompts/web-design/desktop-visual-analysis.json',
-    'mobile-visual-analyzer': 'config/prompts/web-design/mobile-visual-analysis.json',
-    'unified-visual-analyzer': 'config/prompts/web-design/unified-visual-analysis.json',
-    'seo-analyzer': 'config/prompts/web-design/seo-analysis.json',
-    'content-analyzer': 'config/prompts/web-design/content-analysis.json',
-    'unified-technical-analyzer': 'config/prompts/web-design/unified-technical-analysis.json',
-    'social-analyzer': 'config/prompts/web-design/social-analysis.json',
-    'accessibility-analyzer': 'config/prompts/web-design/accessibility-analysis.json'
-  };
-
-  const promptFile = promptMap[analyzerName];
-  if (!promptFile) {
-    throw new Error(`No prompt file mapping for analyzer: ${analyzerName}`);
-  }
-
-  // Adjust path relative to analysis-engine root
-  const promptPath = path.join(process.cwd(), promptFile);
-  const promptData = await fs.readFile(promptPath, 'utf-8');
-  return JSON.parse(promptData);
+  // Use the shared prompt loader to load the current active prompt
+  const { loadPrompt } = await import('../../shared/prompt-loader.js');
+  return await loadPrompt(analyzerName);
 }
 
 /**

@@ -81,6 +81,20 @@
       "comment": "Was this response served from cache"
     },
     {
+      "name": "retry_count",
+      "type": "integer",
+      "default": 0,
+      "notNull": false,
+      "comment": "Number of retry attempts needed for this API call (0 if succeeded on first try)"
+    },
+    {
+      "name": "rate_limit_hit",
+      "type": "boolean",
+      "default": false,
+      "notNull": false,
+      "comment": "Whether this API call hit a rate limit and required retries"
+    },
+    {
       "name": "error",
       "type": "text",
       "notNull": false,

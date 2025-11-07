@@ -71,7 +71,16 @@ export async function analyzeDesktopVisual(pages, context = {}, customPrompt = n
           outputFormat: customPrompt.outputFormat
         };
       } else {
-        prompt = await loadPrompt('web-design/desktop-visual-analysis', variables);
+        const { substituteVariables } = await import('../shared/prompt-loader.js');
+        const loadedPrompt = await loadPrompt('desktop-visual-analyzer');
+        prompt = {
+          name: loadedPrompt.name,
+          model: loadedPrompt.model,
+          temperature: loadedPrompt.temperature,
+          systemPrompt: loadedPrompt.systemPrompt,
+          userPrompt: await substituteVariables(loadedPrompt.userPromptTemplate, variables, loadedPrompt.variables),
+          outputFormat: loadedPrompt.outputFormat
+        };
       }
 
       // Lazy-load screenshot from disk (memory optimization)

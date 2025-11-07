@@ -420,29 +420,52 @@ export class ResultsAggregator {
     // Core analyzers breakdown
     if (analyzersCost > 0) {
       console.log('Core Analyzers:');
-      if (analysisResults.desktopVisual?._meta?.cost) {
-        const meta = analysisResults.desktopVisual._meta;
-        console.log(`  Desktop Visual:  $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      // Check for unified visual analyzer (desktop + mobile)
+      if (analysisResults.unifiedVisual?._meta?.cost) {
+        const meta = analysisResults.unifiedVisual._meta;
+        const tokens = meta.usage?.total_tokens || 0;
+        console.log(`  Unified Visual:  $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
+      } else {
+        // Fallback to legacy individual analyzers if unified not available
+        if (analysisResults.desktopVisual?._meta?.cost) {
+          const meta = analysisResults.desktopVisual._meta;
+          const tokens = meta.usage?.total_tokens || 0;
+          console.log(`  Desktop Visual:  $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
+        }
+        if (analysisResults.mobileVisual?._meta?.cost) {
+          const meta = analysisResults.mobileVisual._meta;
+          const tokens = meta.usage?.total_tokens || 0;
+          console.log(`  Mobile Visual:   $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
+        }
       }
-      if (analysisResults.mobileVisual?._meta?.cost) {
-        const meta = analysisResults.mobileVisual._meta;
-        console.log(`  Mobile Visual:   $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+      // Check for unified technical analyzer (SEO + content)
+      if (analysisResults.unifiedTechnical?._meta?.cost) {
+        const meta = analysisResults.unifiedTechnical._meta;
+        const tokens = meta.usage?.total_tokens || 0;
+        console.log(`  Unified Technical: $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
+      } else {
+        // Fallback to legacy individual analyzers if unified not available
+        if (analysisResults.seo?._meta?.cost) {
+          const meta = analysisResults.seo._meta;
+          const tokens = meta.usage?.total_tokens || 0;
+          console.log(`  SEO:             $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
+        }
+        if (analysisResults.content?._meta?.cost) {
+          const meta = analysisResults.content._meta;
+          const tokens = meta.usage?.total_tokens || 0;
+          console.log(`  Content:         $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
+        }
       }
-      if (analysisResults.seo?._meta?.cost) {
-        const meta = analysisResults.seo._meta;
-        console.log(`  SEO:             $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
-      }
-      if (analysisResults.content?._meta?.cost) {
-        const meta = analysisResults.content._meta;
-        console.log(`  Content:         $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
-      }
+      // Social and Accessibility are always standalone
       if (analysisResults.social?._meta?.cost) {
         const meta = analysisResults.social._meta;
-        console.log(`  Social:          $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+        const tokens = meta.usage?.total_tokens || 0;
+        console.log(`  Social:          $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
       }
       if (analysisResults.accessibility?._meta?.cost) {
         const meta = analysisResults.accessibility._meta;
-        console.log(`  Accessibility:   $${meta.cost.toFixed(4)}  (${meta.tokens || 0} tokens)`);
+        const tokens = meta.usage?.total_tokens || 0;
+        console.log(`  Accessibility:   $${meta.cost.toFixed(4)}  (${tokens} tokens)`);
       }
       console.log(`  Subtotal:        $${analyzersCost.toFixed(4)}`);
     }
@@ -566,7 +589,7 @@ export class ResultsAggregator {
 
     // Generate screenshots manifest (uploads to Supabase Storage)
     let screenshotsManifest = null;
-    const storageType = process.env.SCREENSHOT_STORAGE || 'supabase_storage';
+    const storageType = process.env.SCREENSHOT_STORAGE || 'local';
 
     if (storageType !== 'local') {
       try {

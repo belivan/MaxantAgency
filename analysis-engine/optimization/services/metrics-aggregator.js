@@ -192,7 +192,7 @@ async function getLeadMetricsForAnalyzer(analyzerName, limit, dateFilter) {
     // Get recent leads
     let leadQuery = supabase
       .from('leads')
-      .select(`${fields.score}, ${fields.issues}, overall_score, grade, validated_at, validation_metadata`)
+      .select(`${fields.score}, ${fields.issues}, overall_score, website_grade, validated_at, validation_metadata`)
       .not(fields.score, 'is', null)
       .order('analyzed_at', { ascending: false })
       .limit(limit);

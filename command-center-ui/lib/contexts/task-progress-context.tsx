@@ -191,10 +191,10 @@ export function TaskProgressProvider({ children }: { children: ReactNode }) {
       setTimeout(() => startNextQueuedTask(taskType as TaskType), 100);
     }
 
-    // Auto-remove completed tasks after 30 seconds
+    // Auto-remove completed tasks after 60 seconds
     setTimeout(() => {
       setTasks(prev => prev.filter(t => t.id !== id));
-    }, 30000);
+    }, 60000);
   }, [startNextQueuedTask]);
 
   // Mark task as errored

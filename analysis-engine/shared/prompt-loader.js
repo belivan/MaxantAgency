@@ -14,47 +14,67 @@
 import { supabase } from '../database/supabase-client.js';
 import fs from 'fs/promises';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
-const PROMPTS_BASE_DIR = path.join(process.cwd(), 'config', 'prompts', 'web-design');
+// Get directory of this file
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Map analyzer names to prompt folder names
+// Always resolve prompts directory relative to this file's location
+const PROMPTS_BASE_DIR = path.join(__dirname, '..', 'config', 'prompts');
+
+// Map analyzer names to category + prompt folder names
 const ANALYZER_TO_PROMPT_MAP = {
-  'desktop-visual-analyzer': 'desktop-visual-analysis',
-  'mobile-visual-analyzer': 'mobile-visual-analysis',
-  'unified-visual-analyzer': 'unified-visual-analysis',
-  'seo-analyzer': 'seo-analysis',
-  'content-analyzer': 'content-analysis',
-  'unified-technical-analyzer': 'unified-technical-analysis',
-  'social-analyzer': 'social-analysis',
-  'accessibility-analyzer': 'accessibility-analysis'
+  'desktop-visual-analyzer': 'web-design/desktop-visual-analysis',
+  'mobile-visual-analyzer': 'web-design/mobile-visual-analysis',
+  'unified-visual-analyzer': 'web-design/unified-visual-analysis',
+  'seo-analyzer': 'web-design/seo-analysis',
+  'content-analyzer': 'web-design/content-analysis',
+  'unified-technical-analyzer': 'web-design/unified-technical-analysis',
+  'social-analyzer': 'web-design/social-analysis',
+  'accessibility-analyzer': 'web-design/accessibility-analysis',
+  'qa-validator': 'validation/qa-validation'
 };
+
+// In-memory cache for loaded prompts (prevents redundant file reads)
+const promptCache = new Map();
 
 /**
  * Load prompt for an analyzer (with variant support)
- * @param {string} analyzerName - Name of the analyzer
+ * @param {string} analyzerNameOrPath - Analyzer name (e.g., 'unified-visual-analyzer') OR path (e.g., 'web-design/unified-visual-analysis')
  * @returns {Promise<object>} Prompt object
  */
-export async function loadPrompt(analyzerName) {
+export async function loadPrompt(analyzerNameOrPath) {
+  // Handle backward compatibility: detect if this is a path or analyzer name
+  let analyzerName = analyzerNameOrPath;
+
+  // If it contains a slash, it's the old path format - convert it
+  if (analyzerNameOrPath.includes('/')) {
+    // Old format: 'web-design/unified-visual-analysis' -> 'unified-visual-analyzer'
+    const pathPart = analyzerNameOrPath.split('/')[1]; // Get 'unified-visual-analysis'
+    analyzerName = pathPart.replace('-analysis', '-analyzer'); // Convert to 'unified-visual-analyzer'
+  }
+
   try {
     // 1. Check database for active variant
     const activeVariant = await getActiveVariant(analyzerName);
 
     if (activeVariant && activeVariant.file_path) {
       // 2. Load from variant file
-      console.log(\`[Prompt Loader] Loading active variant for \${analyzerName}: \${activeVariant.file_path}\`);
-      const promptPath = path.join(process.cwd(), activeVariant.file_path);
+      console.log(`[Prompt Loader] Loading active variant for ${analyzerName}: ${activeVariant.file_path}`);
+      const promptPath = path.join(PROMPTS_BASE_DIR, activeVariant.file_path);
       const promptData = await fs.readFile(promptPath, 'utf-8');
       return JSON.parse(promptData);
     }
 
     // 3. Fall back to base prompt
-    console.log(\`[Prompt Loader] Loading base prompt for \${analyzerName}\`);
-    return await loadBasePrompt(analyzerName);
+    // Pass original parameter to support both old path format and new analyzer name
+    return await loadBasePrompt(analyzerNameOrPath);
 
   } catch (error) {
-    console.error(\`[Prompt Loader] Error loading prompt for \${analyzerName}:\`, error.message);
-    console.log('[Prompt Loader] Falling back to base prompt');
-    return await loadBasePrompt(analyzerName);
+    console.error(`[Prompt Loader] Error loading prompt for ${analyzerName}:`, error.message);
+    // Pass original parameter to support both old path format and new analyzer name (loadBasePrompt will log)
+    return await loadBasePrompt(analyzerNameOrPath);
   }
 }
 
@@ -82,21 +102,36 @@ async function getActiveVariant(analyzerName) {
 
     return data;
   } catch (error) {
-    console.error(\`[Prompt Loader] Error fetching active variant:\`, error.message);
+    console.error(`[Prompt Loader] Error fetching active variant:`, error.message);
     return null;
   }
 }
 
 /**
  * Load base prompt from file
- * @param {string} analyzerName - Name of the analyzer
- * @returns {Promise<object>} Base prompt object
+ * @param {string} analyzerNameOrPath - Analyzer name or path
+ * @returns {Promise<object}> Base prompt object
  */
-async function loadBasePrompt(analyzerName) {
-  const promptFolder = ANALYZER_TO_PROMPT_MAP[analyzerName];
+async function loadBasePrompt(analyzerNameOrPath) {
+  // Check cache first
+  const cacheKey = `base:${analyzerNameOrPath}`;
+  if (promptCache.has(cacheKey)) {
+    return promptCache.get(cacheKey);
+  }
 
-  if (!promptFolder) {
-    throw new Error(\`Unknown analyzer: \${analyzerName}\`);
+  let promptFolder;
+
+  // Check if it's a direct path (backward compatibility)
+  if (analyzerNameOrPath.includes('/')) {
+    // Old format: 'web-design/unified-visual-analysis'
+    promptFolder = analyzerNameOrPath;
+  } else {
+    // New format: 'unified-visual-analyzer' -> lookup in map
+    promptFolder = ANALYZER_TO_PROMPT_MAP[analyzerNameOrPath];
+
+    if (!promptFolder) {
+      throw new Error(`Unknown analyzer: ${analyzerNameOrPath}`);
+    }
   }
 
   // Try new folder structure first
@@ -105,16 +140,22 @@ async function loadBasePrompt(analyzerName) {
 
   // Fall back to old flat structure if needed
   if (!exists) {
-    promptPath = path.join(PROMPTS_BASE_DIR, \`\${promptFolder}.json\`);
+    promptPath = path.join(PROMPTS_BASE_DIR, `${promptFolder}.json`);
     exists = await fs.access(promptPath).then(() => true).catch(() => false);
 
     if (!exists) {
-      throw new Error(\`Prompt file not found for \${analyzerName}\`);
+      throw new Error(`Prompt file not found for ${analyzerNameOrPath}`);
     }
   }
 
+  console.log(`[Prompt Loader] Loading base prompt for ${analyzerNameOrPath}`);
   const promptData = await fs.readFile(promptPath, 'utf-8');
-  return JSON.parse(promptData);
+  const prompt = JSON.parse(promptData);
+
+  // Store in cache
+  promptCache.set(cacheKey, prompt);
+
+  return prompt;
 }
 
 /**
@@ -130,7 +171,7 @@ export async function listVariants(analyzerName) {
     .order('version_number', { ascending: false });
 
   if (error) {
-    console.error(\`Error listing variants for \${analyzerName}:\`, error);
+    console.error(`Error listing variants for ${analyzerName}:`, error);
     return [];
   }
 
@@ -181,7 +222,7 @@ export async function activateVariant(variantId) {
 
   if (error) throw error;
 
-  console.log(\`✅ Activated variant \${variantId} for \${variant.analyzer_name}\`);
+  console.log(`✅ Activated variant ${variantId} for ${variant.analyzer_name}`);
   return data;
 }
 
@@ -195,5 +236,65 @@ export async function revertToBase(analyzerName) {
     .update({ is_active: false })
     .eq('analyzer_name', analyzerName);
 
-  console.log(\`✅ Reverted \${analyzerName} to base prompt\`);
+  console.log(`✅ Reverted ${analyzerName} to base prompt`);
+}
+
+/**
+ * Clear prompt cache (useful for development/testing)
+ * @param {string} analyzerName - Optional specific analyzer to clear, or clear all if not specified
+ */
+export function clearPromptCache(analyzerName = null) {
+  if (analyzerName) {
+    // Clear specific analyzer
+    const cacheKey = `base:${analyzerName}`;
+    if (promptCache.has(cacheKey)) {
+      promptCache.delete(cacheKey);
+      console.log(`[Prompt Loader] Cleared cache for ${analyzerName}`);
+    }
+  } else {
+    // Clear all
+    const count = promptCache.size;
+    promptCache.clear();
+    console.log(`[Prompt Loader] Cleared ${count} cached prompts`);
+  }
+}
+
+/**
+ * Substitute variables in a prompt template
+ * @param {string} template - Template string with {{variable}} placeholders
+ * @param {object} values - Object with variable values
+ * @param {array} expectedVars - Optional array of expected variable definitions
+ * @returns {Promise<string>} Template with variables substituted
+ */
+export async function substituteVariables(template, values, expectedVars) {
+  if (!template) return '';
+
+  let result = template;
+
+  // Replace all {{variable}} placeholders with actual values
+  for (const [key, value] of Object.entries(values)) {
+    const placeholder = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+    result = result.replace(placeholder, value || '');
+  }
+
+  return result;
+}
+
+/**
+ * Collect all analysis prompts for all analyzers
+ * @returns {Promise<object>} Object with all prompts
+ */
+export async function collectAnalysisPrompts() {
+  const prompts = {};
+
+  for (const [analyzerName, promptPath] of Object.entries(ANALYZER_TO_PROMPT_MAP)) {
+    try {
+      prompts[analyzerName] = await loadPrompt(analyzerName);
+    } catch (error) {
+      console.error(`Error loading prompt for ${analyzerName}:`, error.message);
+      prompts[analyzerName] = null;
+    }
+  }
+
+  return prompts;
 }

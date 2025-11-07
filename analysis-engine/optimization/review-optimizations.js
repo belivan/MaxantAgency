@@ -30,12 +30,17 @@ async function saveVariantToFile(variant) {
   // Map analyzer name to prompt file name
   // e.g., "desktop-visual-analyzer" -> "desktop-visual-analysis"
   const analyzerToPromptName = {
+    // UNIFIED ANALYZERS (PRIMARY - in active use)
+    'unified-visual-analyzer': 'unified-visual-analysis',
+    'unified-technical-analyzer': 'unified-technical-analysis',
+
+    // LEGACY ANALYZERS (FALLBACK - used when unified is disabled)
     'desktop-visual-analyzer': 'desktop-visual-analysis',
     'mobile-visual-analyzer': 'mobile-visual-analysis',
-    'unified-visual-analyzer': 'unified-visual-analysis',
     'seo-analyzer': 'seo-analysis',
     'content-analyzer': 'content-analysis',
-    'unified-technical-analyzer': 'unified-technical-analysis',
+
+    // STANDALONE ANALYZERS (ALWAYS USED)
     'social-analyzer': 'social-analysis',
     'accessibility-analyzer': 'accessibility-analysis'
   };

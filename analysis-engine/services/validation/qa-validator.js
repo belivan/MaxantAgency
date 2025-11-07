@@ -16,6 +16,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { callAI, parseJSONResponse } from '../../../database-tools/shared/ai-client.js';
 import { detectArtifact } from './artifact-detector.js';
+import { loadPrompt, substituteVariables } from '../../shared/prompt-loader.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -44,13 +45,22 @@ export async function validateIssue(issue, screenshotPaths, companyName = 'this 
     const screenshots = await loadScreenshots(issue, screenshotPaths);
     console.log(`[QA Validator] Loaded ${screenshots.length} screenshot(s)`);
 
-    // Step 3: Load QA validation prompt
-    const promptPath = join(__dirname, '..', '..', 'config', 'prompts', 'validation', 'qa-validation.json');
-    const promptContent = await readFile(promptPath, 'utf-8');
-    const promptConfig = JSON.parse(promptContent);
+    // Step 3: Load QA validation prompt (using centralized loader)
+    const promptConfig = await loadPrompt('qa-validator');
 
-    // Step 4: Build user prompt with issue details
-    const userPrompt = buildUserPrompt(promptConfig.userPromptTemplate, issue);
+    // Step 4: Build user prompt with issue details (using centralized variable substitution)
+    const metadata = issue.metadata || {};
+    const userPrompt = await substituteVariables(
+      promptConfig.userPromptTemplate,
+      {
+        issue_title: issue.title,
+        issue_description: issue.description,
+        issue_category: issue.category,
+        issue_viewport: metadata.viewport || 'unknown',
+        issue_page_region: metadata.page_region || 'unknown',
+        issue_keywords: (metadata.keywords || []).join(', ')
+      }
+    );
 
     // Step 5: Call GPT-5 Vision
     console.log(`[QA Validator] Calling ${promptConfig.model} for verification...`);
@@ -144,21 +154,6 @@ async function loadScreenshots(issue, screenshotPaths) {
   }
 
   return screenshots;
-}
-
-/**
- * Build user prompt by substituting variables
- */
-function buildUserPrompt(template, issue) {
-  const metadata = issue.metadata || {};
-
-  return template
-    .replace('{{issue_title}}', issue.title)
-    .replace('{{issue_description}}', issue.description)
-    .replace('{{issue_category}}', issue.category)
-    .replace('{{issue_viewport}}', metadata.viewport || 'unknown')
-    .replace('{{issue_page_region}}', metadata.page_region || 'unknown')
-    .replace('{{issue_keywords}}', (metadata.keywords || []).join(', '));
 }
 
 /**
