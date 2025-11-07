@@ -236,21 +236,38 @@ export async function runIterativeDiscovery(icp, options = {}) {
 
   const stats = await getQueryStats(projectId);
 
+  // Cap results to avoid over-processing
+  // Return max 2x the target count to account for filtering during processing
+  // This prevents finding 60 companies when user only wants 1-5 prospects
+  // For very small counts (1-5), we cap more aggressively
+  const maxResults = targetCount <= 5 ? targetCount * 2 : Math.min(targetCount * 3, 100);
+  const cappedProspects = allProspects.slice(0, maxResults);
+
+  if (cappedProspects.length < allProspects.length) {
+    sendProgress({
+      step: 'capping_results',
+      message: `Limiting results to ${cappedProspects.length} companies (from ${allProspects.length} found) to avoid over-processing`,
+      original: allProspects.length,
+      capped: cappedProspects.length,
+      target: targetCount
+    });
+  }
+
   sendProgress({
     step: 'complete',
-    message: `Discovery complete: ${allProspects.length} prospects found`,
-    totalProspects: allProspects.length,
+    message: `Discovery complete: ${cappedProspects.length} prospects found`,
+    totalProspects: cappedProspects.length,
     target: targetCount,
     iterations: iteration,
-    success: allProspects.length >= targetCount,
+    success: cappedProspects.length >= targetCount,
     stats
   });
 
   return {
-    prospects: allProspects,
+    prospects: cappedProspects,
     iterations: iteration,
     queriesExecuted: stats.totalQueries,
-    success: allProspects.length >= targetCount,
+    success: cappedProspects.length >= targetCount,
     stats
   };
 }

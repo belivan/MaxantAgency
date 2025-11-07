@@ -165,7 +165,7 @@ export function FloatingTaskIndicator() {
             ) : (
               tasks.map((task) => {
                 const percentage = task.total > 0
-                  ? Math.round((task.current / task.total) * 100)
+                  ? Math.min(Math.round((task.current / task.total) * 100), 100)
                   : 0;
                 const isRunning = task.status === 'running';
                 const isQueued = task.status === 'queued';

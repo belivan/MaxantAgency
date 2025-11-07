@@ -315,7 +315,7 @@ app.all('/api/analyze-benchmark', async (req, res) => {
  */
 app.post('/api/analyze-url', async (req, res) => {
   try {
-    const { url, company_name, industry, project_id, custom_prompts } = req.body;
+    const { url, company_name, industry, project_id, custom_prompts, max_pages } = req.body;
 
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
@@ -334,6 +334,7 @@ app.post('/api/analyze-url', async (req, res) => {
       project_id: project_id  // Required, validation above ensures it exists
     }, {
       customPrompts: custom_prompts || undefined,
+      maxPagesPerModule: max_pages,
       onProgress: (progress) => {
         console.log(`[Intelligent Analysis] ${progress.step}: ${progress.message}`);
       }

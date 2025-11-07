@@ -238,6 +238,12 @@ export default function ProspectingPage() {
           } else if (event.status === 'completed') {
             if (event.found !== undefined) {
               addTaskLog(taskId, `Found ${event.found} companies`, 'success');
+
+              // Update task total to match actual companies to be processed
+              // This prevents showing "10/1" when processing 10 companies to get 1 prospect
+              if (event.name === 'google-maps-discovery' && event.found > 0) {
+                updateTask(taskId, 0, `Processing ${event.found} companies...`, event.found);
+              }
             } else {
               addTaskLog(taskId, `${stepName} completed`, 'success');
             }

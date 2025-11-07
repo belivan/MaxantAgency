@@ -53,7 +53,7 @@ interface TaskProgressContextValue {
   activeTasks: TaskProgress[];
   queuedTasks: TaskProgress[];
   startTask: (type: TaskType, title: string, total: number, abortController?: AbortController) => string;
-  updateTask: (id: string, current: number, message?: string) => void;
+  updateTask: (id: string, current: number, message?: string, newTotal?: number) => void;
   addLog: (id: string, message: string, type?: 'info' | 'success' | 'warning' | 'error') => void;
   completeTask: (id: string) => void;
   errorTask: (id: string, message: string) => void;
@@ -157,10 +157,10 @@ export function TaskProgressProvider({ children }: { children: ReactNode }) {
   }, [activeTasks, getQueuePosition]);
 
   // Update task progress
-  const updateTask = useCallback((id: string, current: number, message?: string) => {
+  const updateTask = useCallback((id: string, current: number, message?: string, newTotal?: number) => {
     setTasks(prev => prev.map(task =>
       task.id === id
-        ? { ...task, current, message }
+        ? { ...task, current, message, ...(newTotal !== undefined ? { total: newTotal } : {}) }
         : task
     ));
   }, []);

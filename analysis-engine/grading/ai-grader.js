@@ -17,6 +17,27 @@ import { findBestBenchmark } from '../services/benchmark-matcher.js';
 import { calculateGrade } from './grader.js';
 
 /**
+ * Normalize camelCase field names to snake_case
+ * Handles nested objects and arrays recursively
+ */
+function normalizeFieldNames(obj) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj;
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => normalizeFieldNames(item));
+  }
+
+  const normalized = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Convert camelCase to snake_case
+    const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+    normalized[snakeKey] = normalizeFieldNames(value);
+  }
+  return normalized;
+}
+
+/**
  * Grade a website using AI comparative analysis
  *
  * @param {object} analysisResults - Full analysis results from orchestrator
@@ -117,10 +138,16 @@ export async function gradeWithAI(analysisResults, metadata) {
     });
 
     // Parse JSON response from content field (handles markdown/prose wrapping)
-    const parsedGrading = await parseJSONResponse(gradingResult.content);
+    let parsedGrading = await parseJSONResponse(gradingResult.content);
 
-    // DIAGNOSTIC: Log what AI returned
+    // DIAGNOSTIC: Log what AI returned BEFORE normalization
     console.log(`[AI Grader Debug] Raw AI response keys: ${Object.keys(parsedGrading).join(', ')}`);
+
+    // Normalize field names (convert camelCase to snake_case if needed)
+    parsedGrading = normalizeFieldNames(parsedGrading);
+
+    // DIAGNOSTIC: Log after normalization
+    console.log(`[AI Grader Debug] After normalization keys: ${Object.keys(parsedGrading).join(', ')}`);
     console.log(`[AI Grader Debug] overall_score from AI: ${parsedGrading.overall_score}`);
     console.log(`[AI Grader Debug] overall_grade from AI: ${parsedGrading.overall_grade}`);
 

@@ -83,7 +83,8 @@ export function QuickWebsiteAnalysis({
         url: data.url,
         company_name: data.company_name || undefined,
         industry: data.industry || undefined,
-        project_id: selectedProjectId
+        project_id: selectedProjectId,
+        max_pages: 5  // Default for quick analysis
       };
 
       addTaskLog(taskId, 'Crawling website and capturing screenshots...', 'info');

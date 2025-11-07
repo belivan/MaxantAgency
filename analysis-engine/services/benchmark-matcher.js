@@ -136,15 +136,60 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
       matchResult = result;
     }
 
-    // Step 4: Get full benchmark data
+    // Step 4: Validate AI response and get full benchmark data
+
+    // Check if AI returned a benchmark_id
+    if (!matchResult.benchmark_id) {
+      console.warn(`⚠️ AI did not return a benchmark_id, using fallback selection`);
+      console.warn(`   AI response:`, JSON.stringify(matchResult, null, 2));
+
+      // Fallback: Select highest-scored benchmark
+      const fallbackBenchmark = candidateBenchmarks.reduce((best, current) =>
+        current.overall_score > best.overall_score ? current : best
+      );
+
+      console.log(`  └─ Fallback selected: ${fallbackBenchmark.company_name} (score: ${fallbackBenchmark.overall_score})`);
+
+      return {
+        success: true,
+        benchmark: fallbackBenchmark,
+        match_metadata: {
+          match_score: 0,
+          match_reasoning: 'Fallback selection - AI did not return valid benchmark_id',
+          comparison_tier: fallbackBenchmark.benchmark_tier,
+          key_similarities: [],
+          key_differences: [],
+          candidates_considered: candidateBenchmarks.length,
+          fallback_used: true
+        }
+      };
+    }
+
     const selectedBenchmark = candidateBenchmarks.find(b => b.id === matchResult.benchmark_id);
 
     if (!selectedBenchmark) {
-      console.error(`❌ AI selected invalid benchmark ID: ${result.benchmark_id}`);
+      console.error(`❌ AI selected invalid benchmark ID: ${matchResult.benchmark_id}`);
+      console.error(`   Available IDs:`, candidateBenchmarks.map(b => b.id).slice(0, 5));
+
+      // Fallback: Select highest-scored benchmark
+      const fallbackBenchmark = candidateBenchmarks.reduce((best, current) =>
+        current.overall_score > best.overall_score ? current : best
+      );
+
+      console.log(`  └─ Fallback selected: ${fallbackBenchmark.company_name} (score: ${fallbackBenchmark.overall_score})`);
+
       return {
-        success: false,
-        error: 'Invalid benchmark selected',
-        benchmark: null
+        success: true,
+        benchmark: fallbackBenchmark,
+        match_metadata: {
+          match_score: 0,
+          match_reasoning: 'Fallback selection - AI returned invalid benchmark_id',
+          comparison_tier: fallbackBenchmark.benchmark_tier,
+          key_similarities: [],
+          key_differences: [],
+          candidates_considered: candidateBenchmarks.length,
+          fallback_used: true
+        }
       };
     }
 

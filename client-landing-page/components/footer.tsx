@@ -20,7 +20,7 @@ export function Footer() {
             <h3 className="font-semibold text-lg">Services</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/#analysis-form" className="text-muted-foreground hover:text-foreground transition-colors">
+                <a href="/#report-lookup" className="text-muted-foreground hover:text-foreground transition-colors">
                   Website Analysis
                 </a>
               </li>
@@ -30,7 +30,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/#analysis-form" className="text-muted-foreground hover:text-foreground transition-colors">
+                <a href="/#report-lookup" className="text-muted-foreground hover:text-foreground transition-colors">
                   Get Your Report
                 </a>
               </li>

@@ -104,9 +104,9 @@ export const analysisOptionsSchema = z.object({
   // Multi-page crawling configuration (NEW v2.0)
   max_pages: z.number()
     .int('Max pages must be an integer')
-    .min(5, 'Minimum 5 pages')
-    .max(50, 'Maximum 50 pages')
-    .default(30),
+    .min(1, 'Minimum 1 page')
+    .max(15, 'Maximum 15 pages')
+    .default(5),
   level_2_sample_rate: z.number()
     .min(0.25, 'Minimum 25% sample rate')
     .max(1.0, 'Maximum 100% sample rate')

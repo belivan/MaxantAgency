@@ -144,7 +144,7 @@ export function AnalysisConfig({
     }
   }, [externalModelSelections]);
 
-  const [maxPages, setMaxPages] = useState([10]);
+  const [maxPages, setMaxPages] = useState([5]);
   const [internalCustomPrompts, setInternalCustomPrompts] = useState<AnalysisPrompts>({});
   const [internalDefaultPrompts, setInternalDefaultPrompts] = useState<AnalysisPrompts>({});
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
@@ -298,7 +298,8 @@ export function AnalysisConfig({
     onSubmit({
       ...data,
       model_selections: activeModelSelections,
-      custom_prompts: mergedPrompts
+      custom_prompts: mergedPrompts,
+      max_pages: maxPages[0]
     });
   };
 
@@ -453,9 +454,9 @@ export function AnalysisConfig({
                 <Slider
                   value={maxPages}
                   onValueChange={setMaxPages}
-                  min={5}
-                  max={25}
-                  step={5}
+                  min={1}
+                  max={15}
+                  step={1}
                   className="w-full mb-2"
                   disabled={disabled || isLoading}
                 />
