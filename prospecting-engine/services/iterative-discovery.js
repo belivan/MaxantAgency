@@ -137,6 +137,30 @@ export async function runIterativeDiscovery(icp, options = {}) {
           location: expansion.location
         });
 
+        // Early stopping: check if we have enough prospects (including current allProspects)
+        // Do a quick deduplication check to see actual unique count
+        const tempUniqueMap = new Map(uniqueMap);
+        iterationProspects.forEach(p => {
+          if (p.googlePlaceId && !tempUniqueMap.has(p.googlePlaceId)) {
+            tempUniqueMap.set(p.googlePlaceId, p);
+          }
+        });
+
+        const currentUniqueCount = tempUniqueMap.size;
+
+        if (currentUniqueCount >= targetCount) {
+          sendProgress({
+            step: 'early_stop',
+            iteration,
+            queryIndex: i + 1,
+            message: `Target reached! Found ${currentUniqueCount} unique prospects after query ${i + 1}/${expansion.variations.length}. Skipping remaining ${expansion.variations.length - i - 1} queries.`,
+            totalUnique: currentUniqueCount,
+            target: targetCount,
+            queriesSkipped: expansion.variations.length - i - 1
+          });
+          break; // Exit the query loop early
+        }
+
         // Small delay between queries to respect rate limits
         if (i < expansion.variations.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -163,10 +187,10 @@ export async function runIterativeDiscovery(icp, options = {}) {
 
     const beforeDedup = iterationProspects.length;
 
-    // Add to unique map
+    // Add to unique map (using googlePlaceId as the key)
     iterationProspects.forEach(p => {
-      if (p.place_id && !uniqueMap.has(p.place_id)) {
-        uniqueMap.set(p.place_id, p);
+      if (p.googlePlaceId && !uniqueMap.has(p.googlePlaceId)) {
+        uniqueMap.set(p.googlePlaceId, p);
       }
     });
 

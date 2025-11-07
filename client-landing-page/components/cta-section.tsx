@@ -31,18 +31,44 @@ export function CTASection() {
     e.preventDefault()
     setIsSubmitting(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Form submitted:', formData)
-      setIsSubmitting(false)
-      setIsSubmitted(true)
+    try {
+      // Submit to database via API
+      const response = await fetch('/api/capture-lead', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          message: formData.message,
+          // No reportId - this is a contact form submission
+        }),
+      })
 
-      // Reset after 5 seconds
-      setTimeout(() => {
-        setIsSubmitted(false)
-        setFormData({ name: '', email: '', phone: '', company: '', message: '' })
-      }, 5000)
-    }, 1500)
+      const result = await response.json()
+
+      if (response.ok && result.success) {
+        console.log('Contact form submitted successfully:', result.leadId)
+        setIsSubmitted(true)
+
+        // Reset form after 5 seconds
+        setTimeout(() => {
+          setIsSubmitted(false)
+          setFormData({ name: '', email: '', phone: '', company: '', message: '' })
+        }, 5000)
+      } else {
+        console.error('Failed to submit contact form:', result.error)
+        alert('Failed to send message. Please try again.')
+      }
+    } catch (error) {
+      console.error('Error submitting contact form:', error)
+      alert('Failed to send message. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (

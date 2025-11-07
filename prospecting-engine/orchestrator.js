@@ -232,6 +232,18 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
     // STEP 3: Process Each Company
     // ═════════════════════════════════════════════════════════════
 
+    logInfo('Starting STEP 3: Process Each Company', {
+      totalCompanies: companies.length,
+      options: {
+        verifyWebsites: options.verifyWebsites !== false,
+        scrapeWebsites: options.scrapeWebsites !== false,
+        findSocialProfiles: options.findSocialProfiles !== false,
+        scrapeSocialData: options.scrapeSocialData !== false,
+        checkRelevance: options.checkRelevance !== false,
+        filterIrrelevant: options.filterIrrelevant === true
+      }
+    });
+
     for (let i = 0; i < companies.length; i++) {
       const company = companies[i];
 

@@ -116,7 +116,8 @@ export async function GET(
     }
 
     // STEP 5: Return PDF file with proper headers
-    return new NextResponse(pdfBuffer, {
+    // Convert Buffer to Uint8Array for Next.js 16 compatibility
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

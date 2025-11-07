@@ -5,12 +5,12 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json()
-    const { name, email, phone, company, reportId } = body
+    const { name, email, phone, company, reportId, message } = body
 
-    // Validate required fields
-    if (!name || !email || !reportId) {
+    // Validate required fields (reportId is optional for contact form submissions)
+    if (!name || !email) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, email, reportId' },
+        { error: 'Missing required fields: name, email' },
         { status: 400 }
       )
     }
@@ -44,18 +44,22 @@ export async function POST(request: NextRequest) {
       Object.entries(utmParams).filter(([_, v]) => v !== null)
     )
 
+    // Determine source based on submission type
+    const source = reportId ? 'download_gate' : 'contact_form'
+
     // Prepare lead data
     const leadData: Omit<InboundLead, 'id' | 'created_at' | 'updated_at'> = {
       name: name.trim(),
       email: email.trim().toLowerCase(),
       phone: phone?.trim() || undefined,
       company: company?.trim() || undefined,
-      report_id: reportId,
-      source: 'landing_page',
+      report_id: reportId || undefined, // Optional for contact form
+      source,
       download_completed: false,
       ip_address: ip,
       user_agent: userAgent,
       metadata: {
+        message: message?.trim() || undefined, // Store contact form message
         referer,
         utm: filteredUtmParams,
         timestamp: new Date().toISOString(),

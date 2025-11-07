@@ -190,7 +190,7 @@ export default function ProspectingPage() {
       // Always enable iterative discovery for smarter, multi-query prospecting
       useIterativeDiscovery: true,
       maxIterations: 5,
-      maxVariationsPerIteration: 7
+      maxVariationsPerIteration: 3  // Reduced from 7 to minimize redundant queries
     };
 
     // Start non-blocking SSE operation
