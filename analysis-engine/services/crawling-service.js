@@ -37,6 +37,51 @@ export class CrawlingService {
       message: `Crawling ${pages.length} selected pages with desktop + mobile screenshots...`
     });
 
+    // 🎭 SIMULATION MODE: Return mock crawl data without Puppeteer
+    if (process.env.SIMULATE_WEB_CRAWLING === 'true') {
+      console.log(`[CrawlingService] 🎭 SIMULATION MODE: Returning mock crawl data`);
+      const crawledPages = pages.map(pagePath => ({
+        url: pagePath,
+        fullUrl: new URL(pagePath, baseUrl).href,
+        html: `<html><head><title>${companyName || 'Test Company'}</title></head><body><h1>Welcome to ${companyName || 'Our Business'}</h1><p>Professional dental services</p></body></html>`,
+        metadata: {
+          title: `${companyName || 'Test Company'} - Professional Services`,
+          description: 'Quality dental care for your family',
+          timestamp: new Date().toISOString()
+        },
+        screenshots: {
+          desktop: null, // Simulated - no actual screenshots
+          mobile: null
+        },
+        designTokens: {
+          desktop: { fonts: ['Arial', 'Helvetica'], colors: ['#333333', '#0066cc'], extractedAt: new Date().toISOString() },
+          mobile: { fonts: ['Arial', 'Helvetica'], colors: ['#333333', '#0066cc'], extractedAt: new Date().toISOString() }
+        },
+        techStack: { framework: 'simulated', cms: 'none' },
+        success: true,
+        isHomepage: pagePath === '/' || pagePath === ''
+      }));
+
+      // Continue with normal flow using simulated data
+      const successfulPages = crawledPages;
+      const homepage = successfulPages.find(p => p.url === '/' || p.url === '') || successfulPages[0];
+
+      this.onProgress({
+        step: 'business-intelligence',
+        message: 'Extracting business intelligence from crawled pages...'
+      });
+
+      const businessIntel = extractBusinessIntelligence(successfulPages);
+
+      return {
+        pages: successfulPages,
+        homepage,
+        businessIntel,
+        crawlTime: Date.now() - startTime,
+        simulated: true
+      };
+    }
+
     const crawledPages = await crawlSelectedPagesWithScreenshots(baseUrl, pages, {
       timeout: this.timeout,
       concurrency: this.concurrency,
