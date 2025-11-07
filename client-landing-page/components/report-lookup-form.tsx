@@ -120,7 +120,7 @@ export function ReportLookupForm({ onReportFound }: ReportLookupFormProps) {
 
               <div className="mt-6 pt-6 border-t">
                 <p className="text-sm text-center text-muted-foreground">
-                  Enter the company name or email address you provided when requesting your analysis.
+                  We've already analyzed your website. Enter your company name or email to view your results.
                 </p>
               </div>
             </CardContent>

@@ -63,8 +63,22 @@ function extractStringArray(jsonbArray: any[] | null | undefined, field: string 
  * Generate a compelling top priority message from available data
  */
 function generateTopPriority(report: DatabaseReport, lead: DatabaseLead | null | undefined): string {
-  // Priority 1: Use synthesis data if available
-  if (report.synthesis_data?.topPriority) {
+  // Priority 1: Use synthesis data - extract from criticalFindings (rank 1 = top priority)
+  if (report.synthesis_data?.executiveSummary?.criticalFindings?.length > 0) {
+    const topFinding = report.synthesis_data.executiveSummary.criticalFindings[0]
+
+    // Extract the issue text (most important)
+    if (topFinding.issue && typeof topFinding.issue === 'string') {
+      // If impact is available, combine for better context
+      if (topFinding.impact && typeof topFinding.impact === 'string') {
+        return `${topFinding.issue} - ${topFinding.impact}`
+      }
+      return topFinding.issue
+    }
+  }
+
+  // Legacy: Check for old topPriority field (backward compatibility)
+  if (report.synthesis_data?.topPriority && typeof report.synthesis_data.topPriority === 'string') {
     return report.synthesis_data.topPriority
   }
 
@@ -97,7 +111,30 @@ function generateTopPriority(report: DatabaseReport, lead: DatabaseLead | null |
 function generateExecutiveSummary(report: DatabaseReport, lead: DatabaseLead | null | undefined): string {
   // Priority 1: Use synthesis data (AI-generated business summary)
   if (report.synthesis_data?.executiveSummary) {
-    return report.synthesis_data.executiveSummary
+    const execSummary = report.synthesis_data.executiveSummary
+
+    // Handle nested object structure from AI synthesis
+    // Structure: { headline, overview, criticalFindings, strategicRoadmap, roiStatement, callToAction }
+    if (typeof execSummary === 'object' && execSummary !== null) {
+      // Extract overview field (2-3 sentence business context - perfect for executive summary)
+      if (execSummary.overview && typeof execSummary.overview === 'string') {
+        return execSummary.overview
+      }
+
+      // Fallback to headline if overview is missing
+      if (execSummary.headline && typeof execSummary.headline === 'string') {
+        return execSummary.headline
+      }
+
+      // Last resort: stringify the object (shouldn't happen, but prevents crashes)
+      console.warn('[Report Transformer] executiveSummary object missing expected fields:', Object.keys(execSummary))
+      return JSON.stringify(execSummary)
+    }
+
+    // Handle direct string format (legacy or fallback)
+    if (typeof execSummary === 'string') {
+      return execSummary
+    }
   }
 
   // Priority 2: Use lead's analysis summary

@@ -523,8 +523,54 @@ function generateSimulatedResponse(model, systemPrompt, userPrompt, jsonMode, ha
     // Detect what type of analysis this is based on prompt keywords
     const promptText = (systemPrompt + ' ' + userPrompt).toLowerCase();
 
-    if (promptText.includes('design') || promptText.includes('visual') || hasImages) {
-      // Visual/Design analysis
+    // Check unified analyzers FIRST before individual ones
+    if (promptText.includes('unified') && (promptText.includes('visual') || promptText.includes('design') || hasImages)) {
+      // Unified Visual Analyzer (desktop + mobile combined)
+      mockContent = JSON.stringify({
+        overallDesignScore: Math.floor(Math.random() * 30) + 60, // 60-90
+        designIssues: [
+          { issue: "Hero section lacks visual hierarchy", severity: "medium", page: "Homepage" },
+          { issue: "CTA buttons could be more prominent", severity: "low", page: "Homepage" },
+          { issue: "Color contrast needs improvement", severity: "high", page: "Multiple pages" }
+        ],
+        positives: [
+          "Clean, modern layout",
+          "Good use of whitespace",
+          "Consistent branding"
+        ],
+        quickWins: [
+          "Increase CTA button size",
+          "Add hover effects to links",
+          "Improve image loading speed"
+        ],
+        quickWinCount: 3
+      });
+    } else if (promptText.includes('unified') && (promptText.includes('technical') || promptText.includes('seo'))) {
+      // Unified Technical Analyzer (SEO + Content combined)
+      mockContent = JSON.stringify({
+        overallTechnicalScore: Math.floor(Math.random() * 30) + 65, // 65-95
+        seoIssues: [
+          { issue: "Missing meta descriptions", severity: "high", page: "Multiple pages" },
+          { issue: "Slow page load time", severity: "medium", page: "Homepage" }
+        ],
+        contentIssues: [
+          { issue: "About page lacks compelling story", severity: "medium", page: "About" },
+          { issue: "No clear value proposition on homepage", severity: "high", page: "Homepage" }
+        ],
+        positives: [
+          "Mobile-responsive design",
+          "Clear service offerings",
+          "Professional tone"
+        ],
+        quickWins: [
+          "Add meta descriptions to key pages",
+          "Add customer success stories",
+          "Create FAQ section"
+        ],
+        quickWinCount: 3
+      });
+    } else if (promptText.includes('design') || promptText.includes('visual') || hasImages) {
+      // Visual/Design analysis (individual)
       mockContent = JSON.stringify({
         overallDesignScore: Math.floor(Math.random() * 30) + 60, // 60-90
         designIssues: [
@@ -545,7 +591,7 @@ function generateSimulatedResponse(model, systemPrompt, userPrompt, jsonMode, ha
         quickWinCount: 3
       });
     } else if (promptText.includes('seo') || promptText.includes('technical')) {
-      // SEO/Technical analysis
+      // SEO/Technical analysis (individual)
       mockContent = JSON.stringify({
         overallSeoScore: Math.floor(Math.random() * 30) + 65, // 65-95
         seoIssues: [
@@ -583,6 +629,44 @@ function generateSimulatedResponse(model, systemPrompt, userPrompt, jsonMode, ha
           "Add customer success stories",
           "Simplify service descriptions",
           "Create FAQ section"
+        ],
+        quickWinCount: 3
+      });
+    } else if (promptText.includes('social')) {
+      // Social media analysis
+      mockContent = JSON.stringify({
+        socialScore: Math.floor(Math.random() * 30) + 60, // 60-90
+        socialIssues: [
+          { issue: "No visible social media links", severity: "medium", page: "Homepage" },
+          { issue: "Missing social proof/testimonials", severity: "low", page: "Multiple pages" }
+        ],
+        positives: [
+          "Professional online presence",
+          "Consistent branding"
+        ],
+        quickWins: [
+          "Add social media icons to footer",
+          "Embed recent reviews",
+          "Add social sharing buttons"
+        ],
+        quickWinCount: 3
+      });
+    } else if (promptText.includes('accessibility')) {
+      // Accessibility analysis
+      mockContent = JSON.stringify({
+        accessibilityScore: Math.floor(Math.random() * 25) + 70, // 70-95
+        accessibilityIssues: [
+          { issue: "Missing alt text on some images", severity: "medium", page: "Multiple pages" },
+          { issue: "Low color contrast on CTA buttons", severity: "high", page: "Homepage" }
+        ],
+        positives: [
+          "Semantic HTML structure",
+          "Keyboard navigation works"
+        ],
+        quickWins: [
+          "Add alt text to all images",
+          "Improve color contrast ratios",
+          "Add ARIA labels to forms"
         ],
         quickWinCount: 3
       });

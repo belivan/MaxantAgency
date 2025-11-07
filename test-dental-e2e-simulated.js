@@ -18,6 +18,7 @@ dotenv.config();
 
 // Ensure simulation mode is enabled
 process.env.SIMULATE_AI_CALLS = 'true';
+process.env.SIMULATE_WEB_CRAWLING = 'true';
 
 // API endpoints
 const ANALYSIS_API = 'http://localhost:3001';
@@ -57,15 +58,15 @@ async function analyzeCompany(prospect) {
       url: prospect.website,
       company_name: prospect.company_name,
       industry: prospect.industry,
-      project_id: 'mock-dental-project-id-e2e-test'
+      project_id: '00000000-0000-0000-0000-000000000001'
     }, {
       timeout: 60000 // 1 minute timeout (simulated calls are fast)
     });
 
-    if (response.data && response.data.lead) {
-      const lead = response.data.lead;
+    if (response.data && response.data.result) {
+      const lead = response.data.result;
       console.log(`   ✅ Analysis complete`);
-      console.log(`      Grade: ${lead.website_grade || 'N/A'}`);
+      console.log(`      Grade: ${lead.website_grade || lead.grade || 'N/A'}`);
       console.log(`      Design Score: ${lead.design_score || 'N/A'}`);
       console.log(`      SEO Score: ${lead.seo_score || 'N/A'}`);
       return lead;
@@ -86,7 +87,7 @@ async function generateReport(lead) {
   console.log(`📄 Generating report: ${lead.company_name}...`);
 
   try {
-    const response = await axios.post(`${REPORT_API}/api/generate-report`, {
+    const response = await axios.post(`${REPORT_API}/api/generate-from-lead`, {
       lead_id: lead.id
     }, {
       timeout: 60000 // 1 minute timeout
@@ -109,10 +110,10 @@ async function composeOutreach(lead) {
   console.log(`✉️  Composing outreach: ${lead.company_name}...`);
 
   try {
-    const response = await axios.post(`${OUTREACH_API}/api/compose-outreach`, {
-      lead_id: lead.id,
-      email_strategies: ['free-value-delivery', 'portfolio-building'],
-      social_strategies: ['facebook', 'linkedin']
+    const response = await axios.post(`${OUTREACH_API}/api/compose`, {
+      url: lead.url,
+      lead: lead,
+      strategy_id: 'free-value-delivery'
     }, {
       timeout: 60000 // 1 minute timeout
     });
@@ -138,10 +139,15 @@ async function runE2ETest() {
 
   // Verify simulation mode
   if (process.env.SIMULATE_AI_CALLS !== 'true') {
-    console.error('❌ SIMULATE_AI_CALLS not enabled in .env');
+    console.error('❌ SIMULATE_AI_CALLS not enabled');
     process.exit(1);
   }
-  console.log('🎭 AI Simulation Mode: ENABLED\n');
+  if (process.env.SIMULATE_WEB_CRAWLING !== 'true') {
+    console.error('❌ SIMULATE_WEB_CRAWLING not enabled');
+    process.exit(1);
+  }
+  console.log('🎭 AI Simulation Mode: ENABLED');
+  console.log('🎭 Web Crawling Simulation Mode: ENABLED\n');
 
   const startTime = Date.now();
 
@@ -247,7 +253,7 @@ async function runE2ETest() {
   });
 
   // Save full results to file
-  const resultsFile = `/home/user/MaxantAgency/e2e-test-results-simulated-${Date.now()}.json`;
+  const resultsFile = `e2e-test-results-simulated-${Date.now()}.json`;
   const fs = await import('fs');
   fs.writeFileSync(resultsFile, JSON.stringify(results, null, 2));
   console.log(`\n📝 Full results saved to: ${resultsFile}`);

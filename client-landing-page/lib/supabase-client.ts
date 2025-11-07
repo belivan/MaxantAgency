@@ -86,7 +86,17 @@ export async function markCalendlyScheduled(
     .single()
 
   if (error) {
-    console.error('Error updating Calendly status:', error)
+    console.error('Error updating Calendly status:', {
+      error,
+      errorMessage: error.message,
+      errorDetails: error.details,
+      errorHint: error.hint,
+      errorCode: error.code,
+      leadId,
+      eventId,
+      scheduledAt,
+      timestamp: new Date().toISOString()
+    })
     throw error
   }
 

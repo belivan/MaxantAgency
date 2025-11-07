@@ -46,40 +46,32 @@ export async function GET(
       console.log('[Download] Report found in database:', reportRecord.company_name)
       console.log('[Download] Storage path:', reportRecord.storage_path)
 
-      try {
-        // Try to download from Supabase Storage
-        const { data: storageData, error: storageError } = await supabase.storage
-          .from('reports')
-          .download(reportRecord.storage_path)
+      // Download from Supabase Storage (required for all reports)
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from('reports')
+        .download(reportRecord.storage_path)
 
-        if (storageError) {
-          console.warn('[Download] Supabase Storage error:', storageError.message)
-          throw new Error('Storage download failed')
-        }
-
-        // Convert Blob to Buffer
-        const arrayBuffer = await storageData.arrayBuffer()
-        pdfBuffer = Buffer.from(arrayBuffer)
-
-        console.log('[Download] Downloaded from Supabase Storage, size:', pdfBuffer.length, 'bytes')
-
-        // Generate clean filename
-        filename = `${reportRecord.company_name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-analysis-report.pdf`
-
-      } catch (storageError) {
-        console.warn('[Download] Failed to fetch from Supabase Storage, falling back to local filesystem')
-
-        // Fallback to local filesystem if Supabase Storage fails
-        const absolutePath = path.resolve(process.cwd(), reportRecord.storage_path)
-
-        if (existsSync(absolutePath)) {
-          pdfBuffer = await readFile(absolutePath)
-          filename = `${reportRecord.company_name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-analysis-report.pdf`
-          console.log('[Download] Read from local filesystem:', absolutePath)
-        } else {
-          throw new Error(`Report file not found at: ${absolutePath}`)
-        }
+      if (storageError) {
+        console.error('[Download] Supabase Storage error:', storageError.message)
+        console.error('[Download] Storage path:', reportRecord.storage_path)
+        throw new Error(
+          `Failed to download report from Supabase Storage: ${storageError.message}. ` +
+          `The report may need to be regenerated. Storage path: ${reportRecord.storage_path}`
+        )
       }
+
+      if (!storageData) {
+        throw new Error('No data received from Supabase Storage')
+      }
+
+      // Convert Blob to Buffer
+      const arrayBuffer = await storageData.arrayBuffer()
+      pdfBuffer = Buffer.from(arrayBuffer)
+
+      console.log('[Download] Downloaded from Supabase Storage, size:', pdfBuffer.length, 'bytes')
+
+      // Generate clean filename
+      filename = `${reportRecord.company_name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-analysis-report.pdf`
     }
     // STEP 3: Fallback to legacy hardcoded paths (for old reports not in database)
     else {

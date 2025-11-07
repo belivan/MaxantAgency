@@ -438,21 +438,22 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     let contentForUpload = null;
     let uploadResult = { path: null, fullPath: null };
 
-    // Upload FULL PDF to Supabase Storage (if generated)
+    // Upload FULL PDF to Supabase Storage (if generated) - REQUIRED, not optional
     if (format === 'html' && fullPdfPath) {
+      console.log('📤 Uploading FULL PDF to Supabase Storage...');
+      const { readFile: fsReadFile } = await import('fs/promises');
+      const pdfBuffer = await fsReadFile(fullPdfPath);
+
+      const storagePath = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/FULL.pdf`;
+
       try {
-        console.log('📤 Uploading FULL PDF to Supabase Storage...');
-        const { readFile: fsReadFile } = await import('fs/promises');
-        const pdfBuffer = await fsReadFile(fullPdfPath);
-
-        const storagePath = `${reportData.company_name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}/FULL.pdf`;
-
         uploadResult = await uploadReport(pdfBuffer, storagePath, 'application/pdf');
         console.log(`✅ PDF uploaded to Supabase Storage: ${storagePath}`);
       } catch (uploadError) {
-        console.warn(`⚠️  Supabase upload failed: ${uploadError.message}`);
-        console.warn('   PDF available locally at: ' + fullPdfPath);
-        // Continue without upload - local backup is enough
+        console.error(`❌ CRITICAL: Supabase upload failed: ${uploadError.message}`);
+        console.error(`   Stack: ${uploadError.stack}`);
+        console.error(`   Local file: ${fullPdfPath}`);
+        throw new Error(`Failed to upload PDF to Supabase Storage: ${uploadError.message}. Report generation aborted.`);
       }
     }
     // Only handle non-HTML formats (markdown, json, etc.)
@@ -496,12 +497,12 @@ export async function autoGenerateReport(analysisResult, options = {}) {
 
       try {
         uploadResult = await uploadReport(contentForUpload, storagePath, contentType);
+        console.log(`✅ Report uploaded to Supabase Storage: ${storagePath}`);
       } catch (uploadError) {
-        console.log('Supabase upload skipped: '+ uploadError.message);
-        if (localPath) {
-          console.log('Report available locally at: '+ localPath);
-        }
-        // Continue without upload - local backup is enough
+        console.error(`❌ CRITICAL: Supabase upload failed: ${uploadError.message}`);
+        console.error(`   Stack: ${uploadError.stack}`);
+        console.error(`   Local file: ${localPath}`);
+        throw new Error(`Failed to upload report to Supabase Storage: ${uploadError.message}. Report generation aborted.`);
       }
     }
 
@@ -540,7 +541,7 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         project_id: project_id || analysisResult.project_id,
         report_type: 'website_audit',
         format,
-        storage_path: uploadResult?.path || localPath || null, // Use upload path if available, fallback to local path
+        storage_path: uploadResult?.path || null, // MUST be from Supabase Storage, never local path
         storage_bucket: 'reports',
         file_size_bytes: fileSize,
         company_name: reportData.company_name,
@@ -587,6 +588,11 @@ export async function autoGenerateReport(analysisResult, options = {}) {
         status: 'completed',
         generated_at: new Date().toISOString()
       };
+
+      // Validate that we have a valid Supabase Storage path before saving to database
+      if (!metadata.storage_path) {
+        throw new Error('Cannot save report to database: Supabase Storage path is missing. This should never happen if upload was successful.');
+      }
 
       try {
         reportRecord = await saveReportMetadata(metadata);

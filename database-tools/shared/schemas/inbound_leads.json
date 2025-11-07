@@ -1,6 +1,6 @@
 {
   "table": "inbound_leads",
-  "description": "Stores leads captured from the landing page who requested report downloads",
+  "description": "Stores leads captured from the landing page (report downloads and CTA bookings)",
   "columns": [
     {
       "name": "id",
@@ -11,14 +11,14 @@
     {
       "name": "name",
       "type": "text",
-      "notNull": true,
-      "comment": "Full name of the lead"
+      "notNull": false,
+      "comment": "Full name of the lead (nullable for anonymous CTA bookings)"
     },
     {
       "name": "email",
       "type": "text",
-      "notNull": true,
-      "comment": "Email address (required for report download)"
+      "notNull": false,
+      "comment": "Email address (nullable for anonymous CTA bookings)"
     },
     {
       "name": "phone",
@@ -35,15 +35,15 @@
     {
       "name": "report_id",
       "type": "text",
-      "notNull": true,
-      "comment": "ID of the report they requested to download"
+      "notNull": false,
+      "comment": "ID of the report they requested to download (nullable for CTA bookings without report)"
     },
     {
       "name": "source",
       "type": "text",
       "default": "landing_page",
       "notNull": true,
-      "comment": "Lead source: landing_page, direct_outreach, etc."
+      "comment": "Lead source: landing_page, cta_section, direct_outreach, etc."
     },
     {
       "name": "download_completed",
