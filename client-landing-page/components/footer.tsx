@@ -11,7 +11,7 @@ export function Footer() {
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Minty Design Co</h3>
             <p className="text-sm text-muted-foreground">
-              AI-powered website analysis to help your business grow.
+              See where you stand. Know how to win.
             </p>
           </div>
 

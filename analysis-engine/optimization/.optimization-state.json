@@ -1,8 +1,9 @@
 {
   "analysisCounts": {
-    "accessibility-analyzer": 1
+    "accessibility-analyzer": 1,
+    "unified-technical-analyzer": 1,
+    "social-analyzer": 1
   },
   "activeTests": {},
   "lastOptimization": {}
-}{}
 }
