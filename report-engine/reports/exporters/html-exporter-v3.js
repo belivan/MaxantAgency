@@ -29,8 +29,7 @@ import {
   generateBenchmarkEmptyState,
   generatePerformanceEmptyState,
   generateAccessibilityEmptyState,
-  generateBusinessIntelligenceEmptyState,
-  generateScreenshotGalleryEmptyState
+  generateBusinessIntelligenceEmptyState
 } from './components/empty-state.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -194,7 +193,7 @@ async function processScreenshots(analysisResult, registry) {
     console.log('  - desktop_screenshot_url:', benchmark.desktop_screenshot_url ? 'EXISTS' : 'NULL');
     console.log('  - mobile_screenshot_url:', benchmark.mobile_screenshot_url ? 'EXISTS' : 'NULL');
 
-    // Desktop screenshot - try URL first (if absolute HTTP URL), then fall back to local path
+    // Desktop screenshot - try URL first (if absolute HTTP URL), then try as local path, then fall back to screenshot_desktop_path
     let desktopLoaded = false;
 
     // Try URL format (only if it's an absolute HTTP/HTTPS URL)
@@ -213,7 +212,7 @@ async function processScreenshots(analysisResult, registry) {
           screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkDesktopScreenshot);
           registry.register('benchmark-homepage-desktop', dataUri);
           desktopLoaded = true;
-          console.log('  ✅ Desktop screenshot loaded successfully');
+          console.log('  ✅ Desktop screenshot loaded from URL');
         } else {
           console.log('  ❌ Desktop screenshot fetch returned:', response.status);
         }
@@ -222,8 +221,27 @@ async function processScreenshots(analysisResult, registry) {
       }
     }
 
-    // Fall back to local file path if URL didn't work
+    // Try desktop_screenshot_url as local file path if it's not an HTTP URL but exists
+    if (!desktopLoaded && benchmark.desktop_screenshot_url && !isAbsoluteUrl(benchmark.desktop_screenshot_url) && existsSync(benchmark.desktop_screenshot_url)) {
+      console.log('  → Loading desktop screenshot from local path (desktop_screenshot_url field)...');
+      try {
+        const compressed = await compressImageFromFile(benchmark.desktop_screenshot_url, { quality: 85 });
+        screenshotData.benchmarkDesktopScreenshot = {
+          dataUri: compressed.dataUri,
+          device: 'desktop'
+        };
+        screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkDesktopScreenshot);
+        registry.register('benchmark-homepage-desktop', compressed.dataUri);
+        desktopLoaded = true;
+        console.log('  ✅ Desktop screenshot loaded from local path (desktop_screenshot_url)');
+      } catch (err) {
+        console.warn(`⚠️  Failed to process benchmark desktop screenshot from desktop_screenshot_url: ${err.message}`);
+      }
+    }
+
+    // Fall back to screenshot_desktop_path if still not loaded
     if (!desktopLoaded && benchmark.screenshot_desktop_path && existsSync(benchmark.screenshot_desktop_path)) {
+      console.log('  → Loading desktop screenshot from screenshot_desktop_path...');
       try {
         const compressed = await compressImageFromFile(benchmark.screenshot_desktop_path, { quality: 85 });
         screenshotData.benchmarkDesktopScreenshot = {
@@ -232,12 +250,14 @@ async function processScreenshots(analysisResult, registry) {
         };
         screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkDesktopScreenshot);
         registry.register('benchmark-homepage-desktop', compressed.dataUri);
+        desktopLoaded = true;
+        console.log('  ✅ Desktop screenshot loaded from local path (screenshot_desktop_path)');
       } catch (err) {
-        console.warn(`⚠️  Failed to process benchmark desktop screenshot: ${err.message}`);
+        console.warn(`⚠️  Failed to process benchmark desktop screenshot from screenshot_desktop_path: ${err.message}`);
       }
     }
 
-    // Mobile screenshot - try URL first (if absolute HTTP URL), then fall back to local path
+    // Mobile screenshot - try URL first (if absolute HTTP URL), then try as local path, then fall back to screenshot_mobile_path
     let mobileLoaded = false;
 
     // Try URL format (only if it's an absolute HTTP/HTTPS URL)
@@ -256,7 +276,7 @@ async function processScreenshots(analysisResult, registry) {
           screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkMobileScreenshot);
           registry.register('benchmark-homepage-mobile', dataUri);
           mobileLoaded = true;
-          console.log('  ✅ Mobile screenshot loaded successfully');
+          console.log('  ✅ Mobile screenshot loaded from URL');
         } else {
           console.log('  ❌ Mobile screenshot fetch returned:', response.status);
         }
@@ -265,8 +285,27 @@ async function processScreenshots(analysisResult, registry) {
       }
     }
 
-    // Fall back to local file path if URL didn't work
+    // Try mobile_screenshot_url as local file path if it's not an HTTP URL but exists
+    if (!mobileLoaded && benchmark.mobile_screenshot_url && !isAbsoluteUrl(benchmark.mobile_screenshot_url) && existsSync(benchmark.mobile_screenshot_url)) {
+      console.log('  → Loading mobile screenshot from local path (mobile_screenshot_url field)...');
+      try {
+        const compressed = await compressImageFromFile(benchmark.mobile_screenshot_url, { quality: 85 });
+        screenshotData.benchmarkMobileScreenshot = {
+          dataUri: compressed.dataUri,
+          device: 'mobile'
+        };
+        screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkMobileScreenshot);
+        registry.register('benchmark-homepage-mobile', compressed.dataUri);
+        mobileLoaded = true;
+        console.log('  ✅ Mobile screenshot loaded from local path (mobile_screenshot_url)');
+      } catch (err) {
+        console.warn(`⚠️  Failed to process benchmark mobile screenshot from mobile_screenshot_url: ${err.message}`);
+      }
+    }
+
+    // Fall back to screenshot_mobile_path if still not loaded
     if (!mobileLoaded && benchmark.screenshot_mobile_path && existsSync(benchmark.screenshot_mobile_path)) {
+      console.log('  → Loading mobile screenshot from screenshot_mobile_path...');
       try {
         const compressed = await compressImageFromFile(benchmark.screenshot_mobile_path, { quality: 85 });
         screenshotData.benchmarkMobileScreenshot = {
@@ -275,8 +314,10 @@ async function processScreenshots(analysisResult, registry) {
         };
         screenshotData.benchmarkScreenshots.push(screenshotData.benchmarkMobileScreenshot);
         registry.register('benchmark-homepage-mobile', compressed.dataUri);
+        mobileLoaded = true;
+        console.log('  ✅ Mobile screenshot loaded from local path (screenshot_mobile_path)');
       } catch (err) {
-        console.warn(`⚠️  Failed to process benchmark mobile screenshot: ${err.message}`);
+        console.warn(`⚠️  Failed to process benchmark mobile screenshot from screenshot_mobile_path: ${err.message}`);
       }
     }
   }
@@ -295,8 +336,7 @@ function renderEmptyStateForSection(sectionId) {
     'benchmark-comparison-chart': generateBenchmarkEmptyState,
     'performance-metrics': generatePerformanceEmptyState,
     'accessibility-compliance': generateAccessibilityEmptyState,
-    'business-intelligence': generateBusinessIntelligenceEmptyState,
-    'screenshot-gallery': generateScreenshotGalleryEmptyState
+    'business-intelligence': generateBusinessIntelligenceEmptyState
   };
 
   const generator = emptyStateMap[sectionId];

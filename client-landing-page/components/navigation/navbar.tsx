@@ -18,8 +18,9 @@ export function Navbar() {
   }, [pathname])
 
   const navLinks = [
-    { href: '/', label: 'Request Analysis', active: pathname === '/' },
-    { href: '/reports', label: 'View Reports', active: pathname === '/reports' },
+    { href: '/', label: 'Home', active: pathname === '/' },
+    { href: '/#how-it-works', label: 'How It Works', active: false },
+    { href: '/reports', label: 'Reports', active: pathname === '/reports' },
     { href: '/about', label: 'About', active: pathname === '/about' },
   ]
 
@@ -55,8 +56,14 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Desktop Theme Toggle */}
-          <div className="hidden md:flex">
+          {/* Desktop CTA Button & Theme Toggle */}
+          <div className="hidden md:flex items-center gap-3">
+            <Link href="/request">
+              <Button size="sm" className="shadow-sm group">
+                <Sparkles className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" />
+                Get Free Analysis
+              </Button>
+            </Link>
             <ThemeToggle />
           </div>
 
@@ -83,6 +90,14 @@ export function Navbar() {
         {mobileMenuOpen && (
           <div className="border-t border-border/40 py-4 md:hidden">
             <div className="flex flex-col space-y-2">
+              {/* CTA Button First on Mobile */}
+              <Link href="/request" className="mb-2">
+                <Button size="sm" className="w-full shadow-sm group">
+                  <Sparkles className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" />
+                  Get Free Analysis
+                </Button>
+              </Link>
+
               {navLinks.map((link) => (
                 <Link
                   key={link.href}

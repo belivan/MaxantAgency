@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Download, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Lock, Mail } from 'lucide-react'
+import Link from 'next/link'
+import { Download, TrendingUp, TrendingDown, AlertCircle, CheckCircle, Lock, Mail, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { DownloadGateModal } from '@/components/download-gate-modal'
@@ -56,7 +57,22 @@ export function ReportViewer({ report }: ReportViewerProps) {
   const hiddenWinsCount = report.quick_wins.length - 3
 
   return (
-    <section id="report-display" className="py-20 px-4 bg-accent/30">
+    <section id="report-display" className="py-20 px-4 bg-accent/30 relative">
+      {/* Sticky "Analyze Another Site" Button */}
+      <div className="sticky top-20 z-40 flex justify-end mb-4">
+        <div className="container mx-auto max-w-6xl px-4">
+          <Link href="/request">
+            <Button
+              size="lg"
+              className="shadow-lg hover:shadow-xl transition-all group ml-auto"
+            >
+              <Sparkles className="mr-2 h-5 w-5 group-hover:rotate-12 transition-transform" />
+              Analyze Another Site
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       <div className="container mx-auto max-w-6xl space-y-12">
         {/* Header with Download CTA */}
         <motion.div

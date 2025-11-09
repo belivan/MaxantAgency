@@ -22,7 +22,6 @@ import { generateTechnicalDeepDive } from './sections/technical-deep-dive.js';
 import { generateCompleteIssueBreakdown } from './sections/issue-breakdown.js';
 import { generateAccessibilityComplianceSection } from './sections/accessibility.js';
 import { generatePerformanceMetricsSection } from './sections/performance-metrics.js';
-import { generateMultiPageScreenshotGallery } from './sections/screenshot-gallery.js';
 import { generateLeadScoringDashboard } from './sections/lead-scoring.js';
 import { generateAIWeights } from './sections/ai-weights.js';
 import { generateAnalysisScope } from './sections/analysis-scope.js';
@@ -233,17 +232,6 @@ export const SECTIONS_REGISTRY = [
     showPlaceholder: false,
     requiredData: [],
     description: 'AI-calculated category weights and reasoning'
-  },
-  {
-    id: 'screenshot-gallery',
-    name: 'Multi-Page Screenshot Gallery',
-    component: generateMultiPageScreenshotGallery,
-    order: 18,
-    reportTypes: ['full'],
-    required: false,
-    showPlaceholder: false,
-    requiredData: [],
-    description: 'Screenshots from multiple pages across the site'
   },
   {
     id: 'request-full-report-cta',
