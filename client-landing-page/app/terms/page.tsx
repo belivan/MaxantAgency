@@ -5,30 +5,33 @@ export default function TermsOfServicePage() {
         <h1 className="text-4xl font-bold mb-8">Terms of Service</h1>
 
         <div className="space-y-6 text-muted-foreground">
-          <p className="text-sm">Last Updated: November 7, 2025</p>
+            <p className="text-sm">Last Updated: November 7, 2025</p>
 
-          <section className="space-y-3">
-            <h2 className="text-2xl font-semibold text-foreground">1. Acceptance of Terms</h2>
-            <p>
-              By accessing and using this website analysis service, you accept and agree to be bound
-              by these Terms of Service. If you do not agree to these terms, please do not use our
-              services.
-            </p>
-          </section>
+            <section className="space-y-3">
+              <h2 className="text-2xl font-semibold text-foreground">1. Acceptance of Terms</h2>
+              <p>
+                By accessing and using this website analysis service, you accept and agree to be bound
+                by these Terms of Service. If you do not agree to these terms, please do not use our
+                services.
+              </p>
+            </section>
 
-          <section className="space-y-3">
-            <h2 className="text-2xl font-semibold text-foreground">2. Description of Service</h2>
-            <p>
-              We provide AI-powered website analysis services that evaluate your website's design,
-              SEO, content, and overall user experience. Our service includes:
-            </p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>Automated website analysis using artificial intelligence</li>
-              <li>Detailed PDF reports with actionable recommendations</li>
-              <li>Consultation scheduling via Calendly</li>
-              <li>Email and social media outreach (for subscribed users)</li>
-            </ul>
-          </section>
+            <section className="space-y-3">
+              <h2 className="text-2xl font-semibold text-foreground">2. Description of Service</h2>
+              <p>
+                We provide AI-powered website analysis services that evaluate your website against industry
+                competitors or your selected benchmark. Our service includes:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Comparison request form where you can submit your website for analysis</li>
+                <li>Automated website analysis using artificial intelligence</li>
+                <li>Competitive benchmarking (automatic industry-based or manual competitor selection)</li>
+                <li>Comprehensive comparison reports delivered via email within 24 hours</li>
+                <li>Detailed PDF reports with actionable recommendations</li>
+                <li>Consultation scheduling via Calendly</li>
+                <li>Email and social media outreach (for subscribed users)</li>
+              </ul>
+            </section>
 
           <section className="space-y-3">
             <h2 className="text-2xl font-semibold text-foreground">3. User Responsibilities</h2>

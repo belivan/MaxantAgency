@@ -5,28 +5,34 @@ export default function PrivacyPolicyPage() {
         <h1 className="text-4xl font-bold mb-8">Privacy Policy</h1>
 
         <div className="space-y-6 text-muted-foreground">
-          <p className="text-sm">Last Updated: November 7, 2025</p>
+            <p className="text-sm">Last Updated: November 7, 2025</p>
 
-          <section className="space-y-3">
-            <h2 className="text-2xl font-semibold text-foreground">1. Information We Collect</h2>
-            <p>
-              When you use our website analysis service, we collect information that you provide directly to us, including:
-            </p>
-            <ul className="list-disc pl-6 space-y-2">
-              <li>Name and email address</li>
-              <li>Phone number and company name (optional)</li>
-              <li>Website URL for analysis</li>
-              <li>Messages and communications you send us</li>
-              <li>Technical information such as IP address, browser type, and device information</li>
-            </ul>
-          </section>
+            <section className="space-y-3">
+              <h2 className="text-2xl font-semibold text-foreground">1. Information We Collect</h2>
+              <p>
+                When you use our website analysis service or request a comparison analysis, we collect information that you provide directly to us, including:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Company name and email address</li>
+                <li>Your website URL for analysis</li>
+                <li>Industry or business category (optional)</li>
+                <li>Benchmark preference (automatic or manual competitor selection)</li>
+                <li>Competitor website URL (optional, if you choose manual benchmark)</li>
+                <li>Phone number (optional)</li>
+                <li>Additional notes about your business or specific areas to focus on (optional)</li>
+                <li>Messages and communications you send us</li>
+                <li>Technical information such as IP address, browser type, and device information</li>
+              </ul>
+            </section>
 
           <section className="space-y-3">
             <h2 className="text-2xl font-semibold text-foreground">2. How We Use Your Information</h2>
             <p>We use the information we collect to:</p>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Analyze your website and provide you with detailed reports</li>
-              <li>Communicate with you about our services</li>
+              <li>Analyze your website and compare it to industry competitors or your selected benchmark</li>
+              <li>Generate comprehensive comparison reports within 24 hours</li>
+              <li>Email you the analysis results and recommendations</li>
+              <li>Communicate with you about our services and your analysis request</li>
               <li>Schedule consultations via Calendly</li>
               <li>Improve our services and user experience</li>
               <li>Send you marketing communications (with your consent)</li>

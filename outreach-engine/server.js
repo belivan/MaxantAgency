@@ -579,7 +579,7 @@ app.post('/api/compose-batch', async (req, res) => {
  */
 app.post('/api/compose-all-variations', async (req, res) => {
   try {
-    const { lead_ids, project_id } = req.body;
+    const { lead_ids, project_id, force_regenerate } = req.body;
 
     if (!lead_ids || !Array.isArray(lead_ids) || lead_ids.length === 0) {
       return res.status(400).json({
@@ -592,6 +592,7 @@ app.post('/api/compose-all-variations', async (req, res) => {
     console.log(`   Leads: ${lead_ids.length}`);
     console.log(`   Total variations: ${lead_ids.length * 12}`);
     console.log(`   Project: ${project_id || 'none'}`);
+    console.log(`   Force regenerate: ${force_regenerate || false}`);
 
     // Set up SSE
     res.setHeader('Content-Type', 'text/event-stream');
@@ -607,7 +608,8 @@ app.post('/api/compose-all-variations', async (req, res) => {
     const stats = await batchGenerateConsolidated({
       leadIds: lead_ids,
       projectId: project_id,
-      progressCallback
+      progressCallback,
+      forceRegenerate: force_regenerate || false
     });
 
     // Send final success event

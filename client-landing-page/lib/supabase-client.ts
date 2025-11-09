@@ -241,3 +241,136 @@ export async function findReportByEmail(email: string) {
   // Step 2: Fetch the report with full details
   return getReportWithLead(leadData.report_id)
 }
+
+// ============================================================================
+// COMPARISON REQUEST FUNCTIONS
+// ============================================================================
+
+export interface ComparisonRequestData {
+  website_url: string
+  company_name: string
+  email: string
+  industry?: string
+  benchmark_preference: 'auto' | 'manual'
+  competitor_url?: string
+  phone_number?: string
+  additional_notes?: string
+}
+
+/**
+ * Submit a new comparison request
+ * Stores the request with status='pending' for manual processing
+ */
+export async function submitComparisonRequest(data: ComparisonRequestData) {
+  const { data: request, error } = await supabase
+    .from('comparison_requests')
+    .insert({
+      website_url: data.website_url,
+      company_name: data.company_name,
+      email: data.email.toLowerCase(),
+      industry: data.industry || null,
+      business_type: null, // Legacy field, no longer used
+      benchmark_preference: data.benchmark_preference,
+      competitor_url: data.competitor_url || null,
+      phone_number: data.phone_number || null,
+      additional_notes: data.additional_notes || null,
+      status: 'pending',
+      lead_id: null,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error submitting comparison request:', error)
+    throw error
+  }
+
+  return request
+}
+
+/**
+ * Get comparison request by ID
+ */
+export async function getComparisonRequest(requestId: string) {
+  const { data, error } = await supabase
+    .from('comparison_requests')
+    .select('*')
+    .eq('id', requestId)
+    .single()
+
+  if (error) {
+    console.error('Error fetching comparison request:', error)
+    throw error
+  }
+
+  return data
+}
+
+/**
+ * Get all comparison requests for a given email address
+ * Returns most recent first
+ */
+export async function getComparisonRequestsByEmail(email: string) {
+  const { data, error } = await supabase
+    .from('comparison_requests')
+    .select('*')
+    .eq('email', email.toLowerCase())
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching comparison requests by email:', error)
+    throw error
+  }
+
+  return data || []
+}
+
+/**
+ * Update comparison request status
+ * Used for manual processing workflow
+ */
+export async function updateComparisonRequestStatus(
+  requestId: string,
+  status: 'pending' | 'processing' | 'completed' | 'cancelled'
+) {
+  const { data, error } = await supabase
+    .from('comparison_requests')
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error updating comparison request status:', error)
+    throw error
+  }
+
+  return data
+}
+
+/**
+ * Link comparison request to completed lead analysis
+ * Called when the manual analysis is complete
+ */
+export async function linkComparisonToLead(requestId: string, leadId: string) {
+  const { data, error } = await supabase
+    .from('comparison_requests')
+    .update({
+      lead_id: leadId,
+      status: 'completed',
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error linking comparison request to lead:', error)
+    throw error
+  }
+
+  return data
+}

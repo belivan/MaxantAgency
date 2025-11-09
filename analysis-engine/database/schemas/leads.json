@@ -260,6 +260,27 @@
       "type": "integer",
       "description": "Count of high/critical severity issues (AI selection pool)"
     },
+    {
+      "name": "deduplication_stats",
+      "type": "jsonb",
+      "description": "Issue deduplication statistics including original_count, consolidated_count, reduction_percentage, cost, duration_ms, and merge_log array"
+    },
+    {
+      "name": "deduplication_enabled",
+      "type": "boolean",
+      "default": false,
+      "description": "Whether AI deduplication was enabled for this analysis"
+    },
+    {
+      "name": "deduplication_cost",
+      "type": "decimal",
+      "description": "Cost of AI deduplication in USD"
+    },
+    {
+      "name": "deduplication_model",
+      "type": "text",
+      "description": "AI model used for deduplication (e.g., gpt-5-mini)"
+    },
 
     {
       "name": "performance_metrics_pagespeed",

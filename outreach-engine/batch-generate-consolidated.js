@@ -527,7 +527,17 @@ async function processLeadConsolidated(lead, progressCallback = null, leadIndex 
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    console.error('\n❌ Database INSERT failed:');
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Error hint:', error.hint);
+    console.error('\nConsolidated row keys:', Object.keys(consolidatedRow));
+    console.error('\nSample values:');
+    console.error('  email_free_value:', typeof consolidatedRow.email_free_value, consolidatedRow.email_free_value);
+    console.error('  instagram_free_value:', typeof consolidatedRow.instagram_free_value, consolidatedRow.instagram_free_value ? consolidatedRow.instagram_free_value.substring(0, 50) : 'null');
+    throw error;
+  }
 
   console.log(`✅ Saved: ${data.id}`);
 

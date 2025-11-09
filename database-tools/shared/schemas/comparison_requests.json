@@ -1,0 +1,119 @@
+{
+  "table": "comparison_requests",
+  "description": "Stores comparison requests submitted from the client landing page request form",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "website_url",
+      "type": "text",
+      "notNull": true,
+      "comment": "URL of the website to be analyzed"
+    },
+    {
+      "name": "company_name",
+      "type": "text",
+      "notNull": true,
+      "comment": "Name of the company"
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "notNull": true,
+      "comment": "Email address for sending results"
+    },
+    {
+      "name": "industry",
+      "type": "text",
+      "notNull": false,
+      "comment": "Industry or business category (optional - can be inferred from website)"
+    },
+    {
+      "name": "business_type",
+      "type": "text",
+      "notNull": false,
+      "comment": "Type of business (optional - legacy field, can be inferred from website)"
+    },
+    {
+      "name": "benchmark_preference",
+      "type": "text",
+      "notNull": true,
+      "default": "auto",
+      "comment": "Benchmark selection preference: 'auto' (we choose) or 'manual' (user specified)"
+    },
+    {
+      "name": "competitor_url",
+      "type": "text",
+      "notNull": false,
+      "comment": "URL of competitor website (only if benchmark_preference='manual')"
+    },
+    {
+      "name": "phone_number",
+      "type": "text",
+      "notNull": false,
+      "comment": "Optional phone number for contact"
+    },
+    {
+      "name": "additional_notes",
+      "type": "text",
+      "notNull": false,
+      "comment": "Additional context or notes from the client"
+    },
+    {
+      "name": "status",
+      "type": "text",
+      "notNull": true,
+      "default": "pending",
+      "comment": "Status: 'pending', 'processing', 'completed', 'cancelled'"
+    },
+    {
+      "name": "lead_id",
+      "type": "uuid",
+      "notNull": false,
+      "comment": "Foreign key to leads table (set when analysis is completed)"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "NOW()",
+      "notNull": true,
+      "comment": "When the request was submitted"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "NOW()",
+      "notNull": true,
+      "comment": "Last updated timestamp"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_comparison_requests_email",
+      "columns": ["email"]
+    },
+    {
+      "name": "idx_comparison_requests_status",
+      "columns": ["status"]
+    },
+    {
+      "name": "idx_comparison_requests_created_at",
+      "columns": ["created_at"]
+    },
+    {
+      "name": "idx_comparison_requests_lead_id",
+      "columns": ["lead_id"]
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "lead_id",
+      "references": "leads.id",
+      "onDelete": "SET NULL"
+    }
+  ]
+}

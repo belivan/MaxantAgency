@@ -847,10 +847,10 @@ export class ResultsAggregator {
       high_critical_issues_count: allIssues?.filter(i => i.severity === 'critical' || i.severity === 'high').length || 0,
 
       // NEW: Issue Deduplication Metadata
-      issue_deduplication_enabled: process.env.ENABLE_ISSUE_DEDUPLICATION === 'true',
-      issue_deduplication_stats: deduplicationResult?.statistics || null,
-      issue_deduplication_cost: deduplicationResult?.cost || 0,
-      issue_deduplication_merge_log: deduplicationResult?.mergeLog || [],
+      deduplication_enabled: process.env.ENABLE_ISSUE_DEDUPLICATION === 'true',
+      deduplication_stats: deduplicationResult?.statistics || null,
+      deduplication_cost: deduplicationResult?.cost || 0,
+      deduplication_model: deduplicationResult?.modelUsed || process.env.DEDUPLICATION_MODEL || 'gpt-5-mini',
 
       // Synthesis outputs
       consolidated_issues: synthesisResults.consolidatedIssues || [],

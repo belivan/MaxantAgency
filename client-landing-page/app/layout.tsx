@@ -3,14 +3,14 @@ import { Inter } from 'next/font/google'
 import Script from 'next/script'
 import './globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { Navbar } from '@/components/navigation/navbar'
 import { Footer } from '@/components/footer'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Your Website Analysis is Ready | Minty Design Co',
-  description: 'View your comprehensive website analysis report and discover how to improve your online presence with Minty Design Co.',
+  title: 'Professional Website Analysis & Design | Minty Design Co',
+  description: 'Get a comprehensive AI-powered website analysis and compare your site to top competitors in your industry. Data-driven web design that converts.',
 }
 
 export default function RootLayout({
@@ -34,10 +34,8 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <div className="relative min-h-screen" suppressHydrationWarning>
-            {/* Theme toggle fixed in top right */}
-            <div className="fixed top-4 right-4 z-50">
-              <ThemeToggle />
-            </div>
+            {/* Navigation */}
+            <Navbar />
 
             {/* Main content */}
             <main>{children}</main>
