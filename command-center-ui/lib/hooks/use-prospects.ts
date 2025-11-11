@@ -27,7 +27,6 @@ export function useProspects(filters?: ProspectFilters): UseProspectsReturn {
     filters?.industry,
     filters?.city,
     filters?.min_rating,
-    filters?.verified,
     filters?.has_email,
     filters?.project_id,
     filters?.limit,

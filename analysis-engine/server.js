@@ -23,6 +23,8 @@ import { collectAnalysisPrompts } from './shared/prompt-loader.js';
 import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
 import { analyzeBenchmark } from './services/benchmark-analyzer.js';
 import { incrementAnalysisCount } from './optimization/services/optimization-scheduler.js';
+import { enqueueWork, cancelWork, getJob, getQueueStatus } from '../database-tools/shared/work-queue.js';
+import { analyzeProspects, getAnalysisStatus, cancelAnalysis, getOverallQueueStatus } from './routes/analysis-queue-endpoints.js';
 
 // Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
@@ -310,12 +312,29 @@ app.all('/api/analyze-benchmark', async (req, res) => {
  *   "url": "https://example.com",
  *   "company_name": "Example Company",
  *   "industry": "restaurant",
- *   "project_id": "uuid" (REQUIRED)
+ *   "project_id": "uuid" (REQUIRED),
+ *   "enable_deduplication": boolean (optional, default: false),
+ *   "enable_qa_validation": boolean (optional, default: false),
+ *   "enable_ai_grading": boolean (optional, default: false),
+ *   "enable_cross_page_context": boolean (optional, default: false),
+ *   "enable_cross_analyzer_context": boolean (optional, default: false)
  * }
  */
 app.post('/api/analyze-url', async (req, res) => {
   try {
-    const { url, company_name, industry, project_id, custom_prompts, max_pages } = req.body;
+    const {
+      url,
+      company_name,
+      industry,
+      project_id,
+      custom_prompts,
+      max_pages,
+      enable_deduplication,
+      enable_qa_validation,
+      enable_ai_grading,
+      enable_cross_page_context,
+      enable_cross_analyzer_context
+    } = req.body;
 
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
@@ -335,6 +354,12 @@ app.post('/api/analyze-url', async (req, res) => {
     }, {
       customPrompts: custom_prompts || undefined,
       maxPagesPerModule: max_pages,
+      // Use environment variables as defaults for A/B testing toggles
+      enableDeduplication: enable_deduplication ?? (process.env.ENABLE_ISSUE_DEDUPLICATION === 'true'),
+      enableQaValidation: enable_qa_validation ?? (process.env.ENABLE_QA_VALIDATION === 'true'),
+      enableAiGrading: enable_ai_grading ?? (process.env.USE_AI_GRADING === 'true'),
+      enableCrossPageContext: enable_cross_page_context ?? (process.env.ENABLE_CROSS_PAGE_CONTEXT === 'true'),
+      enableCrossAnalyzerContext: enable_cross_analyzer_context ?? (process.env.ENABLE_CROSS_ANALYZER_CONTEXT === 'true'),
       onProgress: (progress) => {
         console.log(`[Intelligent Analysis] ${progress.step}: ${progress.message}`);
       }
@@ -604,17 +629,36 @@ app.post('/api/analyze-url', async (req, res) => {
 });
 
 /**
- * POST /api/analyze
- * Analyze prospects with intelligent multi-page analysis
- *
- * Body:
- * {
- *   "prospect_ids": ["id1", "id2"],
- *   "project_id": "uuid" (REQUIRED),
- *   "custom_prompts": {...} (optional)
- * }
+ * ==================== NEW QUEUE-BASED ENDPOINTS ====================
+ * These use the universal work queue for better concurrency management
+ * and async processing with job IDs
+ * ==================================================================
  */
-app.post('/api/analyze', async (req, res) => {
+
+// POST /api/analyze - Queue prospects for analysis
+app.post('/api/analyze', analyzeProspects);
+
+// GET /api/analysis-status - Get status of queued/running/completed analyses
+app.get('/api/analysis-status', getAnalysisStatus);
+
+// POST /api/cancel-analysis - Cancel queued analyses
+app.post('/api/cancel-analysis', cancelAnalysis);
+
+// GET /api/queue-status - Get overall queue status
+app.get('/api/queue-status', getOverallQueueStatus);
+
+/**
+ * ==================== LEGACY ENDPOINT ====================
+ * POST /api/analyze-legacy
+ * OLD SSE-based batch analysis (DEPRECATED - use /api/analyze instead)
+ *
+ * This endpoint is kept for backward compatibility but should not be used.
+ * It uses the old blocking SSE approach with batching logic.
+ *
+ * MIGRATION: Use /api/analyze (queue-based) instead
+ * =======================================================
+ */
+app.post('/api/analyze-legacy', async (req, res) => {
   try {
     const { prospect_ids, prospects: providedProspects, project_id, custom_prompts } = req.body;
 

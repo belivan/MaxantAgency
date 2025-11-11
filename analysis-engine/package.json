@@ -32,6 +32,7 @@
     "handlebars": "^4.7.8",
     "jsdom": "^27.0.1",
     "openai": "^4.75.0",
+    "p-limit": "^6.2.0",
     "playwright": "^1.40.0",
     "postgres": "^3.4.7",
     "sharp": "^0.34.4",

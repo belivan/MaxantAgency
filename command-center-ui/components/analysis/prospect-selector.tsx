@@ -133,7 +133,6 @@ export function ProspectSelector({
 
       // Apply current filters
       if (filters.status) params.append('status', filters.status as string);
-      if (filters.verified !== undefined) params.append('verified', String(filters.verified));
       if (filters.industry) params.append('industry', filters.industry as string);
       if (filters.city) params.append('city', filters.city as string);
       if (filters.min_rating) params.append('min_rating', String(filters.min_rating));

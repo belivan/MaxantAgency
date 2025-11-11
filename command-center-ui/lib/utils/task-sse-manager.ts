@@ -329,8 +329,13 @@ export function startTaskWithSSE(config: TaskSSEConfig): TaskSSEConnection {
                   } else {
                     // Wrap payload with event type from SSE format
                     // Map 'success' to 'progress' for compatibility with handler
+                    const messageType: SSEMessage['type'] = currentEventType === 'success' ? 'progress'
+                      : (currentEventType === 'progress' || currentEventType === 'complete' ||
+                         currentEventType === 'error' || currentEventType === 'log' || currentEventType === 'status')
+                        ? currentEventType
+                        : 'progress'; // Default fallback
                     message = {
-                      type: currentEventType === 'success' ? 'progress' : currentEventType,
+                      type: messageType,
                       data: dataPayload,
                       timestamp: new Date().toISOString()
                     };

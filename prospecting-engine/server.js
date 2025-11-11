@@ -21,6 +21,8 @@ import { runProspectingPipeline, lookupSingleBusiness } from './orchestrator.js'
 import { getProspects, getProspectById, getProspectStats, deleteProspect, deleteProspects } from './database/supabase-client.js';
 import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 import { logInfo, logError } from './shared/logger.js';
+// Work Queue endpoints (async job-based architecture)
+import { queueProspecting, getProspectStatus, cancelProspecting, getOverallQueueStatus } from './routes/prospecting-queue-endpoints.js';
 
 // Load env from root .env (centralized configuration)
 const __filename = fileURLToPath(import.meta.url);
@@ -188,6 +190,44 @@ app.post('/api/prospect', async (req, res) => {
     res.end();
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// WORK QUEUE ENDPOINTS (Async Job-Based Architecture)
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * POST /api/prospect-queue
+ * Queue prospects for discovery (returns job ID immediately)
+ *
+ * This is the async alternative to /api/prospect (SSE-based).
+ * Use this when you want to:
+ * - Queue multiple prospecting jobs
+ * - Poll for status instead of maintaining SSE connection
+ * - Cancel queued jobs before they start
+ *
+ * Body: Same as /api/prospect
+ */
+app.post('/api/prospect-queue', queueProspecting);
+
+/**
+ * GET /api/prospect-status?job_ids=uuid1,uuid2,...
+ * Get status of queued/running/completed prospecting jobs
+ */
+app.get('/api/prospect-status', getProspectStatus);
+
+/**
+ * POST /api/cancel-prospect
+ * Cancel queued prospecting jobs (can only cancel jobs that haven't started)
+ *
+ * Body: { job_ids: ["uuid1", "uuid2", ...] }
+ */
+app.post('/api/cancel-prospect', cancelProspecting);
+
+/**
+ * GET /api/queue-status
+ * Get overall queue status for all work types (prospecting, analysis, report, outreach)
+ */
+app.get('/api/queue-status', getOverallQueueStatus);
 
 // ═══════════════════════════════════════════════════════════════════
 // GET /api/prospects - List prospects
@@ -451,11 +491,20 @@ app.get('/', (req, res) => {
     version: '2.0.0',
     description: 'Universal company discovery and enrichment system',
     endpoints: {
+      // Prospecting (SSE-based, legacy)
       prospect: 'POST /api/prospect',
+      // Prospecting (Queue-based, recommended)
+      prospectQueue: 'POST /api/prospect-queue',
+      prospectStatus: 'GET /api/prospect-status?job_ids=...',
+      cancelProspect: 'POST /api/cancel-prospect',
+      queueStatus: 'GET /api/queue-status',
+      // Business Lookup
       lookupBusiness: 'POST /api/lookup-business',
+      // Prospect Management
       listProspects: 'GET /api/prospects',
       getProspect: 'GET /api/prospects/:id',
       stats: 'GET /api/stats',
+      // Health
       health: 'GET /health'
     },
     documentation: 'See README.md for full API documentation'

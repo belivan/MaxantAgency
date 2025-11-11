@@ -4,6 +4,7 @@
  */
 
 export * from './use-sse';
+export * from './use-queue-polling';
 export * from './use-prospects';
 export * from './use-leads';
 export * from './use-dashboard-stats';

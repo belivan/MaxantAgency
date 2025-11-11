@@ -440,16 +440,6 @@ export function LeadDetailModal({ lead, open, onClose, onComposeEmail }: LeadDet
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
-                      {profile.handle && (
-                        <p className="text-sm text-muted-foreground">
-                          Handle: @{profile.handle}
-                        </p>
-                      )}
-                      {profile.verified !== undefined && profile.verified && (
-                        <Badge variant="outline" className="text-blue-600 dark:text-blue-400">
-                          Verified
-                        </Badge>
-                      )}
                     </CardContent>
                   </Card>
                 ))}

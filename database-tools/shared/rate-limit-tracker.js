@@ -213,6 +213,7 @@ class RateLimitTracker {
   constructor() {
     this.buckets = new Map(); // model -> { tpm: TokenBucket, itpm: TokenBucket, otpm: TokenBucket, rpm: RequestCounter }
     this.actualLimits = new Map(); // Store actual limits from API headers
+    this.reservations = new Map(); // model -> [{id, inputTokens, outputTokens, timestamp}]
     this.enabled = process.env.ENABLE_RATE_LIMIT_TRACKING !== 'false';
 
     console.log(`[Rate Limit Tracker] Initialized (enabled: ${this.enabled})`);
@@ -344,41 +345,52 @@ class RateLimitTracker {
       };
     }
 
-    // Check token limits
+    // Get reserved tokens to account for pending requests
+    const reserved = this.getReservedTokens(provider, model);
+
+    // Check token limits (accounting for reservations)
     if (provider === 'anthropic') {
       // Separate input/output limits
-      if (buckets.itpm && !buckets.itpm.hasCapacity(estimatedInputTokens)) {
+      const availableInput = buckets.itpm ? buckets.itpm.getAvailable() - reserved.inputTokens : Infinity;
+      const availableOutput = buckets.otpm ? buckets.otpm.getAvailable() - reserved.outputTokens : Infinity;
+
+      if (buckets.itpm && availableInput < estimatedInputTokens) {
         const waitTime = buckets.itpm.getTimeUntilFull();
         return {
           allowed: false,
           reason: 'input_tokens_exceeded',
           waitTime,
-          current: Math.floor(buckets.itpm.capacity - buckets.itpm.getAvailable()),
-          limit: buckets.itpm.capacity
+          current: Math.floor(buckets.itpm.capacity - availableInput),
+          limit: buckets.itpm.capacity,
+          reserved: reserved.inputTokens
         };
       }
 
-      if (buckets.otpm && !buckets.otpm.hasCapacity(estimatedOutputTokens)) {
+      if (buckets.otpm && availableOutput < estimatedOutputTokens) {
         const waitTime = buckets.otpm.getTimeUntilFull();
         return {
           allowed: false,
           reason: 'output_tokens_exceeded',
           waitTime,
-          current: Math.floor(buckets.otpm.capacity - buckets.otpm.getAvailable()),
-          limit: buckets.otpm.capacity
+          current: Math.floor(buckets.otpm.capacity - availableOutput),
+          limit: buckets.otpm.capacity,
+          reserved: reserved.outputTokens
         };
       }
     } else {
       // Combined token limit (OpenAI/Grok)
       const totalTokens = estimatedInputTokens + estimatedOutputTokens;
-      if (buckets.tpm && !buckets.tpm.hasCapacity(totalTokens)) {
+      const availableTotal = buckets.tpm ? buckets.tpm.getAvailable() - reserved.totalTokens : Infinity;
+
+      if (buckets.tpm && availableTotal < totalTokens) {
         const waitTime = buckets.tpm.getTimeUntilFull();
         return {
           allowed: false,
           reason: 'tokens_exceeded',
           waitTime,
-          current: Math.floor(buckets.tpm.capacity - buckets.tpm.getAvailable()),
-          limit: buckets.tpm.capacity
+          current: Math.floor(buckets.tpm.capacity - availableTotal),
+          limit: buckets.tpm.capacity,
+          reserved: reserved.totalTokens
         };
       }
     }
@@ -413,6 +425,96 @@ class RateLimitTracker {
     }
 
     // console.log(`[Rate Limit Tracker] Recorded usage for ${key}: ${inputTokens}/${outputTokens} tokens`);
+  }
+
+  /**
+   * Reserve tokens for an upcoming request (prevents race conditions)
+   *
+   * @param {string} provider - AI provider
+   * @param {string} model - Model name
+   * @param {number} inputTokens - Input tokens to reserve
+   * @param {number} outputTokens - Output tokens to reserve
+   * @returns {string} Reservation ID
+   */
+  reserveTokens(provider, model, inputTokens, outputTokens) {
+    const key = `${provider}:${model}`;
+
+    if (!this.reservations.has(key)) {
+      this.reservations.set(key, []);
+    }
+
+    const reservationId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    this.reservations.get(key).push({
+      id: reservationId,
+      inputTokens,
+      outputTokens,
+      timestamp: Date.now()
+    });
+
+    // Clean up old reservations (older than 5 minutes)
+    this.cleanupOldReservations(key);
+
+    return reservationId;
+  }
+
+  /**
+   * Release a token reservation
+   *
+   * @param {string} provider - AI provider
+   * @param {string} model - Model name
+   * @param {string} reservationId - Reservation ID to release
+   */
+  releaseReservation(provider, model, reservationId) {
+    const key = `${provider}:${model}`;
+    const reservations = this.reservations.get(key);
+
+    if (!reservations) return;
+
+    const index = reservations.findIndex(r => r.id === reservationId);
+    if (index !== -1) {
+      reservations.splice(index, 1);
+    }
+  }
+
+  /**
+   * Get total reserved tokens for a model
+   *
+   * @param {string} provider - AI provider
+   * @param {string} model - Model name
+   * @returns {object} {inputTokens, outputTokens, totalTokens}
+   */
+  getReservedTokens(provider, model) {
+    const key = `${provider}:${model}`;
+    const reservations = this.reservations.get(key) || [];
+
+    const inputTokens = reservations.reduce((sum, r) => sum + r.inputTokens, 0);
+    const outputTokens = reservations.reduce((sum, r) => sum + r.outputTokens, 0);
+
+    return {
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens,
+      count: reservations.length
+    };
+  }
+
+  /**
+   * Clean up reservations older than 5 minutes
+   *
+   * @param {string} key - Provider:model key
+   */
+  cleanupOldReservations(key) {
+    const reservations = this.reservations.get(key);
+    if (!reservations) return;
+
+    const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+    const validReservations = reservations.filter(r => r.timestamp > fiveMinutesAgo);
+
+    if (validReservations.length !== reservations.length) {
+      this.reservations.set(key, validReservations);
+      console.warn(`[Rate Limit Tracker] Cleaned up ${reservations.length - validReservations.length} stale reservations for ${key}`);
+    }
   }
 
   /**

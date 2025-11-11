@@ -3,9 +3,10 @@
 /**
  * All Variations Composer
  * Generate ALL 12 outreach variations (3 email + 9 social) for selected leads
+ * Uses queue-based polling for better reliability
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Loader2, Sparkles, CheckCircle2, XCircle, Mail, MessageCircle } from 'lucide-react';
 import {
   Card,
@@ -20,6 +21,8 @@ import { Badge } from '@/components/ui/badge';
 import { GradeBadge } from '@/components/leads/grade-badge';
 import type { Lead } from '@/lib/types';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
+import { composeAllVariationsQueue, checkOutreachStatus, cancelOutreachJobs } from '@/lib/api/outreach';
+import { useQueuePolling } from '@/lib/hooks/use-queue-polling';
 
 interface AllVariationsComposerProps {
   leads: Lead[];
@@ -43,14 +46,101 @@ export function AllVariationsComposer({
   onComplete
 }: AllVariationsComposerProps) {
   const [statuses, setStatuses] = useState<Record<string, LeadGenerationStatus>>({});
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [jobId, setJobId] = useState<string | null>(null);
   const [totalCost, setTotalCost] = useState(0);
+  const [taskId, setTaskId] = useState<string | null>(null);
   const { startTask, updateTask, addLog, completeTask, errorTask } = useTaskProgress();
 
-  const handleGenerateAll = async () => {
-    setIsGenerating(true);
-    setTotalCost(0);
+  // Use queue polling hook
+  const {
+    jobs,
+    isPolling,
+    allJobsDone,
+    error: pollingError
+  } = useQueuePolling({
+    statusUrl: process.env.NEXT_PUBLIC_OUTREACH_API
+      ? `${process.env.NEXT_PUBLIC_OUTREACH_API}/api/compose-status`
+      : 'http://localhost:3002/api/compose-status',
+    jobIds: jobId ? [jobId] : [],
+    autoStart: true,
+    pollInterval: 3000, // Poll every 3 seconds
+    onJobUpdate: (job) => {
+      if (!taskId) return;
 
+      // Update progress based on job progress
+      if (job.progress) {
+        const progressPercent = (job.progress.current / job.progress.total) * 100;
+        updateTask(taskId, job.progress.current, job.progress.message || 'Processing...');
+
+        // Update individual lead statuses based on progress
+        leads.forEach((lead, index) => {
+          const leadProgress = Math.min(100, ((job.progress!.current / job.progress!.total) * 100));
+          setStatuses(prev => ({
+            ...prev,
+            [lead.id]: {
+              ...prev[lead.id],
+              status: index < job.progress!.current / 12 ? 'completed' : 'generating',
+              progress: leadProgress
+            }
+          }));
+        });
+      }
+    },
+    onJobComplete: (job) => {
+      if (!taskId) return;
+
+      // Mark all leads as completed
+      setStatuses(prev => {
+        const updated = { ...prev };
+        leads.forEach(lead => {
+          updated[lead.id] = {
+            ...updated[lead.id],
+            status: 'completed',
+            progress: 100
+          };
+        });
+        return updated;
+      });
+
+      // Extract results
+      if (job.result) {
+        const { processed_leads, total_variations, total_cost } = job.result;
+        setTotalCost(total_cost || 0);
+        addLog(taskId, `✅ Generated ${total_variations} variations for ${processed_leads} leads`, 'success');
+        addLog(taskId, `Total cost: $${(total_cost || 0).toFixed(4)}`, 'success');
+      }
+
+      completeTask(taskId);
+      onComplete?.();
+    },
+    onJobFailed: (job) => {
+      if (!taskId) return;
+
+      errorTask(taskId, job.error || 'Job failed');
+      addLog(taskId, `❌ Error: ${job.error}`, 'error');
+
+      // Mark all generating leads as error
+      setStatuses(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(leadId => {
+          if (updated[leadId].status === 'generating' || updated[leadId].status === 'pending') {
+            updated[leadId].status = 'error';
+            updated[leadId].error = job.error;
+          }
+        });
+        return updated;
+      });
+    }
+  });
+
+  // Handle polling errors
+  useEffect(() => {
+    if (pollingError && taskId) {
+      addLog(taskId, `⚠️ Polling error: ${pollingError.message}`, 'error');
+    }
+  }, [pollingError, taskId, addLog]);
+
+  const handleGenerateAll = async () => {
     // Initialize statuses
     const initialStatuses: Record<string, LeadGenerationStatus> = {};
     leads.forEach(lead => {
@@ -62,178 +152,45 @@ export function AllVariationsComposer({
       };
     });
     setStatuses(initialStatuses);
+    setTotalCost(0);
 
     // Start task tracking
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const taskId = startTask(
+    const newTaskId = startTask(
       'outreach',
       `Generate ${leads.length * 12} variations for ${leads.length} leads (${timestamp})`,
       leads.length * 12
     );
-    addLog(taskId, 'Starting all-variations generation...', 'info');
+    setTaskId(newTaskId);
+    addLog(newTaskId, 'Queueing all-variations generation...', 'info');
 
     try {
-      const response = await fetch('http://localhost:3002/api/compose-all-variations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          lead_ids: leads.map(l => l.id),
-          project_id: projectId
-        })
-      });
+      // Queue the job
+      const { job_id } = await composeAllVariationsQueue(
+        leads.map(l => l.id),
+        { forceRegenerate: false }
+      );
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('No response body');
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let currentEventType = 'message';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('event:')) {
-            currentEventType = line.slice(6).trim();
-          } else if (line.startsWith('data:')) {
-            const dataStr = line.slice(5).trim();
-            if (dataStr) {
-              try {
-                const data = JSON.parse(dataStr);
-                handleSSEMessage(currentEventType, data, taskId);
-                currentEventType = 'message'; // Reset
-              } catch (e) {
-                console.error('Failed to parse SSE data:', dataStr, e);
-              }
-            }
-          }
-        }
-      }
-
-      completeTask(taskId);
-      addLog(taskId, `All variations generated successfully`, 'success');
-      onComplete?.();
+      setJobId(job_id);
+      addLog(newTaskId, `✅ Job queued successfully (ID: ${job_id})`, 'success');
+      addLog(newTaskId, 'Waiting for job to start...', 'info');
     } catch (error: any) {
-      console.error('All-variations generation failed:', error);
-      errorTask(taskId, error.message);
-      addLog(taskId, `Error: ${error.message}`, 'error');
-    } finally {
-      setIsGenerating(false);
+      console.error('Failed to queue all-variations generation:', error);
+      errorTask(newTaskId, error.message);
+      addLog(newTaskId, `❌ Error: ${error.message}`, 'error');
     }
   };
 
-  const handleSSEMessage = (eventType: string, data: any, taskId: string) => {
-    switch (eventType) {
-      case 'start':
-        addLog(taskId, `Starting generation for ${data.total} leads`, 'info');
-        break;
+  const handleCancel = async () => {
+    if (!jobId || !taskId) return;
 
-      case 'lead_start':
-        setStatuses(prev => ({
-          ...prev,
-          [data.lead.id]: {
-            ...prev[data.lead.id],
-            status: 'generating',
-            progress: 0
-          }
-        }));
-        addLog(taskId, `🔄 ${data.lead.company_name}`, 'info');
-        break;
-
-      case 'variation_start':
-        // Update current variation being generated
-        const leadId = leads[data.leadIndex]?.id;
-        if (leadId) {
-          setStatuses(prev => ({
-            ...prev,
-            [leadId]: {
-              ...prev[leadId],
-              currentVariation: data.variation
-            }
-          }));
-        }
-        break;
-
-      case 'variation_complete':
-        // Update progress for the lead
-        const completedLeadId = leads[data.leadIndex]?.id;
-        if (completedLeadId) {
-          setStatuses(prev => ({
-            ...prev,
-            [completedLeadId]: {
-              ...prev[completedLeadId],
-              progress: data.progress || 0
-            }
-          }));
-          updateTask(taskId, data.leadIndex * 12 + data.variationIndex, data.message);
-        }
-        break;
-
-      case 'lead_complete':
-        const doneLeadId = leads[data.leadIndex]?.id;
-        if (doneLeadId) {
-          setStatuses(prev => ({
-            ...prev,
-            [doneLeadId]: {
-              ...prev[doneLeadId],
-              status: 'completed',
-              progress: 100,
-              cost: data.cost
-            }
-          }));
-          setTotalCost(prev => prev + (data.cost || 0));
-          addLog(taskId, `✅ ${statuses[doneLeadId]?.companyName}: Complete ($${data.cost?.toFixed(4) || '0.00'})`, 'success');
-        }
-        break;
-
-      case 'lead_error':
-        const errorLeadId = leads[data.leadIndex]?.id;
-        if (errorLeadId) {
-          setStatuses(prev => ({
-            ...prev,
-            [errorLeadId]: {
-              ...prev[errorLeadId],
-              status: 'error',
-              error: data.error
-            }
-          }));
-          addLog(taskId, `❌ ${statuses[errorLeadId]?.companyName}: ${data.error}`, 'error');
-        }
-        break;
-
-      case 'variation_skip':
-        const skipLeadId = leads[data.leadIndex]?.id;
-        if (skipLeadId) {
-          setStatuses(prev => ({
-            ...prev,
-            [skipLeadId]: {
-              ...prev[skipLeadId],
-              status: 'skipped'
-            }
-          }));
-          addLog(taskId, `⏭️ ${statuses[skipLeadId]?.companyName}: Already exists`, 'info');
-        }
-        break;
-
-      case 'complete':
-      case 'success':
-        addLog(taskId, `Generation complete! Total cost: $${data.stats?.totalCost?.toFixed(4) || '0.00'}`, 'success');
-        break;
-
-      case 'error':
-        addLog(taskId, `Error: ${data.error}`, 'error');
-        break;
+    try {
+      addLog(taskId, 'Cancelling job...', 'info');
+      await cancelOutreachJobs([jobId]);
+      addLog(taskId, '✅ Job cancelled', 'info');
+      setJobId(null);
+    } catch (error: any) {
+      addLog(taskId, `❌ Failed to cancel: ${error.message}`, 'error');
     }
   };
 
@@ -245,7 +202,10 @@ export function AllVariationsComposer({
     : 0;
 
   const hasStarted = Object.keys(statuses).length > 0;
-  const isComplete = hasStarted && completedCount + errorCount + skippedCount === leads.length;
+  const isComplete = allJobsDone || (hasStarted && completedCount + errorCount + skippedCount === leads.length);
+  const currentJob = jobId ? jobs.get(jobId) : null;
+  const isQueued = currentJob?.state === 'queued';
+  const isRunning = currentJob?.state === 'running';
 
   return (
     <Card>
@@ -263,23 +223,35 @@ export function AllVariationsComposer({
               </span>
             </CardDescription>
           </div>
-          <Button
-            onClick={handleGenerateAll}
-            disabled={isGenerating || leads.length === 0}
-            size="lg"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate All
-              </>
+          <div className="flex items-center gap-2">
+            {(isQueued || isRunning) && (
+              <Button
+                onClick={handleCancel}
+                variant="outline"
+                size="lg"
+                disabled={isRunning} // Can only cancel queued jobs
+              >
+                Cancel
+              </Button>
             )}
-          </Button>
+            <Button
+              onClick={handleGenerateAll}
+              disabled={isPolling || leads.length === 0}
+              size="lg"
+            >
+              {isPolling ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {isQueued ? 'Queued...' : 'Generating...'}
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate All
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -351,8 +323,8 @@ export function AllVariationsComposer({
                           <span className="font-medium truncate">
                             {status.companyName}
                           </span>
-                          {lead.website_grade && (
-                            <GradeBadge grade={lead.website_grade} />
+                          {lead.grade && (
+                            <GradeBadge grade={lead.grade} />
                           )}
                         </div>
                         {status.status === 'generating' && status.currentVariation && (

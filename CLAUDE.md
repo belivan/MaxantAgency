@@ -683,6 +683,156 @@ TOP_ISSUES_SEVERITY_FILTER=critical,high  # Severities to include (default: crit
 
 **Fallback**: If AI fails, uses rule-based sorting by severity + priority with deduplication
 
+### 14. Work Queue System (All Engines)
+
+**Documentation**: `WORK-QUEUE-SYSTEM-GUIDE.md`
+
+MaxantAgency uses a universal work queue system for async job-based architecture across all engines.
+
+**Location**: `database-tools/shared/work-queue.js`
+
+**Integrated Engines**:
+- ✅ Analysis Engine - `analysis-engine/routes/analysis-queue-endpoints.js`
+- ✅ Prospecting Engine - `prospecting-engine/routes/prospecting-queue-endpoints.js`
+- ✅ Report Engine - `report-engine/routes/report-queue-endpoints.js`
+- ✅ Outreach Engine - `outreach-engine/routes/outreach-queue-endpoints.js`
+
+**Key Features**:
+- Priority-based job scheduling (small batches = high priority)
+- Per-work-type concurrency limits
+- Redis-backed persistence with in-memory fallback
+- Job states: queued, running, completed, failed, cancelled
+- Cross-engine coordination and visibility
+- Cancellation support for queued jobs
+- 24-hour automatic cleanup
+
+**API Pattern** (consistent across all engines):
+```javascript
+// Queue job
+POST /api/{work-type}-queue
+Response: { success: true, job_id: "uuid" }
+
+// Check status
+GET /api/{work-type}-status?job_ids=uuid1,uuid2
+Response: { success: true, jobs: [...], summary: {...} }
+
+// Cancel job
+POST /api/cancel-{work-type}
+Body: { job_ids: ["uuid1", "uuid2"] }
+
+// Overall queue status (all engines)
+GET /api/queue-status
+Response: { types: { analysis: {...}, prospecting: {...}, report: {...} } }
+```
+
+**Work Types & Concurrency**:
+```javascript
+{
+  analysis: 2,      // Max 2 concurrent analyses
+  prospecting: 1,   // Max 1 concurrent prospecting
+  report: 1,        // Max 1 concurrent report
+  outreach: 2       // Max 2 concurrent outreach
+}
+```
+
+**Configuration**:
+```env
+USE_WORK_QUEUE=true                    # Enable work queue system
+REDIS_URL=redis://localhost:6379       # Redis connection
+MAX_CONCURRENT_ANALYSES=2
+MAX_CONCURRENT_PROSPECTING=1
+MAX_CONCURRENT_REPORTS=1
+MAX_CONCURRENT_OUTREACH=2
+```
+
+**Priority Calculation**:
+- Small batches (1-5 items) = Priority 1 (high)
+- Medium batches (6-20 items) = Priority 2 (medium)
+- Large batches (21+ items) = Priority 3 (low)
+
+**Benefits**:
+- No SSE timeout issues with long-running jobs
+- Poll for status instead of maintaining persistent connections
+- Cancel jobs before they start (testing, debugging, cost savings)
+- Unified monitoring across all engines
+- Resource protection via concurrency limits
+- Cross-engine coordination prevents resource contention
+
+**Backward Compatibility**:
+- Existing endpoints remain fully functional
+- Analysis: `/api/analyze-url` (old) + `/api/analyze` (new queue-based)
+- Prospecting: `/api/prospect` (SSE) + `/api/prospect-queue` (queue-based)
+- Report: `/api/generate` (sync) + `/api/generate-queue` (queue-based)
+- Outreach: `/api/compose-all-variations` (SSE) + `/api/compose-queue` (queue-based)
+
+**Usage Example - Analysis Engine**:
+```javascript
+// Queue analysis job
+const { job_id } = await fetch('/api/analyze', {
+  method: 'POST',
+  body: JSON.stringify({ prospect_ids: [...], project_id: 'uuid' })
+}).then(r => r.json());
+
+// Poll for status
+const checkStatus = async () => {
+  const { jobs } = await fetch(`/api/analysis-status?job_ids=${job_id}`)
+    .then(r => r.json());
+
+  if (jobs[0].state === 'completed') {
+    console.log('Result:', jobs[0].result);
+  } else if (jobs[0].state === 'failed') {
+    console.error('Failed:', jobs[0].error);
+  } else {
+    setTimeout(checkStatus, 5000); // Check again in 5 seconds
+  }
+};
+```
+
+**Usage Example - Outreach Engine**:
+```javascript
+// Queue outreach composition (12 variations per lead)
+const { job_id } = await fetch('http://localhost:3002/api/compose-queue', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    lead_ids: ['uuid1', 'uuid2', 'uuid3'],
+    options: { forceRegenerate: false }
+  })
+}).then(r => r.json());
+
+// Poll for status
+const { jobs } = await fetch(`http://localhost:3002/api/compose-status?job_ids=${job_id}`)
+  .then(r => r.json());
+
+console.log(jobs[0].result);
+// { success: true, processed_leads: 3, total_variations: 36, total_cost: 0.24, ... }
+```
+
+**Monitoring**:
+```bash
+# Live queue monitoring
+node database-tools/shared/rate-limit-monitor.js --watch
+
+# Check queue status (any engine)
+curl http://localhost:3001/api/queue-status  # Analysis Engine
+curl http://localhost:3010/api/queue-status  # Prospecting Engine
+curl http://localhost:3003/api/queue-status  # Report Engine
+curl http://localhost:3002/api/queue-status  # Outreach Engine
+```
+
+**System Architecture**:
+```
+Work Queue (Layer 4) - Job scheduling & prioritization
+    ↓
+Request Queue (Layer 3) - Per-engine AI concurrency (10 concurrent)
+    ↓
+Distributed Rate Limiter (Layer 2) - Cross-engine coordination via Redis
+    ↓
+Local Rate Limiter (Layer 1) - Per-process token buckets
+    ↓
+AI Providers (OpenAI, Anthropic, xAI)
+```
+
 ## Environment Variables
 
 All engines use environment variables for configuration. Create a `.env` file in each engine's root directory (or use a shared `.env` at the project root).
@@ -773,6 +923,35 @@ PORT=3003  # Report Engine
 PORT=3002  # Outreach Engine
 PORT=3020  # Pipeline Orchestrator
 PORT=3000  # Command Center UI
+```
+
+### Work Queue System
+
+```env
+# Enable/Disable Work Queue
+USE_WORK_QUEUE=true                    # Enable universal work queue (default: true)
+
+# Redis Configuration (required for cross-engine coordination)
+REDIS_URL=redis://localhost:6379       # Redis connection URL
+# Or use individual fields:
+# REDIS_HOST=localhost
+# REDIS_PORT=6379
+# REDIS_PASSWORD=your-password
+
+# Per-Type Concurrency Limits
+MAX_CONCURRENT_ANALYSES=2              # Max concurrent analysis jobs
+MAX_CONCURRENT_OUTREACH=2              # Max concurrent outreach jobs
+MAX_CONCURRENT_REPORTS=1               # Max concurrent report jobs
+MAX_CONCURRENT_PROSPECTING=1           # Max concurrent prospecting jobs
+
+# Request Queue (Per-Engine AI Concurrency)
+MAX_CONCURRENT_AI_CALLS=10             # Max concurrent AI calls per engine process
+MIN_DELAY_BETWEEN_AI_CALLS_MS=150      # Minimum delay between AI calls (traffic spreading)
+USE_REQUEST_QUEUE=true                 # Enable request queue (default: true)
+
+# Distributed Rate Limiting
+USE_DISTRIBUTED_RATE_LIMITING=true     # Enable cross-engine rate limit coordination
+FALLBACK_TO_LOCAL_LIMITING=true        # Fall back to local if Redis fails
 ```
 
 ### Other Configuration
@@ -988,6 +1167,7 @@ All engines follow the same API patterns:
 - `README.md` - System overview and architecture
 - `SETUP.md` - Setup instructions and first-time configuration
 - `RATE-LIMIT-SYSTEM-GUIDE.md` - Complete rate limiting documentation
+- `WORK-QUEUE-SYSTEM-GUIDE.md` - Complete work queue system documentation
 - `package.json` - Root-level npm scripts for dev workflow
 
 **Database Tools**:

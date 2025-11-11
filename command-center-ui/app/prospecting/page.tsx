@@ -52,7 +52,6 @@ export default function ProspectingPage() {
   const [selectedProspectIds, setSelectedProspectIds] = useState<string[]>([]);
   const [filters, setFilters] = useState<ProspectFilters>({
     status: 'ready_for_analysis',
-    verified: true,
     limit: 10,
     offset: 0,
     project_id: selectedProjectId || undefined

@@ -16,8 +16,109 @@ import type {
 const API_BASE = process.env.NEXT_PUBLIC_PROSPECTING_API || 'http://localhost:3010';
 
 /**
- * Generate prospects based on ICP brief
+ * Generate prospects based on ICP brief (Queue-based)
+ * Returns job_id for polling-based status tracking
+ * @preferred Use this method for new implementations
+ */
+export async function generateProspectsQueue(
+  brief: Record<string, any>,
+  options: ProspectGenerationOptions
+): Promise<{ job_id: string }> {
+  const response = await fetch(`${API_BASE}/api/prospect-queue`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      brief,
+      ...options
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || error.message || 'Failed to queue prospect generation');
+  }
+
+  const data = await response.json();
+
+  if (!data.success || !data.job_id) {
+    throw new Error('Failed to queue prospecting job');
+  }
+
+  return { job_id: data.job_id };
+}
+
+/**
+ * Check status of prospecting jobs
+ * @param jobIds Array of job IDs to check
+ */
+export async function checkProspectingStatus(jobIds: string[]): Promise<{
+  success: boolean;
+  jobs: Array<{
+    job_id: string;
+    work_type: string;
+    state: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+    priority: number;
+    progress?: {
+      current: number;
+      total: number;
+      message?: string;
+    };
+    result?: any;
+    error?: string;
+    created_at: string;
+    started_at?: string;
+    completed_at?: string;
+  }>;
+  summary: {
+    total: number;
+    queued: number;
+    running: number;
+    completed: number;
+    failed: number;
+    cancelled: number;
+  };
+}> {
+  const queryString = jobIds.map(id => `job_ids=${id}`).join('&');
+  const response = await fetch(`${API_BASE}/api/prospecting-status?${queryString}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || error.message || 'Failed to check prospecting status');
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Cancel queued prospecting jobs
+ * @param jobIds Array of job IDs to cancel (only works for queued jobs)
+ */
+export async function cancelProspectingJobs(jobIds: string[]): Promise<{
+  success: boolean;
+  cancelled: number;
+  not_found: number;
+  already_started: number;
+}> {
+  const response = await fetch(`${API_BASE}/api/cancel-prospecting`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job_ids: jobIds })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || error.message || 'Failed to cancel prospecting jobs');
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Generate prospects based on ICP brief (SSE-based - DEPRECATED)
  * Returns SSE URL for real-time progress tracking
+ * @deprecated Use generateProspectsQueue() instead for better reliability
  */
 export async function generateProspects(
   brief: Record<string, any>,
@@ -66,9 +167,6 @@ export async function getProspects(filters?: ProspectFilters): Promise<{ prospec
   }
   if (filters?.min_rating !== undefined) {
     params.set('min_rating', filters.min_rating.toString());
-  }
-  if (filters?.verified !== undefined) {
-    params.set('verified', filters.verified.toString());
   }
   if (filters?.has_email !== undefined) {
     params.set('has_email', filters.has_email.toString());

@@ -52,8 +52,112 @@ export async function analyzeSingleUrl(
 }
 
 /**
- * Analyze prospects by URLs
+ * Analyze prospects by URLs (Queue-based)
+ * Returns job_id for polling-based status tracking
+ * @preferred Use this method for new implementations
+ */
+export async function analyzeProspectsQueue(
+  prospectIds: string[],
+  options: AnalysisOptions
+): Promise<{ job_id: string }> {
+  const response = await fetch(`${API_BASE}/api/analyze-queue`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prospect_ids: prospectIds,
+      project_id: options.project_id,
+      tier: options.tier,
+      modules: options.modules || [],
+      capture_screenshots: options.capture_screenshots ?? true
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || error.message || 'Failed to queue analysis');
+  }
+
+  const data = await response.json();
+
+  if (!data.success || !data.job_id) {
+    throw new Error('Failed to queue analysis job');
+  }
+
+  return { job_id: data.job_id };
+}
+
+/**
+ * Check status of analysis jobs
+ * @param jobIds Array of job IDs to check
+ */
+export async function checkAnalysisStatus(jobIds: string[]): Promise<{
+  success: boolean;
+  jobs: Array<{
+    job_id: string;
+    work_type: string;
+    state: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+    priority: number;
+    progress?: {
+      current: number;
+      total: number;
+      message?: string;
+    };
+    result?: any;
+    error?: string;
+    created_at: string;
+    started_at?: string;
+    completed_at?: string;
+  }>;
+  summary: {
+    total: number;
+    queued: number;
+    running: number;
+    completed: number;
+    failed: number;
+    cancelled: number;
+  };
+}> {
+  const queryString = jobIds.map(id => `job_ids=${id}`).join('&');
+  const response = await fetch(`${API_BASE}/api/analysis-status?${queryString}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || error.message || 'Failed to check analysis status');
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Cancel queued analysis jobs
+ * @param jobIds Array of job IDs to cancel (only works for queued jobs)
+ */
+export async function cancelAnalysisJobs(jobIds: string[]): Promise<{
+  success: boolean;
+  cancelled: number;
+  not_found: number;
+  already_started: number;
+}> {
+  const response = await fetch(`${API_BASE}/api/cancel-analysis`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job_ids: jobIds })
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || error.message || 'Failed to cancel analysis jobs');
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Analyze prospects by URLs (SSE-based - DEPRECATED)
  * Returns SSE URL for real-time progress tracking
+ * @deprecated Use analyzeProspectsQueue() instead for better reliability
  */
 export async function analyzeProspects(
   prospectIds: string[],

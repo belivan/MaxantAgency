@@ -11,7 +11,7 @@
  * - Cross-viewport issues (layout breaks, content shifts)
  */
 
-import { loadPrompt } from '../shared/prompt-loader.js';
+import { loadPrompt, substituteVariables } from '../shared/prompt-loader.js';
 import { callAI, parseJSONResponse } from '../../database-tools/shared/ai-client.js';
 import { sanitizeForFilePath } from '../../database-tools/shared/path-utils.js';
 import { readFile, writeFile, mkdir } from 'fs/promises';
@@ -72,6 +72,7 @@ async function saveScreenshotSections(images, imageDescriptions, companyName) {
  * @param {string} context.industry - Industry type
  * @param {string} context.baseUrl - Base website URL
  * @param {string} context.tech_stack - Technology stack
+ * @param {object} context.contextBuilder - Optional ContextBuilder for cross-page intelligence
  * @param {object} customPrompt - Custom prompt configuration (optional)
  * @returns {Promise<object>} Unified visual analysis results (desktop + mobile + responsive)
  */
@@ -92,13 +93,25 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
     // For multi-page analysis, analyze the first 3 pages
     const pagesToAnalyze = pages.slice(0, 3);
 
+    // Check if cross-page context is enabled
+    const contextBuilder = context.contextBuilder;
+    const useCrossPageContext = contextBuilder && contextBuilder.enableCrossPage;
+
+    if (useCrossPageContext) {
+      console.log(`[Unified Visual Analyzer] Cross-page context enabled - using SEQUENTIAL processing`);
+      console.log(`[Unified Visual Analyzer] Note: This adds ~80s but reduces duplicate issues`);
+    } else {
+      console.log(`[Unified Visual Analyzer] Using PARALLEL processing for 3x speed improvement`);
+    }
+
     // Analyze each page (both viewports in a SINGLE AI call)
     const individualResults = [];
     let totalCost = 0;
     let totalUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
     let lastPromptModel = null;
 
-    for (const page of pagesToAnalyze) {
+    // Helper function to analyze a single page
+    const analyzeSinglePage = async (page, pageIndex) => {
       console.log(`[Unified Visual Analyzer] Analyzing page: ${page.url} (both viewports)...`);
 
       // Extract design tokens from this page
@@ -116,10 +129,12 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
         designTokensMobile: JSON.stringify(designTokensMobile, null, 2)
       };
 
-      // Use custom prompt if provided, otherwise load default
-      const { substituteVariables } = await import('../shared/prompt-loader.js');
+      // Use custom prompt if provided, otherwise load appropriate default
       let prompt;
+      let promptVariant; // Track which prompt file was used for A/B testing
+
       if (customPrompt) {
+        promptVariant = 'custom';
         prompt = {
           name: customPrompt.name,
           model: customPrompt.model,
@@ -128,7 +143,24 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
           userPrompt: await substituteVariables(customPrompt.userPromptTemplate, variables, customPrompt.variables),
           outputFormat: customPrompt.outputFormat
         };
+      } else if (useCrossPageContext) {
+        // Load context-aware prompt directly (aggressive duplicate avoidance)
+        promptVariant = 'context-aware';
+        const contextAwarePath = join(__dirname, '..', 'config', 'prompts', 'web-design', 'unified-visual-analysis', 'context-aware.json');
+        const promptData = await readFile(contextAwarePath, 'utf-8');
+        const loadedPrompt = JSON.parse(promptData);
+
+        prompt = {
+          name: loadedPrompt.name,
+          model: loadedPrompt.model,
+          temperature: loadedPrompt.temperature,
+          systemPrompt: loadedPrompt.systemPrompt,
+          userPrompt: await substituteVariables(loadedPrompt.userPromptTemplate, variables, loadedPrompt.variables),
+          outputFormat: loadedPrompt.outputFormat
+        };
       } else {
+        // Load standard base prompt via prompt loader
+        promptVariant = 'base';
         const loadedPrompt = await loadPrompt('unified-visual-analyzer');
         prompt = {
           name: loadedPrompt.name,
@@ -191,42 +223,129 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
       // Save screenshot sections for validation
       const sectionPaths = await saveScreenshotSections(images, imageDescriptions, context.company_name || 'unknown');
 
+      // Get cross-page context if available
+      let crossPageContext = '';
+      if (useCrossPageContext) {
+        const pageContext = contextBuilder.getPageContext(page.url, { pageIndex });
+        if (pageContext && pageContext.instructions) {
+          crossPageContext = '\n\n---\n\n**CROSS-PAGE CONTEXT:**\n' + pageContext.instructions + '\n\n---\n';
+          console.log(`[Unified Visual Analyzer] Added context from ${pageContext.pagesAnalyzedCount} previous pages`);
+        }
+      }
+
       // Call centralized AI client with processed images
       const response = await callAI({
         model: prompt.model,
         systemPrompt: prompt.systemPrompt,
-        userPrompt: prompt.userPrompt + imageContext,
+        userPrompt: prompt.userPrompt + crossPageContext + imageContext,
         temperature: prompt.temperature,
         images: images,
         jsonMode: true
       });
 
-      console.log(`[Unified Visual Analyzer] AI response (${response.usage?.total_tokens || 0} tokens, $${response.cost?.toFixed(4) || '0.0000'})`);
+      console.log(`[Unified Visual Analyzer] AI response for ${page.url} (${response.usage?.total_tokens || 0} tokens, $${response.cost?.toFixed(4) || '0.0000'})`);
 
       const modelUsed = response.model || prompt.model;
-      lastPromptModel = modelUsed;
+
+      // Optional: Save raw AI response for debugging (when DEBUG_VISUAL_ANALYZER=true)
+      if (process.env.DEBUG_VISUAL_ANALYZER === 'true') {
+        try {
+          const debugPath = join(__dirname, '..', 'debug-logs', 'unified-visual-responses');
+          await mkdir(debugPath, { recursive: true });
+          const timestamp = new Date().toISOString().replace(/:/g, '-').replace(/\..+/, '');
+          const debugFile = join(debugPath, `response-${sanitizeForFilePath(context.company_name || 'unknown')}-${timestamp}.json`);
+
+          await writeFile(debugFile, JSON.stringify({
+            company_name: context.company_name,
+            url: page.url,
+            timestamp: new Date().toISOString(),
+            model: modelUsed,
+            usage: response.usage || null,
+            cost: response.cost || 0,
+            raw_content: response.content,
+            content_length: response.content?.length || 0
+          }, null, 2));
+
+          console.log(`[Debug] Saved raw AI response to: ${debugFile}`);
+        } catch (debugError) {
+          // Don't block analysis if debug logging fails
+          console.warn(`[Debug] Failed to save debug log: ${debugError.message}`);
+        }
+      }
 
       // Parse JSON response
       const result = await parseJSONResponse(response.content);
       validateUnifiedVisualResponse(result);
 
-      individualResults.push({
+      // Store context for next page (if context-aware mode enabled)
+      if (useCrossPageContext) {
+        const allIssues = [
+          ...(result.desktopIssues || []),
+          ...(result.mobileIssues || []),
+          ...(result.responsiveIssues || []),
+          ...(result.sharedIssues || [])
+        ];
+
+        // Add page context to builder for next page
+        // NOTE: No post-processing similarity filtering - we rely on AI prompt instructions
+        // to avoid duplicates based on the context provided
+        contextBuilder.addPageContext({
+          url: page.url,
+          issues: allIssues,
+          scores: {
+            desktop: result.desktopScore,
+            mobile: result.mobileScore,
+            responsive: result.responsiveScore
+          },
+          analyzer: 'visual'
+        });
+
+        console.log(`[Unified Visual Analyzer] Added ${allIssues.length} issues to context for next page`);
+      }
+
+      return {
         url: page.url,
         _meta: {
           model: modelUsed,
-          usage: response.usage || null
+          usage: response.usage || null,
+          cost: response.cost || 0,
+          promptVariant: promptVariant  // Track which prompt was used for A/B testing
         },
         _screenshot_sections: sectionPaths,  // For validation
-        ...result
-      });
+        ...result  // Return unfiltered results - AI handles duplicate avoidance via prompt
+      };
+    };
 
-      totalCost += response.cost || 0;
-      if (response.usage) {
-        totalUsage.prompt_tokens += response.usage.prompt_tokens || 0;
-        totalUsage.completion_tokens += response.usage.completion_tokens || 0;
-        totalUsage.total_tokens += response.usage.total_tokens || 0;
+    // Process pages: SEQUENTIAL (with context) or PARALLEL (fast mode)
+    let pageResults;
+
+    if (useCrossPageContext) {
+      // SEQUENTIAL processing for context-aware analysis
+      console.log(`[Unified Visual Analyzer] Processing ${pagesToAnalyze.length} pages SEQUENTIALLY with context...`);
+      pageResults = [];
+      for (let i = 0; i < pagesToAnalyze.length; i++) {
+        const result = await analyzeSinglePage(pagesToAnalyze[i], i);
+        pageResults.push(result);
       }
+    } else {
+      // PARALLEL processing for speed (original optimization)
+      console.log(`[Unified Visual Analyzer] Processing ${pagesToAnalyze.length} pages in PARALLEL...`);
+      pageResults = await Promise.all(
+        pagesToAnalyze.map((page, index) => analyzeSinglePage(page, index))
+      );
     }
+
+    // Aggregate costs and usage
+    pageResults.forEach(result => {
+      individualResults.push(result);
+      totalCost += result._meta.cost || 0;
+      if (result._meta.usage) {
+        totalUsage.prompt_tokens += result._meta.usage.prompt_tokens || 0;
+        totalUsage.completion_tokens += result._meta.usage.completion_tokens || 0;
+        totalUsage.total_tokens += result._meta.usage.total_tokens || 0;
+      }
+      lastPromptModel = result._meta.model;
+    });
 
     // Detect cross-page consistency issues
     const consistencyIssues = detectVisualConsistency(individualResults);
@@ -351,6 +470,7 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
         usage: totalUsage,
         timestamp: new Date().toISOString(),
         pagesAnalyzed: pagesToAnalyze.length,
+        promptVariant: individualResults[0]?._meta?.promptVariant || null,  // A/B testing tracking
         totalScreenshotSize: pages.reduce((sum, p) =>
           sum + (p.screenshots?.desktop?.length || 0) + (p.screenshots?.mobile?.length || 0), 0
         ),
@@ -373,41 +493,10 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
     };
 
   } catch (error) {
-    console.error('Unified visual analysis failed:', error);
-
-    // Return graceful degradation
-    const fallbackModel = customPrompt?.model || 'gpt-5';
-    return {
-      model: fallbackModel,
-      overallVisualScore: 30,
-      desktopScore: 30,
-      mobileScore: 30,
-      responsiveScore: 30,
-      visualScore: 30,
-      desktopIssues: [],
-      mobileIssues: [],
-      responsiveIssues: [{
-        category: 'error',
-        severity: 'high',
-        title: 'Unified visual analysis failed',
-        description: `Unable to analyze screenshots: ${error.message}`,
-        impact: 'Cannot provide visual design recommendations',
-        recommendation: 'Manual design audit recommended',
-        priority: 'high',
-        difficulty: 'unknown',
-        viewport: 'responsive'
-      }],
-      sharedIssues: [],
-      issues: [],
-      positives: [],
-      quickWinCount: 0,
-      _meta: {
-        analyzer: 'unified-visual',
-        model: fallbackModel,
-        error: error.message,
-        timestamp: new Date().toISOString()
-      }
-    };
+    console.error('❌ [Unified Visual Analyzer] CRITICAL FAILURE:', error);
+    console.error('[Unified Visual Analyzer] Re-throwing error to enforce fail-fast behavior');
+    // FAIL FAST: Don't return fallback data, propagate error up to analysis coordinator
+    throw error;
   }
 }
 
@@ -502,7 +591,7 @@ function validateUnifiedVisualResponse(result) {
   scores.forEach((score, index) => {
     const fieldName = ['desktopScore', 'mobileScore', 'responsiveScore'][index];
     if (typeof score !== 'number' || score < 0 || score > 100) {
-      throw new Error(`${fieldName} must be number between 0-100`);
+      throw new Error(`${fieldName} must be number between 0-100 (received: ${JSON.stringify(score)}, type: ${typeof score})`);
     }
   });
 

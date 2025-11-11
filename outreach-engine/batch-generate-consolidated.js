@@ -1,16 +1,14 @@
-import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { supabase } from './integrations/database.js';
 import { buildPersonalizationContext, buildSocialContext } from './shared/personalization-builder.js';
 import { loadPrompt, fillTemplate, validateContext } from './shared/prompt-loader.js';
+import { callAI } from '../database-tools/shared/ai-client.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../.env') });
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const EMAIL_VARIATIONS = [
   { name: 'free-value-delivery', type: 'free_value', field: 'email_free_value' },
@@ -58,26 +56,6 @@ async function getLeads(filters = {}) {
   return data || [];
 }
 
-/**
- * Call Claude API
- */
-async function callClaude(model, systemPrompt, userPrompt, temperature = 0.7) {
-  const response = await anthropic.messages.create({
-    model,
-    max_tokens: 1024,
-    temperature,
-    system: systemPrompt,
-    messages: [{
-      role: 'user',
-      content: userPrompt
-    }]
-  });
-
-  return {
-    content: response.content[0].text,
-    usage: response.usage
-  };
-}
 
 /**
  * Calculate API cost
@@ -513,6 +491,7 @@ async function processLeadConsolidated(lead, progressCallback = null, leadIndex 
 
   // Save to database as ONE ROW
   console.log('\n💾 Saving consolidated row to database...');
+
   if (progressCallback) {
     progressCallback({
       type: 'saving',
@@ -562,18 +541,16 @@ async function generateEmail(lead, context, variation) {
   // Fill template
   const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
 
-  // Generate with Claude
+  // Generate with centralized AI client (supports GPT, Claude, Grok)
   const startTime = Date.now();
-  const response = await callClaude(
-    prompt.model || 'claude-haiku-4-5',
-    prompt.systemPrompt,
-    filledPrompt,
-    prompt.temperature || 0.7
-  );
+  const response = await callAI({
+    model: prompt.model || 'claude-haiku-4-5',
+    systemPrompt: prompt.systemPrompt,
+    userPrompt: filledPrompt,
+    temperature: prompt.temperature || 0.7,
+    module: 'batch-generate-consolidated/email'
+  });
   const duration = Date.now() - startTime;
-
-  // Calculate cost
-  const cost = calculateCost(prompt.model || 'claude-haiku-4-5', response.usage);
 
   // Extract subject line and clean body
   const { subject, body } = extractSubjectLine(response.content);
@@ -584,7 +561,7 @@ async function generateEmail(lead, context, variation) {
     body: body,
     metadata: {
       model: prompt.model || 'claude-haiku-4-5',
-      cost,
+      cost: response.cost,
       duration,
       input_tokens: response.usage.input_tokens,
       output_tokens: response.usage.output_tokens
@@ -610,25 +587,23 @@ async function generateSocialDM(lead, platform, variation) {
   // Fill template
   const filledPrompt = fillTemplate(prompt.userPromptTemplate, context);
 
-  // Generate with Claude
+  // Generate with centralized AI client (supports GPT, Claude, Grok)
   const startTime = Date.now();
-  const response = await callClaude(
-    prompt.model || 'claude-haiku-4-5',
-    prompt.systemPrompt,
-    filledPrompt,
-    prompt.temperature || 0.8
-  );
+  const response = await callAI({
+    model: prompt.model || 'claude-haiku-4-5',
+    systemPrompt: prompt.systemPrompt,
+    userPrompt: filledPrompt,
+    temperature: prompt.temperature || 0.8,
+    module: 'batch-generate-consolidated/social'
+  });
   const duration = Date.now() - startTime;
-
-  // Calculate cost
-  const cost = calculateCost(prompt.model || 'claude-haiku-4-5', response.usage);
 
   return {
     body: response.content,
     profile_url: context.social_profile_url,
     metadata: {
       model: prompt.model || 'claude-haiku-4-5',
-      cost,
+      cost: response.cost,
       duration,
       input_tokens: response.usage.input_tokens,
       output_tokens: response.usage.output_tokens

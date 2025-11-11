@@ -25,16 +25,32 @@ function getEnvVarNameForPrompt(category, name) {
 
   // Map of prompt paths to environment variable names
   const envVarMap = {
-    // Email strategies
+    // Current Email Strategies
+    'email-strategies/free-value-delivery': 'EMAIL_COMPOSER_MODEL',
+    'email-strategies/portfolio-building': 'EMAIL_COMPOSER_MODEL',
+    'email-strategies/problem-first-urgent': 'EMAIL_COMPOSER_MODEL',
+    'email-strategies/subject-line-generator': 'SUBJECT_LINE_MODEL',
+
+    // Current Social Strategies - Instagram
+    'social-strategies/instagram-free-value': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/instagram-portfolio-building': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/instagram-problem-first': 'SOCIAL_COMPOSER_MODEL',
+
+    // Current Social Strategies - LinkedIn
+    'social-strategies/linkedin-free-value': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/linkedin-portfolio-building': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/linkedin-problem-first': 'SOCIAL_COMPOSER_MODEL',
+
+    // Current Social Strategies - Facebook
+    'social-strategies/facebook-free-value': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/facebook-portfolio-building': 'SOCIAL_COMPOSER_MODEL',
+    'social-strategies/facebook-problem-first': 'SOCIAL_COMPOSER_MODEL',
+
+    // Archived Email Strategies (for backward compatibility)
     'email-strategies/compliment-sandwich': 'EMAIL_COMPOSER_MODEL',
     'email-strategies/problem-first': 'EMAIL_COMPOSER_MODEL',
     'email-strategies/achievement-focused': 'EMAIL_COMPOSER_MODEL',
     'email-strategies/question-based': 'EMAIL_COMPOSER_MODEL',
-
-    // Social strategies
-    'social-strategies/linkedin-dm': 'SOCIAL_COMPOSER_MODEL',
-    'social-strategies/twitter-dm': 'SOCIAL_COMPOSER_MODEL',
-    'social-strategies/instagram-dm': 'SOCIAL_COMPOSER_MODEL',
 
     // Reasoning/composer
     'reasoning/email-composer': 'EMAIL_COMPOSER_MODEL',

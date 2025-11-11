@@ -41,8 +41,109 @@ async function parseErrorMessage(response: Response, fallbackMessage: string): P
 // ============================================================================
 
 /**
- * Compose emails for multiple leads
+ * Compose all variations (3 email + 9 social) for multiple leads (Queue-based)
+ * Returns job_id for polling-based status tracking
+ * @preferred Use this method for new implementations
+ */
+export async function composeAllVariationsQueue(
+  leadIds: string[],
+  options?: { forceRegenerate?: boolean }
+): Promise<{ job_id: string }> {
+  const response = await fetch(`${API_BASE}/api/compose-queue`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      lead_ids: leadIds,
+      options: options || {}
+    })
+  });
+
+  if (!response.ok) {
+    const errorMessage = await parseErrorMessage(response, 'Failed to queue outreach composition');
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+
+  if (!data.success || !data.job_id) {
+    throw new Error('Failed to queue outreach composition job');
+  }
+
+  return { job_id: data.job_id };
+}
+
+/**
+ * Check status of outreach composition jobs
+ * @param jobIds Array of job IDs to check
+ */
+export async function checkOutreachStatus(jobIds: string[]): Promise<{
+  success: boolean;
+  jobs: Array<{
+    job_id: string;
+    work_type: string;
+    state: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
+    priority: number;
+    progress?: {
+      current: number;
+      total: number;
+      message?: string;
+    };
+    result?: any;
+    error?: string;
+    created_at: string;
+    started_at?: string;
+    completed_at?: string;
+  }>;
+  summary: {
+    total: number;
+    queued: number;
+    running: number;
+    completed: number;
+    failed: number;
+    cancelled: number;
+  };
+}> {
+  const queryString = jobIds.map(id => `job_ids=${id}`).join('&');
+  const response = await fetch(`${API_BASE}/api/compose-status?${queryString}`);
+
+  if (!response.ok) {
+    const errorMessage = await parseErrorMessage(response, 'Failed to check outreach status');
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Cancel queued outreach composition jobs
+ * @param jobIds Array of job IDs to cancel (only works for queued jobs)
+ */
+export async function cancelOutreachJobs(jobIds: string[]): Promise<{
+  success: boolean;
+  cancelled: number;
+  not_found: number;
+  already_started: number;
+}> {
+  const response = await fetch(`${API_BASE}/api/cancel-outreach`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job_ids: jobIds })
+  });
+
+  if (!response.ok) {
+    const errorMessage = await parseErrorMessage(response, 'Failed to cancel outreach jobs');
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+/**
+ * Compose emails for multiple leads (SSE-based - DEPRECATED)
  * Returns SSE URL for real-time progress tracking
+ * @deprecated Use composeAllVariationsQueue() instead for better reliability
  */
 export async function composeEmails(
   leadIds: string[],

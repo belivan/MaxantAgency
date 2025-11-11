@@ -22,7 +22,7 @@ import { saveDualScreenshots } from '../utils/screenshot-storage.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const SCREENSHOT_DELAY_MS = Number(process.env.SCREENSHOT_DELAY_MS || 8000);
+const SCREENSHOT_DELAY_MS = Number(process.env.SCREENSHOT_DELAY_MS || 2000);
 
 // Load scraper configuration
 let config;

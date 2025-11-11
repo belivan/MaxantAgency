@@ -16,6 +16,7 @@ import sharp from 'sharp';
 import fetch from 'node-fetch';
 import { createClient } from '@supabase/supabase-js';
 import { getRateLimitTracker } from './rate-limit-tracker.js';
+import { enqueueAIRequest } from './request-queue.js';
 
 // Load environment variables from the root .env file
 const __filename = fileURLToPath(import.meta.url);
@@ -27,6 +28,7 @@ const DEBUG_AI_CALLS = process.env.DEBUG_AI_CALLS === 'true';
 const DEBUG_AI_SAVE_TO_FILE = process.env.DEBUG_AI_SAVE_TO_FILE === 'true';
 const DEBUG_OUTPUT_DIR = process.env.DEBUG_OUTPUT_DIR || './debug-logs';
 const LOG_AI_CALLS_TO_DB = process.env.LOG_AI_CALLS_TO_DB === 'true';
+const USE_REQUEST_QUEUE = process.env.USE_REQUEST_QUEUE !== 'false'; // Default: enabled
 
 // Rate limiting and retry configuration
 const ENABLE_AUTO_RETRY = process.env.ENABLE_AUTO_RETRY !== 'false';
@@ -828,32 +830,41 @@ export async function callAI({
         }
       }
 
-      // Make the actual API call
-      if (provider === 'anthropic') {
-        response = await callClaude({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, maxTokens, timeout });
-      } else {
-        try {
-          response = await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, jsonMode, maxTokens, provider, timeout });
-        } catch (error) {
-          const message = (error?.message || '').toLowerCase();
-          // Auto-fallback to GPT-5-mini if GPT-5 hits token limits (only when explicitly enabled)
-          if (autoFallback && model === 'gpt-5' && message.includes('token limit')) {
-            console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-5-mini.');
-            response = await callOpenAICompatible({
-              model: 'gpt-5-mini',
-              systemPrompt,
-              userPrompt,
-              temperature,
-              images: normalizedImages,
-              jsonMode,
-              maxTokens,
-              provider: 'openai',
-              timeout
-            });
-          } else {
-            throw error;
+      // Make the actual API call (with optional queuing)
+      const makeAPICall = async () => {
+        if (provider === 'anthropic') {
+          return await callClaude({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, maxTokens, timeout });
+        } else {
+          try {
+            return await callOpenAICompatible({ model, systemPrompt, userPrompt, temperature, images: normalizedImages, jsonMode, maxTokens, provider, timeout });
+          } catch (error) {
+            const message = (error?.message || '').toLowerCase();
+            // Auto-fallback to GPT-5-mini if GPT-5 hits token limits (only when explicitly enabled)
+            if (autoFallback && model === 'gpt-5' && message.includes('token limit')) {
+              console.warn('[AI Client] GPT-5 hit token limits. Falling back to gpt-5-mini.');
+              return await callOpenAICompatible({
+                model: 'gpt-5-mini',
+                systemPrompt,
+                userPrompt,
+                temperature,
+                images: normalizedImages,
+                jsonMode,
+                maxTokens,
+                provider: 'openai',
+                timeout
+              });
+            } else {
+              throw error;
+            }
           }
         }
+      };
+
+      // Execute with or without queue
+      if (USE_REQUEST_QUEUE) {
+        response = await enqueueAIRequest(provider, model, estimatedInputTokens + estimatedOutputTokens, makeAPICall);
+      } else {
+        response = await makeAPICall();
       }
 
       // Record successful usage
@@ -1374,6 +1385,67 @@ Rules:
 }
 
 /**
+ * Helper function to coerce string numbers to numeric types
+ * Handles common AI mistakes like returning "75" instead of 75
+ *
+ * @param {any} obj - Object to coerce
+ * @param {number} depth - Recursion depth (safety limit)
+ * @returns {any} Object with coerced numeric fields
+ */
+function coerceNumericFields(obj, depth = 0) {
+  // Safety: prevent infinite recursion
+  if (depth > 10) return obj;
+
+  // Only process objects
+  if (obj === null || typeof obj !== 'object') return obj;
+
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map(item => coerceNumericFields(item, depth + 1));
+  }
+
+  // Process object fields
+  const coerced = {};
+  let coercionCount = 0;
+
+  for (const [key, value] of Object.entries(obj)) {
+    // Check if this field name suggests it should be numeric
+    const isNumericField = /Score$|^score|Count$|^count|Tokens$|Priority$|Severity$/i.test(key);
+
+    if (typeof value === 'string' && value.trim() !== '') {
+      // Try to parse as number
+      const parsed = parseFloat(value);
+
+      if (!isNaN(parsed) && isFinite(parsed)) {
+        // Only coerce if:
+        // 1. Field name suggests numeric type, OR
+        // 2. String looks like a pure number (no extra text)
+        const isPureNumber = /^-?\d+\.?\d*$/.test(value.trim());
+
+        if (isNumericField || isPureNumber) {
+          coerced[key] = Math.round(parsed);
+          coercionCount++;
+          if (depth === 0) {
+            console.warn(`[AI Client] Coerced ${key} from string "${value}" to number ${coerced[key]}`);
+          }
+        } else {
+          coerced[key] = value;
+        }
+      } else {
+        coerced[key] = value;
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      // Recursively process nested objects/arrays
+      coerced[key] = coerceNumericFields(value, depth + 1);
+    } else {
+      coerced[key] = value;
+    }
+  }
+
+  return coerced;
+}
+
+/**
  * Parse JSON response with error handling and AI-powered fallback
  */
 export async function parseJSONResponse(content, options = {}) {
@@ -1398,7 +1470,8 @@ export async function parseJSONResponse(content, options = {}) {
     // If parsing fails, try to extract JSON object from conversational text
     // (handles cases like "I'll analyze... {json here}")
     try {
-      return JSON.parse(jsonText);
+      const parsed = JSON.parse(jsonText);
+      return coerceNumericFields(parsed);
     } catch (firstError) {
       // Find first { and last } to extract JSON from conversational wrapper
       const firstBrace = jsonText.indexOf('{');
@@ -1408,7 +1481,8 @@ export async function parseJSONResponse(content, options = {}) {
         const extractedJson = jsonText.substring(firstBrace, lastBrace + 1);
 
         try {
-          return JSON.parse(extractedJson);
+          const parsed = JSON.parse(extractedJson);
+          return coerceNumericFields(parsed);
         } catch (secondError) {
           // JSON is malformed - try to repair common issues
           console.warn('⚠️  JSON parsing failed, attempting to repair...');
@@ -1546,7 +1620,7 @@ export async function parseJSONResponse(content, options = {}) {
           try {
             const parsed = JSON.parse(repaired);
             console.log('✅ Successfully repaired JSON!');
-            return parsed;
+            return coerceNumericFields(parsed);
           } catch (thirdError) {
             // Rule-based repair failed - try AI recovery if enabled
             const enableAIRecovery = process.env.ENABLE_AI_JSON_RECOVERY === 'true';
@@ -1556,7 +1630,7 @@ export async function parseJSONResponse(content, options = {}) {
               const aiRecovered = await recoverJSONWithAI(extractedJson, options.expectedSchema, thirdError.message);
 
               if (aiRecovered) {
-                return aiRecovered;
+                return coerceNumericFields(aiRecovered);
               }
 
               console.log('❌ AI recovery also failed, giving up.');
@@ -1585,7 +1659,7 @@ export async function parseJSONResponse(content, options = {}) {
         const aiRecovered = await recoverJSONWithAI(contentStr, options.expectedSchema, firstError.message);
 
         if (aiRecovered) {
-          return aiRecovered;
+          return coerceNumericFields(aiRecovered);
         }
 
         console.log('❌ AI recovery also failed, giving up.');

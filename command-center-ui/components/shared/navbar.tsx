@@ -16,6 +16,7 @@ import {
   Users,
   Mail,
   BarChart3,
+  Activity,
   Info
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -69,6 +70,11 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Analytics',
     href: '/analytics',
     icon: <BarChart3 className="w-5 h-5" />
+  },
+  {
+    label: 'Queue',
+    href: '/queue',
+    icon: <Activity className="w-5 h-5" />
   }
 ];
 

@@ -1,9 +1,9 @@
 /**
  * Analysis Coordinator
- * 
+ *
  * Responsible for coordinating all 6 analyzers (SEO, content, visual desktop/mobile, social, accessibility).
- * Runs analyzers in parallel on appropriate pages.
- * 
+ * Runs analyzers in parallel (rate limiting handled by global queue in ai-client.js).
+ *
  * Single Responsibility: Analyzer Coordination
  */
 
@@ -199,6 +199,29 @@ export class AnalysisCoordinator {
             : Promise.resolve(getDefaultAccessibilityResults())
         ]);
 
+        // CRITICAL: Validate analyzer results - fail fast if core analyzers return null/invalid data
+        if (!unifiedTech || typeof unifiedTech.seoScore !== 'number' || typeof unifiedTech.contentScore !== 'number') {
+          const error = new Error('❌ ANALYZER FAILURE: Unified technical analyzer returned null or invalid data');
+          error.analyzerFailure = true;
+          error.failedAnalyzer = 'unified-technical';
+          error.receivedData = unifiedTech;
+          console.error('[Analysis Coordinator]', error.message);
+          console.error('[Analysis Coordinator] Received data:', JSON.stringify(unifiedTech, null, 2));
+          throw error;
+        }
+
+        if (!unifiedVis || typeof unifiedVis.desktopScore !== 'number' || typeof unifiedVis.mobileScore !== 'number') {
+          const error = new Error('❌ ANALYZER FAILURE: Unified visual analyzer returned null or invalid data');
+          error.analyzerFailure = true;
+          error.failedAnalyzer = 'unified-visual';
+          error.receivedData = unifiedVis;
+          console.error('[Analysis Coordinator]', error.message);
+          console.error('[Analysis Coordinator] Received data:', JSON.stringify(unifiedVis, null, 2));
+          throw error;
+        }
+
+        console.log('[Analysis Coordinator] ✅ All core analyzers returned valid data');
+
         // Split unified technical results for backward compatibility
         unifiedTechnicalResults = unifiedTech;
         seoResults = enableSEO ? analyzers.getSEOResults(unifiedTech) : getDefaultSEOResults();
@@ -254,6 +277,39 @@ export class AnalysisCoordinator {
             ? analyzers.analyzeAccessibility(accessibilityPages, enrichedContext, customPrompts?.accessibility)
             : Promise.resolve(getDefaultAccessibilityResults())
         ]);
+
+        // CRITICAL: Validate analyzer results - fail fast if core analyzers return null/invalid data
+        if (enableSEO && (!seo || typeof seo.seoScore !== 'number')) {
+          const error = new Error('❌ ANALYZER FAILURE: SEO analyzer returned null or invalid data');
+          error.analyzerFailure = true;
+          error.failedAnalyzer = 'seo';
+          error.receivedData = seo;
+          console.error('[Analysis Coordinator]', error.message);
+          console.error('[Analysis Coordinator] Received data:', JSON.stringify(seo, null, 2));
+          throw error;
+        }
+
+        if (enableContent && (!content || typeof content.contentScore !== 'number')) {
+          const error = new Error('❌ ANALYZER FAILURE: Content analyzer returned null or invalid data');
+          error.analyzerFailure = true;
+          error.failedAnalyzer = 'content';
+          error.receivedData = content;
+          console.error('[Analysis Coordinator]', error.message);
+          console.error('[Analysis Coordinator] Received data:', JSON.stringify(content, null, 2));
+          throw error;
+        }
+
+        if (!unifiedVis || typeof unifiedVis.desktopScore !== 'number' || typeof unifiedVis.mobileScore !== 'number') {
+          const error = new Error('❌ ANALYZER FAILURE: Unified visual analyzer returned null or invalid data');
+          error.analyzerFailure = true;
+          error.failedAnalyzer = 'unified-visual';
+          error.receivedData = unifiedVis;
+          console.error('[Analysis Coordinator]', error.message);
+          console.error('[Analysis Coordinator] Received data:', JSON.stringify(unifiedVis, null, 2));
+          throw error;
+        }
+
+        console.log('[Analysis Coordinator] ✅ All core analyzers returned valid data');
 
         seoResults = seo;
         contentResults = content;

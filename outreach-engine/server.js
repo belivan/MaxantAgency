@@ -20,6 +20,14 @@ import { generateSocialDM } from './generators/social-generator.js';
 // Batch Generator
 import { batchGenerateConsolidated } from './batch-generate-consolidated.js';
 
+// Work Queue endpoints (async job-based architecture)
+import {
+  queueOutreachComposition,
+  getCompositionStatus,
+  cancelComposition,
+  getOverallQueueStatus
+} from './routes/outreach-queue-endpoints.js';
+
 // Validators
 import { validateEmail } from './validators/email-validator.js';
 import { validateSocialDM } from './validators/social-validator.js';
@@ -633,6 +641,34 @@ app.post('/api/compose-all-variations', async (req, res) => {
 
 /**
  * ═══════════════════════════════════════════════════════════════════
+ * WORK QUEUE ENDPOINTS (Async job-based architecture)
+ * ═══════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * POST /api/compose-queue - Queue outreach composition
+ * Returns job_id immediately, check status with /api/compose-status
+ */
+app.post('/api/compose-queue', queueOutreachComposition);
+
+/**
+ * GET /api/compose-status?job_ids=uuid1,uuid2 - Check job status
+ */
+app.get('/api/compose-status', getCompositionStatus);
+
+/**
+ * POST /api/cancel-compose - Cancel queued jobs
+ * Body: { job_ids: ["uuid1", "uuid2"] }
+ */
+app.post('/api/cancel-compose', cancelComposition);
+
+/**
+ * GET /api/queue-status - Get overall queue statistics
+ */
+app.get('/api/queue-status', getOverallQueueStatus);
+
+/**
+ * ═══════════════════════════════════════════════════════════════════
  * EMAIL SENDING ENDPOINTS
  * ═══════════════════════════════════════════════════════════════════
  */
@@ -1092,19 +1128,29 @@ app.listen(PORT, () => {
   console.log('╚════════════════════════════════════════════════════════╝');
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
   console.log(`\n📋 Available endpoints:`);
-  console.log(`   POST   /api/compose`);
-  console.log(`   POST   /api/compose-social`);
-  console.log(`   POST   /api/compose-batch`);
-  console.log(`   POST   /api/compose-social-batch (SSE)`);
-  console.log(`   POST   /api/compose-all-variations (SSE)`);
-  console.log(`   POST   /api/send-email`);
-  console.log(`   POST   /api/send-batch`);
-  console.log(`   POST   /api/sync-from-notion`);
-  console.log(`   GET    /api/strategies`);
-  console.log(`   GET    /api/leads/ready`);
-  console.log(`   GET    /api/emails`);
-  console.log(`   GET    /api/social-messages`);
-  console.log(`   GET    /api/stats`);
-  console.log(`   GET    /health`);
-  console.log(`\n💡 Tip: Use http://localhost:${PORT}/health to check status\n`);
+  console.log(`\n   🎯 QUEUE-BASED (Recommended - Async with job tracking):`);
+  console.log(`      POST   /api/compose-queue         - Queue outreach composition`);
+  console.log(`      GET    /api/compose-status        - Check job status`);
+  console.log(`      POST   /api/cancel-compose        - Cancel queued jobs`);
+  console.log(`      GET    /api/queue-status          - Get queue statistics`);
+  console.log(`\n   📧 COMPOSITION (SSE streaming):`);
+  console.log(`      POST   /api/compose               - Single lead composition`);
+  console.log(`      POST   /api/compose-social        - Single social DM`);
+  console.log(`      POST   /api/compose-batch         - Batch email composition (SSE)`);
+  console.log(`      POST   /api/compose-social-batch  - Batch social DMs (SSE)`);
+  console.log(`      POST   /api/compose-all-variations - All 12 variations (SSE)`);
+  console.log(`\n   📤 SENDING:`);
+  console.log(`      POST   /api/send-email            - Send single email`);
+  console.log(`      POST   /api/send-batch            - Batch send emails`);
+  console.log(`\n   🔄 INTEGRATION:`);
+  console.log(`      POST   /api/sync-from-notion      - Sync from Notion`);
+  console.log(`\n   📊 QUERY:`);
+  console.log(`      GET    /api/strategies            - List available strategies`);
+  console.log(`      GET    /api/leads/ready           - Get ready leads`);
+  console.log(`      GET    /api/emails                - Get composed emails`);
+  console.log(`      GET    /api/social-messages       - Get social messages`);
+  console.log(`      GET    /api/stats                 - Get statistics`);
+  console.log(`      GET    /health                    - Health check`);
+  console.log(`\n💡 Tip: Use queue-based endpoints for better scalability and cancellation support`);
+  console.log(`💡 Tip: Use http://localhost:${PORT}/health to check status\n`);
 });

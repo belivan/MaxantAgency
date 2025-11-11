@@ -29,6 +29,16 @@ import { deduplicateIssues } from './issue-deduplication-service.js';
 export class ResultsAggregator {
   constructor(options = {}) {
     this.onProgress = options.onProgress || (() => {});
+    // Optional features (can override environment variables)
+    this.enableDeduplication = options.enableDeduplication !== undefined
+      ? options.enableDeduplication
+      : process.env.ENABLE_ISSUE_DEDUPLICATION === 'true';
+    this.enableQaValidation = options.enableQaValidation !== undefined
+      ? options.enableQaValidation
+      : process.env.ENABLE_QA_VALIDATION === 'true';
+    this.enableAiGrading = options.enableAiGrading !== undefined
+      ? options.enableAiGrading
+      : process.env.USE_AI_GRADING === 'true';
   }
 
   /**
@@ -38,7 +48,7 @@ export class ResultsAggregator {
    * @param {object} crawlData - Data from CrawlingService
    * @param {object} pageSelection - Selection from PageSelectionService
    * @param {object} discoveryData - Data from DiscoveryService
-   * @param {object} context - Business context
+   * @param {object} context - Business context (may include contextBuilder for A/B testing)
    * @param {string} baseUrl - Base website URL
    * @param {number} startTime - Analysis start timestamp
    * @param {object} benchmark - Matched benchmark data (optional)
@@ -51,6 +61,16 @@ export class ResultsAggregator {
 
     // PHASE 1: Calculate Scores
     const scores = this.calculateScores(analysisResults);
+
+    // PHASE 1.5: Extract Context Metrics (for A/B testing)
+    const contextBuilder = context.contextBuilder;
+    const contextMetrics = contextBuilder ? contextBuilder.getMetrics() : null;
+    const contextModeUsed = contextBuilder
+      ? (contextBuilder.enableCrossPage && contextBuilder.enableCrossAnalyzer ? 'both'
+          : contextBuilder.enableCrossPage ? 'cross_page'
+          : contextBuilder.enableCrossAnalyzer ? 'cross_analyzer'
+          : 'none')
+      : 'none';
 
     // PHASE 2: Extract Quick Wins
     const quickWins = this.extractQuickWins(analysisResults);
@@ -65,7 +85,7 @@ export class ResultsAggregator {
 
     // PHASE 5: QA Validation (Optional - filters false positives from visual analysis)
     let validationMetadata = null;
-    if (process.env.ENABLE_QA_VALIDATION === 'true') {
+    if (this.enableQaValidation) {
       this.onProgress({ step: 'qa-validation', message: 'Validating visual issues with AI...' });
       console.log('\n[QA Validation] Starting screenshot validation...');
 
@@ -142,7 +162,7 @@ export class ResultsAggregator {
     let issuesForSelection = allIssues;
     let deduplicationResult = null;
 
-    if (process.env.ENABLE_ISSUE_DEDUPLICATION === 'true') {
+    if (this.enableDeduplication) {
       this.onProgress({ step: 'deduplicating-issues', message: 'Deduplicating issues with AI...' });
       console.log('\n[Results Aggregator] Running AI deduplication on all issues...');
 
@@ -173,7 +193,7 @@ export class ResultsAggregator {
 
     // PHASE 6: Grading + Lead Scoring (AI or Manual)
     // Uses validated issues (false positives already filtered out)
-    const useAIGrading = process.env.USE_AI_GRADING === 'true';
+    const useAIGrading = this.enableAiGrading;
     let gradeResults, leadScoringData;
 
     // Initialize gradeMetadata (used in both AI and manual paths, and later for synthesis)
@@ -557,7 +577,9 @@ export class ResultsAggregator {
       benchmarkMatchMetadata,  // NEW: Pass benchmark match metadata
       topIssuesResult,  // NEW: Pass top 5 issues selection result
       allIssues,  // NEW: Pass all collected issues for metrics
-      deduplicationResult  // NEW: Pass deduplication results
+      deduplicationResult,  // NEW: Pass deduplication results
+      contextMetrics,  // NEW: Pass context metrics for A/B testing
+      contextModeUsed  // NEW: Pass context mode used for A/B testing
     });
   }
 
@@ -755,7 +777,9 @@ export class ResultsAggregator {
       benchmarkMatchMetadata,  // NEW: Benchmark match metadata
       topIssuesResult,  // NEW: Top 5 issues selection result
       allIssues,  // NEW: All collected issues
-      deduplicationResult  // NEW: Deduplication results
+      deduplicationResult,  // NEW: Deduplication results
+      contextMetrics,  // NEW: Context metrics for A/B testing
+      contextModeUsed  // NEW: Context mode used for A/B testing
     } = data;
 
     // DIAGNOSTIC: Log gradeResults before returning
@@ -1003,7 +1027,14 @@ export class ResultsAggregator {
           discovery_ms: discoveryData.discoveryTime,
           crawl_ms: crawlData.crawlTime
         }
-      }
+      },
+
+      // Context-aware analysis metrics (for A/B testing)
+      context_metrics: contextMetrics,
+      context_mode_used: contextModeUsed,
+      prompt_variant_used: analysisResults.unifiedVisual?._meta?.promptVariant
+        || analysisResults.desktopVisual?._meta?.promptVariant
+        || null
     };
   }
 

@@ -603,6 +603,25 @@
     },
 
     {
+      "name": "context_metrics",
+      "type": "jsonb",
+      "description": "Context-aware analysis metrics for A/B testing (issue_reduction: {total, duplicates_avoided, reduction_rate}, performance: {context_build_time, overhead_percentage}, quality: {issues_upgraded, issues_downgraded, scope_enhanced}, context: {pages_analyzed, unique_issues, patterns_detected})"
+    },
+    {
+      "name": "context_mode_used",
+      "type": "text",
+      "enum": ["none", "cross_page", "cross_analyzer", "both"],
+      "default": "none",
+      "index": true,
+      "description": "Which context mode was used for this analysis (for A/B testing comparison)"
+    },
+    {
+      "name": "prompt_variant_used",
+      "type": "text",
+      "description": "Name of prompt variant used (e.g., 'base.json', 'context-aware.json') for A/B testing tracking"
+    },
+
+    {
       "name": "created_at",
       "type": "timestamptz",
       "default": "now()",

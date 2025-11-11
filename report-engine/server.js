@@ -30,6 +30,13 @@ import {
   getReportsByLeadId,
   incrementDownloadCount
 } from './database/supabase-client.js';
+// Work Queue endpoints (async job-based architecture)
+import {
+  queueReportGeneration,
+  getReportStatus,
+  cancelReport,
+  getOverallQueueStatus
+} from './routes/report-queue-endpoints.js';
 
 // Initialize Express app
 const app = express();
@@ -466,6 +473,49 @@ app.post('/api/generate-from-lead', async (req, res) => {
 });
 
 // ==========================================
+// WORK QUEUE ENDPOINTS (Async Job-Based Architecture)
+// ==========================================
+
+/**
+ * POST /api/generate-queue
+ * Queue report generation (returns job ID immediately)
+ *
+ * This is the async alternative to /api/generate and /api/generate-from-lead.
+ * Use this when you want to:
+ * - Queue multiple report generation jobs
+ * - Poll for status instead of waiting synchronously
+ * - Cancel queued jobs before they start
+ * - Generate reports in batch with priority handling
+ *
+ * Body: {
+ *   lead_id: 'uuid' (optional),
+ *   analysisResult: {...} (optional),
+ *   options: { format, sections, saveToDatabase, project_id, lead_id }
+ * }
+ */
+app.post('/api/generate-queue', queueReportGeneration);
+
+/**
+ * GET /api/report-status?job_ids=uuid1,uuid2,...
+ * Get status of queued/running/completed report generation jobs
+ */
+app.get('/api/report-status', getReportStatus);
+
+/**
+ * POST /api/cancel-report
+ * Cancel queued report generation jobs (can only cancel jobs that haven't started)
+ *
+ * Body: { job_ids: ["uuid1", "uuid2", ...] }
+ */
+app.post('/api/cancel-report', cancelReport);
+
+/**
+ * GET /api/queue-status
+ * Get overall queue status for all work types (prospecting, analysis, report, outreach)
+ */
+app.get('/api/queue-status', getOverallQueueStatus);
+
+// ==========================================
 // REPORT RETRIEVAL ENDPOINTS
 // ==========================================
 
@@ -655,12 +705,20 @@ async function startServer() {
       console.log(`📦 Report Version: ${process.env.REPORT_VERSION || 'v3'}`);
       console.log('='.repeat(60));
       console.log('\n📚 Available endpoints:');
+      console.log('\n  🔄 Report Generation (Synchronous):');
       console.log(`   POST   http://localhost:${PORT}/api/generate`);
       console.log(`   POST   http://localhost:${PORT}/api/generate-from-lead`);
+      console.log('\n  📋 Report Generation (Queue-based, Recommended):');
+      console.log(`   POST   http://localhost:${PORT}/api/generate-queue`);
+      console.log(`   GET    http://localhost:${PORT}/api/report-status?job_ids=...`);
+      console.log(`   POST   http://localhost:${PORT}/api/cancel-report`);
+      console.log(`   GET    http://localhost:${PORT}/api/queue-status`);
+      console.log('\n  📄 Report Retrieval:');
       console.log(`   GET    http://localhost:${PORT}/api/reports/:id`);
       console.log(`   GET    http://localhost:${PORT}/api/reports/:id/download`);
       console.log(`   GET    http://localhost:${PORT}/api/reports/lead/:lead_id`);
       console.log(`   DELETE http://localhost:${PORT}/api/reports/:id`);
+      console.log('\n  ❤️  Health:');
       console.log(`   GET    http://localhost:${PORT}/health`);
       console.log('='.repeat(60) + '\n');
     });

@@ -225,11 +225,6 @@ export function ProspectTable({
 
                   <TableCell className="font-medium">
                     {prospect.company_name}
-                    {prospect.verified && (
-                      <Badge variant="outline" className="ml-2 text-xs">
-                        Verified
-                      </Badge>
-                    )}
                   </TableCell>
 
                   <TableCell>

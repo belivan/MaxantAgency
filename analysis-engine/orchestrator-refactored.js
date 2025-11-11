@@ -18,6 +18,7 @@ import { CrawlingService } from './services/crawling-service.js';
 import { AnalysisCoordinator } from './services/analysis-coordinator.js';
 import { ResultsAggregator } from './services/results-aggregator.js';
 import { findBestBenchmark } from './services/benchmark-matcher.js';
+import { ContextBuilder } from './services/context-builder.js';
 
 /**
  * Run INTELLIGENT multi-page analysis pipeline
@@ -43,7 +44,12 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     maxPagesPerModule = process.env.MAX_PAGES_PER_MODULE ? parseInt(process.env.MAX_PAGES_PER_MODULE) : 5,
     generate_report = false,
     report_format = 'html',
-    save_to_database = false
+    save_to_database = false,
+    enableDeduplication,
+    enableQaValidation,
+    enableAiGrading,
+    enableCrossPageContext,
+    enableCrossAnalyzerContext
   } = options;
   const startTime = Date.now();
 
@@ -234,6 +240,24 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     // ========================================
     // PHASE 4: ANALYSIS (with benchmark context)
     // ========================================
+
+    // Create ContextBuilder if context sharing is enabled
+    let contextBuilder = null;
+    if (enableCrossPageContext || enableCrossAnalyzerContext) {
+      contextBuilder = new ContextBuilder({
+        enableCrossPage: enableCrossPageContext || false,
+        enableCrossAnalyzer: enableCrossAnalyzerContext || false,
+        verboseLogging: true
+      });
+      console.log(`[Orchestrator] Context Builder initialized (cross-page: ${enableCrossPageContext}, cross-analyzer: ${enableCrossAnalyzerContext})`);
+    }
+
+    // Add contextBuilder to context for analyzers
+    const analysisContext = {
+      ...context,
+      contextBuilder
+    };
+
     const analysisCoordinator = new AnalysisCoordinator({
       onProgress: progress
     });
@@ -242,7 +266,7 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       crawlData,
       pageSelection,
       sitemap,
-      context,
+      analysisContext,  // Pass context with contextBuilder
       url,
       customPrompts,
       benchmark,  // NEW: Pass benchmark to all analyzers
@@ -291,8 +315,11 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
     // ========================================
     // PHASE 5: RESULTS AGGREGATION
     // ========================================
-    const resultsAggregator = new ResultsAggregator({ 
-      onProgress: progress 
+    const resultsAggregator = new ResultsAggregator({
+      onProgress: progress,
+      enableDeduplication,
+      enableQaValidation,
+      enableAiGrading
     });
 
     const finalResults = await resultsAggregator.aggregate(
