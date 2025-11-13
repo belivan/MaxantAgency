@@ -359,7 +359,7 @@ app.post('/api/analyze-url', async (req, res) => {
       enableDeduplication: enable_deduplication ?? (process.env.ENABLE_ISSUE_DEDUPLICATION === 'true'),
       enableQaValidation: enable_qa_validation ?? (process.env.ENABLE_QA_VALIDATION === 'true'),
       enableAiGrading: enable_ai_grading ?? (process.env.USE_AI_GRADING === 'true'),
-      enableCrossPageContext: enable_cross_page_context ?? (process.env.ENABLE_CROSS_PAGE_CONTEXT === 'true'),
+      enableCrossPageContext: enable_cross_page_context ?? (process.env.ENABLE_CROSS_PAGE_CONTEXT !== 'false'), // DEFAULT: true (context-aware mode)
       enableCrossAnalyzerContext: enable_cross_analyzer_context ?? (process.env.ENABLE_CROSS_ANALYZER_CONTEXT === 'true'),
       onProgress: (progress) => {
         console.log(`[Intelligent Analysis] ${progress.step}: ${progress.message}`);
