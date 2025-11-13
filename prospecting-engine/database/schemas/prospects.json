@@ -45,6 +45,11 @@
       "description": "Website accessibility status"
     },
     {
+      "name": "crawl_error_details",
+      "type": "jsonb",
+      "description": "Detailed crawl error information: {error_type, error_message, failed_at, retry_count}"
+    },
+    {
       "name": "city",
       "type": "text",
       "index": true,
@@ -179,6 +184,11 @@
       "description": "Snapshot of AI prompts used when this prospect was discovered"
     },
     {
+      "name": "business_intelligence",
+      "type": "jsonb",
+      "description": "Business intelligence data including company size, years in business, pricing visibility, content freshness, decision maker accessibility, and premium features"
+    },
+    {
       "name": "created_at",
       "type": "timestamptz",
       "default": "now()",
@@ -211,6 +221,14 @@
       "columns": [
         "run_id"
       ]
+    },
+    {
+      "name": "idx_prospects_business_intelligence",
+      "columns": [
+        "business_intelligence"
+      ],
+      "type": "gin",
+      "description": "GIN index for efficient JSONB queries on business intelligence data"
     }
   ],
   "constraints": [

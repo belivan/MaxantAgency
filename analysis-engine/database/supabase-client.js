@@ -345,6 +345,35 @@ export async function getLeadStats(filters = {}) {
 }
 
 // ============================================================================
+// PROSPECTS - Access to prospect data from Prospecting Engine
+// ============================================================================
+
+/**
+ * Get a single prospect by ID
+ *
+ * @param {string} id - Prospect ID
+ * @returns {Promise<object>} Prospect object with business intelligence
+ */
+export async function getProspectById(id) {
+  try {
+    const { data, error } = await supabase
+      .from('prospects')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Failed to fetch prospect:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    throw error;
+  }
+}
+
+// ============================================================================
 // BENCHMARKS - Industry-leading exemplar websites for comparative analysis
 // ============================================================================
 

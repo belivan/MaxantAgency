@@ -327,7 +327,7 @@ export async function analyzeWebsiteIntelligent(url, context = {}, options = {})
       crawlData,
       pageSelection,
       sitemap,
-      context,
+      analysisContext,  // FIXED: Pass analysisContext with contextBuilder, not original context
       url,
       startTime,
       benchmark,  // NEW: Pass benchmark data

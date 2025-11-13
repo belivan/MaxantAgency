@@ -64,6 +64,14 @@ export class ResultsAggregator {
 
     // PHASE 1.5: Extract Context Metrics (for A/B testing)
     const contextBuilder = context.contextBuilder;
+    console.log('[ResultsAggregator] Context Builder present:', !!contextBuilder);
+    if (contextBuilder) {
+      console.log('[ResultsAggregator] Context Builder config:', {
+        enableCrossPage: contextBuilder.enableCrossPage,
+        enableCrossAnalyzer: contextBuilder.enableCrossAnalyzer
+      });
+    }
+
     const contextMetrics = contextBuilder ? contextBuilder.getMetrics() : null;
     const contextModeUsed = contextBuilder
       ? (contextBuilder.enableCrossPage && contextBuilder.enableCrossAnalyzer ? 'both'
@@ -71,6 +79,9 @@ export class ResultsAggregator {
           : contextBuilder.enableCrossAnalyzer ? 'cross_analyzer'
           : 'none')
       : 'none';
+
+    console.log('[ResultsAggregator] Context mode determined:', contextModeUsed);
+    console.log('[ResultsAggregator] Context metrics:', contextMetrics ? 'present' : 'null');
 
     // PHASE 2: Extract Quick Wins
     const quickWins = this.extractQuickWins(analysisResults);

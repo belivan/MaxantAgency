@@ -31,6 +31,90 @@ import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
 
 /**
+ * Classify crawl error into error type and determine website_status
+ *
+ * @param {string} errorMessage - Error message from scrapeWebsite or extractFromDOM
+ * @returns {object} {error_type, website_status, error_message}
+ */
+function classifyError(errorMessage) {
+  const msg = errorMessage.toLowerCase();
+
+  // Antibot protection (403, bot detection, cloudflare, etc.)
+  if (
+    msg.includes('403') ||
+    msg.includes('forbidden') ||
+    msg.includes('cloudflare') ||
+    msg.includes('bot') ||
+    msg.includes('captcha') ||
+    msg.includes('denied')
+  ) {
+    return {
+      error_type: 'antibot',
+      website_status: 'bot_protected',
+      error_message: errorMessage
+    };
+  }
+
+  // Timeout errors
+  if (
+    msg.includes('timeout') ||
+    msg.includes('timed out') ||
+    msg.includes('navigation timeout')
+  ) {
+    return {
+      error_type: 'timeout',
+      website_status: 'timeout',
+      error_message: errorMessage
+    };
+  }
+
+  // SSL/Certificate errors
+  if (
+    msg.includes('ssl') ||
+    msg.includes('certificate') ||
+    msg.includes('cert') ||
+    msg.includes('https')
+  ) {
+    return {
+      error_type: 'ssl',
+      website_status: 'ssl_error',
+      error_message: errorMessage
+    };
+  }
+
+  // Network errors (DNS, connection refused, etc.)
+  if (
+    msg.includes('enotfound') ||
+    msg.includes('dns') ||
+    msg.includes('connection') ||
+    msg.includes('econnrefused') ||
+    msg.includes('net::')
+  ) {
+    return {
+      error_type: 'network',
+      website_status: 'not_found',
+      error_message: errorMessage
+    };
+  }
+
+  // 404 / Not Found
+  if (msg.includes('404') || msg.includes('not found')) {
+    return {
+      error_type: 'not_found',
+      website_status: 'not_found',
+      error_message: errorMessage
+    };
+  }
+
+  // Unknown error
+  return {
+    error_type: 'unknown',
+    website_status: 'timeout', // Default to timeout for unknown errors
+    error_message: errorMessage
+  };
+}
+
+/**
  * Run the full prospecting pipeline
  *
  * @param {object} brief - ICP brief
@@ -283,6 +367,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
         let websiteStatus = 'no_website';
         let websiteData = null;
         let extractedData = null;
+        let crawlErrorDetails = null;
 
         if (company.website && options.verifyWebsites !== false) {
           const verification = await verifyWebsite(company.website);
@@ -317,7 +402,8 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
                   extractedData = await extractFromDOM(
                     websiteData.page,
                     company.website,
-                    company.name
+                    company.name,
+                    company.industry || 'general'
                   );
 
                   logInfo('DOM extraction complete', {
@@ -385,11 +471,42 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
                   if (websiteData.page) {
                     await websiteData.page.close();
                   }
+                } else {
+                  // Website scraping failed - classify error and save details
+                  const errorDetails = classifyError(websiteData.error || 'Unknown error');
+
+                  logWarn('Website scraping failed - saving error details', {
+                    company: company.name,
+                    error_type: errorDetails.error_type,
+                    website_status: errorDetails.website_status
+                  });
+
+                  // Update websiteStatus to reflect the error
+                  websiteStatus = errorDetails.website_status;
+
+                  // Save error details to be included in prospect data
+                  crawlErrorDetails = {
+                    error_type: errorDetails.error_type,
+                    error_message: errorDetails.error_message,
+                    failed_at: new Date().toISOString(),
+                    retry_count: 0
+                  };
                 }
               } catch (error) {
                 logError('Website scraping/extraction failed', error, {
                   company: company.name
                 });
+
+                // Classify the exception error
+                const errorDetails = classifyError(error.message);
+                websiteStatus = errorDetails.website_status;
+
+                crawlErrorDetails = {
+                  error_type: errorDetails.error_type,
+                  error_message: errorDetails.error_message,
+                  failed_at: new Date().toISOString(),
+                  retry_count: 0
+                };
 
                 // Close page on error too
                 if (websiteData?.page) {
@@ -467,6 +584,7 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           industry: company.industry,
           website: company.website,
           website_status: websiteStatus,
+          crawl_error_details: crawlErrorDetails,
           city: company.city,
           state: company.state,
           address: company.address,
@@ -480,7 +598,8 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
           google_review_count: company.reviewCount,
           most_recent_review_date: company.mostRecentReviewDate,
           social_profiles: socialProfiles,
-          social_metadata: socialMetadata
+          social_metadata: socialMetadata,
+          business_intelligence: extractedData?.business_intelligence || null
         };
 
         // STEP 7: ICP Relevance Check (AI-powered)
@@ -825,6 +944,7 @@ export async function lookupSingleBusiness(query, options = {}) {
     let websiteStatus = 'no_website';
     let websiteData = null;
     let extractedData = null;
+    let crawlErrorDetails = null;
 
     if (company.website && options.scrapeWebsite !== false) {
       const verification = await verifyWebsite(company.website);
@@ -856,7 +976,8 @@ export async function lookupSingleBusiness(query, options = {}) {
             extractedData = await extractFromDOM(
               websiteData.page,
               company.website,
-              company.name
+              company.name,
+              company.industry || 'general'
             );
 
             logInfo('DOM extraction complete', {
@@ -908,11 +1029,42 @@ export async function lookupSingleBusiness(query, options = {}) {
             if (websiteData.page) {
               await websiteData.page.close();
             }
+          } else {
+            // Website scraping failed - classify error and save details
+            const errorDetails = classifyError(websiteData.error || 'Unknown error');
+
+            logWarn('Website scraping failed - saving error details', {
+              company: company.name,
+              error_type: errorDetails.error_type,
+              website_status: errorDetails.website_status
+            });
+
+            // Update websiteStatus to reflect the error
+            websiteStatus = errorDetails.website_status;
+
+            // Save error details
+            crawlErrorDetails = {
+              error_type: errorDetails.error_type,
+              error_message: errorDetails.error_message,
+              failed_at: new Date().toISOString(),
+              retry_count: 0
+            };
           }
         } catch (error) {
           logError('Website scraping/extraction failed', error, {
             company: company.name
           });
+
+          // Classify the exception error
+          const errorDetails = classifyError(error.message);
+          websiteStatus = errorDetails.website_status;
+
+          crawlErrorDetails = {
+            error_type: errorDetails.error_type,
+            error_message: errorDetails.error_message,
+            failed_at: new Date().toISOString(),
+            retry_count: 0
+          };
 
           if (websiteData?.page) {
             try {
@@ -1003,6 +1155,7 @@ export async function lookupSingleBusiness(query, options = {}) {
       industry: company.industry,
       website: company.website,
       website_status: websiteStatus,
+      crawl_error_details: crawlErrorDetails,
       city: company.city,
       state: company.state,
       address: company.address,
@@ -1017,6 +1170,7 @@ export async function lookupSingleBusiness(query, options = {}) {
       most_recent_review_date: company.mostRecentReviewDate,
       social_profiles: socialProfiles,
       social_metadata: socialMetadata,
+      business_intelligence: extractedData?.business_intelligence || null,
       icp_match_score: null, // Not applicable for single lookup
       is_relevant: true, // Default to true (no ICP filtering)
       icp_brief_snapshot: null, // No ICP brief

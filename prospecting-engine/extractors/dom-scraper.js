@@ -14,16 +14,22 @@
  */
 
 import { logInfo, logWarn, logDebug } from '../shared/logger.js';
+import { extractBusinessIntelligence } from './business-intelligence-extractor.js';
+import { discoverPages } from '../selectors/page-discovery.js';
+import { selectPagesForBI } from '../selectors/bi-page-selector.js';
 
 /**
- * Extract all data from website using DOM parsing
+ * Extract all data from website using DOM parsing with AI-powered page selection
  *
  * @param {object} page - Playwright page object
  * @param {string} url - Website URL
  * @param {string} companyName - Company name for context
+ * @param {string} industry - Industry for intelligent page selection (default: 'general')
+ * @param {object} options - Additional options {useAIPageSelection: boolean}
  * @returns {Promise<object>} Extracted data with confidence score
  */
-export async function extractFromDOM(page, url, companyName) {
+export async function extractFromDOM(page, url, companyName, industry = 'general', options = {}) {
+  const { useAIPageSelection = true } = options;
   const startTime = Date.now();
 
   logInfo('Starting DOM extraction', { url, company: companyName });
@@ -35,8 +41,12 @@ export async function extractFromDOM(page, url, companyName) {
     description: null,
     services: [],
     confidence: 0,
-    pages_visited: ['homepage']
+    pages_visited: ['homepage'],
+    business_intelligence: null
   };
+
+  // Collect HTML snapshots for BI extraction
+  const crawledPages = [];
 
   try {
     // ═══════════════════════════════════════════════════════════
@@ -82,43 +92,114 @@ export async function extractFromDOM(page, url, companyName) {
       data.services = await extractServices(page, companyName);
     }
 
-    // ═══════════════════════════════════════════════════════════
-    // STEP 2: Visit Contact Page (if email/phone still missing)
-    // ═══════════════════════════════════════════════════════════
-
-    if (!data.contact_email || !data.contact_phone) {
-      const contactData = await visitContactPage(page, url);
-      if (contactData) {
-        data.contact_email = data.contact_email || contactData.email;
-        data.contact_phone = data.contact_phone || contactData.phone;
-        data.contact_name = data.contact_name || contactData.name;
-        data.pages_visited.push('contact');
-      }
+    // Capture homepage HTML for BI extraction
+    try {
+      const homepageHtml = await page.content();
+      crawledPages.push({
+        url: url,
+        html: homepageHtml,
+        isHomepage: true
+      });
+    } catch (error) {
+      logWarn('Failed to capture homepage HTML for BI', { error: error.message });
     }
 
     // ═══════════════════════════════════════════════════════════
-    // STEP 3: Visit About Page (if description still missing)
+    // STEP 2: AI-Powered Multi-Page Crawling
     // ═══════════════════════════════════════════════════════════
 
-    if (!data.description) {
-      const aboutData = await visitAboutPage(page, url);
-      if (aboutData) {
-        data.description = aboutData.description;
-        data.contact_name = data.contact_name || aboutData.owner_name;
-        data.pages_visited.push('about');
+    if (useAIPageSelection) {
+      try {
+        logInfo('Starting AI-powered page selection', { industry, company: companyName });
+
+        // 2a. Discover all pages from sitemap/robots/navigation
+        const discovered = await discoverPages(url, { timeout: 10000 });
+        logInfo('Page discovery complete', {
+          totalPages: discovered.totalPages,
+          sources: discovered.sources
+        });
+
+        // 2b. Use AI to select optimal pages for BI
+        const selection = await selectPagesForBI(discovered, {
+          company_name: companyName,
+          industry: industry
+        }, { maxPages: 7 });
+
+        logInfo('AI page selection complete', {
+          selectedPages: selection.selected_pages.length,
+          reasoning: selection.reasoning,
+          cost: selection.meta?.cost || 0
+        });
+
+        // 2c. Visit each selected page (skip homepage - already visited)
+        const pagesToVisit = selection.selected_pages.filter(p => p !== '/');
+
+        for (const pagePath of pagesToVisit) {
+          try {
+            const pageUrl = new URL(pagePath, url).href;
+            logDebug('Visiting selected page', { page: pagePath });
+
+            await page.goto(pageUrl, {
+              waitUntil: 'domcontentloaded',
+              timeout: 10000
+            });
+
+            // Extract contact data if still missing
+            if (!data.contact_email) {
+              data.contact_email = await extractEmails(page);
+            }
+            if (!data.contact_phone) {
+              data.contact_phone = await extractPhones(page);
+            }
+            if (!data.description) {
+              data.description = await extractDescription(page);
+            }
+            if (data.services.length === 0) {
+              data.services = await extractServices(page, companyName);
+            }
+            if (!data.contact_name) {
+              data.contact_name = await extractContactName(page);
+            }
+
+            // Capture page HTML for BI extraction
+            try {
+              const pageHtml = await page.content();
+              crawledPages.push({
+                url: pageUrl,
+                html: pageHtml,
+                isHomepage: false
+              });
+            } catch (error) {
+              logWarn('Failed to capture page HTML for BI', {
+                page: pagePath,
+                error: error.message
+              });
+            }
+
+            // Track visited page
+            const pageType = pagePath.split('/').filter(Boolean)[0] || 'unknown';
+            data.pages_visited.push(pageType);
+
+          } catch (error) {
+            logWarn('Failed to visit selected page', {
+              page: pagePath,
+              error: error.message
+            });
+            // Continue with next page
+          }
+        }
+
+      } catch (error) {
+        logWarn('AI page selection failed, falling back to hardcoded pages', {
+          error: error.message
+        });
+
+        // Fallback to hardcoded page visits
+        await fallbackPageVisits(page, url, data, crawledPages);
       }
-    }
-
-    // ═══════════════════════════════════════════════════════════
-    // STEP 4: Visit Services/Menu Page (if services still missing)
-    // ═══════════════════════════════════════════════════════════
-
-    if (data.services.length === 0) {
-      const servicesData = await visitServicesPage(page, url);
-      if (servicesData && servicesData.length > 0) {
-        data.services = servicesData;
-        data.pages_visited.push('services');
-      }
+    } else {
+      // Use hardcoded page visits if AI selection is disabled
+      await fallbackPageVisits(page, url, data, crawledPages);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -126,6 +207,29 @@ export async function extractFromDOM(page, url, companyName) {
     // ═══════════════════════════════════════════════════════════
 
     data.confidence = calculateConfidence(data);
+
+    // ═══════════════════════════════════════════════════════════
+    // STEP 6: Extract Business Intelligence from Crawled Pages
+    // ═══════════════════════════════════════════════════════════
+
+    if (crawledPages.length > 0) {
+      try {
+        logInfo('Extracting business intelligence', {
+          pagesCount: crawledPages.length,
+          pages: data.pages_visited
+        });
+        data.business_intelligence = extractBusinessIntelligence(crawledPages);
+        logInfo('Business intelligence extracted', {
+          hasCompanySize: !!data.business_intelligence?.companySize,
+          hasYearsInBusiness: !!data.business_intelligence?.yearsInBusiness,
+          hasPricing: !!data.business_intelligence?.pricingVisibility,
+          hasFreshness: !!data.business_intelligence?.contentFreshness
+        });
+      } catch (error) {
+        logWarn('Business intelligence extraction failed', { error: error.message });
+        data.business_intelligence = null;
+      }
+    }
 
     const duration = Date.now() - startTime;
     logInfo('DOM extraction complete', {
@@ -136,7 +240,8 @@ export async function extractFromDOM(page, url, companyName) {
       hasPhone: !!data.contact_phone,
       hasDescription: !!data.description,
       servicesCount: data.services.length,
-      pagesVisited: data.pages_visited.length
+      pagesVisited: data.pages_visited.length,
+      hasBI: !!data.business_intelligence
     });
 
     return data;
@@ -527,6 +632,102 @@ async function visitServicesPage(page, baseUrl) {
   } catch (error) {
     logDebug('Failed to visit services page', { error: error.message });
     return null;
+  }
+}
+
+/**
+ * Extract contact name from page
+ */
+async function extractContactName(page) {
+  try {
+    const name = await page.evaluate(() => {
+      const text = document.body.innerText;
+      const patterns = [
+        /contact:?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+        /owner:?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+        /manager:?\s*([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+        /founded by\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i,
+        /by\s+([A-Z][a-z]+\s+[A-Z][a-z]+)/i
+      ];
+
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) return match[1];
+      }
+      return null;
+    });
+
+    return name;
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Fallback to hardcoded page visits if AI selection fails
+ */
+async function fallbackPageVisits(page, url, data, crawledPages) {
+  // Visit contact page if email/phone missing
+  if (!data.contact_email || !data.contact_phone) {
+    const contactData = await visitContactPage(page, url);
+    if (contactData) {
+      data.contact_email = data.contact_email || contactData.email;
+      data.contact_phone = data.contact_phone || contactData.phone;
+      data.contact_name = data.contact_name || contactData.name;
+      data.pages_visited.push('contact');
+
+      try {
+        const contactHtml = await page.content();
+        crawledPages.push({
+          url: page.url(),
+          html: contactHtml,
+          isHomepage: false
+        });
+      } catch (error) {
+        logWarn('Failed to capture contact page HTML for BI', { error: error.message });
+      }
+    }
+  }
+
+  // Visit about page if description missing
+  if (!data.description) {
+    const aboutData = await visitAboutPage(page, url);
+    if (aboutData) {
+      data.description = aboutData.description;
+      data.contact_name = data.contact_name || aboutData.owner_name;
+      data.pages_visited.push('about');
+
+      try {
+        const aboutHtml = await page.content();
+        crawledPages.push({
+          url: page.url(),
+          html: aboutHtml,
+          isHomepage: false
+        });
+      } catch (error) {
+        logWarn('Failed to capture about page HTML for BI', { error: error.message });
+      }
+    }
+  }
+
+  // Visit services page if services missing
+  if (data.services.length === 0) {
+    const servicesData = await visitServicesPage(page, url);
+    if (servicesData && servicesData.length > 0) {
+      data.services = servicesData;
+      data.pages_visited.push('services');
+
+      try {
+        const servicesHtml = await page.content();
+        crawledPages.push({
+          url: page.url(),
+          html: servicesHtml,
+          isHomepage: false
+        });
+      } catch (error) {
+        logWarn('Failed to capture services page HTML for BI', { error: error.message });
+      }
+    }
   }
 }
 

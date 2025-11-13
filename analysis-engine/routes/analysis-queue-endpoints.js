@@ -11,6 +11,7 @@ import { enqueueWork, cancelWork, getJob, getQueueStatus } from '../../database-
 import { saveLocalBackup, markAsUploaded, markAsFailed } from '../utils/local-backup.js';
 import { incrementAnalysisCount } from '../optimization/services/optimization-scheduler.js';
 import { withTimeout } from '../utils/promise-timeout.js';
+import { getProspectById } from '../database/supabase-client.js';
 
 // Supabase client
 const supabase = createClient(
@@ -42,11 +43,12 @@ export async function analyzeProspects(req, res) {
       // Mode 2: Fetch by IDs from database
       console.log(`[Analysis Queue] Fetching ${prospect_ids.length} prospects from database...`);
 
-      const { data: fetchedProspects, error: fetchError } = await supabase
+      const { data: fetchedProspects, error: fetchError} = await supabase
         .from('prospects')
-        .select('id, company_name, website, industry, city, state, address, contact_email, contact_phone, contact_name, description, services, social_profiles, social_metadata, icp_match_score, google_rating, google_review_count, most_recent_review_date, website_status')
+        .select('id, company_name, website, industry, city, state, address, contact_email, contact_phone, contact_name, description, services, social_profiles, social_metadata, icp_match_score, google_rating, google_review_count, most_recent_review_date, website_status, crawl_error_details')
         .in('id', prospect_ids)
-        .not('website', 'is', null);
+        .not('website', 'is', null)
+        .not('website_status', 'in', '(bot_protected,timeout,ssl_error,not_found)'); // Skip uncrawlable prospects
 
       if (fetchError) {
         return res.status(500).json({
@@ -361,6 +363,25 @@ async function executeAnalysis(data) {
     }
 
     if (result.success) {
+      // Fetch business intelligence from prospect if available
+      let businessIntelligence = null;
+      if (data.prospect_id) {
+        try {
+          console.log(`[Analysis Executor] Fetching business intelligence from prospect ${data.prospect_id}...`);
+          const prospect = await getProspectById(data.prospect_id);
+          businessIntelligence = prospect?.business_intelligence || null;
+
+          if (businessIntelligence) {
+            console.log(`[Analysis Executor] Business intelligence found for ${data.company_name}`);
+          } else {
+            console.log(`[Analysis Executor] No business intelligence found for ${data.company_name}`);
+          }
+        } catch (biError) {
+          console.warn(`[Analysis Executor] Failed to fetch business intelligence for ${data.company_name}:`, biError.message);
+          // Continue without BI data - not a critical failure
+        }
+      }
+
       // Prepare lead data for database
       const leadData = {
         // Core information
@@ -398,9 +419,11 @@ async function executeAnalysis(data) {
         desktop_screenshot: result.desktop_screenshot_url || null,
         mobile_screenshot: result.mobile_screenshot_url || null,
 
+        // Business Intelligence (from Prospecting Engine)
+        business_intelligence: businessIntelligence,
+
         // Metadata
         analysis_cost: result.analysis_cost || 0,
-        analysis_duration_ms: result.analysis_duration_ms || null,
         analysis_timestamp: new Date().toISOString(),
         status: 'ready_for_outreach'
       };

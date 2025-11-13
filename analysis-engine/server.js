@@ -345,6 +345,7 @@ app.post('/api/analyze-url', async (req, res) => {
     }
 
     console.log(`[Intelligent Analysis] Starting intelligent analysis for ${url}`);
+    console.log(`[Intelligent Analysis] Request params: enable_cross_page_context=${enable_cross_page_context}, enable_deduplication=${enable_deduplication}, enable_qa_validation=${enable_qa_validation}`);
 
     // Use intelligent multi-page analyzer
     const result = await analyzeWebsiteIntelligent(url, {
@@ -535,6 +536,11 @@ app.post('/api/analyze-url', async (req, res) => {
       analysis_cost: result.analysis_cost || 0,
       cost_breakdown: result.cost_breakdown || null,
       analysis_time: result.analysis_time || 0,
+
+      // A/B Testing Metrics
+      context_metrics: result.context_metrics || null,
+      context_mode_used: result.context_mode_used || 'none',
+      prompt_variant_used: result.prompt_variant_used || null,
 
       // Discovery Log (simplified - full data is in backup)
       discovery_log: result.discovery_log ? {

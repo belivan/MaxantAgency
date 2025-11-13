@@ -275,6 +275,34 @@ export async function analyzeUnifiedVisual(pages, context = {}, customPrompt = n
 
       // Parse JSON response
       const result = await parseJSONResponse(response.content);
+
+      // Sanitize scores (coerce string numbers to actual numbers)
+      // This handles AI hallucinations where it returns "fifty" instead of 50
+      const sanitizeScore = (value) => {
+        if (typeof value === 'number') return value;
+        if (typeof value === 'string') {
+          // Try to parse as number
+          const parsed = parseFloat(value);
+          if (!isNaN(parsed)) return Math.round(parsed);
+
+          // Try to convert word numbers (common AI hallucination)
+          const wordToNumber = {
+            'zero': 0, 'ten': 10, 'twenty': 20, 'thirty': 30, 'forty': 40,
+            'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
+            'one hundred': 100, 'hundred': 100
+          };
+          const normalized = value.toLowerCase().trim();
+          if (wordToNumber[normalized] !== undefined) {
+            return wordToNumber[normalized];
+          }
+        }
+        return value; // Return as-is, let validation catch the error
+      };
+
+      result.desktopScore = sanitizeScore(result.desktopScore);
+      result.mobileScore = sanitizeScore(result.mobileScore);
+      result.responsiveScore = sanitizeScore(result.responsiveScore);
+
       validateUnifiedVisualResponse(result);
 
       // Store context for next page (if context-aware mode enabled)
