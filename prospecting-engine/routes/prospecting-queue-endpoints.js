@@ -72,13 +72,21 @@ export async function queueProspecting(req, res) {
     // Calculate batch size for priority (smaller batches = higher priority)
     const batchSize = normalizedBrief.count || 50;
 
+    // Apply environment-based defaults if not explicitly set in options
+    const enableSocialScraping = process.env.ENABLE_SOCIAL_SCRAPING === 'true';
+    const useVisionFallback = process.env.USE_VISION_FALLBACK !== 'false'; // Default true for backward compatibility
+
     // Queue the prospecting job
     const jobId = await enqueueWork('prospecting', {
       brief: normalizedBrief,
       options: {
         ...options,
         customPrompts: custom_prompts,
-        modelSelections: model_selections
+        modelSelections: model_selections,
+        // Override defaults if not explicitly set
+        findSocial: options.findSocial !== undefined ? options.findSocial : enableSocialScraping,
+        scrapeSocial: options.scrapeSocial !== undefined ? options.scrapeSocial : enableSocialScraping,
+        useGrokFallback: options.useGrokFallback !== undefined ? options.useGrokFallback : useVisionFallback
       }
     }, batchSize, async (data) => {
       // Execute prospecting pipeline

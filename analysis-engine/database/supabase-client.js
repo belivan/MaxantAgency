@@ -545,12 +545,14 @@ export async function getBenchmarksByIndustry(industry, options = {}) {
   try {
     const { tier = null, limit = 10, minScore = null } = options;
 
+    // Extract first word for fuzzy matching (e.g., "Dental Practice" → "Dental")
+    const industryKeyword = industry.split(' ')[0];
+
     let query = supabase
       .from('benchmarks')
       .select('*')
-      .eq('industry', industry)
-      .eq('is_active', true)
-      .eq('quality_flag', 'approved');
+      .ilike('industry', `%${industryKeyword}%`)
+      .eq('is_active', true);
 
     if (tier) {
       query = query.eq('benchmark_tier', tier);

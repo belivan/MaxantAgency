@@ -28,6 +28,7 @@ import { generateAnalysisScope } from './sections/analysis-scope.js';
 import { generateDesignTokensSection } from './sections/design-tokens.js';
 import { generateFooter } from './sections/footer.js';
 import { generateRequestFullReportCTA } from './sections/request-full-report-cta.js';
+import { generateMultiPageScreenshotGallery } from './sections/screenshot-gallery.js';
 
 /**
  * Section Registry
@@ -211,16 +212,28 @@ export const SECTIONS_REGISTRY = [
     requiredData: ['performance_metrics_pagespeed'],
     description: 'PageSpeed Insights and Core Web Vitals data'
   },
+  // DISABLED: "How We Calculated Your Score" section removed per user request
+  // {
+  //   id: 'score-breakdown',
+  //   name: 'Grading Methodology',
+  //   component: generateScoreBreakdownSection,
+  //   order: 16,
+  //   reportTypes: ['full'],
+  //   required: false,
+  //   showPlaceholder: true,
+  //   requiredData: [],
+  //   description: 'Pie chart and bars showing how the grade was calculated'
+  // },
   {
-    id: 'score-breakdown',
-    name: 'Grading Methodology',
-    component: generateScoreBreakdownSection,
-    order: 16,
-    reportTypes: ['full'], // Only in full reports, not preview
+    id: 'screenshot-gallery',
+    name: 'Visual Evidence Gallery',
+    component: generateMultiPageScreenshotGallery,
+    order: 18,
+    reportTypes: ['full'],
     required: false,
-    showPlaceholder: true,
+    showPlaceholder: false,
     requiredData: [],
-    description: 'Pie chart and bars showing how the grade was calculated'
+    description: 'Multi-page screenshot gallery showing desktop and mobile views'
   },
   {
     id: 'ai-weights',

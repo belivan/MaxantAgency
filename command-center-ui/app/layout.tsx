@@ -6,7 +6,7 @@ import { TaskProgressProvider } from '@/lib/contexts/task-progress-context';
 import { FloatingTaskIndicator } from '@/components/shared/floating-task-indicator';
 
 export const metadata: Metadata = {
-  title: 'Maxant Command Center',
+  title: 'Minty Design Co',
   description: 'Unified dashboard for prospecting, analysis, and outreach.'
 };
 

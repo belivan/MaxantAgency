@@ -34,6 +34,10 @@ export async function analyzeProspects(req, res) {
     // Accept either prospect_ids OR prospects array directly
     let prospects;
     let missingIds = [];
+    let notFoundIds = [];
+    let noWebsiteIds = [];
+    let problematicWebsiteIds = [];
+    let alreadyAnalyzedIds = [];
 
     if (providedProspects && providedProspects.length > 0) {
       // Mode 1: Direct prospect data (no database needed)
@@ -43,12 +47,52 @@ export async function analyzeProspects(req, res) {
       // Mode 2: Fetch by IDs from database
       console.log(`[Analysis Queue] Fetching ${prospect_ids.length} prospects from database...`);
 
+      // First, fetch ALL prospects without filters to diagnose issues
+      const { data: allProspects, error: allFetchError } = await supabase
+        .from('prospects')
+        .select('id, company_name, website, website_status, crawl_error_details')
+        .in('id', prospect_ids);
+
+      if (allFetchError) {
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to fetch prospects',
+          details: allFetchError.message
+        });
+      }
+
+      // Categorize prospects by status
+      const allProspectsMap = new Map((allProspects || []).map(p => [p.id, p]));
+      notFoundIds = prospect_ids.filter(id => !allProspectsMap.has(id));
+      noWebsiteIds = [];
+      problematicWebsiteIds = [];
+      const validIds = [];
+
+      for (const id of prospect_ids) {
+        const prospect = allProspectsMap.get(id);
+        if (!prospect) {
+          // Already in notFoundIds
+          continue;
+        }
+        if (!prospect.website) {
+          noWebsiteIds.push({ id, company: prospect.company_name });
+        } else if (['bot_protected', 'timeout', 'ssl_error', 'not_found'].includes(prospect.website_status)) {
+          problematicWebsiteIds.push({
+            id,
+            company: prospect.company_name,
+            status: prospect.website_status,
+            error: prospect.crawl_error_details?.error_message || null
+          });
+        } else {
+          validIds.push(id);
+        }
+      }
+
+      // Now fetch the valid prospects with full data
       const { data: fetchedProspects, error: fetchError} = await supabase
         .from('prospects')
         .select('id, company_name, website, industry, city, state, address, contact_email, contact_phone, contact_name, description, services, social_profiles, social_metadata, icp_match_score, google_rating, google_review_count, most_recent_review_date, website_status, crawl_error_details')
-        .in('id', prospect_ids)
-        .not('website', 'is', null)
-        .not('website_status', 'in', '(bot_protected,timeout,ssl_error,not_found)'); // Skip uncrawlable prospects
+        .in('id', validIds);
 
       if (fetchError) {
         return res.status(500).json({
@@ -58,20 +102,71 @@ export async function analyzeProspects(req, res) {
         });
       }
 
-      // Track missing IDs
-      const foundIds = new Set((fetchedProspects || []).map(p => p.id));
-      missingIds = prospect_ids.filter(id => !foundIds.has(id));
+      // Check for duplicate URLs (already analyzed leads)
+      alreadyAnalyzedIds = [];
+      if (fetchedProspects && fetchedProspects.length > 0) {
+        const validUrls = fetchedProspects.map(p => p.website).filter(Boolean);
+
+        if (validUrls.length > 0) {
+          const { data: existingLeads } = await supabase
+            .from('leads')
+            .select('url, company_name, id')
+            .in('url', validUrls);
+
+          if (existingLeads && existingLeads.length > 0) {
+            const existingUrlMap = new Map(existingLeads.map(l => [l.url, l]));
+
+            fetchedProspects.forEach(p => {
+              if (existingUrlMap.has(p.website)) {
+                const existing = existingUrlMap.get(p.website);
+                alreadyAnalyzedIds.push({
+                  id: p.id,
+                  company: p.company_name,
+                  url: p.website,
+                  existing_lead: existing.company_name,
+                  existing_lead_id: existing.id
+                });
+              }
+            });
+
+            if (alreadyAnalyzedIds.length > 0) {
+              console.warn(`  - ${alreadyAnalyzedIds.length} already analyzed (duplicate URLs):`,
+                alreadyAnalyzedIds.map(p => `${p.company} → updates "${p.existing_lead}"`));
+            }
+          }
+        }
+      }
+
+      // Track missing IDs with detailed reasons
+      missingIds = [...notFoundIds, ...noWebsiteIds.map(p => p.id), ...problematicWebsiteIds.map(p => p.id)];
 
       if (missingIds.length > 0) {
-        console.warn(`[Analysis Queue] ${missingIds.length} prospect(s) not found in database:`, missingIds);
+        console.warn(`[Analysis Queue] ${missingIds.length} prospect(s) excluded from analysis:`);
+        if (notFoundIds.length > 0) {
+          console.warn(`  - ${notFoundIds.length} not found in database:`, notFoundIds);
+        }
+        if (noWebsiteIds.length > 0) {
+          console.warn(`  - ${noWebsiteIds.length} missing website URL:`, noWebsiteIds.map(p => p.company));
+        }
+        if (problematicWebsiteIds.length > 0) {
+          console.warn(`  - ${problematicWebsiteIds.length} with problematic websites:`,
+            problematicWebsiteIds.map(p => `${p.company} (${p.status})`));
+        }
       }
 
       if (!fetchedProspects || fetchedProspects.length === 0) {
         return res.status(404).json({
           success: false,
-          error: 'No prospects found',
-          details: `None of the ${prospect_ids.length} requested prospect(s) were found in the database`,
-          missing_prospect_ids: missingIds
+          error: 'No prospects available for analysis',
+          details: `All ${prospect_ids.length} requested prospect(s) were excluded from analysis`,
+          missing_prospect_ids: missingIds,
+          exclusion_reasons: {
+            not_found: notFoundIds,
+            no_website: noWebsiteIds,
+            problematic_website: problematicWebsiteIds,
+            already_analyzed: alreadyAnalyzedIds
+          },
+          tip: 'Prospects with missing or problematic websites cannot be analyzed. Try fixing the website URLs or website status.'
         });
       }
 
@@ -167,6 +262,12 @@ export async function analyzeProspects(req, res) {
       job_ids: jobIds,
       total: jobIds.length,
       missing_prospect_ids: missingIds,
+      exclusion_reasons: {
+        not_found: notFoundIds,
+        no_website: noWebsiteIds,
+        problematic_website: problematicWebsiteIds,
+        already_analyzed: alreadyAnalyzedIds
+      },
       message: `Queued ${jobIds.length} analyses${missingIds.length > 0 ? ` (${missingIds.length} skipped)` : ''}`
     });
 
@@ -198,7 +299,10 @@ export async function getAnalysisStatus(req, res) {
       });
     }
 
-    const jobIdArray = job_ids.split(',').map(id => id.trim());
+    // Handle both array (from UI) and comma-separated string
+    const jobIdArray = Array.isArray(job_ids)
+      ? job_ids
+      : job_ids.split(',').map(id => id.trim());
     const statuses = [];
 
     for (const jobId of jobIdArray) {
@@ -416,15 +520,31 @@ async function executeAnalysis(data) {
         one_liner: result.one_liner || null,
 
         // Screenshots
-        desktop_screenshot: result.desktop_screenshot_url || null,
-        mobile_screenshot: result.mobile_screenshot_url || null,
+        screenshot_desktop_url: result.screenshot_desktop_url || null,
+        screenshot_mobile_url: result.screenshot_mobile_url || null,
 
-        // Business Intelligence (from Prospecting Engine)
+        // Business Intelligence (from Prospecting Engine - higher quality than analysis extraction)
         business_intelligence: businessIntelligence,
+
+        // Tech Stack
+        tech_stack: result.tech_stack || JSON.stringify({ cms: 'Unknown', frameworks: [], analytics: [] }),
+        page_load_time: result.page_load_time || null,
+
+        // Performance Metrics
+        performance_metrics_pagespeed: result.performance_metrics_pagespeed || null,
+        performance_metrics_crux: result.performance_metrics_crux || null,
+        performance_issues: result.performance_issues || [],
+        performance_score_mobile: result.performance_score_mobile || null,
+        performance_score_desktop: result.performance_score_desktop || null,
+        performance_api_errors: result.performance_api_errors || [],
+
+        // Benchmark Matching
+        matched_benchmark_id: result.matched_benchmark_id || null,
+        matched_benchmark: result.matched_benchmark || null,
 
         // Metadata
         analysis_cost: result.analysis_cost || 0,
-        analysis_timestamp: new Date().toISOString(),
+        analyzed_at: new Date().toISOString(),
         status: 'ready_for_outreach'
       };
 
@@ -432,7 +552,7 @@ async function executeAnalysis(data) {
       let backupPath = null;
       try {
         backupPath = await withTimeout(
-          saveLocalBackup(leadData),
+          saveLocalBackup(result, leadData),
           30000, // 30 second timeout for backup
           'Local backup timed out'
         );
@@ -445,7 +565,7 @@ async function executeAnalysis(data) {
       const { data: savedLead, error: saveError } = await supabase
         .from('leads')
         .upsert(leadData, {
-          onConflict: 'url,project_id',
+          onConflict: 'url',
           ignoreDuplicates: false
         })
         .select()
@@ -471,6 +591,14 @@ async function executeAnalysis(data) {
           error: `Database save failed: ${saveError.message}`,
           duration_ms: Date.now() - startTime
         };
+      }
+
+      // Check if this was an update vs a new lead
+      if (savedLead) {
+        const wasUpdate = savedLead.created_at !== savedLead.updated_at;
+        if (wasUpdate) {
+          console.warn(`⚠️  [Analysis Executor] Updated existing lead: ${data.company_name} (URL: ${data.url})`);
+        }
       }
 
       // Mark backup as uploaded

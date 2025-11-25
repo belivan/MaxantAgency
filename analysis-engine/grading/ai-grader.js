@@ -155,15 +155,15 @@ export async function gradeWithAI(analysisResults, metadata) {
     let overallScore = parsedGrading.overall_score;
     if (overallScore == null || isNaN(overallScore)) {
       console.warn(`  ⚠️ AI did not return overall_score (value: ${parsedGrading.overall_score}), calculating from dimension scores...`);
-      // Fallback: calculate weighted average of dimension scores
-      const weights = parsedGrading.dimension_weights_used || { design: 0.30, seo: 0.30, performance: 0.20, content: 0.10, accessibility: 0.05, social: 0.05 };
+      // Fallback: calculate weighted average of dimension scores (matches weights.json for MVP - website-only focus)
+      const weights = parsedGrading.dimension_weights_used || { design: 0.30, seo: 0.30, performance: 0.20, content: 0.15, accessibility: 0.05, social: 0.0 };
       overallScore = (
         ((gradingData.design_score || 50) * weights.design) +
         ((gradingData.seo_score || 50) * weights.seo) +
         ((gradingData.performance_score || 50) * (weights.performance || 0.20)) +
-        ((gradingData.content_score || 50) * (weights.content || 0.10)) +
+        ((gradingData.content_score || 50) * (weights.content || 0.15)) +
         ((gradingData.accessibility_score || 50) * (weights.accessibility || 0.05)) +
-        ((gradingData.social_score || 50) * (weights.social || 0.05))
+        ((gradingData.social_score || 50) * (weights.social || 0.0))
       );
 
       // Final safety check: if still NaN, use 50 as absolute fallback

@@ -99,7 +99,7 @@ export function Navbar() {
                 <span className="text-primary-foreground font-bold text-lg">M</span>
               </div>
               <span className="font-semibold text-lg hidden sm:inline">
-                Maxant Agency
+                Minty Design Co
               </span>
             </Link>
           </div>

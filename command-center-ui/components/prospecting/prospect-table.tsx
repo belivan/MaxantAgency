@@ -29,8 +29,9 @@ import {
   AlertDialogTitle
 } from '@/components/ui/alert-dialog';
 import { TableSkeleton } from '@/components/shared/loading-spinner';
-import { formatPhone } from '@/lib/utils/format';
+import { formatPhone, formatDateTime } from '@/lib/utils/format';
 import { deleteProspects } from '@/lib/api/prospecting';
+import { ProspectDetailsModal } from './prospect-details-modal';
 import type { Prospect } from '@/lib/types';
 
 interface ProspectTableProps {
@@ -51,9 +52,16 @@ export function ProspectTable({
   const lastClickedIndexRef = useRef<number | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   const isAllSelected = prospects.length > 0 && selectedIds.length === prospects.length;
   const isSomeSelected = selectedIds.length > 0 && !isAllSelected;
+
+  const handleViewDetails = (prospect: Prospect) => {
+    setSelectedProspect(prospect);
+    setShowDetailsModal(true);
+  };
 
   const handleSelectAll = () => {
     if (isAllSelected) {
@@ -110,7 +118,7 @@ export function ProspectTable({
   };
 
   if (loading) {
-    return <TableSkeleton rows={5} columns={8} />;
+    return <TableSkeleton rows={5} columns={9} />;
   }
 
   if (prospects.length === 0) {
@@ -180,6 +188,7 @@ export function ProspectTable({
               </TableHead>
               <TableHead>Project</TableHead>
               <TableHead>Company</TableHead>
+              <TableHead>Date Added</TableHead>
               <TableHead>Industry</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Rating</TableHead>
@@ -224,7 +233,20 @@ export function ProspectTable({
                   </TableCell>
 
                   <TableCell className="font-medium">
-                    {prospect.company_name}
+                    <button
+                      onClick={() => handleViewDetails(prospect)}
+                      className="text-primary hover:underline cursor-pointer text-left"
+                    >
+                      {prospect.company_name}
+                    </button>
+                  </TableCell>
+
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    {prospect.created_at ? (
+                      formatDateTime(prospect.created_at)
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </TableCell>
 
                   <TableCell>
@@ -320,6 +342,13 @@ export function ProspectTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Prospect Details Modal */}
+      <ProspectDetailsModal
+        prospect={selectedProspect}
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+      />
     </div>
   );
 }

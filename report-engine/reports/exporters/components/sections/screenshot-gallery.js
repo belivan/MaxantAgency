@@ -84,12 +84,8 @@ export function generateMultiPageScreenshotGallery(analysisResult, synthesisData
     return html;
   }
 
-  // If only homepage, show notice
+  // Show screenshots (homepage or multi-page)
   if (!hasMultiPageData) {
-    html += '      <div style="background: var(--bg-secondary); padding: 20px; border-radius: var(--radius-md); margin-bottom: 24px; border-left: 4px solid var(--primary);">\n';
-    html += '        <p style="margin: 0; opacity: 0.8;"><strong>📌 Note:</strong> This analysis covered the homepage only. Enable multi-page crawling to capture screenshots from about, services, and other key pages.</p>\n';
-    html += '      </div>\n';
-
     // Show homepage screenshots only
     const homepageScreenshots = screenshotsByPage.get('/');
     if (homepageScreenshots) {

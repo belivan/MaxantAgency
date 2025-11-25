@@ -22,10 +22,23 @@ const __dirname = dirname(__filename);
  * Loads screenshots as base64 dataURIs
  */
 /**
- * Fetch screenshot from URL and convert to data URI
+ * Fetch screenshot from URL or local file path and convert to data URI
  */
 async function fetchScreenshotAsDataUri(url) {
   try {
+    // Check if it's a local file path (not HTTP URL)
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      // It's a local file path - read directly from disk
+      if (existsSync(url)) {
+        const buffer = await readFile(url);
+        return `data:image/png;base64,${buffer.toString('base64')}`;
+      } else {
+        console.warn(`⚠️ Local screenshot file not found: ${url}`);
+        return null;
+      }
+    }
+
+    // It's an HTTP URL - fetch from network
     const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);

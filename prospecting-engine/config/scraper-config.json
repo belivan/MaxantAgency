@@ -1,0 +1,18 @@
+{
+  "business_intelligence": {
+    "enabled": true,
+    "page_type_detection": {
+      "patterns": {
+        "about": ["about", "about-us", "who-we-are", "our-story", "company"],
+        "services": ["services", "what-we-do", "solutions", "offerings"],
+        "team": ["team", "staff", "employees", "our-team", "meet-the-team", "people"],
+        "contact": ["contact", "contact-us", "get-in-touch", "reach-us"],
+        "pricing": ["pricing", "plans", "packages", "rates"],
+        "portfolio": ["portfolio", "work", "projects", "case-studies", "gallery"],
+        "blog": ["blog", "news", "articles", "insights"],
+        "locations": ["locations", "offices", "branches", "stores"],
+        "testimonials": ["testimonials", "reviews", "clients", "success-stories"]
+      }
+    }
+  }
+}

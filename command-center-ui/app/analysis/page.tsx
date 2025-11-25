@@ -259,55 +259,125 @@ export default function AnalysisPage() {
     const taskTitle = `Intelligent Analysis: ${selectedIds.length} prospects (${timestamp})`;
     const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
 
-    // Start SSE operation with automatic task tracking (non-blocking!)
-    const connection = startTaskWithSSE({
-      url: `${API_BASE}/api/analyze`,
-      method: 'POST',
-      body: {
-        prospect_ids: selectedIds,
-        project_id: selectedProjectId,
-        custom_prompts: (config as any).custom_prompts || undefined,
-        model_selections: (config as any).model_selections || currentModelSelections
-      },
-      taskType: 'analysis',
-      title: taskTitle,
-      total: selectedIds.length,
-      taskManager: {
-        startTask,
-        updateTask,
-        addLog,
-        completeTask,
-        errorTask,
-        cancelTask
-      },
-      onMessage: (message, taskId) => {
-        // Handle custom SSE message formats from analysis engine
-        const data = message.data as any;
+    // Start task tracking
+    const taskId = startTask('analysis', taskTitle, selectedIds.length);
+    addLog(taskId, `Starting analysis of ${selectedIds.length} prospect(s)...`, 'info');
 
-        if (message.type === 'progress' || message.type === 'log') {
-          // Handle different progress message formats
-          if (data.company && data.current) {
-            addLog(taskId, `Analyzing ${data.company} (${data.current}/${data.total})...`, 'info');
-          } else if (data.grade && data.company) {
-            addLog(taskId, `✅ ${data.company}: Grade ${data.grade} (${data.score}/100)`, 'success');
-          } else if (data.success === false && data.company) {
-            addLog(taskId, `❌ ${data.company}: ${data.error || 'Analysis failed'}`, 'error');
-          }
-        }
-      },
-      onComplete: (data, taskId) => {
-        const successCount = (data as any).successful || 0;
-        addLog(taskId, `Analysis complete! ${successCount} leads analyzed`, 'success');
-        // Refresh leads data after completion
-        refreshLeads();
-      },
-      onError: (error, taskId) => {
-        console.error('Analysis failed:', error);
-        alert(`Analysis failed: ${error.message}`);
+    try {
+      // Queue analysis jobs
+      const response = await fetch(`${API_BASE}/api/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prospect_ids: selectedIds,
+          project_id: selectedProjectId,
+          custom_prompts: (config as any).custom_prompts || undefined,
+          model_selections: (config as any).model_selections || currentModelSelections
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to queue analysis');
       }
-    });
 
-    console.log(`✓ Started analysis task: ${connection.taskId} (non-blocking)`);
+      const queueData = await response.json();
+      const jobIds = queueData.job_ids || [];
+
+      if (jobIds.length === 0) {
+        throw new Error('No jobs were queued');
+      }
+
+      addLog(taskId, `Queued ${jobIds.length} analysis job(s)`, 'info');
+
+      // Show exclusion warnings
+      if (queueData.exclusion_reasons) {
+        const { no_website, problematic_website, already_analyzed } = queueData.exclusion_reasons;
+
+        if (no_website && no_website.length > 0) {
+          const companies = no_website.map((p: any) => p.company).join(', ');
+          addLog(taskId, `⚠️ Skipped ${no_website.length} prospect(s) (no website): ${companies}`, 'warning');
+        }
+
+        if (problematic_website && problematic_website.length > 0) {
+          const issues = problematic_website.map((p: any) => `${p.company} (${p.status})`).join(', ');
+          addLog(taskId, `⚠️ Skipped ${problematic_website.length} prospect(s) (website issues): ${issues}`, 'warning');
+        }
+
+        if (already_analyzed && already_analyzed.length > 0) {
+          const companies = already_analyzed.map((p: any) => p.company).join(', ');
+          addLog(taskId, `ℹ️ ${already_analyzed.length} prospect(s) already analyzed (will update): ${companies}`, 'info');
+        }
+      }
+
+      // Poll for status updates
+      const pollInterval = setInterval(async () => {
+        try {
+          const queryString = jobIds.map((id: string) => `job_ids=${id}`).join('&');
+          const statusResponse = await fetch(`${API_BASE}/api/analysis-status?${queryString}`);
+
+          if (!statusResponse.ok) {
+            console.error('Failed to fetch status');
+            return;
+          }
+
+          const statusData = await statusResponse.json();
+          const jobs = statusData.jobs || [];
+
+          // Calculate overall progress
+          const completedJobs = jobs.filter((j: any) => j.state === 'completed').length;
+          const failedJobs = jobs.filter((j: any) => j.state === 'failed').length;
+          const totalJobs = jobs.length;
+          const progress = totalJobs > 0 ? (completedJobs + failedJobs) / totalJobs : 0;
+
+          // Update task progress
+          updateTask(taskId, completedJobs, `${completedJobs}/${totalJobs} complete`);
+
+          // Log completed jobs
+          jobs.forEach((job: any) => {
+            if (job.state === 'completed' && job.result) {
+              const result = job.result;
+              if (result.company_name && result.grade) {
+                addLog(taskId, `✅ ${result.company_name}: Grade ${result.grade} (${result.overall_score}/100)`, 'success');
+              }
+            } else if (job.state === 'failed') {
+              addLog(taskId, `❌ Analysis failed: ${job.error || 'Unknown error'}`, 'error');
+            }
+          });
+
+          // Check if all jobs are done
+          const allDone = jobs.every((j: any) => ['completed', 'failed', 'cancelled'].includes(j.state));
+
+          if (allDone) {
+            clearInterval(pollInterval);
+
+            const successCount = completedJobs;
+            const failCount = failedJobs;
+
+            if (failCount > 0) {
+              addLog(taskId, `Analysis complete: ${successCount} succeeded, ${failCount} failed`, 'warning');
+            } else {
+              addLog(taskId, `✓ Analysis complete! ${successCount} leads analyzed`, 'success');
+            }
+
+            completeTask(taskId);
+            refreshLeads();
+          }
+        } catch (pollError) {
+          console.error('Error polling status:', pollError);
+        }
+      }, 3000); // Poll every 3 seconds
+
+      // Timeout after 10 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+      }, 600000);
+
+    } catch (error: any) {
+      console.error('Analysis failed:', error);
+      errorTask(taskId, error.message);
+      alert(`Analysis failed: ${error.message}`);
+    }
   };
 
   const isAnalysisEngineOffline = engineStatus.analysis === 'offline';

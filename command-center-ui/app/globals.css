@@ -20,8 +20,8 @@
     --card-foreground: 240 10% 11%;
     --popover-foreground: 240 10% 11%;
 
-    /* Primary - Indigo (matches report) */
-    --primary: 239 84% 60%;               /* Indigo #4F46E5 */
+    /* Primary - Mint/Emerald (Minty Design Co theme) */
+    --primary: 158 64% 52%;               /* Mint/Emerald #10B981 */
     --primary-foreground: 0 0% 100%;      /* White text on primary */
 
     /* Secondary/Accent - Very light gray */
@@ -49,15 +49,15 @@
     --input: 240 6% 90%;
 
     /* Ring - Primary color for focus states */
-    --ring: 239 84% 60%;
+    --ring: 158 64% 52%;
 
     /* Border radius - Slightly more rounded */
     --radius: 0.75rem;
 
-    /* Charts - Colorful but not overwhelming */
-    --chart-1: 239 84% 60%;               /* Indigo */
-    --chart-2: 158 64% 39%;               /* Green */
-    --chart-3: 262 83% 58%;               /* Purple */
+    /* Charts - Minty/Fresh color palette */
+    --chart-1: 158 64% 52%;               /* Mint/Emerald */
+    --chart-2: 142 71% 45%;               /* Forest Green */
+    --chart-3: 174 72% 56%;               /* Teal */
     --chart-4: 32 95% 44%;                /* Amber */
     --chart-5: 341 75% 47%;               /* Rose */
   }
@@ -70,8 +70,8 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 6% 15%;
     --popover-foreground: 0 0% 98%;
-    --primary: 239 84% 67%;
-    --primary-foreground: 240 10% 11%;
+    --primary: 158 64% 52%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 240 6% 18%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 6% 18%;
@@ -82,10 +82,10 @@
     --destructive-foreground: 0 0% 98%;
     --border: 240 6% 18%;
     --input: 240 6% 18%;
-    --ring: 239 84% 67%;
-    --chart-1: 239 84% 67%;
-    --chart-2: 158 64% 45%;
-    --chart-3: 262 83% 58%;
+    --ring: 158 64% 52%;
+    --chart-1: 158 64% 52%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 174 72% 56%;
     --chart-4: 32 95% 44%;
     --chart-5: 341 75% 47%;
   }

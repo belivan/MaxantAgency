@@ -16,7 +16,7 @@ export default function LandingPage() {
             <span className="text-sm font-medium text-primary">Next-Generation Lead Generation</span>
           </div>
           <h1 className="text-5xl md:text-6xl font-bold mb-6 text-foreground">
-            Maxant Agency
+            Minty Design Co
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
             Where <span className="text-primary font-semibold">17+ AI Agents</span> work in harmony across <span className="text-primary font-semibold">4 specialized engines</span> to transform

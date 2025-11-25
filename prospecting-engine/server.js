@@ -142,10 +142,18 @@ app.post('/api/prospect', async (req, res) => {
       });
     }
 
+    // Apply environment-based defaults if not explicitly set in options
+    const enableSocialScraping = process.env.ENABLE_SOCIAL_SCRAPING === 'true';
+    const useVisionFallback = process.env.USE_VISION_FALLBACK !== 'false'; // Default true for backward compatibility
+
     // Run pipeline with custom prompts and normalized brief
     const results = await runProspectingPipeline(normalizedBrief, {
       ...options,
-      customPrompts: custom_prompts
+      customPrompts: custom_prompts,
+      // Override defaults if not explicitly set
+      findSocial: options.findSocial !== undefined ? options.findSocial : enableSocialScraping,
+      scrapeSocial: options.scrapeSocial !== undefined ? options.scrapeSocial : enableSocialScraping,
+      useGrokFallback: options.useGrokFallback !== undefined ? options.useGrokFallback : useVisionFallback
     }, onProgress);
 
     // Save prompts and model selections to project (first generation only)

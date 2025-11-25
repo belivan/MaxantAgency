@@ -28,19 +28,28 @@ console.log(`\n${BOLD}🛑 MaxantAgency Service Stopper${RESET}\n`);
 console.log('='.repeat(70));
 
 /**
- * Find process using a specific port
+ * Find process using a specific port (cross-platform)
  */
 async function findProcessOnPort(port) {
   try {
-    const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
-    const lines = stdout.trim().split('\n');
+    const isWindows = process.platform === 'win32';
 
-    for (const line of lines) {
-      if (line.includes('LISTENING')) {
-        const parts = line.trim().split(/\s+/);
-        const pid = parts[parts.length - 1];
-        return parseInt(pid);
+    if (isWindows) {
+      const { stdout } = await execAsync(`netstat -ano | findstr :${port}`);
+      const lines = stdout.trim().split('\n');
+
+      for (const line of lines) {
+        if (line.includes('LISTENING')) {
+          const parts = line.trim().split(/\s+/);
+          const pid = parts[parts.length - 1];
+          return parseInt(pid);
+        }
       }
+    } else {
+      // macOS/Linux: use lsof
+      const { stdout } = await execAsync(`lsof -ti :${port}`);
+      const pid = stdout.trim().split('\n')[0];
+      return pid ? parseInt(pid) : null;
     }
     return null;
   } catch (error) {
@@ -49,11 +58,18 @@ async function findProcessOnPort(port) {
 }
 
 /**
- * Kill a process by PID
+ * Kill a process by PID (cross-platform)
  */
 async function killProcess(pid) {
   try {
-    await execAsync(`taskkill /F /PID ${pid}`);
+    const isWindows = process.platform === 'win32';
+
+    if (isWindows) {
+      await execAsync(`taskkill /F /PID ${pid}`);
+    } else {
+      // macOS/Linux: use kill
+      await execAsync(`kill -9 ${pid}`);
+    }
     return true;
   } catch (error) {
     return false;

@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
+// TEMPORARILY DISABLED FOR SCREENSHOTS
 // Protected routes (require authentication)
 // This includes both page routes AND API routes
 const isProtectedRoute = createRouteMatcher([
@@ -14,7 +15,7 @@ const isProtectedRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) await auth.protect();
+  // DISABLED: if (isProtectedRoute(req)) await auth.protect();
 });
 
 export const config = {

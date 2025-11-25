@@ -129,15 +129,8 @@ export function generateHeroSection(analysisResult, synthesisData = null, option
     }
 
     html += '        </div>\n';
-  } else {
-    // Show disclaimer when no social media profiles were found
-    html += '        <div style="margin-top: 16px; padding: 12px 20px; background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: var(--radius-lg); text-align: center;">\n';
-    html += '          <p style="margin: 0; font-size: 0.9rem; color: var(--text-secondary); opacity: 0.85;">\n';
-    html += '            <span style="opacity: 0.6;">ℹ️</span> <strong style="color: var(--text-primary);">No Social Media Profiles Found</strong><br>\n';
-    html += '            <span style="font-size: 0.85rem;">Our analysis used Google Maps data and AI-powered web scraping but could not identify any social media profiles for this business.</span>\n';
-    html += '          </p>\n';
-    html += '        </div>\n';
   }
+  // Note: No disclaimer shown when social profiles are missing
 
   html += '      </div>\n';
 

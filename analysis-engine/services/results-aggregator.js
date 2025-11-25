@@ -26,6 +26,44 @@ import { ValidationService } from './validation-service.js';
 import { selectTopIssues } from './top-issues-selector.js';
 import { deduplicateIssues } from './issue-deduplication-service.js';
 
+/**
+ * Extract email from business intelligence signals array
+ * @param {Array} signals - Array of signal strings from business_intelligence.decisionMakerAccessibility.signals
+ * @returns {string|null} - Extracted email or null
+ */
+function extractEmailFromSignals(signals) {
+  if (!signals || !Array.isArray(signals)) return null;
+
+  for (const signal of signals) {
+    const match = signal.match(/(?:Direct email found|Generic email):\s*([^\s]+@[^\s]+)/i);
+    if (match && match[1]) {
+      const email = match[1].trim();
+      // Validate it's a real email (not an image file)
+      if (email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/) && !email.match(/\.(png|jpg|jpeg|gif|svg)$/i)) {
+        return email;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Extract phone number from business intelligence signals array
+ * @param {Array} signals - Array of signal strings from business_intelligence.decisionMakerAccessibility.signals
+ * @returns {string|null} - Extracted phone or null
+ */
+function extractPhoneFromSignals(signals) {
+  if (!signals || !Array.isArray(signals)) return null;
+
+  for (const signal of signals) {
+    const phoneMatch = signal.match(/\b(\d{3}[-.\s]?\d{3}[-.\s]?\d{4}|\(\d{3}\)\s*\d{3}[-.\s]?\d{4})\b/);
+    if (phoneMatch && phoneMatch[1]) {
+      return phoneMatch[1];
+    }
+  }
+  return null;
+}
+
 export class ResultsAggregator {
   constructor(options = {}) {
     this.onProgress = options.onProgress || (() => {});
@@ -408,7 +446,13 @@ export class ResultsAggregator {
           quickWins.length
         ),
         social_platforms_present: parsedData.social.platformsPresent,
-        contact_email: parsedData.content?.contactInfo?.emails?.[0] || context.contact_email || null,
+        contact_email: parsedData.content?.contactInfo?.emails?.[0] ||
+                      context.contact_email ||
+                      extractEmailFromSignals(businessIntel.decisionMakerAccessibility?.signals) ||
+                      null,
+        contact_phone: extractPhoneFromSignals(businessIntel.decisionMakerAccessibility?.signals) ||
+                      context.contact_phone ||
+                      null,
 
         // Business intelligence data
         years_in_business: businessIntel.yearsInBusiness?.estimatedYears,
@@ -938,10 +982,15 @@ export class ResultsAggregator {
       // Screenshots (provide both _path and _url for compatibility)
       // _path: Expected by report generator (auto-report-generator.js)
       // _url: Used by database schema (leads.json)
-      screenshot_desktop_path: screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop,
-      screenshot_mobile_path: screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile,
-      screenshot_desktop_url: screenshotsManifest?.pages['/']?.desktop?.url || screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop,
-      screenshot_mobile_url: screenshotsManifest?.pages['/']?.mobile?.url || screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile,
+      // Storage mode determines whether _url contains local paths or Supabase URLs
+      screenshot_desktop_path: screenshotPaths[homepage.url]?.desktop || screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop,
+      screenshot_mobile_path: screenshotPaths[homepage.url]?.mobile || screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile,
+      screenshot_desktop_url: (process.env.SCREENSHOT_STORAGE === 'local')
+        ? (screenshotPaths[homepage.url]?.desktop || screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop)
+        : (screenshotsManifest?.pages[homepage.url]?.desktop?.url || screenshotPaths[homepage.url]?.desktop || screenshotPaths['/']?.desktop || screenshotPaths['']?.desktop),
+      screenshot_mobile_url: (process.env.SCREENSHOT_STORAGE === 'local')
+        ? (screenshotPaths[homepage.url]?.mobile || screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile)
+        : (screenshotsManifest?.pages[homepage.url]?.mobile?.url || screenshotPaths[homepage.url]?.mobile || screenshotPaths['/']?.mobile || screenshotPaths['']?.mobile),
 
       // NEW: Screenshots manifest (Supabase Storage with multi-page support)
       screenshots_manifest: screenshotsManifest,
@@ -958,6 +1007,9 @@ export class ResultsAggregator {
 
       // Business intelligence
       business_intelligence: businessIntel,
+
+      // Benchmark ID (foreign key)
+      matched_benchmark_id: benchmark ? benchmark.id : null,
 
       // Benchmark comparison data (if available)
       matched_benchmark: benchmark ? {

@@ -10,7 +10,8 @@
     "test": "node tests/unit/test-prompt-loader.js && node tests/unit/test-analyzers.js && node tests/unit/test-grading-system.js",
     "test:prompts": "node tests/unit/test-prompt-loader.js",
     "test:analyzers": "node tests/unit/test-analyzers.js",
-    "test:grading": "node tests/unit/test-grading-system.js"
+    "test:grading": "node tests/unit/test-grading-system.js",
+    "postinstall": "npx playwright install chromium chromium-headless-shell"
   },
   "keywords": [
     "website-analysis",

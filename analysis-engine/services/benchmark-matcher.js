@@ -32,21 +32,12 @@ export async function findBestBenchmark(targetBusiness, options = {}) {
   console.log(`\n🔍 Finding best benchmark for: ${targetBusiness.company_name}`);
 
   try {
-    // Step 1: Get candidate benchmarks from database
-    console.log(`  └─ Fetching benchmarks for industry: ${targetBusiness.industry}`);
+    // Step 1: Get ALL candidate benchmarks from database (let AI do semantic matching)
+    console.log(`  └─ Fetching all benchmarks (AI will match based on industry similarity)`);
 
-    let candidateBenchmarks = await getBenchmarksByIndustry(targetBusiness.industry, {
+    let candidateBenchmarks = await getBenchmarks({
       limit: maxCandidates
     });
-
-    // If no exact industry match, get broader set
-    if (candidateBenchmarks.length === 0) {
-      console.log(`  └─ No exact industry match, fetching broader set...`);
-      candidateBenchmarks = await getBenchmarks({
-        qualityFlag: 'approved',
-        limit: maxCandidates
-      });
-    }
 
     // Filter by tiers
     candidateBenchmarks = candidateBenchmarks.filter(b =>
