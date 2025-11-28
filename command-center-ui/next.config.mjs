@@ -1,12 +1,16 @@
-import { config } from 'dotenv';
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-// Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-config({ path: resolve(__dirname, '../.env') });
+
+// Only load from .env file in local development
+// Vercel provides environment variables directly via their dashboard
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  const { config } = await import('dotenv');
+  config({ path: resolve(__dirname, '../.env') });
+}
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
