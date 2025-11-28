@@ -9,6 +9,7 @@ export * from './lead-detail-modal';
 export * from './lead-details-card';
 export * from './business-intel-badges';
 export * from './reports-section';
+export * from './leads-engine-info';
 
 // Enhanced Visualization Components
 export * from './dimension-radar-chart';

@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LeadsTable, LeadDetailModal } from '@/components/leads';
+import { LeadsTable, LeadDetailModal, LeadsEngineInfo } from '@/components/leads';
 import { useLeads } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
 import { LoadingOverlay, PageLayout } from '@/components/shared';
@@ -21,6 +21,9 @@ export default function LeadsPage() {
   // Detail modal state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
+
+  // Info panel state
+  const [showEngineInfo, setShowEngineInfo] = useState(false);
 
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
@@ -47,6 +50,12 @@ export default function LeadsPage() {
         title="Leads"
         description="Analyzed leads with detailed insights and recommendations"
       >
+        {/* Leads Engine Info */}
+        <LeadsEngineInfo
+          isExpanded={showEngineInfo}
+          onToggle={() => setShowEngineInfo(!showEngineInfo)}
+        />
+
         {/* Error State */}
         {error && (
           <div className="rounded-lg border border-destructive bg-destructive/10 p-4">

@@ -424,10 +424,9 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
               Clear
             </Button>
             <Button
-              variant="ghost"
               size="sm"
               onClick={() => setShowReportModal(true)}
-              className="h-7 px-2 text-xs"
+              className="h-7 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white"
             >
               <FileText className="w-3 h-3 mr-1" />
               Report
@@ -435,7 +434,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
             <Button
               size="sm"
               onClick={() => setShowOutreachModal(true)}
-              className="h-7 px-2 text-xs bg-purple-600 hover:bg-purple-700"
+              className="h-7 px-2 text-xs bg-purple-600 hover:bg-purple-700 text-white"
             >
               <Sparkles className="w-3 h-3 mr-1" />
               Outreach

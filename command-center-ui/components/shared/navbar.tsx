@@ -78,13 +78,8 @@ const NAV_GROUPS: NavGroup[] = [
     ]
   },
   {
-    label: 'Manage',
+    label: 'Sales',
     items: [
-      {
-        label: 'Projects',
-        href: '/projects',
-        icon: <FolderKanban className="w-5 h-5" />
-      },
       {
         label: 'Leads',
         href: '/leads',
@@ -94,6 +89,16 @@ const NAV_GROUPS: NavGroup[] = [
         label: 'Outreach',
         href: '/outreach',
         icon: <Mail className="w-5 h-5" />
+      },
+    ]
+  },
+  {
+    label: 'Manage',
+    items: [
+      {
+        label: 'Projects',
+        href: '/projects',
+        icon: <FolderKanban className="w-5 h-5" />
       },
       {
         label: 'Reports',
