@@ -26,12 +26,14 @@ interface ProjectSelectionCardProps {
   selectedProjectId: string | null;
   onProjectChange: (projectId: string | null) => void;
   prospectCount?: number;
+  hideCreateButton?: boolean;
 }
 
 export function ProjectSelectionCard({
   selectedProjectId,
   onProjectChange,
-  prospectCount = 0
+  prospectCount = 0,
+  hideCreateButton = false
 }: ProjectSelectionCardProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +130,10 @@ export function ProjectSelectionCard({
           <span>Step 1: Select Project</span>
         </CardTitle>
         <CardDescription>
-          Choose or create a project to organize your prospects
+          {hideCreateButton
+            ? 'Select a project to view and analyze its prospects'
+            : 'Choose or create a project to organize your prospects'
+          }
         </CardDescription>
       </CardHeader>
 
@@ -154,7 +159,10 @@ export function ProjectSelectionCard({
                 ))}
                 {projects.length === 0 && !loading && (
                   <SelectItem value="none" disabled>
-                    No active projects - create one below
+                    {hideCreateButton
+                      ? 'No active projects available'
+                      : 'No active projects - create one below'
+                    }
                   </SelectItem>
                 )}
               </SelectContent>
@@ -162,9 +170,11 @@ export function ProjectSelectionCard({
           </div>
 
           {/* Create New Project Button */}
-          <div className="flex items-end">
-            <CreateProjectDialog onProjectCreated={handleProjectCreated} />
-          </div>
+          {!hideCreateButton && (
+            <div className="flex items-end">
+              <CreateProjectDialog onProjectCreated={handleProjectCreated} />
+            </div>
+          )}
         </div>
 
         {/* Error message */}
@@ -175,7 +185,10 @@ export function ProjectSelectionCard({
         {/* Helper text */}
         {!selectedProjectId && (
           <p className="text-sm text-amber-600 dark:text-amber-400">
-            Select a project to continue with prospecting
+            {hideCreateButton
+              ? 'Select a project to continue with analysis'
+              : 'Select a project to continue with prospecting'
+            }
           </p>
         )}
       </CardContent>

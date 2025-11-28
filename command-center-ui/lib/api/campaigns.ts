@@ -1,32 +1,45 @@
 /**
  * Campaigns API Client
- * Manages automated campaigns via Pipeline Orchestrator
+ * Manages automated campaigns via Next.js API (with user isolation)
  */
 
 import type { Campaign, CampaignConfig, CampaignRun } from '@/lib/types/campaign';
 
-const ORCHESTRATOR_API = process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020';
+// All campaign operations now use Next.js API routes with user isolation
+// The orchestrator is called from the API routes, not directly from the client
 
 /**
- * Get all campaigns
+ * Get all campaigns for the current user
+ * Uses Next.js API route with user isolation
  */
 export async function getCampaigns(): Promise<Campaign[]> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns`);
+  try {
+    // Use the proxied API route with user isolation
+    const response = await fetch('/api/campaigns');
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to fetch campaigns' }));
-    throw new Error(error.error || `HTTP ${response.status}: Failed to fetch campaigns`);
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Failed to fetch campaigns' }));
+      throw new Error(error.error || `HTTP ${response.status}: Failed to fetch campaigns`);
+    }
+
+    const data = await response.json();
+    return data.campaigns || data.data || [];
+  } catch (error: any) {
+    // If API is unavailable, return empty array silently
+    if (error.message?.includes('fetch') || error.name === 'TypeError') {
+      console.warn('Campaigns API unavailable');
+      return [];
+    }
+    throw error;
   }
-
-  const data = await response.json();
-  return data.campaigns || data.data || [];
 }
 
 /**
  * Get a single campaign by ID
+ * Uses Next.js API route with user isolation
  */
 export async function getCampaign(id: string): Promise<Campaign> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns/${id}`);
+  const response = await fetch(`/api/campaigns/${id}`);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to fetch campaign' }));
@@ -39,9 +52,10 @@ export async function getCampaign(id: string): Promise<Campaign> {
 
 /**
  * Create a new campaign
+ * Uses Next.js API route with user isolation
  */
 export async function createCampaign(config: CampaignConfig): Promise<Campaign> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns`, {
+  const response = await fetch('/api/campaigns', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -60,9 +74,10 @@ export async function createCampaign(config: CampaignConfig): Promise<Campaign> 
 
 /**
  * Run a campaign immediately
+ * Uses Next.js API route with user isolation
  */
 export async function runCampaign(id: string): Promise<{ runId: string; message: string }> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns/${id}/run`, {
+  const response = await fetch(`/api/campaigns/${id}/run`, {
     method: 'POST',
   });
 
@@ -80,9 +95,10 @@ export async function runCampaign(id: string): Promise<{ runId: string; message:
 
 /**
  * Pause a campaign
+ * Uses Next.js API route with user isolation
  */
 export async function pauseCampaign(id: string): Promise<Campaign> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns/${id}/pause`, {
+  const response = await fetch(`/api/campaigns/${id}/pause`, {
     method: 'PUT',
   });
 
@@ -97,9 +113,10 @@ export async function pauseCampaign(id: string): Promise<Campaign> {
 
 /**
  * Resume a paused campaign
+ * Uses Next.js API route with user isolation
  */
 export async function resumeCampaign(id: string): Promise<Campaign> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns/${id}/resume`, {
+  const response = await fetch(`/api/campaigns/${id}/resume`, {
     method: 'PUT',
   });
 
@@ -114,9 +131,10 @@ export async function resumeCampaign(id: string): Promise<Campaign> {
 
 /**
  * Delete a campaign
+ * Uses Next.js API route with user isolation
  */
 export async function deleteCampaign(id: string): Promise<{ message: string }> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns/${id}`, {
+  const response = await fetch(`/api/campaigns/${id}`, {
     method: 'DELETE',
   });
 
@@ -133,9 +151,10 @@ export async function deleteCampaign(id: string): Promise<{ message: string }> {
 
 /**
  * Get campaign run history
+ * Uses Next.js API route with user isolation
  */
 export async function getCampaignRuns(campaignId: string): Promise<CampaignRun[]> {
-  const response = await fetch(`${ORCHESTRATOR_API}/api/campaigns/${campaignId}/runs`);
+  const response = await fetch(`/api/campaigns/${campaignId}/runs`);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Failed to fetch campaign runs' }));

@@ -5,16 +5,17 @@
  * Visual step progress indicator for the analysis workflow
  */
 
-import { CheckCircle2, FolderOpen, Sparkles } from 'lucide-react';
+import { CheckCircle2, FolderOpen, Users, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AnalysisStepIndicatorProps {
-  currentStep: 1 | 2;
+  currentStep: 1 | 2 | 3;
 }
 
 const STEPS = [
   { num: 1, label: 'Select Project', icon: FolderOpen },
-  { num: 2, label: 'Select & Analyze', icon: Sparkles }
+  { num: 2, label: 'Select Prospects', icon: Users },
+  { num: 3, label: 'Analyze', icon: Zap }
 ];
 
 export function AnalysisStepIndicator({ currentStep }: AnalysisStepIndicatorProps) {
@@ -45,7 +46,7 @@ export function AnalysisStepIndicator({ currentStep }: AnalysisStepIndicatorProp
               </div>
               <span
                 className={cn(
-                  'mt-1.5 text-xs sm:text-sm font-medium transition-colors duration-300',
+                  'mt-1.5 text-xs sm:text-sm font-medium transition-colors duration-300 text-center',
                   isCompleted && 'text-green-600',
                   isCurrent && 'text-primary',
                   !isCompleted && !isCurrent && 'text-muted-foreground'
@@ -59,7 +60,7 @@ export function AnalysisStepIndicator({ currentStep }: AnalysisStepIndicatorProp
             {idx < STEPS.length - 1 && (
               <div
                 className={cn(
-                  'w-12 sm:w-16 md:w-24 h-0.5 mx-1.5 sm:mx-2 transition-colors duration-300',
+                  'w-10 sm:w-14 md:w-20 h-0.5 mx-1.5 sm:mx-2 transition-colors duration-300',
                   step.num < currentStep ? 'bg-green-500' : 'bg-muted'
                 )}
               />

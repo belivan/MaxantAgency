@@ -93,7 +93,7 @@ type TabType = 'tasks' | 'console';
 export function FloatingTaskIndicator() {
   const [mounted, setMounted] = useState(false);
   const { tasks, activeTasks, queuedTasks, removeTask, cancelTask } = useTaskProgress();
-  const { filteredLogs, isOpen, setIsOpen, toggleConsole } = useConsole();
+  const { filteredLogs, errorCount, isOpen, setIsOpen, toggleConsole } = useConsole();
   const [activeTab, setActiveTab] = useState<TabType>('tasks');
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set());
   const isMobile = useMobile();
@@ -131,7 +131,7 @@ export function FloatingTaskIndicator() {
   const queuedCount = queuedTasks.length;
   const hasActiveTasks = activeCount > 0;
   const hasLogs = filteredLogs.length > 0;
-  const errorCount = filteredLogs.filter(log => log.level === 'error').length;
+  // errorCount is now memoized and provided by the context
 
   // Always show the floating button so users can access the console anytime
 

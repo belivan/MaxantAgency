@@ -5,7 +5,7 @@
  * Manages console logs for network requests, task events, and server logs
  */
 
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect, useMemo, ReactNode } from 'react';
 
 export type LogType = 'task' | 'network' | 'server';
 export type LogLevel = 'info' | 'success' | 'warning' | 'error';
@@ -69,6 +69,7 @@ const DEFAULT_FILTERS: ConsoleFilters = {
 interface ConsoleContextValue {
   logs: ConsoleLog[];
   filteredLogs: ConsoleLog[];
+  errorCount: number;
   filters: ConsoleFilters;
   settings: ConsoleSettings;
   isOpen: boolean;
@@ -140,31 +141,38 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
     }
   }, [logs, settings.persistLogs]);
 
-  // Filter logs based on current filters
-  const filteredLogs = logs.filter(log => {
-    // Type filter
-    if (!filters.types.includes(log.type)) return false;
+  // Filter logs based on current filters - memoized to avoid expensive recalculation
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      // Type filter
+      if (!filters.types.includes(log.type)) return false;
 
-    // Level filter
-    if (!filters.levels.includes(log.level)) return false;
+      // Level filter
+      if (!filters.levels.includes(log.level)) return false;
 
-    // Source filter (if any sources specified)
-    if (filters.sources.length > 0 && !filters.sources.includes(log.source)) return false;
+      // Source filter (if any sources specified)
+      if (filters.sources.length > 0 && !filters.sources.includes(log.source)) return false;
 
-    // Health check filter
-    if (!settings.showHealthChecks && log.details?.url?.includes('/health')) return false;
+      // Health check filter
+      if (!settings.showHealthChecks && log.details?.url?.includes('/health')) return false;
 
-    // Search filter
-    if (filters.search) {
-      const searchLower = filters.search.toLowerCase();
-      const matchesMessage = log.message.toLowerCase().includes(searchLower);
-      const matchesSource = log.source.toLowerCase().includes(searchLower);
-      const matchesUrl = log.details?.url?.toLowerCase().includes(searchLower);
-      if (!matchesMessage && !matchesSource && !matchesUrl) return false;
-    }
+      // Search filter
+      if (filters.search) {
+        const searchLower = filters.search.toLowerCase();
+        const matchesMessage = log.message.toLowerCase().includes(searchLower);
+        const matchesSource = log.source.toLowerCase().includes(searchLower);
+        const matchesUrl = log.details?.url?.toLowerCase().includes(searchLower);
+        if (!matchesMessage && !matchesSource && !matchesUrl) return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
+  }, [logs, filters, settings.showHealthChecks]);
+
+  // Memoize error count to avoid filtering on every render in consumers
+  const errorCount = useMemo(() => {
+    return filteredLogs.filter(log => log.level === 'error').length;
+  }, [filteredLogs]);
 
   // Add a new log entry
   const addLog = useCallback((log: Omit<ConsoleLog, 'id' | 'timestamp'>) => {
@@ -247,6 +255,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
       value={{
         logs,
         filteredLogs,
+        errorCount,
         filters,
         settings,
         isOpen,
@@ -270,6 +279,7 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
 const defaultContext: ConsoleContextValue = {
   logs: [],
   filteredLogs: [],
+  errorCount: 0,
   filters: DEFAULT_FILTERS,
   settings: DEFAULT_SETTINGS,
   isOpen: false,

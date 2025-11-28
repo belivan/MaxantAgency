@@ -52,7 +52,22 @@ export async function GET(request: NextRequest) {
     let prospectIdsInProject: string[] | null = null;
 
     if (projectId) {
-      // First, get all prospect IDs in this project
+      // Verify project ownership first
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('id', projectId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (projectError || !project) {
+        return NextResponse.json({
+          success: false,
+          error: 'Project not found or access denied'
+        }, { status: 404 });
+      }
+
+      // Get all prospect IDs in this project
       const { data: projectProspectsData, error: projectProspectsError } = await supabase
         .from('project_prospects')
         .select('prospect_id')
@@ -76,6 +91,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Now query prospects table with those IDs
+      // Note: user_id filter is not needed here since we already verified project ownership
       const selectFields = fields === 'id'
         ? 'id'
         : `*`;
@@ -83,8 +99,7 @@ export async function GET(request: NextRequest) {
       query = supabase
         .from('prospects')
         .select(selectFields, { count: 'exact' })
-        .in('id', prospectIdsInProject)
-        .eq('user_id', user.id);  // Filter by user_id for security
+        .in('id', prospectIdsInProject);
 
       // Apply filters directly on prospects columns
       if (status) {
@@ -105,7 +120,54 @@ export async function GET(request: NextRequest) {
         query = query.order('created_at', { ascending: false });
       }
     } else {
-      // No project filter - query prospects table directly
+      // No project filter - get all prospects from user's projects
+      // First get all project IDs owned by this user
+      const { data: userProjects, error: projectsError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (projectsError) {
+        console.error('Error fetching user projects:', projectsError);
+        throw new Error(`Failed to fetch user projects: ${projectsError.message}`);
+      }
+
+      const userProjectIds = userProjects?.map(p => p.id) || [];
+
+      // If user has no projects, return empty result
+      if (userProjectIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          prospects: [],
+          total: 0,
+          count: 0
+        });
+      }
+
+      // Get all prospect IDs from user's projects
+      const { data: prospectLinks, error: linksError } = await supabase
+        .from('project_prospects')
+        .select('prospect_id')
+        .in('project_id', userProjectIds);
+
+      if (linksError) {
+        console.error('Error fetching prospect links:', linksError);
+        throw new Error(`Failed to fetch prospect links: ${linksError.message}`);
+      }
+
+      const userProspectIds = [...new Set(prospectLinks?.map(p => p.prospect_id) || [])];
+
+      // If no prospects in user's projects, return empty result
+      if (userProspectIds.length === 0) {
+        return NextResponse.json({
+          success: true,
+          prospects: [],
+          total: 0,
+          count: 0
+        });
+      }
+
+      // Query prospects with those IDs
       const selectFields = fields === 'id'
         ? 'id'
         : `*, project_prospects(project_id, projects(id, name))`;
@@ -113,7 +175,7 @@ export async function GET(request: NextRequest) {
       query = supabase
         .from('prospects')
         .select(selectFields, { count: 'exact' })
-        .eq('user_id', user.id)  // Filter by user_id for security
+        .in('id', userProspectIds)
         .order('created_at', { ascending: false });
 
       // Apply filters

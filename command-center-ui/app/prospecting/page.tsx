@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Search, ChevronDown, ChevronUp, MapPin, Globe, Users, Brain } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ICPBriefEditor,
@@ -25,6 +25,83 @@ import { updateProject } from '@/lib/api';
 import type { ProspectGenerationOptions } from '@/lib/types';
 import type { ProspectingPrompts } from '@/lib/types/prospect';
 import { startTaskWithSSE } from '@/lib/utils/task-sse-manager';
+
+// Prospecting Engine Info Component
+function ProspectingEngineInfo({ isExpanded, onToggle }: { isExpanded: boolean; onToggle: () => void }) {
+  return (
+    <div className="mb-6 bg-gradient-to-br from-emerald-500/10 via-blue-500/5 to-purple-500/10 rounded-xl border border-emerald-500/20 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full p-4 flex items-center justify-between text-left hover:bg-muted/30 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 rounded-lg">
+            <Search className="w-5 h-5 text-emerald-500" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Prospecting Engine</h3>
+            <p className="text-sm text-muted-foreground">7-step AI pipeline: discovery → verification → extraction → social → scoring</p>
+          </div>
+        </div>
+        {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-3 border-t border-border/50">
+          <div className="pt-3 space-y-3">
+            {/* Capabilities Grid - Compact */}
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+              <div className="p-2 bg-gradient-to-br from-red-500/10 to-orange-500/5 rounded-lg border border-red-500/20 text-center">
+                <MapPin className="w-4 h-4 text-red-500 mx-auto mb-1" />
+                <span className="text-xs font-medium text-foreground">Maps</span>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 rounded-lg border border-blue-500/20 text-center">
+                <Globe className="w-4 h-4 text-blue-500 mx-auto mb-1" />
+                <span className="text-xs font-medium text-foreground">Extract</span>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-purple-500/10 to-pink-500/5 rounded-lg border border-purple-500/20 text-center">
+                <Users className="w-4 h-4 text-purple-500 mx-auto mb-1" />
+                <span className="text-xs font-medium text-foreground">Social</span>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-lg border border-emerald-500/20 text-center">
+                <Brain className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
+                <span className="text-xs font-medium text-foreground">ICP Score</span>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-orange-500/10 to-amber-500/5 rounded-lg border border-orange-500/20 text-center">
+                <Search className="w-4 h-4 text-orange-500 mx-auto mb-1" />
+                <span className="text-xs font-medium text-foreground">Query AI</span>
+              </div>
+              <div className="p-2 bg-gradient-to-br from-green-500/10 to-lime-500/5 rounded-lg border border-green-500/20 text-center">
+                <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto mb-1" />
+                <span className="text-xs font-medium text-foreground">Verify</span>
+              </div>
+            </div>
+
+            {/* Key Stats - Inline */}
+            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                ~$0.02/prospect
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                8-15s each
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                Deduplication
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                Iterative
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProspectingPage() {
   const engineStatus = useEngineHealth();
@@ -58,6 +135,9 @@ export default function ProspectingPage() {
 
   // Animation visibility state
   const [showConfiguration, setShowConfiguration] = useState(false);
+
+  // Info panel state
+  const [showEngineInfo, setShowEngineInfo] = useState(false);
 
   // Trigger configuration section animation when project selected
   useEffect(() => {
@@ -314,8 +394,11 @@ export default function ProspectingPage() {
   return (
     <PageLayout
       title="Prospecting"
-      description="Generate prospects using your Ideal Customer Profile brief"
+      description="Transform your ICP brief into verified business leads"
     >
+      {/* Prospecting Engine Info */}
+      <ProspectingEngineInfo isExpanded={showEngineInfo} onToggle={() => setShowEngineInfo(!showEngineInfo)} />
+
       {/* Step Indicator */}
       <StepIndicator currentStep={currentStep} />
 
@@ -337,8 +420,9 @@ export default function ProspectingPage() {
         prospectCount={prospectCount}
       />
 
-      {/* Step 2: Configuration (animated reveal) */}
-      <AnimatedSection isVisible={showConfiguration} delay={0}>
+      {/* Step 2: Configuration (animated reveal) - only render when project selected */}
+      {selectedProjectId && (
+        <AnimatedSection isVisible={showConfiguration} delay={0}>
         <div className="space-y-6">
           {/* Configuration Info */}
           {selectedProjectId && prospectCount > 0 && (
@@ -391,6 +475,7 @@ export default function ProspectingPage() {
           </div>
         </div>
       </AnimatedSection>
+      )}
 
       {/* Success Message */}
       {generatedCount > 0 && (

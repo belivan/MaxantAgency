@@ -2,41 +2,134 @@
 
 /**
  * Analysis Page - Step-by-Step Workflow
- * Step 1: Select Project → Step 2: Select Prospects & Analyze
+ * Step 1: Select Project → Step 2: Select Prospects → Step 3: Analyze
  */
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2, ChevronDown, FolderOpen, Plus } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select';
+import { AlertCircle, Brain, Eye, Search, Shield, BarChart3, Zap, ChevronDown, ChevronUp } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   ProspectSelector,
   AnalysisConfig,
   QuickWebsiteAnalysis,
   AnalysisStepIndicator
 } from '@/components/analysis';
-import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
+import { ProjectSelectionCard, AnimatedSection } from '@/components/prospecting';
 import { PageLayout } from '@/components/shared';
-import { AnimatedSection } from '@/components/prospecting';
 import { type AnalysisPrompts, type PromptConfig } from '@/components/analysis/prompt-editor';
 import { useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
-import { updateProject, getProject, getProjects } from '@/lib/api';
-import type { Project } from '@/lib/types';
+import { updateProject, getProject } from '@/lib/api';
 import type { AnalysisOptionsFormData } from '@/lib/utils/validation';
-import { cn } from '@/lib/utils';
 
 const DEFAULT_ANALYSIS_MODEL = 'claude-haiku-4-5';
+
+// Analysis Engine Info Component
+function AnalysisEngineInfo({ isExpanded, onToggle }: { isExpanded: boolean; onToggle: () => void }) {
+  return (
+    <div className="mb-6 bg-gradient-to-br from-primary/5 via-card to-card rounded-xl border border-primary/20 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full p-4 flex items-center justify-between text-left hover:bg-muted/30 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Brain className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Analysis Engine</h3>
+            <p className="text-sm text-muted-foreground">6 AI agents analyze websites across design, SEO, content, social, and accessibility</p>
+          </div>
+        </div>
+        {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 border-t border-border/50">
+          <div className="pt-4 space-y-4">
+            {/* Pipeline Overview */}
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              The Analysis Engine transforms prospects into qualified leads through a <span className="text-foreground font-medium">5-phase intelligent pipeline</span>:
+              discovery, page selection, crawling, parallel analysis, and results aggregation.
+            </p>
+
+            {/* Analyzers Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Eye className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-foreground">Visual Analysis</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Desktop & mobile screenshots analyzed with GPT-5 Vision</p>
+              </div>
+
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Search className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-foreground">SEO & Content</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Technical SEO, meta tags, content quality, and messaging</p>
+              </div>
+
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Shield className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm font-medium text-foreground">Accessibility</span>
+                </div>
+                <p className="text-xs text-muted-foreground">WCAG 2.1 Level AA compliance auditing</p>
+              </div>
+
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <BarChart3 className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-medium text-foreground">Social Media</span>
+                </div>
+                <p className="text-xs text-muted-foreground">Social presence, profiles, and engagement analysis</p>
+              </div>
+
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                  <span className="text-sm font-medium text-foreground">Performance</span>
+                </div>
+                <p className="text-xs text-muted-foreground">PageSpeed Insights & Core Web Vitals</p>
+              </div>
+
+              <div className="p-3 bg-muted/30 rounded-lg border border-border/50">
+                <div className="flex items-center gap-2 mb-1">
+                  <Brain className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Lead Scoring</span>
+                </div>
+                <p className="text-xs text-muted-foreground">AI-powered lead qualification with priority tiers</p>
+              </div>
+            </div>
+
+            {/* Key Stats */}
+            <div className="flex flex-wrap gap-4 pt-2 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-primary" />
+                A-F grading with weighted scores
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-green-500" />
+                ~$0.05 per analysis
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                2-3 min per website
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+                Multi-page crawling
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const buildDefaultModelSelections = (): Record<string, string> => ({
   unifiedVisual: DEFAULT_ANALYSIS_MODEL,
@@ -80,10 +173,8 @@ export default function AnalysisPage() {
   const urlProjectId = searchParams.get('project_id');
 
   // Project state
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [loadingProjects, setLoadingProjects] = useState(true);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
-  const [isProjectExpanded, setIsProjectExpanded] = useState(!urlProjectId);
+  const [prospectCount, setProspectCount] = useState(0);
 
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -99,14 +190,20 @@ export default function AnalysisPage() {
   const isLoadingPromptsRef = useRef(false);
 
   const [leadsCount, setLeadsCount] = useState(0);
-  const [promptsLoading, setPromptsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Animation state
   const [showWorkspace, setShowWorkspace] = useState(false);
 
+  // Info panel state
+  const [showEngineInfo, setShowEngineInfo] = useState(false);
+
   // Derive current step
-  const currentStep = useMemo((): 1 | 2 => {
-    return selectedProjectId ? 2 : 1;
-  }, [selectedProjectId]);
+  const currentStep = useMemo((): 1 | 2 | 3 => {
+    if (!selectedProjectId) return 1;
+    if (selectedIds.length === 0) return 2;
+    return 3;
+  }, [selectedProjectId, selectedIds.length]);
 
   // Update refs
   useEffect(() => {
@@ -114,33 +211,13 @@ export default function AnalysisPage() {
     defaultModelSelectionsRef.current = defaultModelSelections;
   }, [defaultPrompts, defaultModelSelections]);
 
-  // Load projects
-  useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        setLoadingProjects(true);
-        const data = await getProjects({ status: 'active' });
-        setProjects(data);
-      } catch (err) {
-        console.error('Failed to load projects:', err);
-      } finally {
-        setLoadingProjects(false);
-      }
-    };
-    fetchProjects();
-  }, []);
-
-  // Show workspace when project selected
+  // Animate workspace reveal when project selected
   useEffect(() => {
     if (selectedProjectId) {
-      const timer = setTimeout(() => {
-        setShowWorkspace(true);
-        setIsProjectExpanded(false);
-      }, 150);
+      const timer = setTimeout(() => setShowWorkspace(true), 150);
       return () => clearTimeout(timer);
     } else {
       setShowWorkspace(false);
-      setIsProjectExpanded(true);
     }
   }, [selectedProjectId]);
 
@@ -149,7 +226,6 @@ export default function AnalysisPage() {
     async function loadDefaultPrompts() {
       try {
         isLoadingPromptsRef.current = true;
-        setPromptsLoading(true);
         const response = await fetch('/api/analysis/prompts');
         const result = await response.json();
 
@@ -165,7 +241,6 @@ export default function AnalysisPage() {
       } catch (error) {
         console.error('Failed to load default prompts:', error);
       } finally {
-        setPromptsLoading(false);
         setTimeout(() => { isLoadingPromptsRef.current = false; }, 100);
       }
     }
@@ -182,11 +257,18 @@ export default function AnalysisPage() {
         setCurrentPrompts(currentDefaultPrompts);
         setCurrentModelSelections(currentDefaultModelSelections);
         setLeadsCount(0);
+        setProspectCount(0);
         return;
       }
 
       try {
-        const project = await getProject(selectedProjectId);
+        // Load project and prospect count in parallel
+        const [projectResponse, prospectsResponse] = await Promise.all([
+          getProject(selectedProjectId),
+          fetch(`/api/projects/${selectedProjectId}/prospects`)
+        ]);
+
+        const project = projectResponse;
         const projectPrompts = (project as any).analysis_prompts as AnalysisPrompts | undefined;
         const projectModelSelections = (project as any).analysis_model_selections as Record<string, string> | undefined;
 
@@ -224,6 +306,13 @@ export default function AnalysisPage() {
           );
         }
 
+        // Get prospect count
+        if (prospectsResponse.ok) {
+          const prospectsData = await prospectsResponse.json();
+          setProspectCount(prospectsData.data?.length || 0);
+        }
+
+        // Get leads count
         const leadsResponse = await fetch(`/api/leads?project_id=${selectedProjectId}`);
         const leadsResult = await leadsResponse.json();
         if (leadsResult.success) setLeadsCount(leadsResult.total || 0);
@@ -247,19 +336,19 @@ export default function AnalysisPage() {
 
   const refreshLeads = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
-  }, []);
+    // Also refresh prospect count
+    if (selectedProjectId) {
+      fetch(`/api/projects/${selectedProjectId}/prospects`)
+        .then(res => res.json())
+        .then(data => setProspectCount(data.data?.length || 0))
+        .catch(() => {});
+    }
+  }, [selectedProjectId]);
 
   const handleProjectChange = (projectId: string | null) => {
     setSelectedProjectId(projectId);
     setSelectedIds([]); // Clear selections when project changes
   };
-
-  const handleProjectCreated = (project: Project) => {
-    setProjects(prev => [...prev, project]);
-    handleProjectChange(project.id);
-  };
-
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const handleAnalyze = async (config: AnalysisOptionsFormData) => {
     if (selectedIds.length === 0) {
@@ -319,13 +408,13 @@ export default function AnalysisPage() {
       if (queueData.exclusion_reasons) {
         const { no_website, problematic_website, already_analyzed } = queueData.exclusion_reasons;
         if (no_website?.length > 0) {
-          addLog(taskId, `⚠️ Skipped ${no_website.length} (no website)`, 'warning');
+          addLog(taskId, `Skipped ${no_website.length} (no website)`, 'warning');
         }
         if (problematic_website?.length > 0) {
-          addLog(taskId, `⚠️ Skipped ${problematic_website.length} (website issues)`, 'warning');
+          addLog(taskId, `Skipped ${problematic_website.length} (website issues)`, 'warning');
         }
         if (already_analyzed?.length > 0) {
-          addLog(taskId, `ℹ️ ${already_analyzed.length} will be re-analyzed`, 'info');
+          addLog(taskId, `${already_analyzed.length} will be re-analyzed`, 'info');
         }
       }
 
@@ -350,9 +439,9 @@ export default function AnalysisPage() {
 
           jobs.forEach((job: any) => {
             if (job.state === 'completed' && job.result?.company_name && job.result?.grade) {
-              addLog(taskId, `✅ ${job.result.company_name}: Grade ${job.result.grade}`, 'success');
+              addLog(taskId, `${job.result.company_name}: Grade ${job.result.grade}`, 'success');
             } else if (job.state === 'failed') {
-              addLog(taskId, `❌ Failed: ${job.error || 'Unknown error'}`, 'error');
+              addLog(taskId, `Failed: ${job.error || 'Unknown error'}`, 'error');
             }
           });
 
@@ -363,7 +452,7 @@ export default function AnalysisPage() {
             if (failedJobs > 0) {
               addLog(taskId, `Complete: ${completedJobs} succeeded, ${failedJobs} failed`, 'warning');
             } else {
-              addLog(taskId, `✓ All ${completedJobs} leads analyzed!`, 'success');
+              addLog(taskId, `All ${completedJobs} leads analyzed!`, 'success');
             }
             completeTask(taskId);
             refreshLeads();
@@ -387,137 +476,92 @@ export default function AnalysisPage() {
   const isAnalysisEngineOffline = engineStatus.analysis === 'offline';
 
   return (
-    <PageLayout title="Website Analysis" description="Analyze prospects and generate leads">
+    <PageLayout title="Website Analysis" description="Transform prospects into qualified leads with AI-powered analysis">
+      {/* Analysis Engine Info */}
+      <AnalysisEngineInfo isExpanded={showEngineInfo} onToggle={() => setShowEngineInfo(!showEngineInfo)} />
+
       {/* Step Indicator */}
       <AnalysisStepIndicator currentStep={currentStep} />
 
       {/* Engine Offline Warning */}
       {isAnalysisEngineOffline && (
-        <Alert variant="destructive" className="py-2">
+        <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-sm">
-            Analysis engine offline (port 3001)
+          <AlertTitle>Analysis Engine Offline</AlertTitle>
+          <AlertDescription>
+            The analysis engine is not responding. Please start the analysis-engine service (port 3001).
           </AlertDescription>
         </Alert>
       )}
 
       {/* Step 1: Project Selection */}
-      {isProjectExpanded ? (
-        <Card className="border-2 border-primary/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FolderOpen className="w-5 h-5" />
-              Step 1: Select Project
-            </CardTitle>
-            <CardDescription>Choose a project to analyze prospects from</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="project-select">Project</Label>
-                <Select
-                  value={selectedProjectId || undefined}
-                  onValueChange={handleProjectChange}
-                  disabled={loadingProjects}
-                >
-                  <SelectTrigger id="project-select" className="w-full h-11">
-                    <SelectValue placeholder={loadingProjects ? 'Loading...' : 'Select a project...'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {projects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                        {project.client_name && ` - ${project.client_name}`}
-                      </SelectItem>
-                    ))}
-                    {projects.length === 0 && !loadingProjects && (
-                      <SelectItem value="none" disabled>No active projects</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <CreateProjectDialog onProjectCreated={handleProjectCreated} />
-              </div>
-            </div>
-            {!selectedProjectId && (
-              <p className="text-sm text-amber-600 dark:text-amber-400">
-                Select a project to continue
-              </p>
+      <ProjectSelectionCard
+        selectedProjectId={selectedProjectId}
+        onProjectChange={handleProjectChange}
+        prospectCount={prospectCount}
+        hideCreateButton={true}
+      />
+
+      {/* Step 2 & 3: Workspace (only render when project is selected) */}
+      {selectedProjectId && (
+        <AnimatedSection isVisible={showWorkspace} delay={0}>
+          <div className="space-y-4">
+            {/* Project Info Alert */}
+            {prospectCount > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Project Loaded</AlertTitle>
+                <AlertDescription>
+                  This project has {prospectCount} prospects. Select prospects from the table or use Quick Analysis.
+                </AlertDescription>
+              </Alert>
             )}
-          </CardContent>
-        </Card>
-      ) : selectedProject && (
-        <Card
-          className="cursor-pointer hover:bg-muted/50 border-green-500/50 bg-green-50/50 dark:bg-green-950/20"
-          onClick={() => setIsProjectExpanded(true)}
-        >
-          <CardContent className="py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                  <CheckCircle2 className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="font-medium text-sm">{selectedProject.name}</p>
-                  {leadsCount > 0 && (
-                    <p className="text-xs text-muted-foreground">{leadsCount} existing leads</p>
-                  )}
+
+            {/* Main Workspace Grid */}
+            <div className="grid gap-4 lg:grid-cols-3">
+              {/* Left: Prospects Table + Quick Analysis (2 cols on desktop) */}
+              <div className="lg:col-span-2 space-y-4">
+                {/* Quick Website Analysis */}
+                <QuickWebsiteAnalysis
+                  selectedProjectId={selectedProjectId}
+                  disabled={false}
+                  engineOffline={isAnalysisEngineOffline}
+                  onSuccess={refreshLeads}
+                />
+
+                {/* Prospects Selector - filters locked since project is selected */}
+                <ProspectSelector
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  preSelectedIds={preSelectedIds}
+                  projectId={selectedProjectId}
+                  filtersLocked={true}
+                />
+              </div>
+
+              {/* Right: Analysis Config (1 col on desktop) */}
+              <div className="lg:col-span-1">
+                <div className="lg:sticky lg:top-20">
+                  <AnalysisConfig
+                    prospectCount={selectedIds.length}
+                    onSubmit={handleAnalyze}
+                    isLoading={false}
+                    disabled={isAnalysisEngineOffline || selectedIds.length === 0}
+                    customPrompts={currentPrompts || undefined}
+                    defaultPrompts={defaultPrompts || undefined}
+                    onPromptsChange={handlePromptsChange}
+                    promptsLocked={false}
+                    leadsCount={leadsCount}
+                    modelSelections={currentModelSelections}
+                    defaultModelSelections={defaultModelSelections}
+                    onModelSelectionsChange={handleModelSelectionsChange}
+                  />
                 </div>
               </div>
-              <Button variant="ghost" size="sm" className="text-muted-foreground">
-                Change
-                <ChevronDown className="w-4 h-4 ml-1" />
-              </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </AnimatedSection>
       )}
-
-      {/* Step 2: Analysis Workspace */}
-      <AnimatedSection isVisible={showWorkspace} delay={0}>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {/* Left: Prospects Table (2 cols on desktop) */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Quick Website Analysis */}
-            <QuickWebsiteAnalysis
-              selectedProjectId={selectedProjectId}
-              disabled={false}
-              engineOffline={isAnalysisEngineOffline}
-              onSuccess={refreshLeads}
-            />
-
-            {/* Prospects Selector (without project dropdown - already selected above) */}
-            <ProspectSelector
-              selectedIds={selectedIds}
-              onSelectionChange={setSelectedIds}
-              preSelectedIds={preSelectedIds}
-              projectId={selectedProjectId}
-              onProjectChange={handleProjectChange}
-            />
-          </div>
-
-          {/* Right: Analysis Config (1 col on desktop) */}
-          <div className="lg:col-span-1">
-            <div className="lg:sticky lg:top-20">
-              <AnalysisConfig
-                prospectCount={selectedIds.length}
-                onSubmit={handleAnalyze}
-                isLoading={false}
-                disabled={isAnalysisEngineOffline}
-                customPrompts={currentPrompts || undefined}
-                defaultPrompts={defaultPrompts || undefined}
-                onPromptsChange={handlePromptsChange}
-                promptsLocked={false}
-                leadsCount={leadsCount}
-                modelSelections={currentModelSelections}
-                defaultModelSelections={defaultModelSelections}
-                onModelSelectionsChange={handleModelSelectionsChange}
-              />
-            </div>
-          </div>
-        </div>
-      </AnimatedSection>
     </PageLayout>
   );
 }

@@ -16,9 +16,14 @@ import { writeFile, readFile, unlink, mkdir, readdir, stat } from 'fs/promises';
 import { join, dirname, basename } from 'path';
 import { existsSync } from 'fs';
 
-// Configuration via environment variables
-const STORAGE_BASE_DIR = process.env.STORAGE_BASE_DIR || '/opt/MaxantAgency/storage';
-const STORAGE_BASE_URL = process.env.STORAGE_BASE_URL || 'https://api.mintydesign.xyz/storage';
+// Configuration via environment variables (read lazily to ensure dotenv has loaded)
+function getStorageBaseDir() {
+  return process.env.STORAGE_BASE_DIR || '/opt/MaxantAgency/storage';
+}
+
+function getStorageBaseUrl() {
+  return process.env.STORAGE_BASE_URL || 'https://api.mintydesign.xyz/storage';
+}
 
 /**
  * Ensure directory exists, creating it if necessary
@@ -36,7 +41,7 @@ async function ensureDir(dirPath) {
  * @returns {string} Absolute filesystem path
  */
 export function getStoragePath(relativePath) {
-  return join(STORAGE_BASE_DIR, relativePath);
+  return join(getStorageBaseDir(), relativePath);
 }
 
 /**
@@ -47,7 +52,7 @@ export function getStoragePath(relativePath) {
 export function getPublicUrl(relativePath) {
   // Ensure path starts without leading slash
   const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
-  return `${STORAGE_BASE_URL}/${cleanPath}`;
+  return `${getStorageBaseUrl()}/${cleanPath}`;
 }
 
 /**
@@ -228,9 +233,10 @@ export async function getFileStats(storagePath) {
  */
 export async function ensureStorageDirectories() {
   try {
-    await ensureDir(join(STORAGE_BASE_DIR, 'reports'));
-    await ensureDir(join(STORAGE_BASE_DIR, 'screenshots'));
-    console.log(`✅ Storage directories ready: ${STORAGE_BASE_DIR}`);
+    const baseDir = getStorageBaseDir();
+    await ensureDir(join(baseDir, 'reports'));
+    await ensureDir(join(baseDir, 'screenshots'));
+    console.log(`✅ Storage directories ready: ${baseDir}`);
     return true;
   } catch (error) {
     console.error(`❌ Failed to create storage directories:`, error.message);
@@ -242,11 +248,12 @@ export async function ensureStorageDirectories() {
  * Get storage configuration (for debugging)
  */
 export function getStorageConfig() {
+  const baseDir = getStorageBaseDir();
   return {
-    baseDir: STORAGE_BASE_DIR,
-    baseUrl: STORAGE_BASE_URL,
-    reportsDir: join(STORAGE_BASE_DIR, 'reports'),
-    screenshotsDir: join(STORAGE_BASE_DIR, 'screenshots')
+    baseDir,
+    baseUrl: getStorageBaseUrl(),
+    reportsDir: join(baseDir, 'reports'),
+    screenshotsDir: join(baseDir, 'screenshots')
   };
 }
 

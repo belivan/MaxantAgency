@@ -22,9 +22,10 @@ export default function RootLayout({
       <html lang="en">
         <body>
           <Providers>
-            <div className="min-h-screen bg-background">
+            <div className="bg-background min-h-screen">
               <Navbar />
-              <main>{children}</main>
+              {/* Main content: pt-14 for mobile top bar, md:pt-0 + md:ml-56 for desktop sidebar */}
+              <main className="pt-14 md:pt-0 md:ml-56">{children}</main>
             </div>
           </Providers>
         </body>

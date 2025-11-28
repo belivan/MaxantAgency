@@ -177,7 +177,7 @@ export async function getProspects(filters?: ProspectFilters): Promise<{ prospec
   if (filters?.limit) {
     params.set('limit', filters.limit.toString());
   }
-  if (filters?.offset) {
+  if (filters?.offset !== undefined) {
     params.set('offset', filters.offset.toString());
   }
 

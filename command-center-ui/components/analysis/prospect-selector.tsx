@@ -31,6 +31,7 @@ interface ProspectSelectorProps {
   preSelectedIds?: string[];
   projectId?: string | null;
   onProjectChange?: (projectId: string | null) => void;
+  filtersLocked?: boolean; // When true, filters are managed externally and disabled
 }
 
 export function ProspectSelector({
@@ -38,7 +39,8 @@ export function ProspectSelector({
   onSelectionChange,
   preSelectedIds,
   projectId,
-  onProjectChange
+  onProjectChange,
+  filtersLocked = false
 }: ProspectSelectorProps) {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<ProspectFilters>({
@@ -117,21 +119,16 @@ export function ProspectSelector({
     }));
   };
 
-  // Select all prospects in project (across all pages)
-  const handleSelectAllInProject = async () => {
-    if (!filters.project_id) {
-      alert('Please select a project first');
-      return;
-    }
-
+  // Select all prospects (across all pages with current filters)
+  const handleSelectAll = async () => {
     try {
-      // Fetch ALL prospect IDs for the project with current filters
+      // Fetch ALL prospect IDs with current filters
       const params = new URLSearchParams({
-        project_id: filters.project_id,
         fields: 'id' // Only fetch IDs to minimize data transfer
       });
 
       // Apply current filters
+      if (filters.project_id) params.append('project_id', filters.project_id);
       if (filters.status) params.append('status', filters.status as string);
       if (filters.industry) params.append('industry', filters.industry as string);
       if (filters.city) params.append('city', filters.city as string);
@@ -171,43 +168,44 @@ export function ProspectSelector({
   const startIndex = (page - 1) * pageSize + 1;
   const endIndex = Math.min(page * pageSize, total);
 
+  // Hide project filter when managed externally or when filters are locked
+  const hideProjectFilter = onProjectChange !== undefined || filtersLocked;
+
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* Filters Card */}
-      <Card className={!filters.project_id ? "border-amber-500" : ""}>
+      <Card>
         <CardHeader className="pb-2 sm:pb-3">
           <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
             <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             <span>Filters</span>
-            {!filters.project_id && (
-              <span className="text-[10px] sm:text-xs text-amber-600 font-normal">
-                (Select project)
-              </span>
-            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="grid gap-2 sm:gap-3 grid-cols-2 md:grid-cols-5">
-            {/* Project Filter */}
-            <div className="space-y-1 col-span-2 md:col-span-1">
-              <Label htmlFor="project" className="text-[10px] sm:text-xs">Project</Label>
-              <Select
-                value={filters.project_id || ''}
-                onValueChange={(value) => handleFilterChange('project_id', value || undefined)}
-                disabled={loadingProjects}
-              >
-                <SelectTrigger id="project" className={`h-8 text-xs sm:text-sm ${!filters.project_id ? "border-amber-500" : ""}`}>
-                  <SelectValue placeholder={loadingProjects ? 'Loading...' : 'Select'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className={`grid gap-2 sm:gap-3 grid-cols-2 ${hideProjectFilter ? 'md:grid-cols-4' : 'md:grid-cols-5'}`}>
+            {/* Project Filter - Only show if not managed externally */}
+            {!hideProjectFilter && (
+              <div className="space-y-1 col-span-2 md:col-span-1">
+                <Label htmlFor="project" className="text-[10px] sm:text-xs">Project</Label>
+                <Select
+                  value={filters.project_id || 'all'}
+                  onValueChange={(value) => handleFilterChange('project_id', value === 'all' ? undefined : value)}
+                  disabled={loadingProjects}
+                >
+                  <SelectTrigger id="project" className="h-8 text-xs sm:text-sm">
+                    <SelectValue placeholder={loadingProjects ? 'Loading...' : 'All'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All projects</SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Status Filter */}
             <div className="space-y-1">
@@ -215,6 +213,7 @@ export function ProspectSelector({
               <Select
                 value={filters.status as string || 'all'}
                 onValueChange={(value) => handleFilterChange('status', value === 'all' ? undefined : value)}
+                disabled={filtersLocked}
               >
                 <SelectTrigger id="status" className="h-8 text-xs sm:text-sm">
                   <SelectValue placeholder="All" />
@@ -237,6 +236,7 @@ export function ProspectSelector({
                 value={filters.industry as string || ''}
                 onChange={(e) => handleFilterChange('industry', e.target.value)}
                 className="h-8 text-xs sm:text-sm"
+                disabled={filtersLocked}
               />
             </div>
 
@@ -249,6 +249,7 @@ export function ProspectSelector({
                 value={filters.city as string || ''}
                 onChange={(e) => handleFilterChange('city', e.target.value)}
                 className="h-8 text-xs sm:text-sm"
+                disabled={filtersLocked}
               />
             </div>
 
@@ -265,6 +266,7 @@ export function ProspectSelector({
                 value={filters.min_rating || ''}
                 onChange={(e) => handleFilterChange('min_rating', e.target.value ? parseFloat(e.target.value) : undefined)}
                 className="h-8 text-xs sm:text-sm"
+                disabled={filtersLocked}
               />
             </div>
           </div>
@@ -309,8 +311,8 @@ export function ProspectSelector({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleSelectAllInProject}
-                  disabled={!filters.project_id || loading}
+                  onClick={handleSelectAll}
+                  disabled={loading || total === 0}
                   className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3"
                 >
                   <CheckSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5 sm:mr-1.5" />

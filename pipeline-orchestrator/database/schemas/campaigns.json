@@ -66,6 +66,12 @@
       "description": "Optional project/client association"
     },
     {
+      "name": "user_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Owner of this campaign (FK to users.id)"
+    },
+    {
       "name": "created_at",
       "type": "timestamptz",
       "default": "now()"
@@ -89,6 +95,23 @@
     {
       "name": "idx_campaigns_project_id",
       "columns": ["project_id"]
+    },
+    {
+      "name": "idx_campaigns_user_id",
+      "columns": ["user_id"]
+    }
+  ],
+
+  "foreignKeys": [
+    {
+      "column": "user_id",
+      "references": "users.id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "column": "project_id",
+      "references": "projects.id",
+      "onDelete": "SET NULL"
     }
   ],
 

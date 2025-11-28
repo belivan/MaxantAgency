@@ -49,6 +49,28 @@ const statusColors: Record<number, string> = {
   5: 'text-red-500', // 5xx
 };
 
+// Source badge colors based on engine/source name
+const getSourceBadgeColors = (source: string): string => {
+  const sourceLower = source.toLowerCase();
+  // Engine names
+  if (sourceLower.includes('prospect')) return 'bg-green-500/20 text-green-400 border-green-500/30';
+  if (sourceLower.includes('analysis') || sourceLower.includes('analyze')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+  if (sourceLower.includes('report')) return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+  if (sourceLower.includes('outreach') || sourceLower.includes('compose')) return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+  if (sourceLower.includes('pipeline')) return 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30';
+  if (sourceLower.includes('task')) return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+  // API paths
+  if (sourceLower.includes('/lead')) return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+  if (sourceLower.includes('/project')) return 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30';
+  if (sourceLower.includes('/campaign')) return 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30';
+  if (sourceLower.includes('/email') || sourceLower.includes('/social')) return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+  if (sourceLower.includes('/stats') || sourceLower.includes('/activity')) return 'bg-teal-500/20 text-teal-400 border-teal-500/30';
+  if (sourceLower.includes('/health')) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+  if (sourceLower.includes('/user') || sourceLower.includes('/auth') || sourceLower.includes('/client') || sourceLower.includes('/session')) return 'bg-rose-500/20 text-rose-400 border-rose-500/30';
+  if (sourceLower.includes('/api')) return 'bg-sky-500/20 text-sky-400 border-sky-500/30';
+  return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+};
+
 export function ConsoleLogEntry({ log }: ConsoleLogEntryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -82,6 +104,11 @@ export function ConsoleLogEntry({ log }: ConsoleLogEntryProps) {
     if (!status) return 'text-muted-foreground';
     const category = Math.floor(status / 100);
     return statusColors[category] || 'text-muted-foreground';
+  };
+
+  // Strip redundant prefixes like "[engine-name:console]" or "[engine-name]" from message
+  const cleanMessage = (message: string) => {
+    return message.replace(/^\[[\w-]+(?::[\w-]+)?\]\s*/i, '');
   };
 
   return (
@@ -122,13 +149,16 @@ export function ConsoleLogEntry({ log }: ConsoleLogEntryProps) {
         </span>
 
         {/* Source badge */}
-        <span className="flex-shrink-0 px-1.5 py-0.5 rounded bg-muted text-[10px] uppercase tracking-wide text-muted-foreground max-w-[100px] truncate">
+        <span className={cn(
+          "flex-shrink-0 px-1.5 py-0.5 rounded border text-[10px] uppercase tracking-wide max-w-[100px] truncate",
+          getSourceBadgeColors(log.source)
+        )}>
           {log.source}
         </span>
 
         {/* Message */}
         <span className={cn('flex-1', levelColors[log.level], !isExpanded && 'truncate')}>
-          {log.message}
+          {cleanMessage(log.message)}
         </span>
 
         {/* Duration (for network logs) */}
