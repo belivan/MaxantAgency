@@ -1,11 +1,13 @@
 'use client';
 
 import React from 'react';
-import { SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
+import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Zap, Brain, Target, TrendingUp, Sparkles, Bot, Search, FileText, Mail, BarChart3, Shield, Rocket, ArrowRight, FileCode, Layers, Clock } from 'lucide-react';
 
 export default function LandingPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-6 py-20">
@@ -25,25 +27,33 @@ export default function LandingPage() {
 
           {/* Auth CTAs */}
           <div className="flex gap-4 justify-center mb-12">
-            <SignedOut>
-              <SignUpButton mode="modal">
-                <button className="px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-semibold text-lg transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+            {!isLoaded ? (
+              // Loading state - show placeholder buttons
+              <>
+                <div className="px-8 py-4 bg-primary/50 text-primary-foreground rounded-lg font-semibold text-lg flex items-center gap-2 animate-pulse">
                   Get Started Free
                   <ArrowRight className="w-5 h-5" />
-                </button>
-              </SignUpButton>
-              <SignInButton mode="modal">
-                <button className="px-8 py-4 bg-card hover:bg-accent border border-border rounded-lg font-semibold text-lg transition-all">
+                </div>
+                <div className="px-8 py-4 bg-card/50 border border-border rounded-lg font-semibold text-lg animate-pulse">
                   Sign In
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
+                </div>
+              </>
+            ) : isSignedIn ? (
               <Link href="/dashboard" className="px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-semibold text-lg transition-all shadow-sm hover:shadow-md flex items-center gap-2">
                 Go to Dashboard
                 <ArrowRight className="w-5 h-5" />
               </Link>
-            </SignedIn>
+            ) : (
+              <>
+                <Link href="/sign-up" className="px-8 py-4 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-semibold text-lg transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+                  Get Started Free
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link href="/sign-in" className="px-8 py-4 bg-card hover:bg-accent border border-border rounded-lg font-semibold text-lg transition-all">
+                  Sign In
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Stats */}
@@ -774,28 +784,27 @@ export default function LandingPage() {
             the power of multi-agent AI.
           </p>
           <div className="flex gap-4 justify-center">
-            <SignedOut>
-              <SignUpButton mode="modal">
-                <button className="px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+            {isSignedIn ? (
+              <>
+                <Link href="/dashboard" className="px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2">
+                  Go to Dashboard
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
+                <Link href="/prospecting" className="px-8 py-3 bg-card hover:bg-accent border border-border rounded-lg font-medium transition-all">
+                  Start Prospecting
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/sign-up" className="px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2">
                   Get Started Free
                   <ArrowRight className="w-5 h-5" />
-                </button>
-              </SignUpButton>
-              <SignInButton mode="modal">
-                <button className="px-8 py-3 bg-card hover:bg-accent border border-border rounded-lg font-medium transition-all">
+                </Link>
+                <Link href="/sign-in" className="px-8 py-3 bg-card hover:bg-accent border border-border rounded-lg font-medium transition-all">
                   Sign In
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <Link href="/dashboard" className="px-8 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-all shadow-sm hover:shadow-md flex items-center gap-2">
-                Go to Dashboard
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link href="/prospecting" className="px-8 py-3 bg-card hover:bg-accent border border-border rounded-lg font-medium transition-all">
-                Start Prospecting
-              </Link>
-            </SignedIn>
+                </Link>
+              </>
+            )}
           </div>
         </section>
 

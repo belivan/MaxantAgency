@@ -135,7 +135,7 @@ export function useQueuePolling<T = any>(
   const [allJobsDone, setAllJobsDone] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const pollIntervalRef = useRef<NodeJS.Timeout>();
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const previousJobsRef = useRef<Map<string, QueueJob<T>>>(new Map());
   const allJobsDoneNotifiedRef = useRef(false);
 
@@ -247,7 +247,7 @@ export function useQueuePolling<T = any>(
   const stopPolling = useCallback(() => {
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current);
-      pollIntervalRef.current = undefined;
+      pollIntervalRef.current = null;
     }
     setIsPolling(false);
   }, []);

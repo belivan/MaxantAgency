@@ -57,11 +57,22 @@ const nextConfig = {
   },
 
   // Production build configuration
-  output: 'standalone', // For Docker deployment
+  // output: 'standalone', // Only needed for Docker deployment, not Vercel
 
   // Experimental features
   experimental: {
     externalDir: true,
+  },
+
+  // Turbopack configuration - set root directory to avoid lockfile confusion
+  turbopack: {
+    root: __dirname,
+  },
+
+  // Disable static export for Clerk compatibility
+  // Pages will be rendered on-demand (SSR)
+  typescript: {
+    ignoreBuildErrors: false,
   },
 };
 

@@ -1,0 +1,177 @@
+# Production Docker Compose for MaxantAgency
+# Backend services only - UI deployed to Vercel
+# Uses Caddy for automatic HTTPS
+
+services:
+  # Caddy Reverse Proxy (Auto-HTTPS)
+  caddy:
+    image: caddy:2-alpine
+    container_name: maksant-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - maksant-network
+    depends_on:
+      - prospecting-engine
+      - analysis-engine
+      - outreach-engine
+      - report-engine
+      - pipeline-orchestrator
+
+  # Prospecting Engine (with Playwright for scraping)
+  prospecting-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+      args:
+        SERVICE_NAME: prospecting-engine
+        PORT: 3010
+    container_name: maksant-prospecting
+    restart: unless-stopped
+    expose:
+      - "3010"
+    environment:
+      - NODE_ENV=production
+      - PORT=3010
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    shm_size: '2gb'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Analysis Engine (with Playwright for screenshots)
+  analysis-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+      args:
+        SERVICE_NAME: analysis-engine
+        PORT: 3001
+    container_name: maksant-analysis
+    restart: unless-stopped
+    expose:
+      - "3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    shm_size: '2gb'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Outreach Engine (lightweight, no Playwright)
+  outreach-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+      args:
+        SERVICE_NAME: outreach-engine
+    container_name: maksant-outreach
+    restart: unless-stopped
+    expose:
+      - "3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Pipeline Orchestrator (lightweight, no Playwright)
+  pipeline-orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.node
+      args:
+        SERVICE_NAME: pipeline-orchestrator
+    container_name: maksant-pipeline
+    restart: unless-stopped
+    expose:
+      - "3020"
+    environment:
+      - NODE_ENV=production
+      - PORT=3020
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3020/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis (Work Queue Coordination)
+  redis:
+    image: redis:7-alpine
+    container_name: maksant-redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
+  # Report Engine (with Playwright for PDF generation)
+  report-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+      args:
+        SERVICE_NAME: report-engine
+        PORT: 3003
+    container_name: maksant-reports
+    restart: unless-stopped
+    expose:
+      - "3003"
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    shm_size: '2gb'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  maksant-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+  caddy_data:
+  caddy_config:

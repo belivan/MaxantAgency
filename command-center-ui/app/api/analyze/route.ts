@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 600;
+export const maxDuration = 300; // Vercel hobby plan limit
 
 type AnalyzePayload = {
   urls: string[];

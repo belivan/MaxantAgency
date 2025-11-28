@@ -55,7 +55,7 @@ export function useSSE<T = any>(options: UseSSEOptions<T>): UseSSEReturn {
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update status and notify callback
   const updateStatus = useCallback((newStatus: SSEStatus) => {

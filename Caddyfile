@@ -1,0 +1,56 @@
+# Caddy configuration for MaxantAgency Backend
+# Auto-HTTPS enabled by default
+
+api.mintydesign.xyz {
+    # CORS headers for frontend
+    header {
+        Access-Control-Allow-Origin https://app.mintydesign.xyz
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization"
+        Access-Control-Max-Age 86400
+    }
+
+    # Handle preflight requests
+    @options method OPTIONS
+    respond @options 204
+
+    # Prospecting Engine
+    handle /prospecting/* {
+        uri strip_prefix /prospecting
+        reverse_proxy prospecting-engine:3010
+    }
+
+    # Analysis Engine
+    handle /analysis/* {
+        uri strip_prefix /analysis
+        reverse_proxy analysis-engine:3001
+    }
+
+    # Report Engine
+    handle /reports/* {
+        uri strip_prefix /reports
+        reverse_proxy report-engine:3003
+    }
+
+    # Outreach Engine
+    handle /outreach/* {
+        uri strip_prefix /outreach
+        reverse_proxy outreach-engine:3002
+    }
+
+    # Pipeline Orchestrator
+    handle /pipeline/* {
+        uri strip_prefix /pipeline
+        reverse_proxy pipeline-orchestrator:3020
+    }
+
+    # Health check endpoint
+    handle /health {
+        respond "OK" 200
+    }
+
+    # Default - return 404 for unmatched routes
+    handle {
+        respond "Not Found" 404
+    }
+}
