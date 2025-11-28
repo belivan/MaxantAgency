@@ -7,7 +7,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LeadsTable, LeadDetailModal, ReportsSection } from '@/components/leads';
+import { LeadsTable, LeadDetailModal } from '@/components/leads';
 import { useLeads } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
 import { LoadingOverlay, PageLayout } from '@/components/shared';
@@ -22,9 +22,6 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
-  // Selected leads for bulk operations
-  const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
-
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);
     setDetailModalOpen(true);
@@ -38,10 +35,6 @@ export default function LeadsPage() {
   const handleComposeEmail = (leadId: string) => {
     // Navigate to outreach page with single lead
     router.push(`/outreach?lead_ids=${leadId}`);
-  };
-
-  const handleSelectionChange = (selectedIds: string[], leads: Lead[]) => {
-    setSelectedLeads(leads);
   };
 
   return (
@@ -65,25 +58,13 @@ export default function LeadsPage() {
         {loading && !leads.length ? (
           <LoadingSection title="Loading Leads" />
         ) : (
-          <>
-            {/* Leads Table */}
-            <LeadsTable
-              leads={leads}
-              loading={loading}
-              onLeadClick={handleLeadClick}
-              onComposeEmails={handleComposeEmails}
-              onSelectionChange={handleSelectionChange}
-              onRefresh={refresh}
-            />
-
-            {/* Reports Section */}
-            {leads.length > 0 && (
-              <ReportsSection
-                selectedLeads={selectedLeads}
-                onRefresh={refresh}
-              />
-            )}
-          </>
+          <LeadsTable
+            leads={leads}
+            loading={loading}
+            onLeadClick={handleLeadClick}
+            onComposeEmails={handleComposeEmails}
+            onRefresh={refresh}
+          />
         )}
 
         {/* Lead Detail Modal */}
