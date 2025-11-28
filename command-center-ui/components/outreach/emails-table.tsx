@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { Mail, Eye, Send, MoreHorizontal, Calendar } from 'lucide-react';
+import { Mail, Eye, MoreHorizontal } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -29,7 +29,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
@@ -177,19 +176,6 @@ export function EmailsTable({
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            {email.status === 'pending' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => onSendEmail?.(email.id)}>
-                                  <Send className="w-4 h-4 mr-2" />
-                                  Send Now
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => onScheduleEmail?.(email.id)}>
-                                  <Calendar className="w-4 h-4 mr-2" />
-                                  Schedule
-                                </DropdownMenuItem>
-                              </>
-                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

@@ -79,7 +79,7 @@ export async function checkProspectingStatus(jobIds: string[]): Promise<{
   };
 }> {
   const queryString = jobIds.map(id => `job_ids=${id}`).join('&');
-  const response = await fetch(`${API_BASE}/api/prospecting-status?${queryString}`);
+  const response = await fetch(`${API_BASE}/api/prospect-status?${queryString}`);
 
   if (!response.ok) {
     const error = await response.json();

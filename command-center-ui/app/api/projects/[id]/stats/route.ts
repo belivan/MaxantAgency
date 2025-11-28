@@ -42,15 +42,15 @@ export async function GET(
     // Get grade distribution for leads
     const { data: gradeData } = await supabase
       .from('leads')
-      .select('grade')
+      .select('website_grade')
       .eq('project_id', projectId);
 
     const gradeDistribution = {
-      A: gradeData?.filter(l => l.grade === 'A').length || 0,
-      B: gradeData?.filter(l => l.grade === 'B').length || 0,
-      C: gradeData?.filter(l => l.grade === 'C').length || 0,
-      D: gradeData?.filter(l => l.grade === 'D').length || 0,
-      F: gradeData?.filter(l => l.grade === 'F').length || 0
+      A: gradeData?.filter(l => l.website_grade === 'A').length || 0,
+      B: gradeData?.filter(l => l.website_grade === 'B').length || 0,
+      C: gradeData?.filter(l => l.website_grade === 'C').length || 0,
+      D: gradeData?.filter(l => l.website_grade === 'D').length || 0,
+      F: gradeData?.filter(l => l.website_grade === 'F').length || 0
     };
 
     // Get campaigns for this project

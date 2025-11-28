@@ -9,11 +9,7 @@ import { useState } from 'react';
 import {
   Mail,
   Copy,
-  Send,
-  Calendar,
   ExternalLink,
-  Building2,
-  User,
   Sparkles
 } from 'lucide-react';
 import {
@@ -89,33 +85,6 @@ export function EmailDetailModal({
               </DialogDescription>
             </div>
 
-            {/* Action Buttons */}
-            {email.status !== 'sent' && (
-              <div className="flex flex-col gap-2">
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => {
-                    onSendEmail?.(email.id);
-                    onClose();
-                  }}
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Now
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    onScheduleEmail?.(email.id);
-                    onClose();
-                  }}
-                >
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Schedule
-                </Button>
-              </div>
-            )}
           </div>
 
           {/* Contact Info */}

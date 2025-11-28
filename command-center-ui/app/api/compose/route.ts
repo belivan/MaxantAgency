@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward request to email-composer API (port 3001)
-    const emailComposerUrl = process.env.EMAIL_COMPOSER_URL || 'http://localhost:3001';
+    // Forward request to outreach-engine API (port 3002)
+    const emailComposerUrl = process.env.NEXT_PUBLIC_OUTREACH_API || 'http://localhost:3002';
     const response = await fetch(`${emailComposerUrl}/api/compose`, {
       method: 'POST',
       headers: {

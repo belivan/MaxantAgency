@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { MessageSquare, Eye, Send, MoreHorizontal, Instagram, Facebook, Linkedin } from 'lucide-react';
+import { MessageSquare, Eye, MoreHorizontal, Instagram, Facebook, Linkedin } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -29,7 +29,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
@@ -194,15 +193,6 @@ export function SocialMessagesTable({
                               <Eye className="w-4 h-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            {message.status === 'pending' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => onSendMessage?.(message.id)}>
-                                  <Send className="w-4 h-4 mr-2" />
-                                  Send Now
-                                </DropdownMenuItem>
-                              </>
-                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

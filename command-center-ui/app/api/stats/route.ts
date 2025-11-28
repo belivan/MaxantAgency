@@ -34,16 +34,16 @@ export async function GET() {
     // Fetch leads stats
     const { data: leadsData, error: leadsError } = await supabase
       .from('leads')
-      .select('lead_grade, contact_email', { count: 'exact' });
+      .select('website_grade, contact_email', { count: 'exact' });
 
     if (leadsError) throw leadsError;
 
     const leadsByGrade = {
-      A: leadsData?.filter(l => l.lead_grade === 'A').length || 0,
-      B: leadsData?.filter(l => l.lead_grade === 'B').length || 0,
-      C: leadsData?.filter(l => l.lead_grade === 'C').length || 0,
-      D: leadsData?.filter(l => l.lead_grade === 'D').length || 0,
-      F: leadsData?.filter(l => l.lead_grade === 'F').length || 0,
+      A: leadsData?.filter(l => l.website_grade === 'A').length || 0,
+      B: leadsData?.filter(l => l.website_grade === 'B').length || 0,
+      C: leadsData?.filter(l => l.website_grade === 'C').length || 0,
+      D: leadsData?.filter(l => l.website_grade === 'D').length || 0,
+      F: leadsData?.filter(l => l.website_grade === 'F').length || 0,
       total: leadsData?.length || 0,
       withEmail: leadsData?.filter(l => l.contact_email).length || 0
     };
