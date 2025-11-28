@@ -24,7 +24,7 @@ import {
 } from './reports/storage/supabase-storage.js';
 // Database operations (reports table)
 import {
-  supabase,
+  getSupabaseClient,
   saveReportMetadata,
   getReportById,
   getReportsByLeadId,
@@ -187,7 +187,7 @@ app.post('/api/generate-from-lead', async (req, res) => {
     console.log(`   Format: ${format}`);
 
     // Fetch lead from database
-    const { data: lead, error: leadError } = await supabase
+    const { data: lead, error: leadError } = await getSupabaseClient()
       .from('leads')
       .select('*')
       .eq('id', lead_id)
@@ -204,7 +204,7 @@ app.post('/api/generate-from-lead', async (req, res) => {
     // Fetch benchmark data if matched_benchmark_id exists
     let matchedBenchmark = null;
     if (lead.matched_benchmark_id) {
-      const { data: benchmark, error: benchmarkError } = await supabase
+      const { data: benchmark, error: benchmarkError } = await getSupabaseClient()
         .from('benchmarks')
         .select('*')
         .eq('id', lead.matched_benchmark_id)
