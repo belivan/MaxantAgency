@@ -34,13 +34,21 @@ const supabase = createClient(
  */
 export async function queueReportGeneration(req, res) {
   try {
-    const { lead_id, analysisResult: providedAnalysisResult, options = {} } = req.body;
+    const { lead_id, analysisResult: providedAnalysisResult, options = {}, user_id } = req.body;
 
     // Validate input - need either lead_id OR analysisResult
     if (!lead_id && !providedAnalysisResult) {
       return res.status(400).json({
         success: false,
         error: 'Either lead_id or analysisResult is required'
+      });
+    }
+
+    // Validate user_id
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'user_id is required - every report must have an owner'
       });
     }
 
@@ -247,7 +255,8 @@ export async function queueReportGeneration(req, res) {
         sections: options.sections || ['all'],
         saveToDatabase: options.saveToDatabase !== false,
         project_id: options.project_id || leadData?.project_id || null,
-        lead_id: options.lead_id || lead_id || leadData?.id || null
+        lead_id: options.lead_id || lead_id || leadData?.id || null,
+        user_id: user_id  // Required for user data isolation
       }
     }, 1, async (data) => {
       // Execute report generation

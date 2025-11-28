@@ -36,18 +36,22 @@ export interface ReportGenerationOptions {
 /**
  * Generate a website audit report for a lead (Queue-based)
  * Returns job_id for polling-based status tracking
+ * Uses proxy route to inject user_id for data isolation
  * @preferred Use this method for new implementations
  */
 export async function generateReportQueue(
   options: ReportGenerationOptions
 ): Promise<{ job_id: string }> {
-  const response = await fetch(`${API_BASE}/api/generate-queue`, {
+  // Use proxy route that adds user_id
+  const response = await fetch('/api/reports/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       lead_id: options.lead_id,
-      format: options.format || 'html',
-      sections: options.sections || ['all']
+      options: {
+        format: options.format || 'html',
+        sections: options.sections || ['all']
+      }
     })
   });
 
@@ -67,19 +71,23 @@ export async function generateReportQueue(
 
 /**
  * Generate multiple reports in batch (Queue-based)
+ * Uses proxy route to inject user_id for data isolation
  * @param leadIds Array of lead IDs to generate reports for
  */
 export async function generateReportBatchQueue(
   leadIds: string[],
   options?: { format?: 'markdown' | 'html'; sections?: string[] }
 ): Promise<{ job_id: string }> {
-  const response = await fetch(`${API_BASE}/api/generate-queue`, {
+  // Use proxy route that adds user_id
+  const response = await fetch('/api/reports/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       lead_ids: leadIds,
-      format: options?.format || 'html',
-      sections: options?.sections || ['all']
+      options: {
+        format: options?.format || 'html',
+        sections: options?.sections || ['all']
+      }
     })
   });
 

@@ -18,13 +18,15 @@ const API_BASE = process.env.NEXT_PUBLIC_PROSPECTING_API || 'http://localhost:30
 /**
  * Generate prospects based on ICP brief (Queue-based)
  * Returns job_id for polling-based status tracking
+ * Uses proxy route to inject user_id for data isolation
  * @preferred Use this method for new implementations
  */
 export async function generateProspectsQueue(
   brief: Record<string, any>,
   options: ProspectGenerationOptions
 ): Promise<{ job_id: string }> {
-  const response = await fetch(`${API_BASE}/api/prospect-queue`, {
+  // Use proxy route that adds user_id
+  const response = await fetch('/api/prospecting/queue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

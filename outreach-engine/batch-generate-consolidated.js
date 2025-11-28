@@ -341,7 +341,8 @@ async function processLeadConsolidated(lead, progressCallback = null, leadIndex 
     contact_email: lead.contact_email,
     contact_name: lead.contact_name,
     contact_title: lead.contact_title,
-    project_id: lead.project_id
+    project_id: lead.project_id,
+    user_id: lead.user_id  // Required for user data isolation
   };
 
   const metadata = {

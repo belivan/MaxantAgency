@@ -333,6 +333,7 @@ app.post('/api/analyze-url', async (req, res) => {
       company_name,
       industry,
       project_id,
+      user_id,
       prospect_id,
       custom_prompts,
       max_pages,
@@ -349,6 +350,10 @@ app.post('/api/analyze-url', async (req, res) => {
 
     if (!project_id) {
       return res.status(400).json({ error: 'project_id is required - every lead must belong to a project' });
+    }
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id is required - every lead must have an owner' });
     }
 
     console.log(`[Intelligent Analysis] Starting intelligent analysis for ${url}`);
@@ -422,6 +427,7 @@ app.post('/api/analyze-url', async (req, res) => {
       company_name: result.company_name,
       industry: result.industry,
       project_id: project_id,  // Required
+      user_id: user_id,  // Required for user data isolation
       prospect_id: prospect_id || null,  // From request body, not result
 
       // Grading & Scores (with NaN validation)

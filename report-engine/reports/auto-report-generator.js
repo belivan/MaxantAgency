@@ -257,7 +257,8 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     sections = ['all'],
     saveToDatabase = true,
     project_id = null,
-    lead_id = null
+    lead_id = null,
+    user_id = null  // Required for user data isolation
   } = options;
 
   try {
@@ -607,6 +608,7 @@ export async function autoGenerateReport(analysisResult, options = {}) {
       const metadata = {
         lead_id: lead_id || analysisResult.id, // Use options.lead_id if provided, fallback to analysisResult.id
         project_id: project_id || analysisResult.project_id,
+        user_id: user_id || analysisResult.user_id, // Required for user data isolation
         report_type: 'website_audit',
         format,
         storage_path: uploadResult?.path || null, // MUST be from Supabase Storage, never local path

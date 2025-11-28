@@ -17,6 +17,7 @@ const REPORT_API_BASE = process.env.NEXT_PUBLIC_REPORT_API || 'http://localhost:
 
 /**
  * Analyze a single website URL directly
+ * Uses proxy route to inject user_id for data isolation
  */
 export async function analyzeSingleUrl(
   url: string,
@@ -26,7 +27,8 @@ export async function analyzeSingleUrl(
     project_id: string;
   }
 ): Promise<Lead> {
-  const response = await fetch(`${API_BASE}/api/analyze-url`, {
+  // Use proxy route that adds user_id
+  const response = await fetch('/api/analysis/analyze-url', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -54,13 +56,15 @@ export async function analyzeSingleUrl(
 /**
  * Analyze prospects by URLs (Queue-based)
  * Returns job_id for polling-based status tracking
+ * Uses proxy route to inject user_id for data isolation
  * @preferred Use this method for new implementations
  */
 export async function analyzeProspectsQueue(
   prospectIds: string[],
   options: AnalysisOptions
 ): Promise<{ job_id: string }> {
-  const response = await fetch(`${API_BASE}/api/analyze-queue`, {
+  // Use proxy route that adds user_id
+  const response = await fetch('/api/analysis/queue', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

@@ -165,6 +165,7 @@ export function buildFinalProspect(prospectData, relevanceData, metadata) {
     status: 'ready_for_analysis',
     run_id: metadata.runId,
     source: metadata.source || 'prospecting-engine',
+    user_id: metadata.userId || null,  // Required for user data isolation
     discovery_cost: 0,
     discovery_time_ms: Date.now() - metadata.startTime
   };

@@ -32,13 +32,20 @@ import { enqueueWork, cancelWork, getJob, getQueueStatus } from '../../database-
  */
 export async function queueProspecting(req, res) {
   try {
-    const { brief, options = {}, custom_prompts, model_selections } = req.body;
+    const { brief, options = {}, custom_prompts, model_selections, user_id } = req.body;
 
     // Validate request
     if (!brief) {
       return res.status(400).json({
         success: false,
         error: 'Missing "brief" in request body'
+      });
+    }
+
+    if (!user_id) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing "user_id" - every prospect must have an owner'
       });
     }
 
@@ -81,6 +88,7 @@ export async function queueProspecting(req, res) {
       brief: normalizedBrief,
       options: {
         ...options,
+        userId: user_id,  // Required for user data isolation
         customPrompts: custom_prompts,
         modelSelections: model_selections,
         // Override defaults if not explicitly set

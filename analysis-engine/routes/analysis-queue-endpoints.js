@@ -25,10 +25,14 @@ const supabase = createClient(
  */
 export async function analyzeProspects(req, res) {
   try {
-    const { prospect_ids, prospects: providedProspects, project_id, custom_prompts } = req.body;
+    const { prospect_ids, prospects: providedProspects, project_id, user_id, custom_prompts } = req.body;
 
     if (!project_id) {
       return res.status(400).json({ error: 'project_id is required - every lead must belong to a project' });
+    }
+
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id is required - every lead must have an owner' });
     }
 
     // Accept either prospect_ids OR prospects array directly
@@ -225,6 +229,7 @@ export async function analyzeProspects(req, res) {
         company_name: prospect.company_name || 'Unknown Company',
         industry: prospect.industry || 'unknown',
         project_id: project_id,
+        user_id: user_id,  // Required for user data isolation
         prospect_id: prospect.id || null,
         city: prospect.city || null,
         state: prospect.state || null,
@@ -503,6 +508,7 @@ async function executeAnalysis(data) {
         company_name: result.company_name,
         industry: result.industry,
         project_id: data.project_id,
+        user_id: data.user_id,  // Required for user data isolation
         prospect_id: data.prospect_id,
         city: result.city || data.city || null,
         state: result.state || data.state || null,

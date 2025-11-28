@@ -586,7 +586,8 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
             customPrompts,
             runId,
             startTime,
-            source: 'prospecting-engine'
+            source: 'prospecting-engine',
+            userId: options.userId  // Required for user data isolation
           }
         );
 
@@ -1016,7 +1017,8 @@ export async function lookupSingleBusiness(query, options = {}) {
         customPrompts: null,
         runId,
         startTime,
-        source: 'single-lookup'
+        source: 'single-lookup',
+        userId: options.userId  // Required for user data isolation
       }
     );
 
