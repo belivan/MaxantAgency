@@ -715,43 +715,41 @@ export class ResultsAggregator {
 
     console.log(`[Screenshots] Using ${Object.keys(screenshotPaths).length} screenshot paths saved by crawler`);
 
-    // Generate screenshots manifest (uploads to Supabase Storage)
+    // Generate screenshots manifest (uploads to VPS storage)
     let screenshotsManifest = null;
     const storageType = process.env.SCREENSHOT_STORAGE || 'local';
 
-    if (storageType !== 'local') {
-      try {
-        console.log(`[Screenshots] Generating manifest and uploading to Supabase Storage...`);
+    try {
+      console.log(`[Screenshots] Generating manifest and uploading to storage (type: ${storageType})...`);
 
-        // generateScreenshotsManifest expects Buffers, so temporarily load from disk
-        const { readFile } = await import('fs/promises');
-        const pagesWithBuffers = await Promise.all(
-          pages.map(async (page) => {
-            if (!page.screenshots?.desktop && !page.screenshots?.mobile) {
-              return page;
-            }
+      // generateScreenshotsManifest expects Buffers, so temporarily load from disk
+      const { readFile } = await import('fs/promises');
+      const pagesWithBuffers = await Promise.all(
+        pages.map(async (page) => {
+          if (!page.screenshots?.desktop && !page.screenshots?.mobile) {
+            return page;
+          }
 
-            const screenshots = {};
-            if (page.screenshots.desktop) {
-              screenshots.desktop = await readFile(page.screenshots.desktop);
-            }
-            if (page.screenshots.mobile) {
-              screenshots.mobile = await readFile(page.screenshots.mobile);
-            }
+          const screenshots = {};
+          if (page.screenshots.desktop) {
+            screenshots.desktop = await readFile(page.screenshots.desktop);
+          }
+          if (page.screenshots.mobile) {
+            screenshots.mobile = await readFile(page.screenshots.mobile);
+          }
 
-            return { ...page, screenshots };
-          })
-        );
+          return { ...page, screenshots };
+        })
+      );
 
-        screenshotsManifest = await generateScreenshotsManifest(pagesWithBuffers, leadId, storageType);
-        console.log(`[Screenshots] ✅ Manifest generated: ${screenshotsManifest.total_screenshots} screenshots, ${(screenshotsManifest.total_size_bytes / 1024 / 1024).toFixed(2)} MB`);
+      screenshotsManifest = await generateScreenshotsManifest(pagesWithBuffers, leadId, storageType);
+      console.log(`[Screenshots] ✅ Manifest generated: ${screenshotsManifest.total_screenshots} screenshots, ${(screenshotsManifest.total_size_bytes / 1024 / 1024).toFixed(2)} MB`);
 
-        // Buffers can now be garbage collected
-      } catch (error) {
-        console.error(`[Screenshots] ⚠️  Failed to generate manifest:`, error.message);
-        console.error(`[Screenshots] Falling back to local storage only`);
-        // Don't throw - gracefully fall back to local storage
-      }
+      // Buffers can now be garbage collected
+    } catch (error) {
+      console.error(`[Screenshots] ⚠️  Failed to generate manifest:`, error.message);
+      console.error(`[Screenshots] Falling back to local storage only`);
+      // Don't throw - gracefully fall back to local storage
     }
 
     return { screenshotPaths, screenshotsManifest };
