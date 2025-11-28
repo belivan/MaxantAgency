@@ -1,4 +1,5 @@
 import winston from 'winston';
+import TransportStream from 'winston-transport';
 import dotenv from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -8,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '../../.env') });
 
-const { combine, timestamp, printf, colorize, errors } = winston.format;
+const { combine, timestamp, printf, errors } = winston.format;
 
 /**
  * Custom log format for structured logging
@@ -33,6 +34,42 @@ const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
 });
 
 /**
+ * Custom transport that uses console.log so logs get intercepted by console-logger.js
+ * This enables real-time log streaming to the UI via SSE
+ */
+class ConsoleLogTransport extends TransportStream {
+  constructor(opts = {}) {
+    super(opts);
+    this.name = 'consoleLogTransport';
+    this.level = opts.level || 'info';
+  }
+
+  log(info, callback) {
+    setImmediate(() => {
+      // Map Winston levels to console methods
+      const level = info.level.replace(/\x1B\[[0-9;]*m/g, ''); // Strip ANSI colors
+      const message = info[Symbol.for('message')] || info.message;
+
+      switch (level) {
+        case 'error':
+          console.error(message);
+          break;
+        case 'warn':
+        case 'warning':
+          console.warn(message);
+          break;
+        case 'debug':
+          console.debug(message);
+          break;
+        default:
+          console.log(message);
+      }
+    });
+    callback();
+  }
+}
+
+/**
  * Create Winston logger instance
  */
 const logger = winston.createLogger({
@@ -43,10 +80,9 @@ const logger = winston.createLogger({
     logFormat
   ),
   transports: [
-    // Console output
-    new winston.transports.Console({
+    // Console output via console.log (gets intercepted by console-logger.js)
+    new ConsoleLogTransport({
       format: combine(
-        colorize(),
         timestamp({ format: 'HH:mm:ss' }),
         logFormat
       )

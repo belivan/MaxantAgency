@@ -1,4 +1,5 @@
 import winston from 'winston';
+import TransportStream from 'winston-transport';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -31,17 +32,50 @@ const customFormat = winston.format.combine(
   })
 );
 
+/**
+ * Custom transport that uses console.log so logs get intercepted by console-logger.js
+ * This enables real-time log streaming to the UI via SSE
+ */
+class ConsoleLogTransport extends TransportStream {
+  constructor(opts = {}) {
+    super(opts);
+    this.name = 'consoleLogTransport';
+    this.level = opts.level || 'info';
+  }
+
+  log(info, callback) {
+    setImmediate(() => {
+      // Map Winston levels to console methods
+      const level = info.level.replace(/\x1B\[[0-9;]*m/g, ''); // Strip ANSI colors
+      const message = info[Symbol.for('message')] || info.message;
+
+      switch (level) {
+        case 'error':
+          console.error(message);
+          break;
+        case 'warn':
+        case 'warning':
+          console.warn(message);
+          break;
+        case 'debug':
+          console.debug(message);
+          break;
+        default:
+          console.log(message);
+      }
+    });
+    callback();
+  }
+}
+
 // Create the logger
 const logger = winston.createLogger({
   level: logLevel,
   format: customFormat,
   transports: [
-    // Console output (colored for development)
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        customFormat
-      )
+    // Console output via console.log (gets intercepted by console-logger.js)
+    new ConsoleLogTransport({
+      format: customFormat
     }),
     // File output (all logs)
     new winston.transports.File({
