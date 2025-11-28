@@ -60,7 +60,7 @@ async function prepareScreenshotData(reportData) {
 
   // PRIORITY 1: Try local file paths first (faster, no network calls)
   if (reportData.screenshot_desktop_path || reportData.screenshot_mobile_path) {
-    console.log(`📸 Loading screenshots from local file paths`);
+    console.log(`📸 Trying to load screenshots from local file paths`);
 
     if (reportData.screenshot_desktop_path && existsSync(reportData.screenshot_desktop_path)) {
       try {
@@ -88,8 +88,9 @@ async function prepareScreenshotData(reportData) {
       }
     }
   }
-  // PRIORITY 2: Try screenshot URLs (Supabase Storage)
-  else if (reportData.screenshot_desktop_url || reportData.screenshot_mobile_url) {
+
+  // PRIORITY 2: Try screenshot URLs (Supabase Storage) - fallback if no screenshots loaded
+  if (screenshotData.screenshots.length === 0 && (reportData.screenshot_desktop_url || reportData.screenshot_mobile_url)) {
     console.log(`📸 Loading screenshots from Supabase Storage URLs`);
 
     if (reportData.screenshot_desktop_url) {
@@ -114,9 +115,10 @@ async function prepareScreenshotData(reportData) {
       }
     }
   }
-  // PRIORITY 3: Use screenshots_manifest with multiple pages (legacy mode)
-  else if (reportData.screenshots_manifest && reportData.screenshots_manifest.pages) {
-    console.log(`📸 Loading screenshots from manifest (${reportData.screenshots_manifest.total_screenshots} total) - legacy mode`);
+
+  // PRIORITY 3: Use screenshots_manifest with multiple pages - fallback if no screenshots loaded
+  if (screenshotData.screenshots.length === 0 && reportData.screenshots_manifest && reportData.screenshots_manifest.pages) {
+    console.log(`📸 Loading screenshots from manifest (${reportData.screenshots_manifest.total_screenshots} total)`);
 
     for (const [pageUrl, viewports] of Object.entries(reportData.screenshots_manifest.pages)) {
       // Load desktop screenshot
