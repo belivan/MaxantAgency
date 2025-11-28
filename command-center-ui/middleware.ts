@@ -10,7 +10,7 @@ const isProtectedRoute = createRouteMatcher([
   '/leads(.*)',
   '/outreach(.*)',
   '/analytics(.*)',
-  '/api(.*)',  // Protect ALL API routes
+  '/api/(?!webhooks)(.*)',  // Protect API routes EXCEPT webhooks (for Clerk webhooks)
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
