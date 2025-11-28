@@ -95,7 +95,7 @@ async function processScreenshots(analysisResult, registry) {
         try {
           const response = await fetch(page.desktop_screenshot.public_url);
           if (response.ok) {
-            const buffer = await response.buffer();
+            const buffer = Buffer.from(await response.arrayBuffer());
             const base64 = buffer.toString('base64');
             const dataUri = `data:image/png;base64,${base64}`;
 
@@ -124,7 +124,7 @@ async function processScreenshots(analysisResult, registry) {
         try {
           const response = await fetch(page.mobile_screenshot.public_url);
           if (response.ok) {
-            const buffer = await response.buffer();
+            const buffer = Buffer.from(await response.arrayBuffer());
             const base64 = buffer.toString('base64');
             const dataUri = `data:image/png;base64,${base64}`;
 
