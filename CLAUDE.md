@@ -37,6 +37,46 @@ Pipeline Orchestrator (:3020)
 Supabase PostgreSQL
 ```
 
+### Production Deployment
+
+**Frontend (UI)**: Deployed to Vercel at `app.mintydesign.xyz`
+
+**Backend (All Engines)**: Deployed to Hetzner VPS at `api.mintydesign.xyz`
+
+#### Hetzner VPS Access
+
+SSH into the production server:
+```bash
+ssh -i ~/.ssh/minty_key root@46.62.217.176
+```
+
+The backend services are located at `/opt/MaxantAgency` and managed via Docker Compose:
+```bash
+cd /opt/MaxantAgency
+
+# View running containers
+docker compose ps
+
+# View logs
+docker compose logs -f [service-name]
+
+# Restart services
+docker compose restart
+
+# Rebuild and restart (after code updates)
+git pull
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
+**Caddy Reverse Proxy**: Routes API requests from `api.mintydesign.xyz` to the appropriate engine:
+- `/prospecting/*` → prospecting-engine:3010
+- `/analysis/*` → analysis-engine:3001
+- `/reports/*` → report-engine:3003
+- `/outreach/*` → outreach-engine:3002
+- `/pipeline/*` → pipeline-orchestrator:3020
+
 Each engine is **autonomous** with its own:
 - `server.js` - Express server with REST endpoints
 - `database/supabase-client.js` - Database CRUD operations

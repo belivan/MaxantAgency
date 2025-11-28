@@ -63,7 +63,7 @@ const nextConfig = {
   },
 
   // Production build configuration
-  // output: 'standalone', // Only needed for Docker deployment, not Vercel
+  output: 'standalone', // Required for Docker deployment
 
   // Experimental features
   experimental: {

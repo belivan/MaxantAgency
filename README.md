@@ -61,6 +61,12 @@ open http://localhost:3000
 
 ### Production Deployment
 
+**Current Live Deployment:**
+- **Frontend (UI)**: [app.mintydesign.xyz](https://app.mintydesign.xyz) (Vercel)
+- **Backend (API)**: [api.mintydesign.xyz](https://api.mintydesign.xyz) (Hetzner VPS)
+
+The backend runs all engines via Docker Compose on a Hetzner VPS. Caddy handles SSL and reverse proxy routing.
+
 Choose your deployment method:
 
 #### Option 1: Docker (Recommended)

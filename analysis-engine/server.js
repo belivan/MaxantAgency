@@ -25,6 +25,7 @@ import { analyzeBenchmark } from './services/benchmark-analyzer.js';
 import { incrementAnalysisCount } from './optimization/services/optimization-scheduler.js';
 import { enqueueWork, cancelWork, getJob, getQueueStatus } from '../database-tools/shared/work-queue.js';
 import { analyzeProspects, getAnalysisStatus, cancelAnalysis, getOverallQueueStatus } from './routes/analysis-queue-endpoints.js';
+import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
 
 // Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +41,11 @@ const activeAnalyses = new Map(); // URL -> { promise, startTime, type }
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Initialize console logger and SSE endpoint
+const logger = createLogger('analysis-engine');
+setupLogStreamEndpoint(app, 'analysis-engine');
+logger.info('Analysis Engine starting...');
 
 // Initialize Supabase client
 const supabase = createClient(

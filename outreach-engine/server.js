@@ -27,6 +27,7 @@ import {
   cancelComposition,
   getOverallQueueStatus
 } from './routes/outreach-queue-endpoints.js';
+import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
 
 // Validators
 import { validateEmail } from './validators/email-validator.js';
@@ -79,6 +80,11 @@ const PORT = process.env.PORT || 3002;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Initialize console logger and SSE endpoint
+const logger = createLogger('outreach-engine');
+setupLogStreamEndpoint(app, 'outreach-engine');
+logger.info('Outreach Engine starting...');
 
 // Request logging
 app.use((req, res, next) => {

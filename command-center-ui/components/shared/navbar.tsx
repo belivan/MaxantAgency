@@ -17,9 +17,17 @@ import {
   Mail,
   BarChart3,
   Activity,
-  Info
+  Menu
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import {
   SignInButton,
   SignUpButton,
@@ -104,8 +112,8 @@ export function Navbar() {
             </Link>
           </div>
 
-          {/* Navigation Links - Only show when signed in */}
-          <div className="flex items-center space-x-1">
+          {/* Desktop Navigation Links - Hidden on mobile */}
+          <div className="hidden md:flex items-center space-x-1">
             <SignedIn>
               {NAV_ITEMS.map((item) => (
                 <Link
@@ -119,7 +127,7 @@ export function Navbar() {
                       : 'text-muted-foreground'
                   )}
                 >
-                  <span className="hidden sm:inline">{item.icon}</span>
+                  {item.icon}
                   <span>{item.label}</span>
                   {item.badge && item.badge > 0 && (
                     <span className="bg-primary text-primary-foreground text-xs font-semibold px-2 py-0.5 rounded-full">
@@ -153,6 +161,50 @@ export function Navbar() {
             <div className="ml-2 pl-2 border-l border-border">
               <ThemeToggle />
             </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          <div className="flex md:hidden items-center space-x-2">
+            <ThemeToggle />
+            <SignedOut>
+              <SignInButton mode="modal">
+                <Button variant="ghost" size="sm">Sign In</Button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-[280px]">
+                  <SheetHeader>
+                    <SheetTitle>Navigation</SheetTitle>
+                  </SheetHeader>
+                  <nav className="flex flex-col space-y-1 mt-4">
+                    {NAV_ITEMS.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          'flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium transition-colors',
+                          'hover:bg-accent hover:text-accent-foreground',
+                          isActive(item.href)
+                            ? 'bg-accent text-accent-foreground'
+                            : 'text-muted-foreground'
+                        )}
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </SignedIn>
           </div>
         </div>
       </div>

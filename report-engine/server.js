@@ -37,6 +37,7 @@ import {
   cancelReport,
   getOverallQueueStatus
 } from './routes/report-queue-endpoints.js';
+import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
 
 // Initialize Express app
 const app = express();
@@ -48,6 +49,11 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));
+
+// Initialize console logger and SSE endpoint
+const logger = createLogger('report-engine');
+setupLogStreamEndpoint(app, 'report-engine');
+logger.info('Report Engine starting...');
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Request logging

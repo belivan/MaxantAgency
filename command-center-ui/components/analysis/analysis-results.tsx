@@ -109,7 +109,7 @@ export function AnalysisResults({ projectId, limit = 10 }: { projectId?: string 
             <p className="text-sm">No analyses yet. Start analyzing prospects to see results here.</p>
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

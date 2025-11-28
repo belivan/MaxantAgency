@@ -208,15 +208,16 @@ export function AnalysisHistory({
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>Pages</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Cost</TableHead>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Grade</TableHead>
+                  <TableHead>Pages</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Cost</TableHead>
                 <TableHead>Started</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -322,8 +323,9 @@ export function AnalysisHistory({
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 

@@ -578,7 +578,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
             {hasActiveFilters ? 'No leads match the selected filters' : 'No leads found'}
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

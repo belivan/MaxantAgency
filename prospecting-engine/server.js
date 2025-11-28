@@ -23,6 +23,7 @@ import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 import { logInfo, logError } from './shared/logger.js';
 // Work Queue endpoints (async job-based architecture)
 import { queueProspecting, getProspectStatus, cancelProspecting, getOverallQueueStatus } from './routes/prospecting-queue-endpoints.js';
+import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
 
 // Load env from root .env (centralized configuration)
 const __filename = fileURLToPath(import.meta.url);
@@ -41,6 +42,11 @@ const PORT = process.env.PORT || 3010;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Initialize console logger and SSE endpoint
+const logger = createLogger('prospecting-engine');
+setupLogStreamEndpoint(app, 'prospecting-engine');
+logger.info('Prospecting Engine starting...');
 
 // Request logging middleware
 app.use((req, res, next) => {

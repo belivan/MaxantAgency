@@ -2,8 +2,10 @@ import '@/app/globals.css';
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Navbar } from '@/components/shared';
-import { TaskProgressProvider } from '@/lib/contexts/task-progress-context';
-import { FloatingTaskIndicator } from '@/components/shared/floating-task-indicator';
+import { Providers } from '@/components/providers';
+
+// Force dynamic rendering to avoid issues with client-side contexts during static generation
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
   title: 'Minty Design Co',
@@ -19,13 +21,12 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body>
-          <TaskProgressProvider>
+          <Providers>
             <div className="min-h-screen bg-background">
               <Navbar />
               <main>{children}</main>
-              <FloatingTaskIndicator />
             </div>
-          </TaskProgressProvider>
+          </Providers>
         </body>
       </html>
     </ClerkProvider>

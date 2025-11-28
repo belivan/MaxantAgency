@@ -284,10 +284,26 @@ export function TaskProgressProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Default noop context for SSR/fallback scenarios
+const defaultTaskProgressContext: TaskProgressContextValue = {
+  tasks: [],
+  activeTask: null,
+  activeTasks: [],
+  queuedTasks: [],
+  startTask: () => '',
+  updateTask: () => {},
+  addLog: () => {},
+  completeTask: () => {},
+  errorTask: () => {},
+  cancelTask: () => {},
+  removeTask: () => {},
+  clearCompletedTasks: () => {},
+  canStartTask: () => true,
+  getQueuePosition: () => 0,
+};
+
 export function useTaskProgress() {
   const context = useContext(TaskProgressContext);
-  if (!context) {
-    throw new Error('useTaskProgress must be used within TaskProgressProvider');
-  }
-  return context;
+  // Return default context if provider not available (SSR or outside provider)
+  return context || defaultTaskProgressContext;
 }

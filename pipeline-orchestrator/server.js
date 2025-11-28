@@ -20,6 +20,7 @@ import {
   rescheduleCampaign,
   getActiveTasks
 } from './schedulers/index.js';
+import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
 
 // Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
@@ -32,6 +33,11 @@ const PORT = process.env.PORT || 3020;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Initialize console logger and SSE endpoint
+const logger = createLogger('pipeline-orchestrator');
+setupLogStreamEndpoint(app, 'pipeline-orchestrator');
+logger.info('Pipeline Orchestrator starting...');
 
 // Request logging middleware
 app.use((req, res, next) => {
