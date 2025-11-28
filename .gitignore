@@ -140,3 +140,6 @@ batch-test-results.txt
 !/README.md
 !/SETUP.md
 !/CLAUDE.md
+
+# Local file storage (PDFs, screenshots)
+storage/
