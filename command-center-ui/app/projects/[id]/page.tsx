@@ -2,16 +2,18 @@
 
 /**
  * Project Detail Page
- * Project workspace with tabs for Prospects, Leads, Outreach, and Campaigns
+ * Compact, mobile-friendly design with visual hierarchy
  */
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Calendar, DollarSign, Users, Mail, TrendingUp, ChevronDown } from 'lucide-react';
+import {
+  ArrowLeft, DollarSign, Users, Mail, TrendingUp, ChevronDown,
+  ChevronRight, Play, Settings, BarChart3, Zap, Calendar, ExternalLink
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { LoadingOverlay } from '@/components/shared';
 import { getProject } from '@/lib/api/projects';
@@ -36,14 +38,25 @@ interface ProjectStats {
   leads_count: number;
   emails_count: number;
   campaigns_count: number;
-  grade_distribution: {
-    A: number;
-    B: number;
-    C: number;
-    D: number;
-    F: number;
-  };
+  grade_distribution: { A: number; B: number; C: number; D: number; F: number; };
 }
+
+// Status colors with visual distinction
+const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
+  active: { bg: 'bg-emerald-500/10', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  paused: { bg: 'bg-amber-500/10', text: 'text-amber-700', dot: 'bg-amber-500' },
+  completed: { bg: 'bg-blue-500/10', text: 'text-blue-700', dot: 'bg-blue-500' },
+  archived: { bg: 'bg-slate-500/10', text: 'text-slate-600', dot: 'bg-slate-400' },
+};
+
+// Grade colors
+const gradeColors: Record<string, string> = {
+  A: 'text-emerald-600 bg-emerald-500/10',
+  B: 'text-blue-600 bg-blue-500/10',
+  C: 'text-amber-600 bg-amber-500/10',
+  D: 'text-orange-600 bg-orange-500/10',
+  F: 'text-red-600 bg-red-500/10',
+};
 
 export default function ProjectDetailPage() {
   const params = useParams();
@@ -62,7 +75,6 @@ export default function ProjectDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
 
-  // Load project data and stats
   useEffect(() => {
     const loadProject = async () => {
       try {
@@ -71,14 +83,9 @@ export default function ProjectDetailPage() {
           getProject(projectId),
           fetch(`/api/projects/${projectId}/stats`).then(r => r.json())
         ]);
-
         setProject(projectData);
-
         if (statsResponse.success && statsResponse.data) {
           setStats(statsResponse.data);
-        } else {
-          console.error('Stats API returned error:', statsResponse.error);
-          // Keep default stats values (zeros)
         }
       } catch (err: any) {
         console.error('Failed to load project:', err);
@@ -87,135 +94,160 @@ export default function ProjectDetailPage() {
         setLoading(false);
       }
     };
-
     loadProject();
   }, [projectId]);
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto p-4">
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
           <p className="text-sm text-destructive">{error}</p>
         </div>
-        <Button onClick={() => router.push('/projects')} className="mt-4">
+        <Button onClick={() => router.push('/projects')} className="mt-4" size="sm">
           Back to Projects
         </Button>
       </div>
     );
   }
 
+  const statusStyle = statusColors[project?.status || 'paused'];
+
   return (
     <>
       <LoadingOverlay isLoading={loading} message="Loading project..." />
-      <div className="container mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+      <div className="container mx-auto px-4 py-4 md:p-6 space-y-4">
+        {/* Compact Header */}
+        <div className="space-y-3">
+          {/* Back + Title Row */}
+          <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => router.push('/projects')}
-              className="flex items-center space-x-2"
+              className="h-8 w-8 p-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back</span>
             </Button>
-            <div className="space-y-1">
-              <div className="flex items-center space-x-3">
-                <h1 className="text-3xl font-bold tracking-tight">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl md:text-2xl font-bold truncate">
                   {project?.name || 'Loading...'}
                 </h1>
                 {project?.status && (
-                  <Badge variant={getStatusVariant(project.status)}>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusStyle.bg} ${statusStyle.text}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
                     {project.status}
-                  </Badge>
+                  </span>
                 )}
               </div>
               {project?.description && (
-                <p className="text-muted-foreground">{project.description}</p>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {project.description}
+                </p>
               )}
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setActiveTab('campaigns')}>
+                <Play className="w-3.5 h-3.5 mr-1" />
+                Run
+              </Button>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => alert('Edit project modal coming soon!')}
-            >
-              Edit Project
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => setActiveTab('campaigns')}
-            >
-              Run Campaign
-            </Button>
-          </div>
+          {/* Inline Stats Bar */}
+          {project && (
+            <div className="flex items-center gap-1 p-2 bg-muted/30 rounded-lg overflow-x-auto text-sm">
+              <StatChip
+                icon={<DollarSign className="w-3.5 h-3.5" />}
+                value={formatCurrency(Number(project.budget) || 0)}
+                subValue={`${formatCurrency(Number(project.total_spent) || 0)} used`}
+                color="text-amber-600"
+              />
+              <div className="w-px h-6 bg-border mx-1" />
+              <StatChip
+                icon={<Users className="w-3.5 h-3.5" />}
+                value={stats.prospects_count}
+                label="Prospects"
+                color="text-slate-600"
+              />
+              <div className="w-px h-6 bg-border mx-1" />
+              <StatChip
+                icon={<BarChart3 className="w-3.5 h-3.5" />}
+                value={stats.leads_count}
+                label="Leads"
+                color="text-blue-600"
+              />
+              <div className="w-px h-6 bg-border mx-1" />
+              <StatChip
+                icon={<Mail className="w-3.5 h-3.5" />}
+                value={stats.emails_count}
+                label="Emails"
+                color="text-emerald-600"
+              />
+              {/* Grade Pills */}
+              {stats.leads_count > 0 && (
+                <>
+                  <div className="w-px h-6 bg-border mx-1" />
+                  <div className="flex items-center gap-1">
+                    {stats.grade_distribution.A > 0 && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${gradeColors.A}`}>
+                        {stats.grade_distribution.A}A
+                      </span>
+                    )}
+                    {stats.grade_distribution.B > 0 && (
+                      <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${gradeColors.B}`}>
+                        {stats.grade_distribution.B}B
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Project Stats Summary */}
-        {project && (
-          <div className="grid gap-4 md:grid-cols-4">
-            <StatCard
-              icon={<DollarSign className="w-4 h-4" />}
-              label="Budget"
-              value={formatCurrency(Number(project.budget) || 0)}
-              subtitle={`${formatCurrency(Number(project.total_spent) || 0)} spent`}
-            />
-            <StatCard
-              icon={<Users className="w-4 h-4" />}
-              label="Prospects"
-              value={stats.prospects_count || 0}
-              subtitle="Generated"
-            />
-            <StatCard
-              icon={<TrendingUp className="w-4 h-4" />}
-              label="Leads"
-              value={stats.leads_count || 0}
-              subtitle={`${stats.grade_distribution?.A || 0} Grade A`}
-            />
-            <StatCard
-              icon={<Mail className="w-4 h-4" />}
-              label="Outreach"
-              value={stats.emails_count || 0}
-              subtitle="Emails composed"
-            />
-          </div>
-        )}
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="prospects">Prospects</TabsTrigger>
-            <TabsTrigger value="leads">Leads</TabsTrigger>
-            <TabsTrigger value="outreach">Outreach</TabsTrigger>
-            <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+        {/* Tabs - Full width on mobile */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="w-full grid grid-cols-5 sm:inline-flex sm:w-auto">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">
+              <TrendingUp className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="prospects" className="text-xs sm:text-sm">
+              <Users className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Prospects</span>
+            </TabsTrigger>
+            <TabsTrigger value="leads" className="text-xs sm:text-sm">
+              <BarChart3 className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Leads</span>
+            </TabsTrigger>
+            <TabsTrigger value="outreach" className="text-xs sm:text-sm">
+              <Mail className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Outreach</span>
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="text-xs sm:text-sm">
+              <Zap className="w-3.5 h-3.5 sm:mr-1" />
+              <span className="hidden sm:inline">Auto</span>
+            </TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <OverviewTab project={project} stats={stats} onNavigateToTab={setActiveTab} />
+          <TabsContent value="overview" className="space-y-4 mt-4">
+            <OverviewTab project={project} stats={stats} />
           </TabsContent>
 
-          {/* Prospects Tab */}
-          <TabsContent value="prospects" className="space-y-6">
+          <TabsContent value="prospects" className="space-y-4 mt-4">
             <ProspectsTab projectId={projectId} />
           </TabsContent>
 
-          {/* Leads Tab */}
-          <TabsContent value="leads" className="space-y-6">
+          <TabsContent value="leads" className="space-y-4 mt-4">
             <LeadsTab projectId={projectId} />
           </TabsContent>
 
-          {/* Outreach Tab */}
-          <TabsContent value="outreach" className="space-y-6">
+          <TabsContent value="outreach" className="space-y-4 mt-4">
             <OutreachTab projectId={projectId} />
           </TabsContent>
 
-          {/* Campaigns Tab */}
-          <TabsContent value="campaigns" className="space-y-6">
+          <TabsContent value="campaigns" className="space-y-4 mt-4">
             <CampaignsTab projectId={projectId} />
           </TabsContent>
         </Tabs>
@@ -225,85 +257,102 @@ export default function ProjectDetailPage() {
 }
 
 // ============================================================================
-// Tab Components
+// Tab Components (Compact versions)
 // ============================================================================
 
 function OverviewTab({
   project,
   stats,
-  onNavigateToTab
 }: {
   project: Project | null;
   stats: ProjectStats;
-  onNavigateToTab: (tab: string) => void;
 }) {
   if (!project) return null;
 
+  const analysisRate = stats.prospects_count > 0
+    ? ((stats.leads_count / stats.prospects_count) * 100).toFixed(0)
+    : '0';
+  const emailRate = stats.leads_count > 0
+    ? ((stats.emails_count / stats.leads_count) * 100).toFixed(0)
+    : '0';
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold mb-4">Project Overview</h2>
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <InfoRow label="Status" value={project.status} />
-            <InfoRow label="Budget" value={formatCurrency(Number(project.budget) || 0)} />
-            <InfoRow label="Total Spent" value={formatCurrency(Number(project.total_spent) || 0)} />
-            <InfoRow label="Created" value={formatDateTime(project.created_at)} />
+    <div className="space-y-4">
+      {/* Pipeline Conversion Rates - Only show if there's data */}
+      {stats.prospects_count > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Conversion Rates</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 rounded-lg bg-muted/50">
+                <p className="text-2xl font-bold text-blue-600">{analysisRate}%</p>
+                <p className="text-xs text-muted-foreground">Analysis Rate</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/50">
+                <p className="text-2xl font-bold text-emerald-600">{emailRate}%</p>
+                <p className="text-xs text-muted-foreground">Outreach Rate</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Grade Distribution */}
+      {stats.leads_count > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Lead Quality</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              {(['A', 'B', 'C', 'D', 'F'] as const).map(grade => {
+                const count = stats.grade_distribution[grade];
+                const pct = stats.leads_count > 0 ? (count / stats.leads_count) * 100 : 0;
+                return (
+                  <div key={grade} className="flex-1 text-center">
+                    <div
+                      className={`h-16 rounded-t flex items-end justify-center ${gradeColors[grade].replace('text-', 'bg-').replace('bg-', 'bg-')}`}
+                      style={{ opacity: pct > 0 ? 0.2 + (pct / 100) * 0.8 : 0.1 }}
+                    >
+                      <span className="text-lg font-bold pb-1">{count}</span>
+                    </div>
+                    <span className={`text-xs font-medium ${gradeColors[grade].split(' ')[0]}`}>
+                      {grade}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Project Info - Compact */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Details</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground">Budget</p>
+            <p className="font-medium">{formatCurrency(Number(project.budget) || 0)}</p>
           </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Performance Metrics</h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          <MetricCard
-            label="Prospects Generated"
-            value={stats.prospects_count}
-          />
-          <MetricCard
-            label="Leads Analyzed"
-            value={stats.leads_count}
-            breakdown={`${stats.grade_distribution.A}A / ${stats.grade_distribution.B}B / ${stats.grade_distribution.C}C`}
-          />
-          <MetricCard
-            label="Outreach Sent"
-            value={stats.emails_count}
-          />
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Quick Actions</h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          <ActionCard
-            title="Generate Prospects"
-            description="Run prospecting for this project"
-            action="Prospect"
-            onClick={() => onNavigateToTab('prospects')}
-          />
-          <ActionCard
-            title="Analyze Leads"
-            description="Analyze websites for this project"
-            action="Analyze"
-            onClick={() => onNavigateToTab('leads')}
-          />
-          <ActionCard
-            title="Compose Outreach"
-            description="Create personalized emails"
-            action="Compose"
-            onClick={() => onNavigateToTab('outreach')}
-          />
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xl font-semibold mb-4">Recent Activity</h3>
-        <div className="rounded-lg border border-border bg-card p-6">
-          <p className="text-muted-foreground text-center py-8">
-            No activity yet. Start by generating prospects.
-          </p>
-        </div>
-      </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Spent</p>
+            <p className="font-medium">{formatCurrency(Number(project.total_spent) || 0)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Created</p>
+            <p className="font-medium">{formatDateTime(project.created_at, { relative: true })}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Status</p>
+            <p className="font-medium capitalize">{project.status}</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -314,10 +363,8 @@ function ProspectsTab({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [icpBriefOpen, setIcpBriefOpen] = useState(false);
-  const [analysisPromptsOpen, setAnalysisPromptsOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
 
-  // Load prospects and project data
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -326,7 +373,6 @@ function ProspectsTab({ projectId }: { projectId: string }) {
           getProspects({ project_id: projectId }),
           getProject(projectId)
         ]);
-
         setProspects(prospectsData.prospects || []);
         setProject(projectData);
       } catch (err) {
@@ -335,168 +381,72 @@ function ProspectsTab({ projectId }: { projectId: string }) {
         setLoading(false);
       }
     };
-
     loadData();
   }, [projectId]);
 
-  const hasIcpBrief = project?.icp_brief && Object.keys(project.icp_brief).length > 0;
-  const hasAnalysisPrompts = project?.analysis_config?.prompts && Object.keys(project.analysis_config.prompts).length > 0;
-  const hasProspects = prospects.length > 0;
+  const hasConfig = project?.icp_brief && Object.keys(project.icp_brief).length > 0;
 
   const handleDeleteComplete = () => {
-    // Reload prospects after deletion
     getProspects({ project_id: projectId })
       .then(data => setProspects(data.prospects || []))
       .catch(err => console.error('Failed to reload prospects:', err));
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Prospects</h2>
-        <Button onClick={() => router.push(`/prospecting?project_id=${projectId}`)}>
-          Generate More Prospects
+        <h2 className="text-lg font-semibold">Prospects ({prospects.length})</h2>
+        <Button size="sm" onClick={() => router.push(`/prospecting?project_id=${projectId}`)}>
+          Generate More
         </Button>
       </div>
 
-      {/* ICP Brief Section */}
-      {hasIcpBrief && (
-        <Collapsible open={icpBriefOpen} onOpenChange={setIcpBriefOpen}>
-          <Card>
-            <CardHeader>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between cursor-pointer">
-                  <div>
-                    <CardTitle className="text-lg">Ideal Customer Profile (ICP)</CardTitle>
-                    <CardDescription>Targeting criteria for this project</CardDescription>
-                  </div>
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${icpBriefOpen ? 'rotate-180' : ''}`}
-                  />
-                </div>
-              </CollapsibleTrigger>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <div className="grid gap-3 md:grid-cols-2">
-                  {project?.icp_brief?.industry && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Industry</p>
-                      <p className="mt-1">{project.icp_brief.industry}</p>
-                    </div>
-                  )}
-                  {project?.icp_brief?.city && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Location</p>
-                      <p className="mt-1">{project.icp_brief.city}</p>
-                    </div>
-                  )}
-                  {project?.icp_brief?.target_description && (
-                    <div className="md:col-span-2">
-                      <p className="text-sm font-medium text-muted-foreground">Description</p>
-                      <p className="mt-1">{project.icp_brief.target_description}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      {/* Analysis Prompts Section */}
-      {hasAnalysisPrompts && (
-        <Collapsible open={analysisPromptsOpen} onOpenChange={setAnalysisPromptsOpen}>
-          <Card>
-            <CardHeader>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between cursor-pointer">
-                  <div>
-                    <CardTitle className="text-lg">Analysis Configuration</CardTitle>
-                    <CardDescription>AI prompts used for website analysis</CardDescription>
-                  </div>
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${analysisPromptsOpen ? 'rotate-180' : ''}`}
-                  />
-                </div>
-              </CollapsibleTrigger>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <div className="space-y-4">
-                  {project?.analysis_config?.prompts?.design && (
-                    <div className="border-b pb-3">
-                      <p className="text-sm font-medium mb-1">Design Analysis</p>
-                      <p className="text-xs text-muted-foreground">
-                        Model: {project.analysis_config.prompts.design.model || 'N/A'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {project.analysis_config.prompts.design.description}
-                      </p>
-                    </div>
-                  )}
-                  {project?.analysis_config?.prompts?.seo && (
-                    <div className="border-b pb-3">
-                      <p className="text-sm font-medium mb-1">SEO Analysis</p>
-                      <p className="text-xs text-muted-foreground">
-                        Model: {project.analysis_config.prompts.seo.model || 'N/A'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {project.analysis_config.prompts.seo.description}
-                      </p>
-                    </div>
-                  )}
-                  {project?.analysis_config?.prompts?.content && (
-                    <div className="border-b pb-3">
-                      <p className="text-sm font-medium mb-1">Content Analysis</p>
-                      <p className="text-xs text-muted-foreground">
-                        Model: {project.analysis_config.prompts.content.model || 'N/A'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {project.analysis_config.prompts.content.description}
-                      </p>
-                    </div>
-                  )}
-                  {project?.analysis_config?.prompts?.social && (
-                    <div className="pb-3">
-                      <p className="text-sm font-medium mb-1">Social Media Analysis</p>
-                      <p className="text-xs text-muted-foreground">
-                        Model: {project.analysis_config.prompts.social.model || 'N/A'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {project.analysis_config.prompts.social.description}
-                      </p>
-                    </div>
-                  )}
-                  {project?.analysis_config?.prompts_updated_at && (
-                    <div className="pt-2 border-t">
-                      <p className="text-xs text-muted-foreground">
-                        Last updated: {new Date(project.analysis_config.prompts_updated_at).toLocaleString()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      {/* Prospects Table or Empty State */}
-      {!hasProspects && !loading ? (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <p className="text-muted-foreground text-center py-8">
-            No prospects generated for this project yet.
-          </p>
-          <div className="text-center mt-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/prospecting?project_id=${projectId}`)}
-            >
-              Start Prospecting
+      {/* ICP Config - Collapsible */}
+      {hasConfig && (
+        <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" className="w-full justify-between">
+              <span className="flex items-center gap-2">
+                <Settings className="w-3.5 h-3.5" />
+                ICP Configuration
+              </span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${configOpen ? 'rotate-180' : ''}`} />
             </Button>
-          </div>
-        </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-2">
+            <Card>
+              <CardContent className="pt-4 grid grid-cols-2 gap-3 text-sm">
+                {project?.icp_brief?.industry && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Industry</p>
+                    <p className="font-medium">{project.icp_brief.industry}</p>
+                  </div>
+                )}
+                {project?.icp_brief?.city && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Location</p>
+                    <p className="font-medium">{project.icp_brief.city}</p>
+                  </div>
+                )}
+                {project?.icp_brief?.target_description && (
+                  <div className="col-span-2">
+                    <p className="text-xs text-muted-foreground">Target</p>
+                    <p className="font-medium">{project.icp_brief.target_description}</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Prospects Table or Empty */}
+      {prospects.length === 0 && !loading ? (
+        <EmptyState
+          message="No prospects yet"
+          action="Start Prospecting"
+          onClick={() => router.push(`/prospecting?project_id=${projectId}`)}
+        />
       ) : (
         <ProspectTable
           prospects={prospects}
@@ -507,13 +457,15 @@ function ProspectsTab({ projectId }: { projectId: string }) {
         />
       )}
 
-      {/* Action Buttons */}
-      {hasProspects && selectedIds.length > 0 && (
-        <div className="flex items-center gap-3">
+      {/* Analyze Selected */}
+      {selectedIds.length > 0 && (
+        <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+          <span className="text-sm text-muted-foreground">{selectedIds.length} selected</span>
           <Button
+            size="sm"
             onClick={() => router.push(`/analysis?project_id=${projectId}&prospect_ids=${selectedIds.join(',')}`)}
           >
-            Analyze Selected ({selectedIds.length})
+            Analyze Selected
           </Button>
         </div>
       )}
@@ -524,23 +476,15 @@ function ProspectsTab({ projectId }: { projectId: string }) {
 function LeadsTab({ projectId }: { projectId: string }) {
   const router = useRouter();
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [leadModalOpen, setLeadModalOpen] = useState(false);
-  const [analysisConfigOpen, setAnalysisConfigOpen] = useState(false);
 
-  // Load leads and project data
   const loadData = async () => {
     try {
       setLoading(true);
-      const [leadsData, projectData] = await Promise.all([
-        getLeads({ project_id: projectId }),
-        getProject(projectId)
-      ]);
-
+      const leadsData = await getLeads({ project_id: projectId });
       setLeads(leadsData || []);
-      setProject(projectData);
     } catch (err) {
       console.error('Failed to load leads:', err);
     } finally {
@@ -552,103 +496,36 @@ function LeadsTab({ projectId }: { projectId: string }) {
     loadData();
   }, [projectId]);
 
-  // Refresh function
-  const refreshLeads = () => {
-    loadData();
-  };
-
-  const hasAnalysisConfig = project?.analysis_config && Object.keys(project.analysis_config).length > 0;
-  const hasLeads = leads.length > 0;
-
-  const handleLeadClick = (lead: Lead) => {
-    setSelectedLead(lead);
-    setLeadModalOpen(true);
-  };
-
-  const handleComposeEmails = (leadIds: string[]) => {
-    router.push(`/outreach?project_id=${projectId}&lead_ids=${leadIds.join(',')}`);
-  };
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Leads</h2>
-        <Button onClick={() => router.push(`/analysis?project_id=${projectId}`)}>
-          Analyze More Prospects
+        <h2 className="text-lg font-semibold">Leads ({leads.length})</h2>
+        <Button size="sm" onClick={() => router.push(`/analysis?project_id=${projectId}`)}>
+          Analyze More
         </Button>
       </div>
 
-      {/* Analysis Config Section */}
-      {hasAnalysisConfig && (
-        <Collapsible open={analysisConfigOpen} onOpenChange={setAnalysisConfigOpen}>
-          <Card>
-            <CardHeader>
-              <CollapsibleTrigger asChild>
-                <div className="flex items-center justify-between cursor-pointer">
-                  <div>
-                    <CardTitle className="text-lg">Analysis Configuration</CardTitle>
-                    <CardDescription>Settings used for analyzing websites</CardDescription>
-                  </div>
-                  <ChevronDown
-                    className={`w-5 h-5 transition-transform ${analysisConfigOpen ? 'rotate-180' : ''}`}
-                  />
-                </div>
-              </CollapsibleTrigger>
-            </CardHeader>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <div className="grid gap-3 md:grid-cols-2">
-                  {project?.analysis_config?.tier && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Analysis Tier</p>
-                      <p className="mt-1 capitalize">{project.analysis_config.tier}</p>
-                    </div>
-                  )}
-                  {project?.analysis_config?.modules && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Modules Enabled</p>
-                      <p className="mt-1">{project.analysis_config.modules.join(', ')}</p>
-                    </div>
-                  )}
-                  {project?.analysis_config?.capture_screenshots !== undefined && (
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Screenshots</p>
-                      <p className="mt-1">{project.analysis_config.capture_screenshots ? 'Enabled' : 'Disabled'}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
-      {/* Leads Table or Empty State */}
-      {!hasLeads && !loading ? (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <p className="text-muted-foreground text-center py-8">
-            No leads analyzed for this project yet.
-          </p>
-          <div className="text-center mt-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/analysis?project_id=${projectId}`)}
-            >
-              Start Analysis
-            </Button>
-          </div>
-        </div>
+      {leads.length === 0 && !loading ? (
+        <EmptyState
+          message="No leads analyzed yet"
+          action="Start Analysis"
+          onClick={() => router.push(`/analysis?project_id=${projectId}`)}
+        />
       ) : (
         <LeadsTable
           leads={leads}
           loading={loading}
-          onLeadClick={handleLeadClick}
-          onComposeEmails={handleComposeEmails}
-          onRefresh={refreshLeads}
+          onLeadClick={(lead) => {
+            setSelectedLead(lead);
+            setLeadModalOpen(true);
+          }}
+          onComposeEmails={(leadIds) => {
+            router.push(`/outreach?project_id=${projectId}&lead_ids=${leadIds.join(',')}`);
+          }}
+          onRefresh={loadData}
         />
       )}
 
-      {/* Lead Detail Modal */}
       <LeadDetailModal
         lead={selectedLead}
         open={leadModalOpen}
@@ -672,7 +549,6 @@ function OutreachTab({ projectId }: { projectId: string }) {
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [messageModalOpen, setMessageModalOpen] = useState(false);
 
-  // Load emails and social messages
   useEffect(() => {
     const loadOutreach = async () => {
       try {
@@ -681,7 +557,6 @@ function OutreachTab({ projectId }: { projectId: string }) {
           fetch(`${process.env.NEXT_PUBLIC_OUTREACH_API || 'http://localhost:3002'}/api/emails?project_id=${projectId}`).then(r => r.json()),
           fetch(`${process.env.NEXT_PUBLIC_OUTREACH_API || 'http://localhost:3002'}/api/social-messages?project_id=${projectId}`).then(r => r.json())
         ]);
-
         setEmails(emailsData.emails || []);
         setSocialMessages(messagesData.messages || []);
       } catch (err) {
@@ -690,104 +565,60 @@ function OutreachTab({ projectId }: { projectId: string }) {
         setLoading(false);
       }
     };
-
     loadOutreach();
   }, [projectId]);
 
-  const handleEmailClick = (email: any) => {
-    setSelectedEmail(email);
-    setEmailModalOpen(true);
-  };
-
-  const handleMessageClick = (message: any) => {
-    setSelectedMessage(message);
-    setMessageModalOpen(true);
-  };
-
-  const hasEmails = emails.length > 0;
-  const hasMessages = socialMessages.length > 0;
-  const hasOutreach = hasEmails || hasMessages;
+  const hasOutreach = emails.length > 0 || socialMessages.length > 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Outreach</h2>
-        <Button onClick={() => router.push(`/outreach?project_id=${projectId}`)}>
+        <h2 className="text-lg font-semibold">Outreach</h2>
+        <Button size="sm" onClick={() => router.push(`/outreach?project_id=${projectId}`)}>
           Compose More
         </Button>
       </div>
 
       {!hasOutreach && !loading ? (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <p className="text-muted-foreground text-center py-8">
-            No outreach messages created for this project yet.
-          </p>
-          <div className="text-center mt-4">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/outreach?project_id=${projectId}`)}
-            >
-              Start Composing
-            </Button>
-          </div>
-        </div>
+        <EmptyState
+          message="No outreach created yet"
+          action="Start Composing"
+          onClick={() => router.push(`/outreach?project_id=${projectId}`)}
+        />
       ) : (
-        <>
-          {/* Tabs for Emails and Social Messages */}
-          <Tabs value={activeView} onValueChange={(v: any) => setActiveView(v)}>
-            <TabsList>
-              <TabsTrigger value="emails">
-                Emails ({emails.length})
-              </TabsTrigger>
-              <TabsTrigger value="social">
-                Social DMs ({socialMessages.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="emails" className="mt-6">
-              <EmailsTable
-                emails={emails}
-                loading={loading}
-                onEmailClick={handleEmailClick}
-              />
-            </TabsContent>
-
-            <TabsContent value="social" className="mt-6">
-              <SocialMessagesTable
-                messages={socialMessages}
-                loading={loading}
-                onMessageClick={handleMessageClick}
-              />
-            </TabsContent>
-          </Tabs>
-        </>
+        <Tabs value={activeView} onValueChange={(v: any) => setActiveView(v)}>
+          <TabsList className="w-full grid grid-cols-2">
+            <TabsTrigger value="emails">Emails ({emails.length})</TabsTrigger>
+            <TabsTrigger value="social">Social ({socialMessages.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="emails" className="mt-4">
+            <EmailsTable emails={emails} loading={loading} onEmailClick={(e) => {
+              setSelectedEmail(e);
+              setEmailModalOpen(true);
+            }} />
+          </TabsContent>
+          <TabsContent value="social" className="mt-4">
+            <SocialMessagesTable messages={socialMessages} loading={loading} onMessageClick={(m) => {
+              setSelectedMessage(m);
+              setMessageModalOpen(true);
+            }} />
+          </TabsContent>
+        </Tabs>
       )}
 
-      {/* Email Detail Modal */}
-      <EmailDetailModal
-        email={selectedEmail}
-        open={emailModalOpen}
-        onClose={() => {
-          setEmailModalOpen(false);
-          setSelectedEmail(null);
-        }}
-      />
-
-      {/* Social Message Detail Modal */}
-      <SocialMessageDetailModal
-        message={selectedMessage}
-        open={messageModalOpen}
-        onClose={() => {
-          setMessageModalOpen(false);
-          setSelectedMessage(null);
-        }}
-      />
+      <EmailDetailModal email={selectedEmail} open={emailModalOpen} onClose={() => {
+        setEmailModalOpen(false);
+        setSelectedEmail(null);
+      }} />
+      <SocialMessageDetailModal message={selectedMessage} open={messageModalOpen} onClose={() => {
+        setMessageModalOpen(false);
+        setSelectedMessage(null);
+      }} />
     </div>
   );
 }
 
 function CampaignsTab({ projectId }: { projectId: string }) {
-  const router = useRouter();
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [campaignRuns, setCampaignRuns] = useState<any[]>([]);
@@ -796,209 +627,113 @@ function CampaignsTab({ projectId }: { projectId: string }) {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
 
-  // Load campaigns
-  useEffect(() => {
-    const loadCampaigns = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns?project_id=${projectId}`
-        );
-        const data = await response.json();
-        setCampaigns(data.campaigns || []);
-      } catch (err) {
-        console.error('Failed to load campaigns:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const baseUrl = process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020';
 
+  const loadCampaigns = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${baseUrl}/api/campaigns?project_id=${projectId}`);
+      const data = await response.json();
+      setCampaigns(data.campaigns || []);
+    } catch (err) {
+      console.error('Failed to load campaigns:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadCampaigns();
   }, [projectId]);
 
-  // Load runs for selected campaign
   const handleViewRuns = async (campaignId: string) => {
     try {
       setSelectedCampaignId(campaignId);
       setRunsLoading(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns/${campaignId}/runs`
-      );
+      const response = await fetch(`${baseUrl}/api/campaigns/${campaignId}/runs`);
       const data = await response.json();
       setCampaignRuns(data.runs || []);
     } catch (err) {
-      console.error('Failed to load campaign runs:', err);
+      console.error('Failed to load runs:', err);
     } finally {
       setRunsLoading(false);
     }
   };
 
-  const handleRunNow = async (campaignId: string) => {
+  const handleAction = async (action: string, campaignId: string) => {
+    const endpoints: Record<string, { method: string; path: string }> = {
+      run: { method: 'POST', path: `/api/campaigns/${campaignId}/run` },
+      pause: { method: 'PUT', path: `/api/campaigns/${campaignId}/pause` },
+      resume: { method: 'PUT', path: `/api/campaigns/${campaignId}/resume` },
+      delete: { method: 'DELETE', path: `/api/campaigns/${campaignId}` },
+    };
+    const { method, path } = endpoints[action];
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns/${campaignId}/run`,
-        { method: 'POST' }
-      );
-      if (response.ok) {
-        alert('Campaign run started successfully!');
-        // Refresh campaigns
-        const refreshResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns?project_id=${projectId}`
-        );
-        const data = await refreshResponse.json();
-        setCampaigns(data.campaigns || []);
+      await fetch(`${baseUrl}${path}`, { method });
+      if (action === 'delete' && selectedCampaignId === campaignId) {
+        setSelectedCampaignId(null);
+        setCampaignRuns([]);
       }
+      loadCampaigns();
     } catch (err) {
-      console.error('Failed to run campaign:', err);
-      alert('Failed to run campaign');
-    }
-  };
-
-  const handlePause = async (campaignId: string) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns/${campaignId}/pause`,
-        { method: 'PUT' }
-      );
-      if (response.ok) {
-        // Refresh campaigns
-        const refreshResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns?project_id=${projectId}`
-        );
-        const data = await refreshResponse.json();
-        setCampaigns(data.campaigns || []);
-      }
-    } catch (err) {
-      console.error('Failed to pause campaign:', err);
-    }
-  };
-
-  const handleResume = async (campaignId: string) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns/${campaignId}/resume`,
-        { method: 'PUT' }
-      );
-      if (response.ok) {
-        // Refresh campaigns
-        const refreshResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns?project_id=${projectId}`
-        );
-        const data = await refreshResponse.json();
-        setCampaigns(data.campaigns || []);
-      }
-    } catch (err) {
-      console.error('Failed to resume campaign:', err);
-    }
-  };
-
-  const handleDelete = async (campaignId: string) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns/${campaignId}`,
-        { method: 'DELETE' }
-      );
-      if (response.ok) {
-        // Refresh campaigns
-        const refreshResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns?project_id=${projectId}`
-        );
-        const data = await refreshResponse.json();
-        setCampaigns(data.campaigns || []);
-
-        // Clear selected campaign if it was deleted
-        if (selectedCampaignId === campaignId) {
-          setSelectedCampaignId(null);
-          setCampaignRuns([]);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to delete campaign:', err);
+      console.error(`Failed to ${action} campaign:`, err);
     }
   };
 
   const handleCreateCampaign = async (config: any) => {
     try {
       setCreateLoading(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(config)
-        }
-      );
-
+      const response = await fetch(`${baseUrl}/api/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
       if (response.ok) {
-        // Refresh campaigns
-        const refreshResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_ORCHESTRATOR_API || 'http://localhost:3020'}/api/campaigns?project_id=${projectId}`
-        );
-        const data = await refreshResponse.json();
-        setCampaigns(data.campaigns || []);
+        loadCampaigns();
         setScheduleDialogOpen(false);
-      } else {
-        const error = await response.json();
-        alert(`Failed to create campaign: ${error.error || 'Unknown error'}`);
       }
     } catch (err) {
       console.error('Failed to create campaign:', err);
-      alert('Failed to create campaign');
     } finally {
       setCreateLoading(false);
     }
   };
 
-  const hasCampaigns = campaigns.length > 0;
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Automated Campaigns</h2>
-        <Button onClick={() => setScheduleDialogOpen(true)}>
-          Schedule Campaign
+        <h2 className="text-lg font-semibold">Automation ({campaigns.length})</h2>
+        <Button size="sm" onClick={() => setScheduleDialogOpen(true)}>
+          <Calendar className="w-3.5 h-3.5 mr-1" />
+          Schedule
         </Button>
       </div>
 
-      {!hasCampaigns && !loading ? (
-        <div className="rounded-lg border border-border bg-card p-6">
-          <p className="text-muted-foreground text-center py-8">
-            No campaigns scheduled for this project yet.
-          </p>
-          <div className="text-center mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setScheduleDialogOpen(true)}
-            >
-              Create Campaign
-            </Button>
-          </div>
-        </div>
+      {campaigns.length === 0 && !loading ? (
+        <EmptyState
+          message="No campaigns scheduled"
+          action="Create Campaign"
+          onClick={() => setScheduleDialogOpen(true)}
+        />
       ) : (
         <>
           <ScheduledCampaignsTable
             campaigns={campaigns}
-            onRunNow={handleRunNow}
-            onPause={handlePause}
-            onResume={handleResume}
-            onDelete={handleDelete}
+            onRunNow={(id) => handleAction('run', id)}
+            onPause={(id) => handleAction('pause', id)}
+            onResume={(id) => handleAction('resume', id)}
+            onDelete={(id) => handleAction('delete', id)}
             onViewRuns={handleViewRuns}
             loading={loading}
           />
-
-          {/* Campaign Runs Section */}
           {selectedCampaignId && (
-            <div className="space-y-4">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold">Campaign Run History</h3>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedCampaignId(null);
-                    setCampaignRuns([]);
-                  }}
-                >
+                <h3 className="text-sm font-medium">Run History</h3>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setSelectedCampaignId(null);
+                  setCampaignRuns([]);
+                }}>
                   Close
                 </Button>
               </div>
@@ -1008,7 +743,6 @@ function CampaignsTab({ projectId }: { projectId: string }) {
         </>
       )}
 
-      {/* Campaign Schedule Dialog */}
       <CampaignScheduleDialog
         open={scheduleDialogOpen}
         onOpenChange={setScheduleDialogOpen}
@@ -1024,97 +758,46 @@ function CampaignsTab({ projectId }: { projectId: string }) {
 // Helper Components
 // ============================================================================
 
-function StatCard({
+function StatChip({
   icon,
-  label,
   value,
-  subtitle
+  label,
+  subValue,
+  color
 }: {
   icon: React.ReactNode;
-  label: string;
   value: string | number;
-  subtitle?: string;
+  label?: string;
+  subValue?: string;
+  color: string;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <div className="text-muted-foreground">{icon}</div>
-      </div>
-      <p className="text-2xl font-bold">{value}</p>
-      {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+    <div className="flex items-center gap-1.5 px-2 py-1 whitespace-nowrap">
+      <span className={color}>{icon}</span>
+      <span className="font-semibold text-sm">{value}</span>
+      {label && <span className="text-xs text-muted-foreground hidden sm:inline">{label}</span>}
+      {subValue && <span className="text-xs text-muted-foreground hidden md:inline">({subValue})</span>}
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="font-medium capitalize">{value}</p>
-    </div>
-  );
-}
-
-function ActionCard({
-  title,
-  description,
+function EmptyState({
+  message,
   action,
   onClick
 }: {
-  title: string;
-  description: string;
+  message: string;
   action: string;
   onClick: () => void;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-6 space-y-3">
-      <h4 className="font-semibold">{title}</h4>
-      <p className="text-sm text-muted-foreground">{description}</p>
-      <Button variant="outline" className="w-full" onClick={onClick}>
+    <div className="text-center py-8 border border-dashed rounded-lg">
+      <p className="text-muted-foreground mb-3">{message}</p>
+      <Button variant="outline" size="sm" onClick={onClick}>
         {action}
       </Button>
     </div>
   );
-}
-
-function MetricCard({
-  label,
-  value,
-  breakdown
-}: {
-  label: string;
-  value: number;
-  breakdown?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card p-6">
-      <p className="text-sm text-muted-foreground mb-2">{label}</p>
-      <p className="text-3xl font-bold">{value}</p>
-      {breakdown && (
-        <p className="text-xs text-muted-foreground mt-2">{breakdown}</p>
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-function getStatusVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
-  switch (status) {
-    case 'active':
-      return 'default';
-    case 'paused':
-      return 'secondary';
-    case 'completed':
-      return 'outline';
-    case 'archived':
-      return 'destructive';
-    default:
-      return 'secondary';
-  }
 }
 
 function formatCurrency(value: number): string {
@@ -1125,4 +808,3 @@ function formatCurrency(value: number): string {
     maximumFractionDigits: 0
   }).format(value);
 }
-

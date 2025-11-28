@@ -1,0 +1,58 @@
+{
+  "table": "system_logs",
+  "description": "Centralized logs from all engines - 5 day retention",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()"
+    },
+    {
+      "name": "engine",
+      "type": "text",
+      "nullable": false,
+      "comment": "prospecting, analysis, report, outreach, pipeline"
+    },
+    {
+      "name": "module",
+      "type": "text",
+      "comment": "Sub-component within engine"
+    },
+    {
+      "name": "level",
+      "type": "text",
+      "nullable": false,
+      "comment": "debug, info, success, warning, error"
+    },
+    {
+      "name": "message",
+      "type": "text",
+      "nullable": false
+    },
+    {
+      "name": "data",
+      "type": "jsonb",
+      "comment": "Optional structured metadata"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_system_logs_engine",
+      "columns": ["engine"]
+    },
+    {
+      "name": "idx_system_logs_level",
+      "columns": ["level"]
+    },
+    {
+      "name": "idx_system_logs_created_at",
+      "columns": ["created_at"]
+    }
+  ]
+}

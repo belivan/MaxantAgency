@@ -119,6 +119,9 @@ export function Navbar() {
               <span className="font-semibold text-lg hidden sm:inline">
                 Minty Design Co
               </span>
+              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded">
+                BETA
+              </span>
             </Link>
           </div>
 
@@ -183,6 +186,7 @@ export function Navbar() {
               </SignInButton>
             </SignedOut>
             <SignedIn>
+              <QuotaStatus />
               <UserButton afterSignOutUrl="/" />
               <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                 {menuOpen ? (

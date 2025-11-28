@@ -16,8 +16,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3010
+      - STORAGE_BASE_DIR=/opt/MaxantAgency/storage
     env_file:
       - .env
+    volumes:
+      - ./storage:/opt/MaxantAgency/storage
     networks:
       - maksant-network
     shm_size: '2gb'
@@ -71,8 +74,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3002
+      - STORAGE_BASE_DIR=/opt/MaxantAgency/storage
     env_file:
       - .env
+    volumes:
+      - ./storage:/opt/MaxantAgency/storage
     networks:
       - maksant-network
     healthcheck:
@@ -95,8 +101,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3020
+      - STORAGE_BASE_DIR=/opt/MaxantAgency/storage
     env_file:
       - .env
+    volumes:
+      - ./storage:/opt/MaxantAgency/storage
     networks:
       - maksant-network
     healthcheck:

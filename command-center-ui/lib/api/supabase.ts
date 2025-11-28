@@ -188,35 +188,18 @@ export async function getTotalCosts(): Promise<{
 }
 
 /**
- * Get analytics data
+ * Get analytics data (filtered by user's projects)
  */
 export async function getAnalytics(): Promise<any> {
-  const { data: prospects } = await supabase.from('prospects').select('*');
-  const { data: leads } = await supabase.from('leads').select('*');
+  const response = await fetch('/api/analytics');
 
-  const total_prospects = prospects?.length || 0;
-  const total_leads = leads?.length || 0;
-  const qualified_leads = leads?.filter((l: any) => l.lead_grade === 'A' || l.lead_grade === 'B').length || 0;
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to fetch analytics');
+  }
 
-  return {
-    stats: {
-      total_cost: 0,
-      total_prospects,
-      total_leads,
-      qualified_leads,
-      contacted: 0,
-      cost_per_lead: 0,
-      conversion_rate: total_prospects > 0 ? (total_leads / total_prospects) * 100 : 0
-    },
-    cost_breakdown: [],
-    funnel: {
-      prospects: total_prospects,
-      analyzed: total_leads,
-      leads: total_leads,
-      qualified: qualified_leads,
-      contacted: 0
-    }
-  };
+  const result = await response.json();
+  return result.data;
 }
 
 /**

@@ -16,6 +16,7 @@ import {
   AlertCircle,
   ArrowDown,
   Pause,
+  HardDrive,
 } from 'lucide-react';
 import { useConsole, LogType, LogLevel } from '@/lib/contexts/console-context';
 import { ConsoleLogEntry } from './console-log-entry';
@@ -48,12 +49,16 @@ export function ConsolePanel() {
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logsContainerRef = useRef<HTMLDivElement>(null);
 
+  // Get last log ID for scroll trigger (works even when logs are trimmed at limit)
+  const lastLogId = filteredLogs.length > 0 ? filteredLogs[filteredLogs.length - 1].id : null;
+
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
-    if (settings.autoScroll && logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (settings.autoScroll && logsContainerRef.current) {
+      // Use scrollTop for more reliable scrolling behavior
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
     }
-  }, [filteredLogs.length, settings.autoScroll]);
+  }, [lastLogId, settings.autoScroll]);
 
   const toggleTypeFilter = (type: LogType) => {
     const newTypes = filters.types.includes(type)
@@ -127,6 +132,20 @@ export function ConsolePanel() {
               title={settings.showHealthChecks ? 'Showing health checks' : 'Hiding health checks'}
             >
               <Settings className="h-3.5 w-3.5" />
+            </button>
+
+            {/* Persist logs toggle */}
+            <button
+              onClick={() => setSettings({ persistLogs: !settings.persistLogs })}
+              className={cn(
+                'p-1.5 rounded transition-colors',
+                settings.persistLogs
+                  ? 'bg-primary/20 text-primary'
+                  : 'text-muted-foreground hover:bg-muted'
+              )}
+              title={settings.persistLogs ? 'Logs persist across refresh' : 'Logs cleared on refresh'}
+            >
+              <HardDrive className="h-3.5 w-3.5" />
             </button>
 
             {/* Export */}
@@ -222,7 +241,13 @@ export function ConsolePanel() {
       <div className="flex-shrink-0 border-t border-border px-2 py-1 text-[10px] text-muted-foreground flex items-center justify-between">
         <span className="hidden md:inline">Cmd+Shift+J: Toggle | Cmd+K: Clear | Esc: Close</span>
         <span className="md:hidden">{filteredLogs.length} logs</span>
-        <span>{settings.showHealthChecks ? 'Showing' : 'Hiding'} health checks</span>
+        <span className="flex items-center gap-2">
+          <span className={settings.persistLogs ? 'text-primary' : ''}>
+            {settings.persistLogs ? 'Persisted' : 'In-memory'}
+          </span>
+          <span>|</span>
+          <span>{settings.showHealthChecks ? 'Showing' : 'Hiding'} health checks</span>
+        </span>
       </div>
     </div>
   );

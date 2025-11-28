@@ -53,7 +53,7 @@ export interface ConsoleSettings {
 }
 
 const DEFAULT_SETTINGS: ConsoleSettings = {
-  maxLogs: 1000,
+  maxLogs: 5000,
   autoScroll: true,
   showHealthChecks: false,
   persistLogs: false,
@@ -92,13 +92,29 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'tasks' | 'network' | 'console'>('tasks');
 
-  // Load settings from localStorage on mount
+  // Load settings and logs from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedSettings = localStorage.getItem('console-settings');
       if (savedSettings) {
         try {
-          setSettingsState({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
+          const parsed = { ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) };
+          setSettingsState(parsed);
+
+          // Load persisted logs if enabled
+          if (parsed.persistLogs) {
+            const savedLogs = localStorage.getItem('console-logs');
+            if (savedLogs) {
+              try {
+                const parsedLogs = JSON.parse(savedLogs);
+                if (Array.isArray(parsedLogs)) {
+                  setLogs(parsedLogs);
+                }
+              } catch (e) {
+                console.error('Failed to parse console logs:', e);
+              }
+            }
+          }
         } catch (e) {
           console.error('Failed to parse console settings:', e);
         }
@@ -112,6 +128,17 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('console-settings', JSON.stringify(settings));
     }
   }, [settings]);
+
+  // Save logs to localStorage when they change (if persistence enabled)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && settings.persistLogs) {
+      // Debounce to avoid excessive writes
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('console-logs', JSON.stringify(logs));
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [logs, settings.persistLogs]);
 
   // Filter logs based on current filters
   const filteredLogs = logs.filter(log => {
@@ -160,6 +187,9 @@ export function ConsoleProvider({ children }: { children: ReactNode }) {
   // Clear all logs
   const clearLogs = useCallback(() => {
     setLogs([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('console-logs');
+    }
   }, []);
 
   // Export logs as JSON file

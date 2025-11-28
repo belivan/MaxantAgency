@@ -1,14 +1,17 @@
 'use client';
 
 /**
- * Pipeline Health Component
- * Displays health status of all 3 engines
+ * Compact Engine Status
+ * Minimal status dots for pipeline health
  */
 
-import { CheckCircle2, AlertCircle, XCircle, Activity } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export type EngineStatus = 'online' | 'offline' | 'degraded';
 
@@ -20,154 +23,55 @@ export interface EngineHealth {
   message?: string;
 }
 
-interface PipelineHealthProps {
+interface EngineStatusDotsProps {
   engines: EngineHealth[];
   loading?: boolean;
+  className?: string;
 }
 
-function getStatusIcon(status: EngineStatus) {
-  switch (status) {
-    case 'online':
-      return <CheckCircle2 className="w-5 h-5" />;
-    case 'degraded':
-      return <AlertCircle className="w-5 h-5" />;
-    case 'offline':
-      return <XCircle className="w-5 h-5" />;
-  }
-}
+const STATUS_COLORS = {
+  online: 'bg-green-500',
+  degraded: 'bg-yellow-500',
+  offline: 'bg-red-500',
+};
 
-function getStatusColor(status: EngineStatus) {
-  switch (status) {
-    case 'online':
-      return 'text-green-600 dark:text-green-500';
-    case 'degraded':
-      return 'text-yellow-600 dark:text-yellow-500';
-    case 'offline':
-      return 'text-red-600 dark:text-red-500';
-  }
-}
-
-function getStatusBadgeVariant(status: EngineStatus): 'default' | 'secondary' | 'destructive' {
-  switch (status) {
-    case 'online':
-      return 'default';
-    case 'degraded':
-      return 'secondary';
-    case 'offline':
-      return 'destructive';
-  }
-}
-
-function EngineHealthItem({ engine }: { engine: EngineHealth }) {
-  return (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex items-center space-x-3">
-        <div className={cn(getStatusColor(engine.status))}>
-          {getStatusIcon(engine.status)}
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-sm font-medium">{engine.name}</p>
-          {engine.message && (
-            <p className="text-xs text-muted-foreground">{engine.message}</p>
-          )}
-          {engine.responseTime && (
-            <p className="text-xs text-muted-foreground">
-              Response time: {engine.responseTime}ms
-            </p>
-          )}
-        </div>
+export function EngineStatusDots({ engines, loading = false, className }: EngineStatusDotsProps) {
+  if (loading) {
+    return (
+      <div className={cn("flex items-center gap-1.5", className)}>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="w-2.5 h-2.5 rounded-full bg-muted animate-pulse" />
+        ))}
       </div>
+    );
+  }
 
-      <Badge variant={getStatusBadgeVariant(engine.status)} className="capitalize">
-        {engine.status}
-      </Badge>
-    </div>
-  );
-}
-
-function HealthSkeleton() {
   return (
-    <div className="flex items-center justify-between py-3 animate-pulse">
-      <div className="flex items-center space-x-3">
-        <div className="w-5 h-5 bg-muted rounded-full" />
-        <div className="space-y-2">
-          <div className="h-4 bg-muted rounded w-32" />
-          <div className="h-3 bg-muted rounded w-24" />
-        </div>
+    <TooltipProvider delayDuration={200}>
+      <div className={cn("flex items-center gap-1.5", className)}>
+        {engines.map((engine, index) => (
+          <Tooltip key={index}>
+            <TooltipTrigger asChild>
+              <div
+                className={cn(
+                  "w-2.5 h-2.5 rounded-full cursor-default transition-colors",
+                  STATUS_COLORS[engine.status]
+                )}
+              />
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="text-xs">
+              <p className="font-medium">{engine.name}</p>
+              <p className="text-muted-foreground capitalize">{engine.status}</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
       </div>
-      <div className="h-5 w-16 bg-muted rounded" />
-    </div>
+    </TooltipProvider>
   );
 }
 
-function getOverallHealth(engines: EngineHealth[]): {
-  status: 'healthy' | 'degraded' | 'critical';
-  color: string;
-  icon: React.ReactNode;
-} {
-  const offlineCount = engines.filter(e => e.status === 'offline').length;
-  const degradedCount = engines.filter(e => e.status === 'degraded').length;
-
-  if (offlineCount > 0) {
-    return {
-      status: 'critical',
-      color: 'text-red-600 dark:text-red-500',
-      icon: <XCircle className="w-6 h-6" />
-    };
-  }
-
-  if (degradedCount > 0) {
-    return {
-      status: 'degraded',
-      color: 'text-yellow-600 dark:text-yellow-500',
-      icon: <AlertCircle className="w-6 h-6" />
-    };
-  }
-
-  return {
-    status: 'healthy',
-    color: 'text-green-600 dark:text-green-500',
-    icon: <CheckCircle2 className="w-6 h-6" />
-  };
-}
-
-export function PipelineHealth({ engines, loading = false }: PipelineHealthProps) {
-  const overall = getOverallHealth(engines);
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <Activity className="w-5 h-5" />
-            <span>Pipeline Health</span>
-          </CardTitle>
-
-          <div className={cn('flex items-center space-x-2', overall.color)}>
-            {overall.icon}
-            <span className="text-sm font-medium capitalize">
-              {overall.status}
-            </span>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="space-y-1">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <HealthSkeleton key={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="divide-y divide-border">
-            {engines.map((engine, index) => (
-              <EngineHealthItem key={index} engine={engine} />
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+// Legacy export for backward compatibility
+export function PipelineHealth({ engines, loading = false }: { engines: EngineHealth[]; loading?: boolean }) {
+  return <EngineStatusDots engines={engines} loading={loading} />;
 }
 

@@ -132,7 +132,12 @@ export function formatDateString(
 /**
  * Format date with time
  */
-export function formatDateTime(date: string | Date): string {
+export function formatDateTime(date: string | Date, options?: {
+  relative?: boolean;
+}): string {
+  if (options?.relative) {
+    return formatRelativeTime(date);
+  }
   return formatDateString(date, 'MMM d, yyyy h:mm a');
 }
 

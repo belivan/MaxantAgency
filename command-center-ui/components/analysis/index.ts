@@ -12,3 +12,4 @@ export * from './features-showcase';
 export * from './analysis-results';
 export * from './benchmark-manager';
 export * from './quick-website-analysis';
+export * from './analysis-step-indicator';

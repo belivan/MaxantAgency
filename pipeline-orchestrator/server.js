@@ -3,7 +3,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
-import { log } from './shared/logger.js';
 import orchestrator from './orchestrator.js';
 import {
   createCampaign,
@@ -20,7 +19,7 @@ import {
   rescheduleCampaign,
   getActiveTasks
 } from './schedulers/index.js';
-import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
+import { createLogger, setupLogStreamEndpoint, cleanupOldLogs } from '../database-tools/shared/console-logger.js';
 
 // Load environment variables from root .env
 const __filename = fileURLToPath(import.meta.url);
@@ -41,7 +40,7 @@ logger.info('Pipeline Orchestrator starting...');
 
 // Request logging middleware
 app.use((req, res, next) => {
-  log.info('API Request', {
+  logger.info('API Request', {
     method: req.method,
     path: req.path,
     ip: req.ip
@@ -61,7 +60,7 @@ app.post('/api/campaigns', async (req, res) => {
   try {
     const campaignConfig = req.body;
 
-    log.info('Creating new campaign', { name: campaignConfig.name });
+    logger.info('Creating new campaign', { name: campaignConfig.name });
 
     // Validate required fields
     if (!campaignConfig.name) {
@@ -91,9 +90,9 @@ app.post('/api/campaigns', async (req, res) => {
     if (campaignConfig.schedule?.cron && campaignConfig.schedule?.enabled) {
       try {
         scheduleCampaign(campaign);
-        log.info('Campaign scheduled', { campaignId: campaign.id });
+        logger.info('Campaign scheduled', { campaignId: campaign.id });
       } catch (error) {
-        log.error('Failed to schedule campaign', {
+        logger.error('Failed to schedule campaign', {
           campaignId: campaign.id,
           error: error.message
         });
@@ -113,7 +112,7 @@ app.post('/api/campaigns', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error creating campaign', { error: error.message });
+    logger.error('Error creating campaign', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -156,7 +155,7 @@ app.get('/api/campaigns', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error listing campaigns', { error: error.message });
+    logger.error('Error listing campaigns', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -187,7 +186,7 @@ app.get('/api/campaigns/:id', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error getting campaign', { error: error.message });
+    logger.error('Error getting campaign', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -212,14 +211,14 @@ app.post('/api/campaigns/:id/run', async (req, res) => {
       });
     }
 
-    log.info('Manually triggering campaign', {
+    logger.info('Manually triggering campaign', {
       campaignId: id,
       name: campaign.name
     });
 
     // Run campaign asynchronously (don't wait for completion)
     runCampaign(campaign, 'manual').catch(error => {
-      log.error('Manual campaign run failed', {
+      logger.error('Manual campaign run failed', {
         campaignId: id,
         error: error.message
       });
@@ -232,7 +231,7 @@ app.post('/api/campaigns/:id/run', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error triggering campaign', { error: error.message });
+    logger.error('Error triggering campaign', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -272,7 +271,7 @@ app.get('/api/campaigns/:id/runs', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error getting campaign runs', { error: error.message });
+    logger.error('Error getting campaign runs', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -303,7 +302,7 @@ app.put('/api/campaigns/:id/pause', async (req, res) => {
     // Unschedule the campaign
     unscheduleCampaign(id);
 
-    log.info('Campaign paused', { campaignId: id, name: campaign.name });
+    logger.info('Campaign paused', { campaignId: id, name: campaign.name });
 
     res.json({
       success: true,
@@ -311,7 +310,7 @@ app.put('/api/campaigns/:id/pause', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error pausing campaign', { error: error.message });
+    logger.error('Error pausing campaign', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -344,7 +343,7 @@ app.put('/api/campaigns/:id/resume', async (req, res) => {
       scheduleCampaign(updated);
     }
 
-    log.info('Campaign resumed', { campaignId: id, name: campaign.name });
+    logger.info('Campaign resumed', { campaignId: id, name: campaign.name });
 
     res.json({
       success: true,
@@ -352,7 +351,7 @@ app.put('/api/campaigns/:id/resume', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error resuming campaign', { error: error.message });
+    logger.error('Error resuming campaign', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -383,7 +382,7 @@ app.delete('/api/campaigns/:id', async (req, res) => {
     // Delete from database (cascade will delete runs too)
     await deleteCampaign(id);
 
-    log.info('Campaign deleted', { campaignId: id, name: campaign.name });
+    logger.info('Campaign deleted', { campaignId: id, name: campaign.name });
 
     res.json({
       success: true,
@@ -391,7 +390,7 @@ app.delete('/api/campaigns/:id', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error deleting campaign', { error: error.message });
+    logger.error('Error deleting campaign', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -442,7 +441,7 @@ app.get('/api/stats', async (req, res) => {
     });
 
   } catch (error) {
-    log.error('Error getting stats', { error: error.message });
+    logger.error('Error getting stats', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -464,7 +463,7 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  log.error('Unhandled error', {
+  logger.error('Unhandled error', {
     error: err.message,
     stack: err.stack
   });
@@ -481,12 +480,15 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   try {
+    // Clean up old logs (5-day retention)
+    await cleanupOldLogs();
+
     // Initialize orchestrator
     await orchestrator.initialize();
 
     // Start Express server
     app.listen(PORT, () => {
-      log.info('Pipeline Orchestrator API started', {
+      logger.info('Pipeline Orchestrator API started', {
         port: PORT,
         environment: process.env.NODE_ENV || 'development'
       });
@@ -505,7 +507,7 @@ async function startServer() {
     });
 
   } catch (error) {
-    log.error('Failed to start server', {
+    logger.error('Failed to start server', {
       error: error.message,
       stack: error.stack
     });

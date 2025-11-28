@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentUser } from '@/lib/server/quota';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,10 +9,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -39,11 +38,12 @@ export async function GET(
       );
     }
 
-    // Fetch project
+    // Fetch project with ownership check
     const { data: project, error } = await supabase
       .from('projects')
       .select('*')
       .eq('id', projectId)
+      .eq('user_id', user.id)  // Ownership check
       .single();
 
     if (error) {
@@ -80,10 +80,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -123,11 +122,12 @@ export async function PATCH(
     if (body.prospecting_prompts !== undefined) updateData.prospecting_prompts = body.prospecting_prompts;
     if (body.prospecting_model_selections !== undefined) updateData.prospecting_model_selections = body.prospecting_model_selections;
 
-    // Update project
+    // Update project with ownership check
     const { data: project, error } = await supabase
       .from('projects')
       .update(updateData)
       .eq('id', projectId)
+      .eq('user_id', user.id)  // Ownership check
       .select()
       .single();
 
@@ -135,7 +135,7 @@ export async function PATCH(
       console.error('Project update error:', error);
       return NextResponse.json(
         { success: false, error: error.message || 'Failed to update project' },
-        { status: 500 }
+        { status: error.code === 'PGRST116' ? 404 : 500 }
       );
     }
 
@@ -159,10 +159,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -182,11 +181,12 @@ export async function DELETE(
     const supabase = createClient(supabaseUrl, supabaseKey);
     const { id: projectId } = await params;
 
-    // Delete project
+    // Delete project with ownership check
     const { error } = await supabase
       .from('projects')
       .delete()
-      .eq('id', projectId);
+      .eq('id', projectId)
+      .eq('user_id', user.id);  // Ownership check
 
     if (error) {
       console.error('Project delete error:', error);

@@ -37,7 +37,7 @@ import {
   cancelReport,
   getOverallQueueStatus
 } from './routes/report-queue-endpoints.js';
-import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
+import { createLogger, setupLogStreamEndpoint, cleanupOldLogs } from '../database-tools/shared/console-logger.js';
 
 // Initialize Express app
 const app = express();
@@ -695,6 +695,9 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
   try {
+    // Clean up old logs (5-day retention)
+    await cleanupOldLogs();
+
     // Ensure Supabase Storage bucket exists
     console.log('🔧 Checking Supabase Storage bucket...');
     await ensureReportsBucket();

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Calendar, TrendingUp } from 'lucide-react';
+import { Calendar, FolderKanban, Users, BarChart3, DollarSign, Plus, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProjectsTable, CreateProjectDialog } from '@/components/projects';
@@ -12,7 +12,7 @@ import {
 } from '@/components/campaigns';
 import { useProjects } from '@/lib/hooks';
 import { LoadingSection } from '@/components/shared/loading-spinner';
-import { LoadingOverlay } from '@/components/shared';
+import { LoadingOverlay, PageLayout } from '@/components/shared';
 import {
   getCampaigns,
   createCampaign,
@@ -85,7 +85,6 @@ export default function ProjectsPage() {
     try {
       await runCampaign(id);
       alert('Campaign started! Check the runs history to see progress.');
-      // Refresh after a delay to show the new run
       setTimeout(() => {
         if (selectedCampaignId === id) {
           loadCampaignRuns(id);
@@ -132,155 +131,200 @@ export default function ProjectsPage() {
     loadCampaignRuns(id);
   };
 
+  // Calculate stats
+  const totalProjects = projects.length;
+  const activeProjects = projects.filter(p => p.status === 'active').length;
+  const totalProspects = projects.reduce((sum, p) => sum + p.prospects_count, 0);
+  const totalCost = projects.reduce((sum, p) => sum + p.total_cost, 0);
+
   return (
     <>
       <LoadingOverlay
         isLoading={loading || campaignsLoading || creatingCampaign}
         message={creatingCampaign ? "Creating campaign..." : "Loading..."}
       />
-      <div className="container mx-auto p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
-            <p className="text-muted-foreground">
-              Manage your prospecting campaigns and automated workflows
-            </p>
+      <PageLayout
+        title="Projects"
+        description="Manage campaigns and workflows"
+        headerRight={
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setScheduleDialogOpen(true)}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Automate</span>
+            </Button>
+            <CreateProjectDialog onProjectCreated={refresh} />
           </div>
+        }
+      >
 
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={() => setScheduleDialogOpen(true)}
-            variant="outline"
-            className="flex items-center space-x-2"
-          >
-            <Calendar className="w-4 h-4" />
-            <span>Schedule Campaign</span>
-          </Button>
-          <CreateProjectDialog onProjectCreated={refresh} />
-        </div>
-      </div>
-
-      {/* Error State */}
-      {error && (
-        <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">{error}</p>
-        </div>
-      )}
-
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="projects" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="projects">Projects</TabsTrigger>
-          <TabsTrigger value="campaigns">
-            <Calendar className="w-4 h-4 mr-2" />
-            Automated Campaigns ({campaigns.length})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Projects Tab */}
-        <TabsContent value="projects" className="space-y-6">
-          {loading && !projects.length ? (
-            <LoadingSection title="Loading Projects" />
-          ) : (
-            <ProjectsTable
-              projects={projects}
-              loading={loading}
-              onProjectClick={(project) => {
-                window.location.href = `/projects/${project.id}`;
-              }}
-              onDeleteComplete={refresh}
+        {/* Compact Stats Bar */}
+        {projects.length > 0 && (
+          <div className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg overflow-x-auto">
+            <StatChip
+              icon={<FolderKanban className="w-3.5 h-3.5" />}
+              value={totalProjects}
+              label="Projects"
+              color="text-slate-600"
             />
-          )}
-
-          {/* Stats Summary */}
-          {projects.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-4 pt-4">
-              <StatCard
-                label="Total Projects"
-                value={projects.length}
-              />
-              <StatCard
-                label="Active Projects"
-                value={projects.filter(p => p.status === 'active').length}
-              />
-              <StatCard
-                label="Total Prospects"
-                value={projects.reduce((sum, p) => sum + p.prospects_count, 0)}
-              />
-              <StatCard
-                label="Total Cost"
-                value={`$${projects.reduce((sum, p) => sum + p.total_cost, 0).toFixed(2)}`}
-              />
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Campaigns Tab */}
-        <TabsContent value="campaigns" className="space-y-6">
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Scheduled Campaigns</h2>
-              <p className="text-muted-foreground">
-                Automated campaigns run on a schedule, executing prospecting, analysis, and outreach automatically
-              </p>
-            </div>
-
-            <ScheduledCampaignsTable
-              campaigns={campaigns}
-              onRunNow={handleRunNow}
-              onPause={handlePause}
-              onResume={handleResume}
-              onDelete={handleDelete}
-              onViewRuns={handleViewRuns}
-              loading={campaignsLoading}
+            <div className="w-px h-4 bg-border" />
+            <StatChip
+              icon={<Zap className="w-3.5 h-3.5" />}
+              value={activeProjects}
+              label="Active"
+              color="text-emerald-600"
+            />
+            <div className="w-px h-4 bg-border" />
+            <StatChip
+              icon={<Users className="w-3.5 h-3.5" />}
+              value={totalProspects}
+              label="Prospects"
+              color="text-blue-600"
+            />
+            <div className="w-px h-4 bg-border" />
+            <StatChip
+              icon={<DollarSign className="w-3.5 h-3.5" />}
+              value={`${totalCost.toFixed(2)}`}
+              label="Cost"
+              color="text-amber-600"
             />
           </div>
+        )}
 
-          {/* Campaign Runs History */}
-          {selectedCampaignId && (
-            <div className="space-y-4">
+        {/* Error State */}
+        {error && (
+          <div className="rounded-lg border border-destructive bg-destructive/10 p-3">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
+
+        {/* Main Content Tabs */}
+        <Tabs defaultValue="projects" className="space-y-4">
+          <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+            <TabsTrigger value="projects" className="text-sm">
+              <FolderKanban className="w-4 h-4 mr-1.5" />
+              Projects
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="text-sm">
+              <Calendar className="w-4 h-4 mr-1.5" />
+              <span className="hidden sm:inline">Campaigns</span>
+              <span className="sm:hidden">Auto</span>
+              {campaigns.length > 0 && (
+                <span className="ml-1.5 bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-full">
+                  {campaigns.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Projects Tab */}
+          <TabsContent value="projects" className="space-y-4 mt-4">
+            {loading && !projects.length ? (
+              <LoadingSection title="Loading Projects" />
+            ) : (
+              <ProjectsTable
+                projects={projects}
+                loading={loading}
+                onProjectClick={(project) => {
+                  window.location.href = `/projects/${project.id}`;
+                }}
+                onDeleteComplete={refresh}
+              />
+            )}
+          </TabsContent>
+
+          {/* Campaigns Tab */}
+          <TabsContent value="campaigns" className="space-y-4 mt-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Run History</h2>
-                  <p className="text-muted-foreground">
-                    {campaigns.find(c => c.id === selectedCampaignId)?.name}
+                  <h2 className="text-lg font-semibold">Scheduled Campaigns</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Automated prospecting, analysis, and outreach
                   </p>
                 </div>
                 <Button
+                  onClick={() => setScheduleDialogOpen(true)}
+                  size="sm"
                   variant="outline"
-                  onClick={() => {
-                    setSelectedCampaignId(null);
-                    setCampaignRuns([]);
-                  }}
                 >
-                  Close
+                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  New
                 </Button>
               </div>
 
-              <CampaignRunsHistory runs={campaignRuns} loading={runsLoading} />
+              <ScheduledCampaignsTable
+                campaigns={campaigns}
+                onRunNow={handleRunNow}
+                onPause={handlePause}
+                onResume={handleResume}
+                onDelete={handleDelete}
+                onViewRuns={handleViewRuns}
+                loading={campaignsLoading}
+              />
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
 
-      {/* Campaign Schedule Dialog */}
-      <CampaignScheduleDialog
-        open={scheduleDialogOpen}
-        onOpenChange={setScheduleDialogOpen}
-        onSubmit={handleCreateCampaign}
-        isLoading={creatingCampaign}
-      />
-      </div>
+            {/* Campaign Runs History */}
+            {selectedCampaignId && (
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold">Run History</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {campaigns.find(c => c.id === selectedCampaignId)?.name}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCampaignId(null);
+                      setCampaignRuns([]);
+                    }}
+                  >
+                    Close
+                  </Button>
+                </div>
+
+                <CampaignRunsHistory runs={campaignRuns} loading={runsLoading} />
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {/* Campaign Schedule Dialog */}
+        <CampaignScheduleDialog
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          onSubmit={handleCreateCampaign}
+          isLoading={creatingCampaign}
+        />
+      </PageLayout>
     </>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+// Compact stat chip for inline display
+function StatChip({
+  icon,
+  value,
+  label,
+  color
+}: {
+  icon: React.ReactNode;
+  value: string | number;
+  label: string;
+  color: string;
+}) {
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
-      <p className="text-sm text-muted-foreground mb-1">{label}</p>
-      <p className="text-2xl font-bold">{value}</p>
+    <div className="flex items-center gap-1.5 px-2 py-1 whitespace-nowrap">
+      <span className={color}>{icon}</span>
+      <span className="font-semibold text-sm">{value}</span>
+      <span className="text-xs text-muted-foreground hidden sm:inline">{label}</span>
     </div>
   );
 }

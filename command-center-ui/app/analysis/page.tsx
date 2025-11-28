@@ -1,40 +1,40 @@
 'use client';
 
 /**
- * Analysis Page - REDESIGNED with Notion-Style Showcase
- * Beautiful feature showcase + analysis workflow
+ * Analysis Page - Step-by-Step Workflow
+ * Step 1: Select Project → Step 2: Select Prospects & Analyze
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronDown, FolderOpen, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select';
 import {
   ProspectSelector,
   AnalysisConfig,
-  StatsOverview,
-  FeaturesShowcase,
-  BenchmarkManager,
-  QuickWebsiteAnalysis
+  QuickWebsiteAnalysis,
+  AnalysisStepIndicator
 } from '@/components/analysis';
+import { CreateProjectDialog } from '@/components/projects/create-project-dialog';
+import { PageLayout } from '@/components/shared';
+import { AnimatedSection } from '@/components/prospecting';
 import { type AnalysisPrompts, type PromptConfig } from '@/components/analysis/prompt-editor';
 import { useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
-import { updateProject, getProject } from '@/lib/api';
+import { updateProject, getProject, getProjects } from '@/lib/api';
+import type { Project } from '@/lib/types';
 import type { AnalysisOptionsFormData } from '@/lib/utils/validation';
-import { startTaskWithSSE } from '@/lib/utils/task-sse-manager';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger
-} from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger
-} from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 const DEFAULT_ANALYSIS_MODEL = 'claude-haiku-4-5';
 
@@ -53,10 +53,7 @@ const ensureDefaultModels = (prompts: AnalysisPrompts | null, overwrite = false)
     if (key === '_meta' || !value) return;
     const prompt = value as PromptConfig;
     if (overwrite || !prompt.model) {
-      updated[key] = {
-        ...prompt,
-        model: DEFAULT_ANALYSIS_MODEL
-      };
+      updated[key] = { ...prompt, model: DEFAULT_ANALYSIS_MODEL };
     }
   });
   return updated;
@@ -68,9 +65,7 @@ const extractModelSelections = (prompts: AnalysisPrompts | null): Record<string,
   Object.entries(prompts).forEach(([key, value]) => {
     if (key === '_meta' || !value) return;
     const prompt = value as PromptConfig;
-    if (prompt.model) {
-      selections[key] = prompt.model;
-    }
+    if (prompt.model) selections[key] = prompt.model;
   });
   return selections;
 };
@@ -78,15 +73,20 @@ const extractModelSelections = (prompts: AnalysisPrompts | null): Record<string,
 export default function AnalysisPage() {
   const searchParams = useSearchParams();
   const engineStatus = useEngineHealth();
-  const { startTask, updateTask, addLog, completeTask, errorTask, cancelTask } = useTaskProgress();
+  const { startTask, updateTask, addLog, completeTask, errorTask } = useTaskProgress();
 
-  // Get pre-selected prospect IDs and project from URL
+  // URL params
   const preSelectedIds = searchParams.get('prospect_ids')?.split(',') || [];
   const urlProjectId = searchParams.get('project_id');
 
+  // Project state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
+  const [isProjectExpanded, setIsProjectExpanded] = useState(!urlProjectId);
+
   // Selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(urlProjectId || null);
 
   // Prompt state
   const [defaultPrompts, setDefaultPrompts] = useState<AnalysisPrompts | null>(null);
@@ -94,34 +94,57 @@ export default function AnalysisPage() {
   const [defaultModelSelections, setDefaultModelSelections] = useState<Record<string, string>>(buildDefaultModelSelections());
   const [currentModelSelections, setCurrentModelSelections] = useState<Record<string, string>>(buildDefaultModelSelections());
 
-  // Use refs to store stable references for useEffect dependencies
   const defaultPromptsRef = useRef<AnalysisPrompts | null>(null);
   const defaultModelSelectionsRef = useRef<Record<string, string>>(buildDefaultModelSelections());
-
-  // Track if we're loading prompts to prevent loops
   const isLoadingPromptsRef = useRef(false);
 
-  // Update refs when state changes
+  const [leadsCount, setLeadsCount] = useState(0);
+  const [promptsLoading, setPromptsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [showWorkspace, setShowWorkspace] = useState(false);
+
+  // Derive current step
+  const currentStep = useMemo((): 1 | 2 => {
+    return selectedProjectId ? 2 : 1;
+  }, [selectedProjectId]);
+
+  // Update refs
   useEffect(() => {
     defaultPromptsRef.current = defaultPrompts;
     defaultModelSelectionsRef.current = defaultModelSelections;
   }, [defaultPrompts, defaultModelSelections]);
 
-  const handlePromptsChange = useCallback((prompts: AnalysisPrompts) => {
-    const normalized = ensureDefaultModels(prompts, false) as AnalysisPrompts;
-    setCurrentPrompts(normalized);
+  // Load projects
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setLoadingProjects(true);
+        const data = await getProjects({ status: 'active' });
+        setProjects(data);
+      } catch (err) {
+        console.error('Failed to load projects:', err);
+      } finally {
+        setLoadingProjects(false);
+      }
+    };
+    fetchProjects();
   }, []);
-  const [leadsCount, setLeadsCount] = useState(0);
-  const [promptsLoading, setPromptsLoading] = useState(true);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [showFeatures, setShowFeatures] = useState(false);
 
-  // Callback to refresh leads after quick analysis
-  const refreshLeads = useCallback(() => {
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
+  // Show workspace when project selected
+  useEffect(() => {
+    if (selectedProjectId) {
+      const timer = setTimeout(() => {
+        setShowWorkspace(true);
+        setIsProjectExpanded(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    } else {
+      setShowWorkspace(false);
+      setIsProjectExpanded(true);
+    }
+  }, [selectedProjectId]);
 
-  // Load default prompts on mount
+  // Load default prompts
   useEffect(() => {
     async function loadDefaultPrompts() {
       try {
@@ -143,17 +166,13 @@ export default function AnalysisPage() {
         console.error('Failed to load default prompts:', error);
       } finally {
         setPromptsLoading(false);
-        setTimeout(() => {
-          isLoadingPromptsRef.current = false;
-        }, 100);
+        setTimeout(() => { isLoadingPromptsRef.current = false; }, 100);
       }
     }
-
     loadDefaultPrompts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Load project-specific prompts and leads count when project changes
+  // Load project-specific data
   useEffect(() => {
     async function loadProjectData() {
       const currentDefaultPrompts = defaultPromptsRef.current;
@@ -168,7 +187,6 @@ export default function AnalysisPage() {
 
       try {
         const project = await getProject(selectedProjectId);
-
         const projectPrompts = (project as any).analysis_prompts as AnalysisPrompts | undefined;
         const projectModelSelections = (project as any).analysis_model_selections as Record<string, string> | undefined;
 
@@ -184,13 +202,7 @@ export default function AnalysisPage() {
                 Object.entries(mergedPrompts).map(([key, value]) => {
                   if (key === '_meta' || !value) return [key, value];
                   const selection = projectModelSelections?.[key] || (value as PromptConfig).model;
-                  return [
-                    key,
-                    {
-                      ...(value as PromptConfig),
-                      model: selection || DEFAULT_ANALYSIS_MODEL
-                    }
-                  ];
+                  return [key, { ...(value as PromptConfig), model: selection || DEFAULT_ANALYSIS_MODEL }];
                 })
               ) as AnalysisPrompts
             : null;
@@ -206,36 +218,48 @@ export default function AnalysisPage() {
           }
         } else {
           setCurrentPrompts(currentDefaultPrompts);
-          if (projectModelSelections) {
-            setCurrentModelSelections({ ...currentDefaultModelSelections, ...projectModelSelections });
-          } else {
-            setCurrentModelSelections(currentDefaultModelSelections);
-          }
+          setCurrentModelSelections(projectModelSelections
+            ? { ...currentDefaultModelSelections, ...projectModelSelections }
+            : currentDefaultModelSelections
+          );
         }
 
         const leadsResponse = await fetch(`/api/leads?project_id=${selectedProjectId}`);
         const leadsResult = await leadsResponse.json();
-
-        if (leadsResult.success) {
-          setLeadsCount(leadsResult.total || 0);
-        }
+        if (leadsResult.success) setLeadsCount(leadsResult.total || 0);
       } catch (error) {
         console.error('Failed to load project data:', error);
       }
     }
 
-    if (defaultPromptsRef.current) {
-      loadProjectData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (defaultPromptsRef.current) loadProjectData();
   }, [selectedProjectId]);
 
+  const handlePromptsChange = useCallback((prompts: AnalysisPrompts) => {
+    const normalized = ensureDefaultModels(prompts, false) as AnalysisPrompts;
+    setCurrentPrompts(normalized);
+  }, []);
+
   const handleModelSelectionsChange = useCallback((selection: Record<string, string>) => {
-    if (isLoadingPromptsRef.current) {
-      return;
-    }
+    if (isLoadingPromptsRef.current) return;
     setCurrentModelSelections(selection);
   }, []);
+
+  const refreshLeads = useCallback(() => {
+    setRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  const handleProjectChange = (projectId: string | null) => {
+    setSelectedProjectId(projectId);
+    setSelectedIds([]); // Clear selections when project changes
+  };
+
+  const handleProjectCreated = (project: Project) => {
+    setProjects(prev => [...prev, project]);
+    handleProjectChange(project.id);
+  };
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   const handleAnalyze = async (config: AnalysisOptionsFormData) => {
     if (selectedIds.length === 0) {
@@ -244,33 +268,30 @@ export default function AnalysisPage() {
     }
 
     if (!selectedProjectId) {
-      alert('⚠ Project Required\n\nPlease select a project from the "Select Project (Required)" card at the top of the page.\n\nAll analyzed leads will automatically belong to the project you select.');
+      alert('Please select a project first');
       return;
     }
 
-    // Save prompts to project (non-blocking)
-    if (selectedProjectId && currentPrompts) {
+    // Save prompts to project
+    if (currentPrompts) {
       try {
         await updateProject(selectedProjectId, {
           analysis_prompts: ensureDefaultModels(currentPrompts, true),
           analysis_model_selections: currentModelSelections
         } as any);
-        console.log('✓ Saved analysis prompts to project:', selectedProjectId);
       } catch (error: any) {
         console.error('Failed to save analysis prompts:', error);
       }
     }
 
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const taskTitle = `Intelligent Analysis: ${selectedIds.length} prospects (${timestamp})`;
+    const taskTitle = `Analyze ${selectedIds.length} prospects (${timestamp})`;
     const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
 
-    // Start task tracking
     const taskId = startTask('analysis', taskTitle, selectedIds.length);
     addLog(taskId, `Starting analysis of ${selectedIds.length} prospect(s)...`, 'info');
 
     try {
-      // Queue analysis jobs
       const response = await fetch(`${API_BASE}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -290,97 +311,74 @@ export default function AnalysisPage() {
       const queueData = await response.json();
       const jobIds = queueData.job_ids || [];
 
-      if (jobIds.length === 0) {
-        throw new Error('No jobs were queued');
-      }
+      if (jobIds.length === 0) throw new Error('No jobs were queued');
 
       addLog(taskId, `Queued ${jobIds.length} analysis job(s)`, 'info');
 
-      // Show exclusion warnings
+      // Log exclusion warnings
       if (queueData.exclusion_reasons) {
         const { no_website, problematic_website, already_analyzed } = queueData.exclusion_reasons;
-
-        if (no_website && no_website.length > 0) {
-          const companies = no_website.map((p: any) => p.company).join(', ');
-          addLog(taskId, `⚠️ Skipped ${no_website.length} prospect(s) (no website): ${companies}`, 'warning');
+        if (no_website?.length > 0) {
+          addLog(taskId, `⚠️ Skipped ${no_website.length} (no website)`, 'warning');
         }
-
-        if (problematic_website && problematic_website.length > 0) {
-          const issues = problematic_website.map((p: any) => `${p.company} (${p.status})`).join(', ');
-          addLog(taskId, `⚠️ Skipped ${problematic_website.length} prospect(s) (website issues): ${issues}`, 'warning');
+        if (problematic_website?.length > 0) {
+          addLog(taskId, `⚠️ Skipped ${problematic_website.length} (website issues)`, 'warning');
         }
-
-        if (already_analyzed && already_analyzed.length > 0) {
-          const companies = already_analyzed.map((p: any) => p.company).join(', ');
-          addLog(taskId, `ℹ️ ${already_analyzed.length} prospect(s) already analyzed (will update): ${companies}`, 'info');
+        if (already_analyzed?.length > 0) {
+          addLog(taskId, `ℹ️ ${already_analyzed.length} will be re-analyzed`, 'info');
         }
       }
 
-      // Poll for status updates
+      // Poll for status
+      let consecutiveFailures = 0;
       const pollInterval = setInterval(async () => {
         try {
           const queryString = jobIds.map((id: string) => `job_ids=${id}`).join('&');
           const statusResponse = await fetch(`${API_BASE}/api/analysis-status?${queryString}`);
 
-          if (!statusResponse.ok) {
-            console.error('Failed to fetch status');
-            return;
-          }
+          if (!statusResponse.ok) return;
 
           const statusData = await statusResponse.json();
           const jobs = statusData.jobs || [];
+          consecutiveFailures = 0;
 
-          // Calculate overall progress
           const completedJobs = jobs.filter((j: any) => j.state === 'completed').length;
           const failedJobs = jobs.filter((j: any) => j.state === 'failed').length;
           const totalJobs = jobs.length;
-          const progress = totalJobs > 0 ? (completedJobs + failedJobs) / totalJobs : 0;
 
-          // Update task progress
           updateTask(taskId, completedJobs, `${completedJobs}/${totalJobs} complete`);
 
-          // Log completed jobs
           jobs.forEach((job: any) => {
-            if (job.state === 'completed' && job.result) {
-              const result = job.result;
-              if (result.company_name && result.grade) {
-                addLog(taskId, `✅ ${result.company_name}: Grade ${result.grade} (${result.overall_score}/100)`, 'success');
-              }
+            if (job.state === 'completed' && job.result?.company_name && job.result?.grade) {
+              addLog(taskId, `✅ ${job.result.company_name}: Grade ${job.result.grade}`, 'success');
             } else if (job.state === 'failed') {
-              addLog(taskId, `❌ Analysis failed: ${job.error || 'Unknown error'}`, 'error');
+              addLog(taskId, `❌ Failed: ${job.error || 'Unknown error'}`, 'error');
             }
           });
 
-          // Check if all jobs are done
           const allDone = jobs.every((j: any) => ['completed', 'failed', 'cancelled'].includes(j.state));
 
           if (allDone) {
             clearInterval(pollInterval);
-
-            const successCount = completedJobs;
-            const failCount = failedJobs;
-
-            if (failCount > 0) {
-              addLog(taskId, `Analysis complete: ${successCount} succeeded, ${failCount} failed`, 'warning');
+            if (failedJobs > 0) {
+              addLog(taskId, `Complete: ${completedJobs} succeeded, ${failedJobs} failed`, 'warning');
             } else {
-              addLog(taskId, `✓ Analysis complete! ${successCount} leads analyzed`, 'success');
+              addLog(taskId, `✓ All ${completedJobs} leads analyzed!`, 'success');
             }
-
             completeTask(taskId);
             refreshLeads();
           }
         } catch (pollError) {
-          console.error('Error polling status:', pollError);
+          consecutiveFailures++;
+          if (consecutiveFailures >= 3) {
+            clearInterval(pollInterval);
+            errorTask(taskId, 'Lost connection to Analysis Engine');
+          }
         }
-      }, 3000); // Poll every 3 seconds
+      }, 3000);
 
-      // Timeout after 10 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval);
-      }, 600000);
-
+      setTimeout(() => clearInterval(pollInterval), 600000);
     } catch (error: any) {
-      console.error('Analysis failed:', error);
       errorTask(taskId, error.message);
       alert(`Analysis failed: ${error.message}`);
     }
@@ -389,101 +387,137 @@ export default function AnalysisPage() {
   const isAnalysisEngineOffline = engineStatus.analysis === 'offline';
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 space-y-4 sm:space-y-6 md:space-y-8">
-        {/* Page Title */}
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
-          Website Analysis
-        </h1>
+    <PageLayout title="Website Analysis" description="Analyze prospects and generate leads">
+      {/* Step Indicator */}
+      <AnalysisStepIndicator currentStep={currentStep} />
 
-        {/* Stats Overview */}
-        <StatsOverview projectId={selectedProjectId} />
+      {/* Engine Offline Warning */}
+      {isAnalysisEngineOffline && (
+        <Alert variant="destructive" className="py-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-sm">
+            Analysis engine offline (port 3001)
+          </AlertDescription>
+        </Alert>
+      )}
 
-        {/* Feature Showcase - Collapsible */}
-        <Collapsible open={showFeatures} onOpenChange={setShowFeatures}>
-          <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2">
-              {showFeatures ? <ChevronUp className="w-4 h-4 mr-2" /> : <ChevronDown className="w-4 h-4 mr-2" />}
-              {showFeatures ? 'Hide' : 'Show'} AI Features
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-4">
-            <FeaturesShowcase />
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="analyze" className="space-y-4 sm:space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="analyze" className="text-xs sm:text-sm">
-              <Sparkles className="w-4 h-4 mr-1 sm:mr-2 hidden sm:block" />
-              <span>Analyze</span>
-            </TabsTrigger>
-            <TabsTrigger value="benchmarks" className="text-xs sm:text-sm">
-              Benchmarks
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Analyze Tab */}
-          <TabsContent value="analyze" className="space-y-4 sm:space-y-6">
-            {isAnalysisEngineOffline && (
-              <Alert variant="destructive" className="py-2 sm:py-3">
-                <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <AlertDescription className="text-xs sm:text-sm">
-                  Analysis engine offline (port 3001)
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Analysis Section - Grid with mobile-first order */}
-            <div className="grid gap-4 sm:gap-5 md:gap-6 lg:grid-cols-3">
-              {/* Prospect Selector - First on mobile, left column row 2 on desktop */}
-              <div className="order-1 lg:order-3 lg:col-span-2">
-                <ProspectSelector
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  preSelectedIds={preSelectedIds}
-                  projectId={selectedProjectId}
-                  onProjectChange={setSelectedProjectId}
-                />
+      {/* Step 1: Project Selection */}
+      {isProjectExpanded ? (
+        <Card className="border-2 border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FolderOpen className="w-5 h-5" />
+              Step 1: Select Project
+            </CardTitle>
+            <CardDescription>Choose a project to analyze prospects from</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1 space-y-2">
+                <Label htmlFor="project-select">Project</Label>
+                <Select
+                  value={selectedProjectId || undefined}
+                  onValueChange={handleProjectChange}
+                  disabled={loadingProjects}
+                >
+                  <SelectTrigger id="project-select" className="w-full h-11">
+                    <SelectValue placeholder={loadingProjects ? 'Loading...' : 'Select a project...'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                        {project.client_name && ` - ${project.client_name}`}
+                      </SelectItem>
+                    ))}
+                    {projects.length === 0 && !loadingProjects && (
+                      <SelectItem value="none" disabled>No active projects</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
-
-              {/* Quick Website Analysis - Second on mobile, left column row 1 on desktop */}
-              <div className="order-2 lg:order-1 lg:col-span-2">
-                <QuickWebsiteAnalysis
-                  selectedProjectId={selectedProjectId}
-                  disabled={false}
-                  engineOffline={isAnalysisEngineOffline}
-                  onSuccess={refreshLeads}
-                />
-              </div>
-
-              {/* Analysis Config - Third on mobile, right column spanning rows on desktop */}
-              <div className="order-3 lg:order-2 lg:row-span-2">
-                <AnalysisConfig
-                  prospectCount={selectedIds.length}
-                  onSubmit={handleAnalyze}
-                  isLoading={false}
-                  disabled={isAnalysisEngineOffline}
-                  customPrompts={currentPrompts || undefined}
-                  defaultPrompts={defaultPrompts || undefined}
-                  onPromptsChange={handlePromptsChange}
-                  promptsLocked={false}
-                  leadsCount={leadsCount}
-                  modelSelections={currentModelSelections}
-                  defaultModelSelections={defaultModelSelections}
-                  onModelSelectionsChange={handleModelSelectionsChange}
-                />
+              <div className="flex items-end">
+                <CreateProjectDialog onProjectCreated={handleProjectCreated} />
               </div>
             </div>
-          </TabsContent>
+            {!selectedProjectId && (
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                Select a project to continue
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : selectedProject && (
+        <Card
+          className="cursor-pointer hover:bg-muted/50 border-green-500/50 bg-green-50/50 dark:bg-green-950/20"
+          onClick={() => setIsProjectExpanded(true)}
+        >
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-sm">{selectedProject.name}</p>
+                  {leadsCount > 0 && (
+                    <p className="text-xs text-muted-foreground">{leadsCount} existing leads</p>
+                  )}
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" className="text-muted-foreground">
+                Change
+                <ChevronDown className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-          {/* Benchmarks Tab */}
-          <TabsContent value="benchmarks" className="space-y-6">
-            <BenchmarkManager />
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
+      {/* Step 2: Analysis Workspace */}
+      <AnimatedSection isVisible={showWorkspace} delay={0}>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {/* Left: Prospects Table (2 cols on desktop) */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Quick Website Analysis */}
+            <QuickWebsiteAnalysis
+              selectedProjectId={selectedProjectId}
+              disabled={false}
+              engineOffline={isAnalysisEngineOffline}
+              onSuccess={refreshLeads}
+            />
+
+            {/* Prospects Selector (without project dropdown - already selected above) */}
+            <ProspectSelector
+              selectedIds={selectedIds}
+              onSelectionChange={setSelectedIds}
+              preSelectedIds={preSelectedIds}
+              projectId={selectedProjectId}
+              onProjectChange={handleProjectChange}
+            />
+          </div>
+
+          {/* Right: Analysis Config (1 col on desktop) */}
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-20">
+              <AnalysisConfig
+                prospectCount={selectedIds.length}
+                onSubmit={handleAnalyze}
+                isLoading={false}
+                disabled={isAnalysisEngineOffline}
+                customPrompts={currentPrompts || undefined}
+                defaultPrompts={defaultPrompts || undefined}
+                onPromptsChange={handlePromptsChange}
+                promptsLocked={false}
+                leadsCount={leadsCount}
+                modelSelections={currentModelSelections}
+                defaultModelSelections={defaultModelSelections}
+                onModelSelectionsChange={handleModelSelectionsChange}
+              />
+            </div>
+          </div>
+        </div>
+      </AnimatedSection>
+    </PageLayout>
   );
 }

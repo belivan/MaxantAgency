@@ -6,8 +6,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { FileText, RefreshCw } from 'lucide-react';
 import { ReportsTable } from '@/components/reports/reports-table';
+import { PageLayout } from '@/components/shared';
 import type { Report } from '@/lib/api/analysis';
 
 export default function ReportsPage() {
@@ -45,18 +45,10 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          <FileText className="h-8 w-8 text-blue-600" />
-          Reports
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          View and download all generated website audit reports
-        </p>
-      </div>
-
+    <PageLayout
+      title="Reports"
+      description="View and download all generated website audit reports"
+    >
       {/* Error State */}
       {error && (
         <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
@@ -77,6 +69,6 @@ export default function ReportsPage() {
         onRefresh={fetchReports}
         onDelete={handleDelete}
       />
-    </div>
+    </PageLayout>
   );
 }

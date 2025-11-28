@@ -1,14 +1,11 @@
 'use client';
 
 /**
- * Activity Feed Component
- * Shows activity history across all engines with pagination
+ * Compact Activity Feed
+ * Minimal activity list without large cards
  */
 
-import { Search, ScanSearch, Mail, MessageSquare, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Search, ScanSearch, Mail, MessageSquare, CheckCircle2 } from 'lucide-react';
 import { formatRelativeTime } from '@/lib/utils/format';
 import { cn } from '@/lib/utils';
 import type { ActivityFeedItem } from '@/lib/types';
@@ -21,6 +18,7 @@ interface ActivityFeedProps {
   onNextPage?: () => void;
   onPreviousPage?: () => void;
   onGoToPage?: (page: number) => void;
+  className?: string;
 }
 
 const ACTIVITY_ICONS = {
@@ -39,68 +37,36 @@ const ACTIVITY_COLORS = {
   red: 'text-red-600 dark:text-red-500'
 } as const;
 
-function ActivityItem({ activity }: { activity: ActivityFeedItem }) {
+function CompactActivityItem({ activity }: { activity: ActivityFeedItem }) {
   const Icon = ACTIVITY_ICONS[activity.type] || Search;
   const colorClass = activity.color ? ACTIVITY_COLORS[activity.color] : 'text-muted-foreground';
 
   return (
-    <div className="flex items-start space-x-3 py-3">
-      <div className={cn('mt-0.5', colorClass)}>
-        <Icon className="w-5 h-5" />
-      </div>
-
-      <div className="flex-1 min-w-0 space-y-1">
-        <p className="text-sm font-medium text-foreground">
-          {activity.message}
-        </p>
-
-        {activity.details && (
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {activity.details.project_name && (
-              <Badge variant="outline" className="text-xs">
-                {activity.details.project_name}
-              </Badge>
-            )}
-            {activity.details.company_name && (
-              <span>{activity.details.company_name}</span>
-            )}
-            {activity.details.grade && (
-              <Badge
-                variant={
-                  activity.details.grade === 'A' || activity.details.grade === 'B'
-                    ? 'default'
-                    : 'secondary'
-                }
-                className="text-xs"
-              >
-                Grade {activity.details.grade}
-              </Badge>
-            )}
-            {activity.details.count !== undefined && (
-              <span>{activity.details.count} items</span>
-            )}
-            {activity.details.cost !== undefined && (
-              <span>${activity.details.cost.toFixed(2)}</span>
-            )}
-          </div>
+    <div className="flex items-center gap-2 py-1.5 text-sm">
+      <span className={cn('shrink-0', colorClass)}>
+        <Icon className="w-4 h-4" />
+      </span>
+      <span className="truncate flex-1 text-foreground">
+        {activity.message}
+        {activity.details?.grade && (
+          <span className="text-muted-foreground ml-1">
+            · Grade {activity.details.grade}
+          </span>
         )}
-
-        <p className="text-xs text-muted-foreground">
-          {formatRelativeTime(activity.timestamp)}
-        </p>
-      </div>
+      </span>
+      <span className="text-xs text-muted-foreground shrink-0">
+        {formatRelativeTime(activity.timestamp)}
+      </span>
     </div>
   );
 }
 
 function ActivitySkeleton() {
   return (
-    <div className="flex items-start space-x-3 py-3 animate-pulse">
-      <div className="w-5 h-5 bg-muted rounded" />
-      <div className="flex-1 space-y-2">
-        <div className="h-4 bg-muted rounded w-3/4" />
-        <div className="h-3 bg-muted rounded w-1/2" />
-      </div>
+    <div className="flex items-center gap-2 py-1.5 animate-pulse">
+      <div className="w-4 h-4 bg-muted rounded shrink-0" />
+      <div className="h-4 bg-muted rounded flex-1" />
+      <div className="h-3 w-12 bg-muted rounded shrink-0" />
     </div>
   );
 }
@@ -110,75 +76,51 @@ export function ActivityFeed({
   loading = false,
   pagination,
   onNextPage,
-  onPreviousPage,
-  onGoToPage
+  className
 }: ActivityFeedProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Activity</CardTitle>
-        {pagination && (
+    <div className={cn("space-y-1", className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between text-sm mb-2">
+        <span className="font-medium">Recent Activity</span>
+        {pagination && pagination.total > 0 && (
           <span className="text-xs text-muted-foreground">
             {pagination.total} total
           </span>
         )}
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="space-y-1">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <ActivitySkeleton key={i} />
+      </div>
+
+      {/* Activity List */}
+      {loading ? (
+        <div className="space-y-0.5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <ActivitySkeleton key={i} />
+          ))}
+        </div>
+      ) : activities.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-4">
+          No activity yet. Start by generating prospects.
+        </p>
+      ) : (
+        <>
+          <div className="divide-y divide-border/50">
+            {activities.map((activity) => (
+              <CompactActivityItem key={activity.id} activity={activity} />
             ))}
           </div>
-        ) : activities.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground">
-              No activity yet
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Start by generating prospects or analyzing leads
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="divide-y divide-border min-h-[450px]">
-              {activities.map((activity) => (
-                <ActivityItem key={activity.id} activity={activity} />
-              ))}
-            </div>
 
-            {/* Pagination Controls */}
-            {pagination && pagination.total_pages > 1 && (
-              <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
-                <div className="text-xs text-muted-foreground">
-                  Page {pagination.page} of {pagination.total_pages}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onPreviousPage}
-                    disabled={!pagination.has_previous || loading}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onNextPage}
-                    disabled={!pagination.has_more || loading}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+          {/* Show more link */}
+          {pagination && pagination.has_more && (
+            <button
+              onClick={onNextPage}
+              className="text-xs text-muted-foreground hover:text-foreground mt-2 transition-colors"
+            >
+              Show more →
+            </button>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 

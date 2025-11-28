@@ -1,10 +1,12 @@
 /**
- * Console Logger with SSE Streaming
+ * Console Logger with SSE Streaming and File/Database Persistence
  *
  * Provides a centralized logging utility that:
  * 1. Logs to console as normal
  * 2. Buffers recent logs in memory
  * 3. Exposes an SSE endpoint for real-time streaming to the UI
+ * 4. Optionally persists logs to VPS JSONL files (recommended)
+ * 5. Optionally persists logs to Supabase system_logs table (legacy)
  *
  * Usage:
  * import { createLogger, setupLogStreamEndpoint } from './console-logger.js';
@@ -13,14 +15,44 @@
  * logger.info('Starting analysis...');
  * logger.error('Something failed', { error: err.message });
  *
+ * // For job-specific logging:
+ * logger.setJobContext('job-123');
+ * logger.info('Processing lead'); // Also writes to jobs/job-123.jsonl
+ *
  * // In Express app:
  * setupLogStreamEndpoint(app);
+ *
+ * Environment Variables:
+ * - LOG_TO_FILE=true  Enable VPS file persistence (recommended)
+ * - LOG_TO_DB=true    Enable database persistence (legacy, costs money)
  */
 
+import { getSupabaseClient } from './supabase-client.js';
+import {
+  appendLog as appendLogToFile,
+  appendJobLog,
+  cleanupOldLogs as cleanupFileOldLogs,
+  ensureLogDirectories
+} from './log-storage.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+// Persistence config
+const LOG_TO_FILE = process.env.LOG_TO_FILE === 'true';
+const LOG_TO_DB = process.env.LOG_TO_DB === 'true';
+
 // In-memory log buffer (circular buffer)
-const MAX_LOGS = 500;
+const MAX_LOGS = parseInt(process.env.LOG_BUFFER_SIZE) || 500;
 const logBuffer = [];
 const sseClients = new Set();
+
+// Track if we've warned about issues (avoid spam)
+let dbWarningShown = false;
+let fileWarningShown = false;
+
+// Track current job context for job-specific logging
+let currentJobId = null;
 
 // Log levels with numeric priority
 const LOG_LEVELS = {
@@ -51,7 +83,138 @@ function formatTimestamp(date) {
 }
 
 /**
- * Add log to buffer and broadcast to SSE clients
+ * Persist log to VPS JSONL file (async, non-blocking)
+ */
+async function persistLogToFile(logEntry) {
+  if (!LOG_TO_FILE) return;
+
+  try {
+    // Write to engine's daily log file
+    await appendLogToFile(logEntry.engine, {
+      ts: logEntry.timestamp,
+      engine: logEntry.engine,
+      module: logEntry.module,
+      level: logEntry.level,
+      msg: logEntry.message?.slice(0, 5000) || '',
+      data: logEntry.data || null
+    });
+
+    // Also write to job-specific log if job context is set
+    if (currentJobId) {
+      await appendJobLog(currentJobId, {
+        ts: logEntry.timestamp,
+        engine: logEntry.engine,
+        module: logEntry.module,
+        level: logEntry.level,
+        msg: logEntry.message?.slice(0, 5000) || '',
+        data: logEntry.data || null
+      });
+    }
+  } catch (err) {
+    // Silent fail - don't break operations
+    if (!fileWarningShown) {
+      // Use original console.warn to avoid recursion
+      process.stderr.write(`[Console Logger] File persistence error: ${err.message}\n`);
+      fileWarningShown = true;
+    }
+  }
+}
+
+/**
+ * Persist log to Supabase system_logs table (async, non-blocking)
+ * Legacy - use LOG_TO_FILE instead for cost savings
+ */
+async function persistLogToDatabase(logEntry) {
+  if (!LOG_TO_DB) return;
+
+  try {
+    const db = getSupabaseClient();
+    if (!db) {
+      if (!dbWarningShown) {
+        process.stderr.write('[Console Logger] Supabase client not available for log persistence\n');
+        dbWarningShown = true;
+      }
+      return;
+    }
+
+    const { error } = await db.from('system_logs').insert({
+      engine: logEntry.engine,
+      module: logEntry.module || null,
+      level: logEntry.level,
+      message: logEntry.message?.slice(0, 5000) || '', // Limit message length
+      data: logEntry.data || null,
+    });
+
+    if (error) {
+      // Only warn once to avoid log spam
+      if (!dbWarningShown) {
+        process.stderr.write(`[Console Logger] Failed to persist log to database: ${error.message}\n`);
+        dbWarningShown = true;
+      }
+    }
+  } catch (err) {
+    // Silent fail - don't break operations
+    if (!dbWarningShown) {
+      process.stderr.write(`[Console Logger] Database persistence error: ${err.message}\n`);
+      dbWarningShown = true;
+    }
+  }
+}
+
+/**
+ * Clean up old logs (older than 5 days)
+ * Call this on startup or periodically
+ * Handles both file and database cleanup
+ */
+export async function cleanupOldLogs(retentionDays = 5) {
+  const results = {
+    fileCleanup: null,
+    dbCleanup: null
+  };
+
+  // Clean up file logs (VPS storage)
+  if (LOG_TO_FILE) {
+    try {
+      results.fileCleanup = await cleanupFileOldLogs(retentionDays);
+    } catch (err) {
+      results.fileCleanup = { error: err.message };
+    }
+  }
+
+  // Clean up database logs (Supabase)
+  if (LOG_TO_DB) {
+    try {
+      const db = getSupabaseClient();
+      if (db) {
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+
+        const { data, error } = await db
+          .from('system_logs')
+          .delete()
+          .lt('created_at', cutoffDate.toISOString())
+          .select('id');
+
+        if (error) {
+          results.dbCleanup = { deleted: 0, error: error.message };
+        } else {
+          const deleted = data?.length || 0;
+          results.dbCleanup = { deleted };
+          if (deleted > 0) {
+            process.stdout.write(`[Console Logger] Cleaned up ${deleted} DB logs older than ${retentionDays} days\n`);
+          }
+        }
+      }
+    } catch (err) {
+      results.dbCleanup = { deleted: 0, error: err.message };
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Add log to buffer, broadcast to SSE clients, and persist
  */
 function addLog(log) {
   // Add to circular buffer
@@ -70,6 +233,31 @@ function addLog(log) {
       sseClients.delete(client);
     }
   }
+
+  // Persist to VPS file (async, non-blocking) - recommended
+  persistLogToFile(log).catch(() => {
+    // Silently ignore - we already handle errors inside the function
+  });
+
+  // Persist to database (async, non-blocking) - legacy
+  persistLogToDatabase(log).catch(() => {
+    // Silently ignore - we already handle errors inside the function
+  });
+}
+
+/**
+ * Set the current job context for job-specific logging
+ * @param {string|null} jobId - Job ID or null to clear
+ */
+export function setJobContext(jobId) {
+  currentJobId = jobId;
+}
+
+/**
+ * Clear the current job context
+ */
+export function clearJobContext() {
+  currentJobId = null;
 }
 
 /**
@@ -115,6 +303,10 @@ export function createLogger(engine, module = 'main') {
 
     // Create a child logger with a specific module name
     child: (childModule) => createLogger(engine, childModule),
+
+    // Set job context for this logger's scope
+    setJobContext: (jobId) => setJobContext(jobId),
+    clearJobContext: () => clearJobContext(),
   };
 }
 
@@ -317,4 +509,13 @@ export function setupLogStreamEndpoint(app, engineName) {
   });
 }
 
-export default { createLogger, getRecentLogs, clearLogs, setupLogStreamEndpoint, interceptConsole };
+export default {
+  createLogger,
+  getRecentLogs,
+  clearLogs,
+  setupLogStreamEndpoint,
+  interceptConsole,
+  cleanupOldLogs,
+  setJobContext,
+  clearJobContext
+};

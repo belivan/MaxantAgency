@@ -204,38 +204,13 @@ export async function composeSingleEmail(
 
 /**
  * Get emails with filters
+ * Uses UI API route with user authentication for data isolation
  */
 export async function getEmails(filters?: EmailFilters): Promise<Email[]> {
   const params = new URLSearchParams();
 
-  if (filters?.status) {
-    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-    statuses.forEach(s => params.append('status', s));
-  }
-  if (filters?.strategy) {
-    const strategies = Array.isArray(filters.strategy) ? filters.strategy : [filters.strategy];
-    strategies.forEach(s => params.append('strategy', s));
-  }
-  if (filters?.min_quality_score !== undefined) {
-    params.set('min_quality_score', filters.min_quality_score.toString());
-  }
   if (filters?.project_id) {
     params.set('project_id', filters.project_id);
-  }
-  if (filters?.campaign_id) {
-    params.set('campaign_id', filters.campaign_id);
-  }
-  if (filters?.synced_to_notion !== undefined) {
-    params.set('synced_to_notion', filters.synced_to_notion.toString());
-  }
-  if (filters?.has_variants !== undefined) {
-    params.set('has_variants', filters.has_variants.toString());
-  }
-  if (filters?.sort_by) {
-    params.set('sort_by', filters.sort_by);
-  }
-  if (filters?.sort_order) {
-    params.set('sort_order', filters.sort_order);
   }
   if (filters?.limit) {
     params.set('limit', filters.limit.toString());
@@ -244,7 +219,8 @@ export async function getEmails(filters?: EmailFilters): Promise<Email[]> {
     params.set('offset', filters.offset.toString());
   }
 
-  const response = await fetch(`${API_BASE}/api/emails?${params.toString()}`);
+  // Use UI API route for user-filtered data (not the engine directly)
+  const response = await fetch(`/api/outreach/emails?${params.toString()}`);
 
   if (!response.ok) {
     const errorMessage = await parseErrorMessage(response, 'Failed to fetch emails');
@@ -419,33 +395,13 @@ export async function composeSocialMessages(
 
 /**
  * Get social messages with filters
+ * Uses UI API route with user authentication for data isolation
  */
 export async function getSocialMessages(filters?: SocialMessageFilters): Promise<SocialMessage[]> {
   const params = new URLSearchParams();
 
-  if (filters?.platform) {
-    const platforms = Array.isArray(filters.platform) ? filters.platform : [filters.platform];
-    platforms.forEach(p => params.append('platform', p));
-  }
-  if (filters?.status) {
-    const statuses = Array.isArray(filters.status) ? filters.status : [filters.status];
-    statuses.forEach(s => params.append('status', s));
-  }
-  if (filters?.strategy) {
-    const strategies = Array.isArray(filters.strategy) ? filters.strategy : [filters.strategy];
-    strategies.forEach(s => params.append('strategy', s));
-  }
-  if (filters?.min_quality_score !== undefined) {
-    params.set('min_quality_score', filters.min_quality_score.toString());
-  }
   if (filters?.project_id) {
     params.set('project_id', filters.project_id);
-  }
-  if (filters?.sort_by) {
-    params.set('sort_by', filters.sort_by);
-  }
-  if (filters?.sort_order) {
-    params.set('sort_order', filters.sort_order);
   }
   if (filters?.limit) {
     params.set('limit', filters.limit.toString());
@@ -454,7 +410,8 @@ export async function getSocialMessages(filters?: SocialMessageFilters): Promise
     params.set('offset', filters.offset.toString());
   }
 
-  const response = await fetch(`${API_BASE}/api/social-messages?${params.toString()}`);
+  // Use UI API route for user-filtered data (not the engine directly)
+  const response = await fetch(`/api/outreach/social?${params.toString()}`);
 
   if (!response.ok) {
     const errorMessage = await parseErrorMessage(response, 'Failed to fetch social messages');

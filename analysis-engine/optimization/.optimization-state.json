@@ -1,10 +1,8 @@
 {
   "analysisCounts": {
-    "unified-visual-analyzer": 1,
-    "social-analyzer": 1
+    "Restaurant": 3,
+    "unified-technical-analyzer": 1
   },
   "activeTests": {},
   "lastOptimization": {}
-}": {}
-}{}
 }

@@ -11,7 +11,7 @@ import { AlertCircle, Mail } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { OutreachTable, OutreachDetailModal } from '@/components/outreach';
 import type { OutreachCompany } from '@/components/outreach/outreach-table';
-import { ProjectSelector } from '@/components/shared/project-selector';
+import { ProjectSelector, PageLayout } from '@/components/shared';
 import { useEngineHealth } from '@/lib/hooks';
 import { getEmails, getSocialMessages } from '@/lib/api/outreach';
 import type { Email, SocialMessage } from '@/lib/types';
@@ -91,22 +91,12 @@ export default function OutreachPage() {
   const totalOutreach = emails.length + socialMessages.length;
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Mail className="w-5 h-5 sm:w-6 sm:h-6" />
-            Outreach
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            {totalOutreach > 0
-              ? `${emails.length} emails · ${socialMessages.length} social messages`
-              : 'View and manage generated outreach'}
-          </p>
-        </div>
-
-        {/* Project Selector */}
+    <PageLayout
+      title="Outreach"
+      description={totalOutreach > 0
+        ? `${emails.length} emails · ${socialMessages.length} social messages`
+        : 'View and manage generated outreach'}
+      headerRight={
         <div className="w-full sm:w-auto sm:min-w-[200px]">
           <ProjectSelector
             value={selectedProjectId}
@@ -116,7 +106,8 @@ export default function OutreachPage() {
             showLabel={false}
           />
         </div>
-      </div>
+      }
+    >
 
       {/* Engine Offline Warning */}
       {isOutreachEngineOffline && (
@@ -151,6 +142,6 @@ export default function OutreachPage() {
         open={selectedCompany !== null}
         onClose={() => setSelectedCompany(null)}
       />
-    </div>
+    </PageLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentUser } from '@/lib/server/quota';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,10 +9,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verify authentication
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -36,6 +35,21 @@ export async function GET(
       return NextResponse.json(
         { success: false, error: 'Project ID is required' },
         { status: 400 }
+      );
+    }
+
+    // Verify project ownership first
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (projectError || !project) {
+      return NextResponse.json(
+        { success: false, error: 'Project not found' },
+        { status: 404 }
       );
     }
 

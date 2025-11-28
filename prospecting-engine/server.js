@@ -20,10 +20,9 @@ import { existsSync } from 'fs';
 import { runProspectingPipeline, lookupSingleBusiness } from './orchestrator.js';
 import { getProspects, getProspectById, getProspectStats, deleteProspect, deleteProspects } from './database/supabase-client.js';
 import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
-import { logInfo, logError } from './shared/logger.js';
 // Work Queue endpoints (async job-based architecture)
 import { queueProspecting, getProspectStatus, cancelProspecting, getOverallQueueStatus } from './routes/prospecting-queue-endpoints.js';
-import { createLogger, setupLogStreamEndpoint } from '../database-tools/shared/console-logger.js';
+import { createLogger, setupLogStreamEndpoint, cleanupOldLogs } from '../database-tools/shared/console-logger.js';
 
 // Load env from root .env (centralized configuration)
 const __filename = fileURLToPath(import.meta.url);
@@ -50,11 +49,7 @@ logger.info('Prospecting Engine starting...');
 
 // Request logging middleware
 app.use((req, res, next) => {
-  logInfo('HTTP Request', {
-    method: req.method,
-    path: req.path,
-    ip: req.ip
-  });
+  logger.debug(`${req.method} ${req.path}`, { ip: req.ip });
   next();
 });
 
@@ -138,12 +133,12 @@ app.post('/api/prospect', async (req, res) => {
 
     // Log if custom configuration is provided
     if (custom_prompts) {
-      logInfo('Using custom prompts for prospecting', {
+      logger.info('Using custom prompts for prospecting', {
         promptKeys: Object.keys(custom_prompts)
       });
     }
     if (model_selections) {
-      logInfo('Using custom model selections for prospecting', {
+      logger.info('Using custom model selections for prospecting', {
         models: model_selections
       });
     }
@@ -168,14 +163,15 @@ app.post('/api/prospect', async (req, res) => {
       try {
         const { saveProspectingConfig } = await import('./database/supabase-client.js');
         await saveProspectingConfig(options.projectId, custom_prompts, model_selections);
-        logInfo('Saved prospecting config to project', {
+        logger.info('Saved prospecting config to project', {
           projectId: options.projectId,
           hasPrompts: !!custom_prompts,
           hasModels: !!model_selections
         });
       } catch (saveError) {
-        logError('Failed to save prospecting config', saveError, {
-          projectId: options.projectId
+        logger.error('Failed to save prospecting config', {
+          projectId: options.projectId,
+          error: saveError.message
         });
         // Don't fail the request if config save fails
       }
@@ -192,7 +188,7 @@ app.post('/api/prospect', async (req, res) => {
     res.end();
 
   } catch (error) {
-    logError('POST /api/prospect failed', error);
+    logger.error('POST /api/prospect failed', { error: error.message });
 
     // Send error event
     res.write(`data: ${JSON.stringify({
@@ -276,7 +272,7 @@ app.get('/api/prospects', async (req, res) => {
     });
 
   } catch (error) {
-    logError('GET /api/prospects failed', error);
+    logger.error('GET /api/prospects failed', { error: error.message });
 
     res.status(500).json({
       success: false,
@@ -306,7 +302,7 @@ app.get('/api/prospects/:id', async (req, res) => {
     });
 
   } catch (error) {
-    logError('GET /api/prospects/:id failed', error);
+    logger.error('GET /api/prospects/:id failed', { error: error.message });
 
     res.status(500).json({
       success: false,
@@ -331,7 +327,7 @@ app.delete('/api/prospects/:id', async (req, res) => {
     });
 
   } catch (error) {
-    logError('DELETE /api/prospects/:id failed', error);
+    logger.error('DELETE /api/prospects/:id failed', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -354,7 +350,7 @@ app.post('/api/prospects/batch-delete', async (req, res) => {
       });
     }
 
-    console.log(`[Batch Delete] Deleting ${ids.length} prospects`);
+    logger.info(`Batch deleting ${ids.length} prospects`);
 
     const deletedCount = await deleteProspects(ids);
 
@@ -366,7 +362,7 @@ app.post('/api/prospects/batch-delete', async (req, res) => {
     });
 
   } catch (error) {
-    logError('POST /api/prospects/batch-delete failed', error);
+    logger.error('POST /api/prospects/batch-delete failed', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message
@@ -397,7 +393,7 @@ app.get('/api/stats', async (req, res) => {
     });
 
   } catch (error) {
-    logError('GET /api/stats failed', error);
+    logger.error('GET /api/stats failed', { error: error.message });
 
     res.status(500).json({
       success: false,
@@ -419,7 +415,7 @@ app.get('/api/prompts/default', async (req, res) => {
       data: prompts
     });
   } catch (error) {
-    logError('Failed to load default prompts', error);
+    logger.error('Failed to load default prompts', { error: error.message });
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to load default prompts'
@@ -454,7 +450,7 @@ app.post('/api/lookup-business', async (req, res) => {
   }
 
   try {
-    logInfo('Looking up single business', {
+    logger.info('Looking up single business', {
       query,
       projectId: options.projectId || 'none'
     });
@@ -464,7 +460,7 @@ app.post('/api/lookup-business', async (req, res) => {
     res.json(result);
 
   } catch (error) {
-    logError('POST /api/lookup-business failed', error);
+    logger.error('POST /api/lookup-business failed', { error: error.message });
 
     // Check if it's a "not found" error
     if (error.message === 'Business not found in Google Maps') {
@@ -530,7 +526,7 @@ app.get('/', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 
 app.use((err, req, res, next) => {
-  logError('Unhandled error', err);
+  logger.error('Unhandled error', { error: err.message, stack: err.stack });
 
   res.status(500).json({
     success: false,
@@ -543,16 +539,23 @@ app.use((err, req, res, next) => {
 // Start server
 // ═══════════════════════════════════════════════════════════════════
 
-app.listen(PORT, () => {
-  console.log('\n═══════════════════════════════════════════════════════');
-  console.log('   PROSPECTING ENGINE v2.0 - Server Running');
-  console.log('═══════════════════════════════════════════════════════');
-  console.log(`   Port:        ${PORT}`);
-  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   Health:      http://localhost:${PORT}/health`);
-  console.log('═══════════════════════════════════════════════════════\n');
+async function startServer() {
+  // Clean up old logs (5-day retention)
+  await cleanupOldLogs();
 
-  logInfo('Prospecting Engine started', { port: PORT });
-});
+  app.listen(PORT, () => {
+    console.log('\n═══════════════════════════════════════════════════════');
+    console.log('   PROSPECTING ENGINE v2.0 - Server Running');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log(`   Port:        ${PORT}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`   Health:      http://localhost:${PORT}/health`);
+    console.log('═══════════════════════════════════════════════════════\n');
+
+    logger.success('Prospecting Engine started', { port: PORT });
+  });
+}
+
+startServer();
 
 export default app;

@@ -2,9 +2,10 @@
  * Dashboard Components Exports
  */
 
-export { StatsCards, StatCard } from './stats-cards';
+export { CompactStats, StatsCards } from './stats-cards';
 export { ActivityFeed } from './activity-feed';
-export { PipelineHealth } from './pipeline-health';
+export { EngineStatusDots, PipelineHealth } from './pipeline-health';
+export { GradeDistribution } from './grade-distribution';
 
-export type { StatCardData } from './stats-cards';
+export type { StatItemData, StatCardData } from './stats-cards';
 export type { EngineStatus, EngineHealth } from './pipeline-health';

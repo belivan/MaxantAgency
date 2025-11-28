@@ -17,6 +17,7 @@ import {
   ProjectSelectionCard,
   AnimatedSection
 } from '@/components/prospecting';
+import { PageLayout } from '@/components/shared';
 import { parseJSON } from '@/lib/utils/validation';
 import { useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
@@ -311,15 +312,10 @@ export default function ProspectingPage() {
   const isProspectingEngineOffline = engineStatus.prospecting === 'offline';
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Prospecting</h1>
-        <p className="text-muted-foreground">
-          Generate prospects using your Ideal Customer Profile brief
-        </p>
-      </div>
-
+    <PageLayout
+      title="Prospecting"
+      description="Generate prospects using your Ideal Customer Profile brief"
+    >
       {/* Step Indicator */}
       <StepIndicator currentStep={currentStep} />
 
@@ -419,7 +415,6 @@ export default function ProspectingPage() {
           </AlertDescription>
         </Alert>
       )}
-
-    </div>
+    </PageLayout>
   );
 }
