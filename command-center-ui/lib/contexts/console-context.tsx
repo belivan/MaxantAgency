@@ -54,7 +54,7 @@ export interface ConsoleSettings {
 
 const DEFAULT_SETTINGS: ConsoleSettings = {
   maxLogs: 1000,
-  autoScroll: false,
+  autoScroll: true,
   showHealthChecks: false,
   persistLogs: false,
 };
