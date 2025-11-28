@@ -15,6 +15,7 @@ import { ConsolePanel } from '@/components/console/console-panel';
 import {
   Sheet,
   SheetContent,
+  SheetTitle,
 } from '@/components/ui/sheet';
 import {
   Activity,
@@ -456,6 +457,7 @@ export function FloatingTaskIndicator() {
       {isMobile ? (
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetContent side="bottom" className="h-[70vh] p-0 rounded-t-xl">
+            <SheetTitle className="sr-only">Task Progress</SheetTitle>
             {panelContent}
           </SheetContent>
         </Sheet>

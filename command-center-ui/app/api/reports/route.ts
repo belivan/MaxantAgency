@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { supabase } from '@/lib/database/supabase-server';
+import { getCurrentUser } from '@/lib/server/quota';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -28,14 +27,15 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sort') || 'generated_at';
     const sortOrder = searchParams.get('order') === 'asc';
 
-    // Build query with lead join
+    // Build query with lead join - filter by user_id for security
     let query = supabase
       .from('reports')
       .select(`
         *,
-        leads(company_name, website, website_grade, overall_score),
+        leads(company_name, url, website_grade, overall_score),
         projects(name)
       `, { count: 'exact' })
+      .eq('user_id', user.id)  // Filter by user_id for security
       .order(sortBy, { ascending: sortOrder })
       .range(offset, offset + limit - 1);
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     const reports = (data || []).map((report: any) => ({
       ...report,
       company_name: report.company_name || report.leads?.company_name,
-      website_url: report.website_url || report.leads?.website,
+      website_url: report.website_url || report.leads?.url,
       website_grade: report.website_grade || report.leads?.website_grade,
       overall_score: report.overall_score || report.leads?.overall_score,
       project_name: report.projects?.name,

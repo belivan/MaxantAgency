@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDefaultBrief } from '@/lib/api/orchestrator';
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentUser } from '@/lib/server/quota';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
@@ -16,6 +17,15 @@ type ProspectPayload = {
 // GET - Fetch prospects from Supabase
 export async function GET(request: NextRequest) {
   try {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -73,7 +83,8 @@ export async function GET(request: NextRequest) {
       query = supabase
         .from('prospects')
         .select(selectFields, { count: 'exact' })
-        .in('id', prospectIdsInProject);
+        .in('id', prospectIdsInProject)
+        .eq('user_id', user.id);  // Filter by user_id for security
 
       // Apply filters directly on prospects columns
       if (status) {
@@ -102,6 +113,7 @@ export async function GET(request: NextRequest) {
       query = supabase
         .from('prospects')
         .select(selectFields, { count: 'exact' })
+        .eq('user_id', user.id)  // Filter by user_id for security
         .order('created_at', { ascending: false });
 
       // Apply filters
@@ -179,6 +191,15 @@ export async function GET(request: NextRequest) {
 // POST - Generate new prospects
 export async function POST(request: Request) {
   try {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = (await request.json()) as ProspectPayload;
     const {
       brief,
@@ -207,7 +228,8 @@ export async function POST(request: Request) {
         count,
         city,
         model,
-        verify
+        verify,
+        user_id: user.id  // Include user_id for data isolation
       })
     });
 

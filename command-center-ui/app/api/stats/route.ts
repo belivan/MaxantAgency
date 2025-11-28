@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentUser } from '@/lib/server/quota';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // Verify authentication and get user
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -17,10 +27,11 @@ export async function GET() {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch prospects stats
+    // Fetch prospects stats - filtered by user_id
     const { data: prospectsData, error: prospectsError } = await supabase
       .from('prospects')
-      .select('status', { count: 'exact' });
+      .select('status', { count: 'exact' })
+      .eq('user_id', user.id);
 
     if (prospectsError) throw prospectsError;
 
@@ -31,10 +42,11 @@ export async function GET() {
       total: prospectsData?.length || 0
     };
 
-    // Fetch leads stats
+    // Fetch leads stats - filtered by user_id
     const { data: leadsData, error: leadsError } = await supabase
       .from('leads')
-      .select('website_grade, contact_email', { count: 'exact' });
+      .select('website_grade, contact_email', { count: 'exact' })
+      .eq('user_id', user.id);
 
     if (leadsError) throw leadsError;
 
@@ -48,10 +60,11 @@ export async function GET() {
       withEmail: leadsData?.filter(l => l.contact_email).length || 0
     };
 
-    // Fetch composed emails stats
+    // Fetch composed emails stats - filtered by user_id
     const { data: emailsData, error: emailsError } = await supabase
       .from('composed_outreach')
-      .select('status', { count: 'exact' });
+      .select('status', { count: 'exact' })
+      .eq('user_id', user.id);
 
     if (emailsError) {
       // Table might not exist, that's ok
