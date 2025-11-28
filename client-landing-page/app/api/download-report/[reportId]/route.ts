@@ -41,34 +41,31 @@ export async function GET(
     let pdfBuffer: Buffer
     let filename: string
 
-    // STEP 2: If found in database, try Supabase Storage
+    // STEP 2: If found in database, fetch from VPS storage
     if (reportRecord && reportRecord.storage_path) {
       console.log('[Download] Report found in database:', reportRecord.company_name)
       console.log('[Download] Storage path:', reportRecord.storage_path)
 
-      // Download from Supabase Storage (required for all reports)
-      const { data: storageData, error: storageError } = await supabase.storage
-        .from('reports')
-        .download(reportRecord.storage_path)
+      // Download from VPS storage (served via Caddy)
+      const storageUrl = `https://api.mintydesign.xyz/storage/reports/${reportRecord.storage_path}`
+      console.log('[Download] Fetching from:', storageUrl)
 
-      if (storageError) {
-        console.error('[Download] Supabase Storage error:', storageError.message)
+      const response = await fetch(storageUrl)
+
+      if (!response.ok) {
+        console.error('[Download] VPS Storage error:', response.status, response.statusText)
         console.error('[Download] Storage path:', reportRecord.storage_path)
         throw new Error(
-          `Failed to download report from Supabase Storage: ${storageError.message}. ` +
+          `Failed to download report from VPS storage: ${response.status} ${response.statusText}. ` +
           `The report may need to be regenerated. Storage path: ${reportRecord.storage_path}`
         )
       }
 
-      if (!storageData) {
-        throw new Error('No data received from Supabase Storage')
-      }
-
-      // Convert Blob to Buffer
-      const arrayBuffer = await storageData.arrayBuffer()
+      // Convert response to Buffer
+      const arrayBuffer = await response.arrayBuffer()
       pdfBuffer = Buffer.from(arrayBuffer)
 
-      console.log('[Download] Downloaded from Supabase Storage, size:', pdfBuffer.length, 'bytes')
+      console.log('[Download] Downloaded from VPS storage, size:', pdfBuffer.length, 'bytes')
 
       // Generate clean filename
       filename = `${reportRecord.company_name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-analysis-report.pdf`
