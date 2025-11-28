@@ -7,6 +7,7 @@
 
 import { ReactNode, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { useAuth } from '@clerk/nextjs';
 import { TaskProgressProvider } from '@/lib/contexts/task-progress-context';
 import { ConsoleProvider } from '@/lib/contexts/console-context';
 import { FetchInterceptor } from '@/lib/utils/fetch-interceptor';
@@ -24,6 +25,7 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   const [mounted, setMounted] = useState(false);
+  const { isSignedIn } = useAuth();
 
   // Only render providers after mounting on client to prevent SSR issues
   useEffect(() => {
@@ -39,9 +41,10 @@ export function Providers({ children }: ProvidersProps) {
     <TaskProgressProvider>
       <ConsoleProvider>
         <FetchInterceptor>
-          <BackendLogConnector />
+          {/* Only show developer tools when signed in */}
+          {isSignedIn && <BackendLogConnector />}
           {children}
-          <FloatingTaskIndicator />
+          {isSignedIn && <FloatingTaskIndicator />}
         </FetchInterceptor>
       </ConsoleProvider>
     </TaskProgressProvider>
