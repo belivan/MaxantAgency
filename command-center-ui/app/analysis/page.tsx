@@ -7,14 +7,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle, Brain, Sparkles } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   ProspectSelector,
   AnalysisConfig,
   StatsOverview,
   FeaturesShowcase,
-  AnalysisResults,
   BenchmarkManager,
   QuickWebsiteAnalysis
 } from '@/components/analysis';
@@ -30,6 +29,12 @@ import {
   TabsList,
   TabsTrigger
 } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger
+} from '@/components/ui/collapsible';
 
 const DEFAULT_ANALYSIS_MODEL = 'claude-haiku-4-5';
 
@@ -109,6 +114,7 @@ export default function AnalysisPage() {
   const [leadsCount, setLeadsCount] = useState(0);
   const [promptsLoading, setPromptsLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [showFeatures, setShowFeatures] = useState(false);
 
   // Callback to refresh leads after quick analysis
   const refreshLeads = useCallback(() => {
@@ -384,55 +390,66 @@ export default function AnalysisPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto p-6 space-y-8">
-        {/* Hero Section */}
-        <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-primary/5 border border-primary/10 rounded-full mb-4">
-            <Brain className="w-4 h-4 text-primary" />
-            <span className="text-sm font-medium text-primary">AI-Powered Intelligence Engine</span>
-          </div>
-          <h1 className="text-4xl font-bold text-foreground">Intelligent Website Analysis</h1>
-          <p className="text-lg text-muted-foreground max-w-3xl leading-relaxed">
-            6 AI analyzers • Context-aware grading • Industry benchmarking • Lead priority scoring • Multi-format reports
-          </p>
-        </div>
+      <div className="container mx-auto px-4 py-4 sm:px-5 sm:py-5 md:px-6 md:py-6 space-y-4 sm:space-y-6 md:space-y-8">
+        {/* Page Title */}
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground">
+          Website Analysis
+        </h1>
 
         {/* Stats Overview */}
         <StatsOverview projectId={selectedProjectId} />
 
-        {/* Feature Showcase */}
-        <div className="space-y-4">
-          <h2 className="text-2xl font-semibold text-foreground">Powered by Advanced AI Features</h2>
-          <FeaturesShowcase />
-        </div>
+        {/* Feature Showcase - Collapsible */}
+        <Collapsible open={showFeatures} onOpenChange={setShowFeatures}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2">
+              {showFeatures ? <ChevronUp className="w-4 h-4 mr-2" /> : <ChevronDown className="w-4 h-4 mr-2" />}
+              {showFeatures ? 'Hide' : 'Show'} AI Features
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-4">
+            <FeaturesShowcase />
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Main Content Tabs */}
-        <Tabs defaultValue="analyze" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="analyze">
-              <Sparkles className="w-4 h-4 mr-2" />
-              Analyze Prospects
+        <Tabs defaultValue="analyze" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="analyze" className="text-xs sm:text-sm">
+              <Sparkles className="w-4 h-4 mr-1 sm:mr-2 hidden sm:block" />
+              <span>Analyze</span>
             </TabsTrigger>
-            <TabsTrigger value="results">Recent Results</TabsTrigger>
-            <TabsTrigger value="benchmarks">Benchmarks</TabsTrigger>
+            <TabsTrigger value="benchmarks" className="text-xs sm:text-sm">
+              Benchmarks
+            </TabsTrigger>
           </TabsList>
 
           {/* Analyze Tab */}
-          <TabsContent value="analyze" className="space-y-6">
+          <TabsContent value="analyze" className="space-y-4 sm:space-y-6">
             {isAnalysisEngineOffline && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Analysis Engine Offline</AlertTitle>
-                <AlertDescription>
-                  The analysis engine is not responding. Please start the analysis-engine service (port 3001) to analyze prospects.
+              <Alert variant="destructive" className="py-2 sm:py-3">
+                <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <AlertDescription className="text-xs sm:text-sm">
+                  Analysis engine offline (port 3001)
                 </AlertDescription>
               </Alert>
             )}
 
-            {/* Analysis Section - Single Grid */}
-            <div className="grid gap-6 lg:grid-cols-3">
-              {/* Left Column - Row 1: Quick Website Analysis */}
-              <div className="lg:col-span-2">
+            {/* Analysis Section - Grid with mobile-first order */}
+            <div className="grid gap-4 sm:gap-5 md:gap-6 lg:grid-cols-3">
+              {/* Prospect Selector - First on mobile, left column row 2 on desktop */}
+              <div className="order-1 lg:order-3 lg:col-span-2">
+                <ProspectSelector
+                  selectedIds={selectedIds}
+                  onSelectionChange={setSelectedIds}
+                  preSelectedIds={preSelectedIds}
+                  projectId={selectedProjectId}
+                  onProjectChange={setSelectedProjectId}
+                />
+              </div>
+
+              {/* Quick Website Analysis - Second on mobile, left column row 1 on desktop */}
+              <div className="order-2 lg:order-1 lg:col-span-2">
                 <QuickWebsiteAnalysis
                   selectedProjectId={selectedProjectId}
                   disabled={false}
@@ -441,8 +458,8 @@ export default function AnalysisPage() {
                 />
               </div>
 
-              {/* Right Column - Rows 1-2: Analysis Config */}
-              <div className="lg:row-span-2">
+              {/* Analysis Config - Third on mobile, right column spanning rows on desktop */}
+              <div className="order-3 lg:order-2 lg:row-span-2">
                 <AnalysisConfig
                   prospectCount={selectedIds.length}
                   onSubmit={handleAnalyze}
@@ -458,23 +475,7 @@ export default function AnalysisPage() {
                   onModelSelectionsChange={handleModelSelectionsChange}
                 />
               </div>
-
-              {/* Left Column - Row 2: Prospect Selector */}
-              <div className="lg:col-span-2">
-                <ProspectSelector
-                  selectedIds={selectedIds}
-                  onSelectionChange={setSelectedIds}
-                  preSelectedIds={preSelectedIds}
-                  projectId={selectedProjectId}
-                  onProjectChange={setSelectedProjectId}
-                />
-              </div>
             </div>
-          </TabsContent>
-
-          {/* Results Tab */}
-          <TabsContent value="results" className="space-y-6">
-            <AnalysisResults projectId={selectedProjectId} limit={20} key={refreshTrigger} />
           </TabsContent>
 
           {/* Benchmarks Tab */}

@@ -1,6 +1,6 @@
 {
   "table": "composed_outreach",
-  "description": "All outreach variations for a lead consolidated into one row (12 variations per lead)",
+  "description": "All outreach variations for a lead consolidated into one row (12 variations per lead). Uses JSONB for emails with {subject, body} structure.",
 
   "columns": [
     {
@@ -135,101 +135,6 @@
     },
 
     {
-      "name": "platform",
-      "type": "text",
-      "enum": ["email", "instagram", "facebook", "linkedin"],
-      "default": "email",
-      "index": true,
-      "description": "Outreach platform"
-    },
-    {
-      "name": "email_subject",
-      "type": "text",
-      "description": "Email subject line"
-    },
-    {
-      "name": "email_body",
-      "type": "text",
-      "description": "Email body content"
-    },
-    {
-      "name": "email_strategy",
-      "type": "text",
-      "description": "Strategy used for generation"
-    },
-    {
-      "name": "character_count",
-      "type": "integer",
-      "description": "Character count (for social DMs)"
-    },
-    {
-      "name": "social_profile_url",
-      "type": "text",
-      "description": "Social media profile URL"
-    },
-    {
-      "name": "has_variants",
-      "type": "boolean",
-      "default": false,
-      "description": "Whether variants were generated"
-    },
-    {
-      "name": "subject_variants",
-      "type": "jsonb",
-      "description": "Subject line variants"
-    },
-    {
-      "name": "body_variants",
-      "type": "jsonb",
-      "description": "Body variants"
-    },
-    {
-      "name": "recommended_variant",
-      "type": "jsonb",
-      "description": "AI-recommended variant"
-    },
-    {
-      "name": "variant_reasoning",
-      "type": "text",
-      "description": "Reasoning for recommended variant"
-    },
-    {
-      "name": "quality_score",
-      "type": "integer",
-      "description": "Quality score (0-100)"
-    },
-    {
-      "name": "validation_issues",
-      "type": "jsonb",
-      "description": "Validation warnings/errors"
-    },
-    {
-      "name": "ai_model",
-      "type": "text",
-      "description": "AI model used for generation"
-    },
-    {
-      "name": "generation_cost",
-      "type": "decimal",
-      "description": "API cost for generation (USD)"
-    },
-    {
-      "name": "generation_time_ms",
-      "type": "integer",
-      "description": "Generation time (milliseconds)"
-    },
-    {
-      "name": "usage_input_tokens",
-      "type": "integer",
-      "description": "Input tokens used"
-    },
-    {
-      "name": "usage_output_tokens",
-      "type": "integer",
-      "description": "Output tokens used"
-    },
-
-    {
       "name": "data_sources_used",
       "type": "jsonb",
       "description": "Which analysis fields were used (executive_summary, consolidated_issues, quick_wins, etc.)"
@@ -268,6 +173,12 @@
       "type": "timestamptz",
       "default": "now()",
       "description": "Last updated"
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Owner of this outreach record (FK to users.id)"
     }
   ],
 
@@ -301,6 +212,36 @@
       "column": "project_id",
       "references": "projects.id",
       "onDelete": "CASCADE"
+    },
+    {
+      "column": "user_id",
+      "references": "users.id",
+      "onDelete": "CASCADE"
     }
-  ]
+  ],
+
+  "_migration_notes": {
+    "removed_columns": [
+      "platform - Not used in consolidated format (all platforms stored per-row)",
+      "email_subject - Consolidated into email_*_value JSONB",
+      "email_body - Consolidated into email_*_value JSONB",
+      "email_strategy - Consolidated into email_*_value JSONB",
+      "character_count - Not tracked (platform constraints handled at generation)",
+      "social_profile_url - Replaced by platform-specific *_profile_url columns",
+      "has_variants - Legacy feature not implemented in consolidated format",
+      "subject_variants - Legacy feature not implemented",
+      "body_variants - Legacy feature not implemented",
+      "recommended_variant - Legacy feature not implemented",
+      "variant_reasoning - Legacy feature not implemented",
+      "quality_score - Not tracked in consolidated format",
+      "validation_issues - Not tracked in consolidated format",
+      "ai_model - Tracked in generation_metadata instead",
+      "generation_cost - Tracked in generation_metadata instead",
+      "generation_time_ms - Tracked in generation_metadata instead",
+      "usage_input_tokens - Tracked in generation_metadata instead",
+      "usage_output_tokens - Tracked in generation_metadata instead"
+    ],
+    "migration_date": "2025-11-28",
+    "reason": "Schema consolidation to match actual batch generation usage pattern"
+  }
 }

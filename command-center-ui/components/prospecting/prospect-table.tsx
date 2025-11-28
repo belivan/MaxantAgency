@@ -134,51 +134,46 @@ export function ProspectTable({
 
   return (
     <div className="space-y-4">
-      {/* Selection Info */}
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <p className="text-sm text-muted-foreground">
-            {selectedIds.length > 0 ? (
-              <>
-                <span className="font-medium text-foreground">{selectedIds.length}</span> of{' '}
-                <span className="font-medium text-foreground">{prospects.length}</span> selected
-              </>
-            ) : (
-              <>Showing {prospects.length} prospects</>
-            )}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            💡 Tip: Hold <kbd className="px-1 py-0.5 text-xs font-semibold border rounded bg-muted">Shift</kbd> and click to select a range
-          </p>
-        </div>
+      {/* Selection Info - Compact for mobile */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs sm:text-sm text-muted-foreground">
+          {selectedIds.length > 0 ? (
+            <><span className="font-medium text-foreground">{selectedIds.length}</span>/{prospects.length} selected</>
+          ) : (
+            <>{prospects.length} prospects</>
+          )}
+        </p>
 
         {selectedIds.length > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button
               variant="outline"
               size="sm"
               onClick={() => onSelectionChange([])}
+              className="h-7 text-xs px-2"
             >
-              Clear Selection
+              Clear
             </Button>
             <Button
               variant="destructive"
               size="sm"
               onClick={() => setShowDeleteDialog(true)}
+              className="h-7 text-xs px-2"
             >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete ({selectedIds.length})
+              <Trash2 className="w-3.5 h-3.5 sm:mr-1.5" />
+              <span className="hidden sm:inline">Delete</span>
+              <span className="sm:hidden">({selectedIds.length})</span>
             </Button>
           </div>
         )}
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
+              <TableHead className="w-10 px-2">
                 <Checkbox
                   checked={isAllSelected}
                   onCheckedChange={handleSelectAll}
@@ -186,14 +181,14 @@ export function ProspectTable({
                   className={isSomeSelected ? 'data-[state=checked]:bg-muted' : ''}
                 />
               </TableHead>
-              <TableHead>Project</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Date Added</TableHead>
-              <TableHead>Industry</TableHead>
-              <TableHead>Location</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead className="w-20">Website</TableHead>
+              <TableHead className="hidden lg:table-cell">Project</TableHead>
+              <TableHead className="min-w-[120px]">Company</TableHead>
+              <TableHead className="hidden xl:table-cell">Date Added</TableHead>
+              <TableHead className="hidden md:table-cell">Industry</TableHead>
+              <TableHead className="hidden lg:table-cell">Location</TableHead>
+              <TableHead className="w-16">Rating</TableHead>
+              <TableHead className="hidden sm:table-cell">Contact</TableHead>
+              <TableHead className="w-14">Site</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -205,7 +200,7 @@ export function ProspectTable({
                   key={prospect.id}
                   className={isSelected ? 'bg-muted/50' : ''}
                 >
-                  <TableCell>
+                  <TableCell className="px-2">
                     <div
                       onClick={(e) => {
                         e.stopPropagation();
@@ -226,7 +221,7 @@ export function ProspectTable({
                     </div>
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     {prospect.project_name || (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -235,13 +230,13 @@ export function ProspectTable({
                   <TableCell className="font-medium">
                     <button
                       onClick={() => handleViewDetails(prospect)}
-                      className="text-primary hover:underline cursor-pointer text-left"
+                      className="text-primary hover:underline cursor-pointer text-left text-sm"
                     >
                       {prospect.company_name}
                     </button>
                   </TableCell>
 
-                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                  <TableCell className="hidden xl:table-cell text-sm text-muted-foreground whitespace-nowrap">
                     {prospect.created_at ? (
                       formatDateTime(prospect.created_at)
                     ) : (
@@ -249,13 +244,13 @@ export function ProspectTable({
                     )}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell text-sm">
                     {prospect.industry || (
                       <span className="text-muted-foreground">—</span>
                     )}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm">
                     {prospect.city && prospect.state ? (
                       <span>{prospect.city}, {prospect.state}</span>
                     ) : (
@@ -265,54 +260,47 @@ export function ProspectTable({
 
                   <TableCell>
                     {prospect.google_rating ? (
-                      <div className="flex items-center space-x-1">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">{prospect.google_rating.toFixed(1)}</span>
-                        {prospect.google_review_count && (
-                          <span className="text-xs text-muted-foreground">
-                            ({prospect.google_review_count})
-                          </span>
-                        )}
+                      <div className="flex items-center gap-0.5">
+                        <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium">{prospect.google_rating.toFixed(1)}</span>
                       </div>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {prospect.contact_email ? (
-                      <div className="space-y-1">
-                        <a
-                          href={`mailto:${prospect.contact_email}`}
-                          className="text-xs text-primary hover:underline block"
-                        >
-                          {prospect.contact_email}
-                        </a>
-                        {prospect.contact_phone && (
-                          <div className="text-xs text-muted-foreground">
-                            {formatPhone(prospect.contact_phone)}
-                          </div>
-                        )}
-                      </div>
+                      <a
+                        href={`mailto:${prospect.contact_email}`}
+                        className="text-xs text-primary hover:underline block truncate max-w-[150px]"
+                        title={prospect.contact_email}
+                      >
+                        {prospect.contact_email}
+                      </a>
                     ) : prospect.contact_phone ? (
-                      <div className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {formatPhone(prospect.contact_phone)}
-                      </div>
+                      </span>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
 
                   <TableCell>
-                    <a
-                      href={prospect.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline inline-flex items-center space-x-1"
-                    >
-                      <ExternalLink className="w-3 h-3" />
-                      <span className="text-xs">Visit</span>
-                    </a>
+                    {prospect.website ? (
+                      <a
+                        href={prospect.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                        title={prospect.website}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
                   </TableCell>
                 </TableRow>
               );

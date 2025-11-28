@@ -70,19 +70,19 @@ export function ConsolePanel() {
   };
 
   return (
-    <div className="flex flex-col h-full max-h-[26rem] overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
-      <div className="flex-shrink-0 border-b border-border p-2 space-y-2">
+      <div className="flex-shrink-0 border-b border-border p-1.5 md:p-2 space-y-1.5 md:space-y-2">
         {/* Top row: Type filters + Actions */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-1 md:gap-2">
           {/* Type filters */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 md:gap-1">
             {typeFilters.map(({ type, icon, label }) => (
               <button
                 key={type}
                 onClick={() => toggleTypeFilter(type)}
                 className={cn(
-                  'flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors',
+                  'flex items-center gap-1 px-1.5 py-1 md:px-2 rounded text-xs transition-colors',
                   filters.types.includes(type)
                     ? 'bg-primary/20 text-primary'
                     : 'bg-muted/50 text-muted-foreground hover:bg-muted'
@@ -150,15 +150,15 @@ export function ConsolePanel() {
         </div>
 
         {/* Second row: Level filters + Search */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {/* Level filters */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 md:gap-1">
             {levelFilters.map(({ level, icon, label, color }) => (
               <button
                 key={level}
                 onClick={() => toggleLevelFilter(level)}
                 className={cn(
-                  'flex items-center gap-1 px-1.5 py-0.5 rounded text-xs transition-colors',
+                  'flex items-center gap-1 px-1 py-0.5 md:px-1.5 rounded text-xs transition-colors',
                   filters.levels.includes(level)
                     ? `bg-muted ${color}`
                     : 'text-muted-foreground/50 hover:text-muted-foreground'
@@ -171,11 +171,11 @@ export function ConsolePanel() {
           </div>
 
           {/* Search */}
-          <div className="flex-1 relative">
+          <div className="flex-1 relative min-w-0">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Filter logs..."
+              placeholder="Filter..."
               value={filters.search}
               onChange={(e) => setFilters({ search: e.target.value })}
               className="w-full pl-7 pr-7 py-1 text-xs bg-muted/50 border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary"
@@ -192,7 +192,7 @@ export function ConsolePanel() {
 
           {/* Log count */}
           <span className="text-xs text-muted-foreground flex-shrink-0">
-            {filteredLogs.length} logs
+            {filteredLogs.length}
           </span>
         </div>
       </div>
@@ -218,9 +218,10 @@ export function ConsolePanel() {
         )}
       </div>
 
-      {/* Footer with keyboard shortcuts hint */}
+      {/* Footer with keyboard shortcuts hint - hidden on mobile */}
       <div className="flex-shrink-0 border-t border-border px-2 py-1 text-[10px] text-muted-foreground flex items-center justify-between">
-        <span>Cmd+Shift+J: Toggle | Cmd+K: Clear | Esc: Close</span>
+        <span className="hidden md:inline">Cmd+Shift+J: Toggle | Cmd+K: Clear | Esc: Close</span>
+        <span className="md:hidden">{filteredLogs.length} logs</span>
         <span>{settings.showHealthChecks ? 'Showing' : 'Hiding'} health checks</span>
       </div>
     </div>

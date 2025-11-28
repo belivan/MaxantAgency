@@ -127,7 +127,7 @@ export function QuickBusinessLookup({
           <span>Quick Business Lookup</span>
         </CardTitle>
         <CardDescription>
-          Look up a single business by name or website
+          Add a single business by name
         </CardDescription>
       </CardHeader>
 
@@ -158,7 +158,7 @@ export function QuickBusinessLookup({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="query">
-              Business Name or URL <span className="text-destructive">*</span>
+              Business Name or URL
             </Label>
             <div className="flex gap-2">
               <Input

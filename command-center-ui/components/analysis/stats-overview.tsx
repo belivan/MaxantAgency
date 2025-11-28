@@ -51,13 +51,13 @@ export function StatsOverview({ projectId }: { projectId?: string | null }) {
 
   if (loading) {
     return (
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 sm:gap-4 md:gap-6 md:grid-cols-4">
         {[...Array(4)].map((_, i) => (
           <Card key={i}>
-            <CardContent className="p-6">
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-8 w-16 mb-1" />
-              <Skeleton className="h-3 w-32" />
+            <CardContent className="p-3 sm:p-4 md:p-6">
+              <Skeleton className="h-4 w-20 sm:w-24 mb-2" />
+              <Skeleton className="h-6 sm:h-8 w-12 sm:w-16 mb-1" />
+              <Skeleton className="h-3 w-24 sm:w-32" />
             </CardContent>
           </Card>
         ))}
@@ -101,22 +101,22 @@ export function StatsOverview({ projectId }: { projectId?: string | null }) {
   ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 sm:gap-4 md:gap-6 md:grid-cols-4">
       {statCards.map((stat, index) => {
         const Icon = stat.icon;
         return (
           <Card key={index} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium text-muted-foreground">
+            <CardContent className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <span className="text-xs sm:text-sm font-medium text-muted-foreground">
                   {stat.label}
                 </span>
-                <Icon className={`w-5 h-5 ${stat.color}`} />
+                <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${stat.color}`} />
               </div>
-              <div className="text-3xl font-bold text-foreground mb-1">
+              <div className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-1">
                 {stat.value}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
                 {stat.detail}
               </p>
             </CardContent>

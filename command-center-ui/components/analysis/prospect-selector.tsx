@@ -172,130 +172,118 @@ export function ProspectSelector({
   const endIndex = Math.min(page * pageSize, total);
 
   return (
-    <div className="space-y-4">
-      {/* Project Filter - PROMINENT at top */}
-      <Card className={!filters.project_id ? "border-amber-500 bg-amber-50 dark:bg-amber-950/20" : "border-primary"}>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="w-5 h-5" />
-            <span>Select Project (Required)</span>
-          </CardTitle>
-          {!filters.project_id && (
-            <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
-              ⚠️ Please select a project. All analyzed leads will belong to this project.
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <Label htmlFor="project" className="text-base font-semibold">
-              Which project should these leads belong to?
-            </Label>
-            <Select
-              value={filters.project_id || ''}
-              onValueChange={(value) => handleFilterChange('project_id', value || undefined)}
-              disabled={loadingProjects}
-            >
-              <SelectTrigger id="project" className="h-12 text-base">
-                <SelectValue placeholder={loadingProjects ? 'Loading projects...' : 'Choose a project...'} />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id} className="text-base py-3">
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-sm text-muted-foreground">
-              Only prospects from this project will be shown below
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Additional Filters Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Filter className="w-5 h-5" />
-            <span>Additional Filters (Optional)</span>
+    <div className="space-y-3 sm:space-y-4">
+      {/* Filters Card */}
+      <Card className={!filters.project_id ? "border-amber-500" : ""}>
+        <CardHeader className="pb-2 sm:pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+            <Filter className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span>Filters</span>
+            {!filters.project_id && (
+              <span className="text-[10px] sm:text-xs text-amber-600 font-normal">
+                (Select project)
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-4">
+        <CardContent className="pt-0">
+          <div className="grid gap-2 sm:gap-3 grid-cols-2 md:grid-cols-5">
+            {/* Project Filter */}
+            <div className="space-y-1 col-span-2 md:col-span-1">
+              <Label htmlFor="project" className="text-[10px] sm:text-xs">Project</Label>
+              <Select
+                value={filters.project_id || ''}
+                onValueChange={(value) => handleFilterChange('project_id', value || undefined)}
+                disabled={loadingProjects}
+              >
+                <SelectTrigger id="project" className={`h-8 text-xs sm:text-sm ${!filters.project_id ? "border-amber-500" : ""}`}>
+                  <SelectValue placeholder={loadingProjects ? 'Loading...' : 'Select'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Status Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+            <div className="space-y-1">
+              <Label htmlFor="status" className="text-[10px] sm:text-xs">Status</Label>
               <Select
                 value={filters.status as string || 'all'}
                 onValueChange={(value) => handleFilterChange('status', value === 'all' ? undefined : value)}
               >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="All statuses" />
+                <SelectTrigger id="status" className="h-8 text-xs sm:text-sm">
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="ready_for_analysis">Ready for Analysis</SelectItem>
-                  <SelectItem value="analyzed">Already Analyzed</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="ready_for_analysis">Ready</SelectItem>
+                  <SelectItem value="analyzed">Analyzed</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Industry Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="industry">Industry</Label>
+            <div className="space-y-1">
+              <Label htmlFor="industry" className="text-[10px] sm:text-xs">Industry</Label>
               <Input
                 id="industry"
-                placeholder="e.g., Restaurant"
+                placeholder="Restaurant"
                 value={filters.industry as string || ''}
                 onChange={(e) => handleFilterChange('industry', e.target.value)}
+                className="h-8 text-xs sm:text-sm"
               />
             </div>
 
             {/* City Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
+            <div className="space-y-1">
+              <Label htmlFor="city" className="text-[10px] sm:text-xs">City</Label>
               <Input
                 id="city"
-                placeholder="e.g., Philadelphia"
+                placeholder="Philly"
                 value={filters.city as string || ''}
                 onChange={(e) => handleFilterChange('city', e.target.value)}
+                className="h-8 text-xs sm:text-sm"
               />
             </div>
 
             {/* Min Rating Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="min_rating">Min Rating</Label>
+            <div className="space-y-1">
+              <Label htmlFor="min_rating" className="text-[10px] sm:text-xs">Rating</Label>
               <Input
                 id="min_rating"
                 type="number"
                 min={0}
                 max={5}
                 step={0.5}
-                placeholder="0.0"
+                placeholder="0"
                 value={filters.min_rating || ''}
                 onChange={(e) => handleFilterChange('min_rating', e.target.value ? parseFloat(e.target.value) : undefined)}
+                className="h-8 text-xs sm:text-sm"
               />
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between mt-3 sm:mt-4">
             <Button
               variant="outline"
               size="sm"
               onClick={refresh}
               disabled={loading}
+              className="h-7 sm:h-8 text-xs px-2 sm:px-3"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              <RefreshCw className={`w-3.5 h-3.5 sm:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
             </Button>
 
-            <div className="text-sm text-muted-foreground">
-              {total > 0 ? `${total} prospect${total === 1 ? '' : 's'} found` : 'No prospects found'}
+            <div className="text-xs text-muted-foreground">
+              {total > 0 ? `${total} found` : 'No prospects'}
             </div>
           </div>
         </CardContent>
@@ -303,8 +291,8 @@ export function ProspectSelector({
 
       {/* Error State */}
       {error && (
-        <div className="rounded-lg border border-destructive bg-destructive/10 p-4">
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-3 sm:p-4">
+          <p className="text-xs sm:text-sm text-destructive">{error}</p>
         </div>
       )}
 
@@ -314,57 +302,40 @@ export function ProspectSelector({
       ) : (
         /* Prospects Table */
         <>
-          {/* Selection Actions */}
+          {/* Selection Bar - Compact */}
           {total > 0 && (
-            <Card className="mb-4">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSelectAllInProject}
-                      disabled={!filters.project_id || loading}
-                      title="Select all prospects in project (across all pages)"
-                    >
-                      <CheckSquare className="w-4 h-4 mr-2" />
-                      Select All ({total})
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleClearAll}
-                      disabled={selectedIds.length === 0}
-                      title="Clear all selections"
-                    >
-                      <Square className="w-4 h-4 mr-2" />
-                      Clear All
-                    </Button>
-                  </div>
-                  <div className="text-sm">
-                    {selectedIds.length > 0 ? (
-                      <>
-                        <span className="font-semibold text-primary">{selectedIds.length} selected</span>
-                        {selectedIds.length > pageSize && (
-                          <span className="text-muted-foreground ml-1">
-                            ({Math.min(prospects.filter(p => selectedIds.includes(p.id)).length, endIndex - startIndex + 1)} visible on this page)
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">No prospects selected</span>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Results Summary */}
-          {total > 0 && (
-            <div className="mb-3 text-sm text-muted-foreground">
-              Showing <span className="font-medium text-foreground">{startIndex}-{endIndex}</span> of{' '}
-              <span className="font-medium text-foreground">{total}</span> prospect{total === 1 ? '' : 's'}
+            <div className="flex items-center justify-between gap-1.5 py-1.5 sm:py-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllInProject}
+                  disabled={!filters.project_id || loading}
+                  className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3"
+                >
+                  <CheckSquare className="w-3 h-3 sm:w-3.5 sm:h-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline">All ({total})</span>
+                  <span className="sm:hidden">{total}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearAll}
+                  disabled={selectedIds.length === 0}
+                  className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3"
+                >
+                  <Square className="w-3 h-3 sm:w-3.5 sm:h-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Clear</span>
+                </Button>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">
+                  {selectedIds.length > 0 && (
+                    <span className="font-medium text-primary">{selectedIds.length}</span>
+                  )}
+                </span>
+              </div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">
+                {startIndex}-{endIndex}/{total}
+              </div>
             </div>
           )}
 
@@ -377,50 +348,31 @@ export function ProspectSelector({
           />
 
           {/* Pagination Controls */}
-          {total > 0 && (
-            <div className="flex items-center justify-between border-t pt-4">
-              <div className="text-sm text-muted-foreground">
-                {total > 0 ? (
-                  <>
-                    Showing <span className="font-medium text-foreground">{startIndex}-{endIndex}</span> of{' '}
-                    <span className="font-medium text-foreground">{total}</span> prospects
-                    {totalPages > 1 && <> • Page {page} of {totalPages}</>}
-                  </>
-                ) : (
-                  <>No prospects found</>
-                )}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2 sm:pt-3">
+              <span className="text-[10px] sm:text-xs text-muted-foreground">
+                {page}/{totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={!hasPrevPage || loading}
+                  className="h-7 sm:h-8 px-1.5 sm:px-2"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={!hasNextPage || loading}
+                  className="h-7 sm:h-8 px-1.5 sm:px-2"
+                >
+                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </Button>
               </div>
-              {totalPages > 1 && (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(page - 1)}
-                    disabled={!hasPrevPage || loading}
-                  >
-                    <ChevronLeft className="w-4 h-4 mr-1" />
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePageChange(page + 1)}
-                    disabled={!hasNextPage || loading}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Selection Summary */}
-          {selectedIds.length > 0 && (
-            <div className="rounded-lg bg-primary/10 border border-primary p-4">
-              <p className="text-sm font-medium">
-                <span className="text-primary">{selectedIds.length}</span> prospect{selectedIds.length === 1 ? '' : 's'} selected for analysis
-              </p>
             </div>
           )}
         </>

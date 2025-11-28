@@ -14,3 +14,5 @@ export * from './social-dm-composer';
 export * from './social-message-preview';
 export * from './social-messages-table';
 export * from './social-message-detail-modal';
+export * from './outreach-table';
+export * from './outreach-detail-modal';

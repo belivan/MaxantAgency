@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentUser } from '@/lib/server/quota';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
+    // Get current user for data isolation
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -21,10 +31,11 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
-    // Build query
+    // Build query with user isolation
     let query = supabase
       .from('projects')
       .select('*')
+      .eq('user_id', user.id) // User isolation
       .order('created_at', { ascending: false });
 
     // Apply status filter if provided
@@ -168,6 +179,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Get current user for data ownership
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const supabaseUrl = process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 
@@ -192,10 +212,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build project data
+    // Build project data with user ownership
     const projectData: any = {
       name: name.trim(),
-      status: 'active'
+      status: 'active',
+      user_id: user.id // Set owner
     };
 
     if (description) {
@@ -207,9 +228,7 @@ export async function POST(request: Request) {
       projectData.budget = budget_limit;
     }
 
-    if (budget_alert_threshold !== undefined) {
-      projectData.budget_alert_threshold = budget_alert_threshold;
-    }
+    // Note: budget_alert_threshold is not in the database schema, so we skip it
 
     // Include JSONB config fields if provided
     if (icp_brief) {

@@ -12,6 +12,8 @@ import {
   MailCheck,
   ExternalLink,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Filter,
   X,
   Trash2,
@@ -20,8 +22,11 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  CheckSquare
+  CheckSquare,
+  FileText,
+  Sparkles
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   Table,
   TableBody,
@@ -56,6 +61,8 @@ import { GradeBadge } from './grade-badge';
 import { PriorityBadge, getPriorityTier } from './priority-badge';
 import { LeadDetailsCard } from './lead-details-card';
 import { BudgetIndicatorBadge, YearsInBusinessBadge, PremiumFeaturesBadge } from './business-intel-badges';
+import { GenerateReportModal } from './generate-report-modal';
+import { GenerateOutreachModal } from './generate-outreach-modal';
 import { formatDate, formatDateTime } from '@/lib/utils/format';
 import { deleteLeads } from '@/lib/api/analysis';
 import type { Lead, LeadGrade } from '@/lib/types';
@@ -124,6 +131,10 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
   // Delete confirmation state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Modal states
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showOutreachModal, setShowOutreachModal] = useState(false);
 
   // Get unique values for filters
   const uniqueIndustries = useMemo(() => {
@@ -364,26 +375,27 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+      <CardHeader className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <CardTitle>Leads</CardTitle>
             <CardDescription>
               {filteredAndSortedLeads.length} lead{filteredAndSortedLeads.length !== 1 ? 's' : ''} found
+              {selectedIds.length > 0 && ` • ${selectedIds.length} selected`}
             </CardDescription>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Select All button - shows when not all leads are selected */}
-            {selectedIds.length < filteredAndSortedLeads.length && filteredAndSortedLeads.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Select All button - selects current page only */}
+            {!allSelectedOnPage && paginatedLeads.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setSelectedIds(filteredAndSortedLeads.map(l => l.id))}
+                onClick={() => handleSelectAll(true)}
                 title="Select all leads on this page"
               >
-                <CheckSquare className="w-4 h-4 mr-2" />
-                Select All ({filteredAndSortedLeads.length})
+                <CheckSquare className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Select Page ({paginatedLeads.length})</span>
               </Button>
             )}
             {selectedIds.length > 0 && (
@@ -393,22 +405,33 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                   size="sm"
                   onClick={() => setSelectedIds([])}
                 >
-                  Clear Selection ({selectedIds.length})
+                  <X className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Clear ({selectedIds.length})</span>
+                  <span className="sm:hidden">{selectedIds.length}</span>
                 </Button>
                 <Button
                   variant="destructive"
                   size="sm"
                   onClick={() => setShowDeleteDialog(true)}
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete ({selectedIds.length})
+                  <Trash2 className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Delete ({selectedIds.length})</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowReportModal(true)}
+                >
+                  <FileText className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Generate Report ({selectedIds.length})</span>
                 </Button>
                 <Button
                   size="sm"
-                  onClick={() => onComposeEmails?.(selectedIds)}
+                  onClick={() => setShowOutreachModal(true)}
+                  className="bg-purple-600 hover:bg-purple-700"
                 >
-                  <Mail className="w-4 h-4 mr-2" />
-                  Compose Emails ({selectedIds.length})
+                  <Sparkles className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Generate Outreach ({selectedIds.length})</span>
                 </Button>
               </>
             )}
@@ -419,17 +442,25 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                 onClick={onRefresh}
                 disabled={loading}
               >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
+                <RefreshCw className={`w-4 h-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
             )}
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
+              className={hasActiveFilters ? 'border-primary' : ''}
             >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
+              <Filter className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Filters</span>
+              {hasActiveFilters && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {[filters.grade !== 'all', filters.priority !== 'all', filters.hasEmail !== 'all',
+                    filters.industry !== '', filters.city !== '', filters.project !== '',
+                    filters.search !== ''].filter(Boolean).length}
+                </Badge>
+              )}
             </Button>
           </div>
         </div>
@@ -451,13 +482,15 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
-              {/* Search */}
-              <Input
-                placeholder="Search companies..."
-                value={filters.search || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+              {/* Search - full width on mobile */}
+              <div className="sm:col-span-2 lg:col-span-2 xl:col-span-1">
+                <Input
+                  placeholder="Search companies..."
+                  value={filters.search || ''}
+                  onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                />
+              </div>
 
               {/* Project Filter */}
               <Select
@@ -505,9 +538,9 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Priorities</SelectItem>
-                  <SelectItem value="hot">🔥 Hot Leads</SelectItem>
-                  <SelectItem value="warm">⭐ Warm Leads</SelectItem>
-                  <SelectItem value="cold">💤 Cold Leads</SelectItem>
+                  <SelectItem value="hot">Hot Leads</SelectItem>
+                  <SelectItem value="warm">Warm Leads</SelectItem>
+                  <SelectItem value="cold">Cold Leads</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -580,23 +613,27 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="w-10">
                     <Checkbox
                       checked={allSelectedOnPage}
                       onCheckedChange={handleSelectAll}
                       aria-label="Select all leads on page"
                     />
                   </TableHead>
-                  <TableHead className="w-12"></TableHead>
-                  <TableHead>
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead className="min-w-[150px]">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort('company_name')}
-                      className="hover:bg-transparent"
+                      className="hover:bg-transparent -ml-3"
                     >
                       Company
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                      {sortField === 'company_name' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                      ) : (
+                        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                      )}
                     </Button>
                   </TableHead>
                   <TableHead>
@@ -604,10 +641,14 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort('grade')}
-                      className="hover:bg-transparent"
+                      className="hover:bg-transparent -ml-3"
                     >
                       Grade
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                      {sortField === 'grade' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                      ) : (
+                        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                      )}
                     </Button>
                   </TableHead>
                   <TableHead>
@@ -615,29 +656,37 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort('lead_priority')}
-                      className="hover:bg-transparent"
+                      className="hover:bg-transparent -ml-3"
                     >
                       Priority
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                      {sortField === 'lead_priority' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                      ) : (
+                        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                      )}
                     </Button>
                   </TableHead>
-                  <TableHead>Budget</TableHead>
-                  <TableHead>Business Age</TableHead>
-                  <TableHead>Premium</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Project</TableHead>
-                  <TableHead>
+                  <TableHead className="hidden lg:table-cell">Budget</TableHead>
+                  <TableHead className="hidden xl:table-cell">Business Age</TableHead>
+                  <TableHead className="hidden xl:table-cell">Premium</TableHead>
+                  <TableHead className="hidden md:table-cell">Contact</TableHead>
+                  <TableHead className="hidden lg:table-cell">Project</TableHead>
+                  <TableHead className="hidden sm:table-cell">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort('created_at')}
-                      className="hover:bg-transparent"
+                      className="hover:bg-transparent -ml-3"
                     >
                       Analyzed
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                      {sortField === 'created_at' ? (
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                      ) : (
+                        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                      )}
                     </Button>
                   </TableHead>
-                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -693,21 +742,21 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                         <TableCell>
                           <PriorityBadge priority={lead.lead_priority || 0} size="sm" />
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           {lead.budget_likelihood ? (
                             <BudgetIndicatorBadge indicator={lead.budget_likelihood} size="sm" showLabel={false} />
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden xl:table-cell">
                           {businessIntel?.years_in_business ? (
                             <YearsInBusinessBadge years={businessIntel.years_in_business} size="sm" />
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden xl:table-cell">
                           {businessIntel?.premium_features && businessIntel.premium_features.length > 0 ? (
                             <PremiumFeaturesBadge
                               count={businessIntel.premium_features.length}
@@ -718,7 +767,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           {lead.contact_email ? (
                             <div className="flex items-center gap-1 text-sm">
                               <MailCheck className="w-3 h-3 text-green-600" />
@@ -728,12 +777,12 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                             <span className="text-xs text-muted-foreground">No email</span>
                           )}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden lg:table-cell">
                           <span className="text-xs text-muted-foreground">
                             {(lead as any).projects?.name || '—'}
                           </span>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell">
                           <span className="text-xs text-muted-foreground">
                             {lead.analyzed_at ? formatDateTime(lead.analyzed_at) : formatDate(lead.created_at)}
                           </span>
@@ -775,11 +824,11 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
 
         {/* Pagination Controls */}
         {filteredAndSortedLeads.length > 0 && (
-          <div className="flex items-center justify-between px-2 py-4 border-t">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-2 py-4 border-t">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Page Size Selector */}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                <span className="text-sm text-muted-foreground hidden sm:inline">Rows:</span>
                 <Select
                   value={pageSize.toString()}
                   onValueChange={(value) => {
@@ -787,7 +836,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                     setCurrentPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[70px]">
+                  <SelectTrigger className="h-8 w-[65px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -801,7 +850,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
 
               {/* Page Info */}
               <div className="text-sm text-muted-foreground">
-                Showing {Math.min((currentPage - 1) * pageSize + 1, filteredAndSortedLeads.length)}-
+                {Math.min((currentPage - 1) * pageSize + 1, filteredAndSortedLeads.length)}-
                 {Math.min(currentPage * pageSize, filteredAndSortedLeads.length)} of {filteredAndSortedLeads.length}
               </div>
             </div>
@@ -809,7 +858,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
             {/* Page Navigation */}
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
+                {currentPage}/{totalPages}
               </span>
               <Button
                 variant="outline"
@@ -817,8 +866,8 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline ml-1">Prev</span>
               </Button>
               <Button
                 variant="outline"
@@ -826,8 +875,8 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
               >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="hidden sm:inline mr-1">Next</span>
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -855,6 +904,22 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Generate Report Modal */}
+      <GenerateReportModal
+        open={showReportModal}
+        onOpenChange={setShowReportModal}
+        selectedLeads={leads.filter(l => selectedIds.includes(l.id))}
+        onComplete={onRefresh}
+      />
+
+      {/* Generate Outreach Modal */}
+      <GenerateOutreachModal
+        open={showOutreachModal}
+        onOpenChange={setShowOutreachModal}
+        selectedLeads={leads.filter(l => selectedIds.includes(l.id))}
+        onComplete={onRefresh}
+      />
     </Card>
   );
 }

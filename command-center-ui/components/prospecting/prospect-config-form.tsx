@@ -74,7 +74,7 @@ export function ProspectConfigForm({
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <Settings2 className="w-5 h-5" />
-          <span>Step 2: Prospect Settings</span>
+          <span>Step 3: Generate Prospects</span>
         </CardTitle>
       </CardHeader>
 
@@ -140,7 +140,7 @@ export function ProspectConfigForm({
                 {!selectedProjectId ? (
                   <>Please select a project to continue</>
                 ) : !icpValid ? (
-                  <>Please configure a valid ICP Brief in Step 1</>
+                  <>Please configure a valid ICP Brief in Step 2</>
                 ) : null}
               </p>
             </div>

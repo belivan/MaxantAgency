@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { Mail, Eye, MoreHorizontal } from 'lucide-react';
+import { Mail, Eye, MoreHorizontal, Copy, Check } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -59,9 +59,25 @@ export function EmailsTable({
   onScheduleEmail
 }: EmailsTableProps) {
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const handleRowClick = (email: Email) => {
     onEmailClick?.(email);
+  };
+
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const handleCopyAll = async (email: Email) => {
+    const fullEmail = `Subject: ${email.email_subject}\n\n${email.email_body}`;
+    await handleCopy(fullEmail, `all-${email.id}`);
   };
 
   const handleSelectEmail = (emailId: string, selected: boolean) => {
@@ -117,12 +133,13 @@ export function EmailsTable({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[250px]">Company</TableHead>
+                  <TableHead className="w-[200px]">Company</TableHead>
                   <TableHead>Subject</TableHead>
-                  <TableHead className="w-[120px]">Strategy</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[120px]">Created</TableHead>
-                  <TableHead className="w-[80px] text-right">Actions</TableHead>
+                  <TableHead className="w-[100px]">Strategy</TableHead>
+                  <TableHead className="w-[80px]">Status</TableHead>
+                  <TableHead className="w-[100px]">Created</TableHead>
+                  <TableHead className="w-[140px] text-center">Copy</TableHead>
+                  <TableHead className="w-[60px] text-right">More</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -162,6 +179,52 @@ export function EmailsTable({
                         <span className="text-xs text-muted-foreground">
                           {formatDateTime(email.created_at)}
                         </span>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleCopy(email.email_subject, `subj-${email.id}`)}
+                            title="Copy subject"
+                          >
+                            {copiedId === `subj-${email.id}` ? (
+                              <Check className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            <span className="ml-1">Subj</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            onClick={() => handleCopy(email.email_body, `body-${email.id}`)}
+                            title="Copy body"
+                          >
+                            {copiedId === `body-${email.id}` ? (
+                              <Check className="w-3 h-3 text-green-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            <span className="ml-1">Body</span>
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="h-7 px-2 text-xs bg-blue-600 hover:bg-blue-700"
+                            onClick={() => handleCopyAll(email)}
+                            title="Copy full email"
+                          >
+                            {copiedId === `all-${email.id}` ? (
+                              <Check className="w-3 h-3" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                            <span className="ml-1">All</span>
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>

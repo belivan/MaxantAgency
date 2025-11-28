@@ -55,7 +55,7 @@ export function LeadDetailsCard({ lead, className }: LeadDetailsCardProps) {
           <CardDescription>AI-powered lead scoring and qualification</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Lead Priority Score */}
             <div className="space-y-2">
               <div className="text-sm text-muted-foreground">Lead Priority</div>

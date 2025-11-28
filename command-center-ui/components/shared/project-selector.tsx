@@ -21,6 +21,8 @@ interface ProjectSelectorProps {
   value: string | null;
   onChange: (projectId: string | null) => void;
   label?: string;
+  placeholder?: string;
+  showLabel?: boolean;
   className?: string;
 }
 
@@ -28,6 +30,8 @@ export function ProjectSelector({
   value,
   onChange,
   label = 'Project',
+  placeholder = 'Select a project',
+  showLabel = true,
   className
 }: ProjectSelectorProps) {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -57,14 +61,14 @@ export function ProjectSelector({
 
   return (
     <div className={className}>
-      <Label htmlFor="project-selector">{label}</Label>
+      {showLabel && label && <Label htmlFor="project-selector">{label}</Label>}
       <Select
         value={value || undefined}
         onValueChange={handleChange}
         disabled={loading}
       >
         <SelectTrigger id="project-selector" className="w-full">
-          <SelectValue placeholder={loading ? 'Loading projects...' : 'Select a project'} />
+          <SelectValue placeholder={loading ? 'Loading...' : placeholder} />
         </SelectTrigger>
         <SelectContent>
           {projects.map((project) => (

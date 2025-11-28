@@ -203,6 +203,12 @@
       "nullable": false,
       "default": "now()",
       "description": "Record last update timestamp"
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": true,
+      "description": "Owner of this report (FK to users.id)"
     }
   ],
   "foreignKeys": [
@@ -217,6 +223,12 @@
       "references": "projects.id",
       "onDelete": "SET NULL",
       "description": "Links report to project"
+    },
+    {
+      "column": "user_id",
+      "references": "users.id",
+      "onDelete": "CASCADE",
+      "description": "Links report to owner"
     }
   ],
   "indexes": [

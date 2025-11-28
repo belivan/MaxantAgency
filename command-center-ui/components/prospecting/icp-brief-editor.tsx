@@ -122,7 +122,7 @@ export function ICPBriefEditor({ value, onChange, onValidChange, showForkWarning
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center space-x-2">
             <FileJson className="w-5 h-5" />
-            <span>Step 1: ICP Brief</span>
+            <span>Step 2: ICP Brief</span>
           </CardTitle>
 
           <div className="flex items-center space-x-2">

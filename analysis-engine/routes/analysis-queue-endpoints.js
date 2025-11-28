@@ -486,7 +486,17 @@ async function executeAnalysis(data) {
         }
       }
 
-      // Prepare lead data for database
+      // Fetch prospect data for contact info linking
+      let prospect = null;
+      if (data.prospect_id) {
+        try {
+          prospect = await getProspectById(data.prospect_id);
+        } catch (e) {
+          console.warn(`[Analysis Executor] Failed to fetch prospect for contact linking:`, e.message);
+        }
+      }
+
+      // Prepare lead data for database - COMPREHENSIVE (all 98 columns)
       const leadData = {
         // Core information
         url: result.url,
@@ -496,6 +506,11 @@ async function executeAnalysis(data) {
         prospect_id: data.prospect_id,
         city: result.city || data.city || null,
         state: result.state || data.state || null,
+
+        // Contact Information (linked from prospect)
+        contact_email: result.contact_email || prospect?.contact_email || data.contact_email || null,
+        contact_phone: result.contact_phone || prospect?.contact_phone || data.contact_phone || null,
+        contact_name: result.contact_name || prospect?.contact_name || data.contact_name || null,
 
         // Grading & Scores
         overall_score: Math.round(result.overall_score),
@@ -508,27 +523,98 @@ async function executeAnalysis(data) {
         social_score: Math.round(result.social_score),
         accessibility_score: Math.round(result.accessibility_score || 50),
 
-        // Issues & Recommendations
+        // Grading Weights (from AI grader)
+        weights: result.weights || null,
+        weight_reasoning: result.weight_reasoning || null,
+
+        // Issues - Combined
         design_issues: result.design_issues || [],
         seo_issues: result.seo_issues || [],
         content_issues: result.content_issues || [],
         social_issues: result.social_issues || [],
         accessibility_issues: result.accessibility_issues || [],
+        accessibility_compliance: result.accessibility_compliance || null,
+        accessibility_wcag_level: result.accessibility_wcag_level || null,
+
+        // Issues - Desktop/Mobile Split
+        design_issues_desktop: result.design_issues_desktop || [],
+        design_issues_mobile: result.design_issues_mobile || [],
+        mobile_critical_issues: result.mobile_critical_issues || 0,
+        desktop_critical_issues: result.desktop_critical_issues || 0,
+
+        // Model Tracking (which AI analyzed what)
+        seo_analysis_model: result.seo_analysis_model || null,
+        content_analysis_model: result.content_analysis_model || null,
+        desktop_visual_model: result.desktop_visual_model || null,
+        mobile_visual_model: result.mobile_visual_model || null,
+        social_analysis_model: result.social_analysis_model || null,
+        accessibility_analysis_model: result.accessibility_analysis_model || null,
+
+        // Quick Wins & Critique
         quick_wins: result.quick_wins || [],
-        top_issues: result.top_issues || [],
+        analysis_summary: result.analysis_summary || null,
         top_issue: result.top_issue || null,
         one_liner: result.one_liner || null,
+        call_to_action: result.call_to_action || null,
+        outreach_angle: result.outreach_angle || null,
+
+        // Top Issues Selection (AI-selected for outreach)
+        top_issues: result.top_issues || [],
+        top_issues_summary: result.top_issues_summary || null,
+        top_issues_selection_strategy: result.top_issues_selection_strategy || null,
+        top_issues_selection_cost: result.top_issues_selection_cost || 0,
+        top_issues_selection_model: result.top_issues_selection_model || null,
+        total_issues_count: result.total_issues_count || 0,
+        high_critical_issues_count: result.high_critical_issues_count || 0,
+
+        // Issue Deduplication
+        deduplication_enabled: result.deduplication_enabled || false,
+        deduplication_stats: result.deduplication_stats || null,
+        deduplication_cost: result.deduplication_cost || 0,
+        deduplication_model: result.deduplication_model || null,
+
+        // Lead Scoring (from AI grader or manual scorer)
+        lead_priority: result.lead_priority || null,
+        lead_priority_reasoning: result.lead_priority_reasoning || null,
+        priority_tier: result.priority_tier || null,
+        budget_likelihood: result.budget_likelihood || null,
+        fit_score: result.fit_score || null,
+        benchmark_tier: result.benchmark_tier || null,
+        quality_gap_score: result.quality_gap_score || null,
+        budget_score: result.budget_score || null,
+        urgency_score: result.urgency_score || null,
+        industry_fit_score: result.industry_fit_score || null,
+        company_size_score: result.company_size_score || null,
+        engagement_score: result.engagement_score || null,
 
         // Screenshots
         screenshot_desktop_url: result.screenshot_desktop_url || null,
         screenshot_mobile_url: result.screenshot_mobile_url || null,
+        screenshots_manifest: result.screenshots_manifest || null,
+
+        // Design Tokens
+        design_tokens_desktop: result.design_tokens_desktop || null,
+        design_tokens_mobile: result.design_tokens_mobile || null,
+
+        // Social Data
+        social_profiles: result.social_profiles || null,
+        social_platforms_present: result.social_platforms_present || [],
+        social_metadata: result.social_metadata || null,
+
+        // Content Insights
+        has_blog: result.has_blog || false,
+        content_insights: result.content_insights || null,
+        page_title: result.page_title || null,
+        meta_description: result.meta_description || null,
 
         // Business Intelligence (from Prospecting Engine - higher quality than analysis extraction)
         business_intelligence: businessIntelligence,
 
-        // Tech Stack
+        // Tech Stack & Site Characteristics
         tech_stack: result.tech_stack || JSON.stringify({ cms: 'Unknown', frameworks: [], analytics: [] }),
         page_load_time: result.page_load_time || null,
+        is_mobile_friendly: result.is_mobile_friendly || null,
+        has_https: result.has_https || null,
 
         // Performance Metrics
         performance_metrics_pagespeed: result.performance_metrics_pagespeed || null,
@@ -542,8 +628,28 @@ async function executeAnalysis(data) {
         matched_benchmark_id: result.matched_benchmark_id || null,
         matched_benchmark: result.matched_benchmark || null,
 
-        // Metadata
+        // Page Discovery & Crawl Metadata
+        pages_discovered: result.crawl_metadata?.pages_discovered || 0,
+        pages_crawled: result.crawl_metadata?.pages_crawled || 0,
+        pages_analyzed: result.crawl_metadata?.pages_analyzed || 0,
+        ai_page_selection: result.ai_page_selection || null,
+        crawl_metadata: result.crawl_metadata || null,
+
+        // QA Validation
+        validation_metadata: result.validation_metadata || null,
+
+        // Context-Aware Analysis (A/B testing)
+        context_metrics: result.context_metrics || null,
+        context_mode_used: result.context_mode_used || null,
+        prompt_variant_used: result.prompt_variant_used || null,
+
+        // Cost & Timing
         analysis_cost: result.analysis_cost || 0,
+        cost_breakdown: result.cost_breakdown || null,
+        analysis_time: result.analysis_time || null,
+        discovery_log: result.discovery_log || null,
+
+        // Status & Timestamps
         analyzed_at: new Date().toISOString(),
         status: 'ready_for_outreach'
       };

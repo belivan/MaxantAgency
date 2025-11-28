@@ -113,52 +113,6 @@ export function CreateProjectDialog({ onProjectCreated }: CreateProjectDialogPro
               )}
             </div>
 
-            {/* Budget Limit */}
-            <div className="space-y-2">
-              <Label htmlFor="budget_limit">Budget Limit (Optional)</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-2.5 text-muted-foreground">$</span>
-                <Input
-                  id="budget_limit"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="500.00"
-                  className="pl-7"
-                  {...register('budget_limit', { valueAsNumber: true })}
-                />
-              </div>
-              {errors.budget_limit && (
-                <p className="text-sm text-destructive">{errors.budget_limit.message}</p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Set a budget limit to track costs for this project
-              </p>
-            </div>
-
-            {/* Budget Alert Threshold */}
-            <div className="space-y-2">
-              <Label htmlFor="budget_alert_threshold">
-                Budget Alert Threshold (%)
-              </Label>
-              <Input
-                id="budget_alert_threshold"
-                type="number"
-                step="1"
-                min="0"
-                max="100"
-                placeholder="80"
-                {...register('budget_alert_threshold', { valueAsNumber: true })}
-              />
-              {errors.budget_alert_threshold && (
-                <p className="text-sm text-destructive">
-                  {errors.budget_alert_threshold.message}
-                </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Get alerted when you reach this percentage of your budget
-              </p>
-            </div>
           </div>
 
           <DialogFooter>

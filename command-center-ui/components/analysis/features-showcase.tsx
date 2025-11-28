@@ -98,7 +98,7 @@ export function FeaturesShowcase() {
   ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-3 grid-cols-2 sm:gap-4 md:gap-6 lg:grid-cols-4">
       {features.map((feature, index) => {
         const Icon = feature.icon;
         return (
@@ -106,21 +106,21 @@ export function FeaturesShowcase() {
             key={index}
             className={`border ${feature.borderColor} ${feature.bgColor} hover:shadow-md transition-shadow`}
           >
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`p-2.5 ${feature.bgColor} rounded-lg`}>
-                  <Icon className={`w-6 h-6 ${feature.iconColor}`} />
+            <CardHeader className="p-3 pb-2 sm:p-6 sm:pb-4">
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <div className={`p-1.5 sm:p-2.5 ${feature.bgColor} rounded-lg`}>
+                  <Icon className={`w-4 h-4 sm:w-6 sm:h-6 ${feature.iconColor}`} />
                 </div>
               </div>
-              <CardTitle className="text-base font-semibold">
+              <CardTitle className="text-sm sm:text-base font-semibold">
                 {feature.title}
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+            <CardContent className="p-3 pt-0 sm:p-6 sm:pt-0">
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed mb-2 sm:mb-4">
                 {feature.description}
               </p>
-              <ul className="space-y-2 mb-4">
+              <ul className="space-y-1 sm:space-y-2 mb-2 sm:mb-4 hidden sm:block">
                 {feature.details.map((detail, i) => (
                   <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
                     <span className={`mt-0.5 ${feature.iconColor}`}>✓</span>
@@ -128,7 +128,9 @@ export function FeaturesShowcase() {
                   </li>
                 ))}
               </ul>
-              {feature.visual}
+              <div className="scale-90 sm:scale-100 origin-left">
+                {feature.visual}
+              </div>
             </CardContent>
           </Card>
         );

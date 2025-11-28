@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { MessageSquare, Eye, MoreHorizontal, Instagram, Facebook, Linkedin } from 'lucide-react';
+import { MessageSquare, Eye, MoreHorizontal, Instagram, Facebook, Linkedin, Copy, Check } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -80,12 +80,24 @@ export function SocialMessagesTable({
   onSendMessage
 }: SocialMessagesTableProps) {
   const [selectedMessages, setSelectedMessages] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = async (text: string, id: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   const handleRowClick = (message: SocialMessage) => {
     onMessageClick?.(message);
   };
 
-  const truncateMessage = (text: string, maxLength: number = 60) => {
+  const truncateMessage = (text: string | undefined | null, maxLength: number = 60) => {
+    if (!text) return 'No message';
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
   };
@@ -131,7 +143,8 @@ export function SocialMessagesTable({
                   <TableHead className="w-[120px]">Strategy</TableHead>
                   <TableHead className="w-[100px]">Status</TableHead>
                   <TableHead className="w-[120px]">Created</TableHead>
-                  <TableHead className="w-[80px] text-right">Actions</TableHead>
+                  <TableHead className="w-[80px] text-center">Copy</TableHead>
+                  <TableHead className="w-[60px] text-right">More</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -179,6 +192,24 @@ export function SocialMessagesTable({
                         <span className="text-xs text-muted-foreground">
                           {formatDateTime(message.created_at)}
                         </span>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700"
+                            onClick={() => handleCopy(message.message_body || '', message.id)}
+                            title="Copy message"
+                          >
+                            {copiedId === message.id ? (
+                              <Check className="w-3 h-3 mr-1" />
+                            ) : (
+                              <Copy className="w-3 h-3 mr-1" />
+                            )}
+                            {copiedId === message.id ? 'Copied!' : 'Copy'}
+                          </Button>
+                        </div>
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>

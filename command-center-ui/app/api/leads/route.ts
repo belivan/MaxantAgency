@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { supabase } from '@/lib/database/supabase-server';
+import { getCurrentUser } from '@/lib/server/quota';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Get current user for data isolation
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -29,10 +28,25 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sort') || 'updated_at';
     const sortOrder = searchParams.get('order') === 'asc';
 
-    // Build query with project name join
+    // Build query with project name and prospect data joins
+    // business_intelligence comes from prospects table (source of truth)
     let query = supabase
       .from('leads')
-      .select('*, projects(name)', { count: 'exact' })
+      .select(`
+        *,
+        projects(name),
+        prospects(
+          business_intelligence,
+          social_profiles,
+          contact_email,
+          contact_phone,
+          google_rating,
+          google_review_count,
+          services,
+          description
+        )
+      `, { count: 'exact' })
+      .eq('user_id', user.id) // User isolation
       .order(sortBy, { ascending: sortOrder })
       .range(offset, offset + limit - 1);
 
@@ -59,10 +73,39 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
+    // Merge prospect data into lead objects
+    // Prospect data takes precedence for business_intelligence, social_profiles, contact info
+    const mergedLeads = (data || []).map((lead: any) => {
+      const prospect = lead.prospects;
+
+      // If no prospect linked, return lead as-is
+      if (!prospect) {
+        return lead;
+      }
+
+      return {
+        ...lead,
+        // Prospect data takes precedence (source of truth)
+        business_intelligence: prospect.business_intelligence || lead.business_intelligence,
+        social_profiles: prospect.social_profiles || lead.social_profiles,
+        // Only override contact info if lead doesn't have it
+        contact_email: lead.contact_email || prospect.contact_email,
+        contact_phone: lead.contact_phone || prospect.contact_phone,
+        // Add Google data from prospect
+        google_rating: prospect.google_rating,
+        google_review_count: prospect.google_review_count,
+        // Add services and description from prospect
+        services: prospect.services,
+        prospect_description: prospect.description,
+        // Remove nested prospect object from response
+        prospects: undefined
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      data: data || [],
-      leads: data || [],  // Keep for backward compatibility
+      data: mergedLeads,
+      leads: mergedLeads,  // Keep for backward compatibility
       total: count || 0,
       limit,
       offset

@@ -305,46 +305,41 @@ export function AnalysisConfig({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center space-x-2">
-              <Settings className="w-5 h-5" />
-              <span>Analysis Configuration</span>
-            </CardTitle>
-            <CardDescription className="mt-1">
-              Complete website analysis with all 6 AI modules · Multi-page discovery · Lead scoring
-            </CardDescription>
-          </div>
-          <Badge variant="outline" className="flex items-center space-x-1">
+      <CardHeader className="pb-3 sm:pb-4">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span>Analysis Config</span>
+          </CardTitle>
+          <Badge variant="outline" className="flex items-center gap-1 text-xs">
             <Zap className="w-3 h-3" />
             <span>v2.0</span>
           </Badge>
         </div>
+        <CardDescription className="text-xs sm:text-sm mt-1 hidden sm:block">
+          6 AI modules · Multi-page discovery · Lead scoring
+        </CardDescription>
       </CardHeader>
 
-      <CardContent>
-        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-          <div className="space-y-4">
-            <Label className="flex items-center space-x-2">
-              <span>Intelligent Analysis Features</span>
-              <Badge variant="secondary" className="text-xs">Enabled</Badge>
+      <CardContent className="pt-0">
+        <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 sm:space-y-6">
+          <div className="space-y-3 sm:space-y-4">
+            <Label className="flex items-center gap-2 text-sm">
+              <span>AI Features</span>
+              <Badge variant="secondary" className="text-xs">On</Badge>
             </Label>
 
-            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-2">
-                  <Brain className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  <Label htmlFor="multi_page_analysis" className="cursor-pointer font-medium">
-                    Intelligent Multi-Page Analysis
+            <div className="flex items-center justify-between gap-2 rounded-lg border p-3 sm:p-4 bg-gradient-to-r from-blue-500/5 to-purple-500/5">
+              <div className="space-y-0.5 min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <Brain className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                  <Label htmlFor="multi_page_analysis" className="cursor-pointer font-medium text-sm">
+                    Multi-Page Analysis
                   </Label>
-                  <Badge className="text-xs">AI-Powered</Badge>
+                  <Badge className="text-[10px] sm:text-xs">AI</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Automatically discover & analyze key business pages
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ✓ Homepage ✓ About/Services ✓ Pricing ✓ Contact ✓ Blog
+                <p className="text-[11px] sm:text-xs text-muted-foreground">
+                  Auto-discover key pages (About, Services, Pricing, Contact)
                 </p>
               </div>
               <Controller
@@ -357,24 +352,22 @@ export function AnalysisConfig({
                     checked={field.value ?? true}
                     onCheckedChange={field.onChange}
                     disabled={disabled || isLoading}
+                    className="flex-shrink-0"
                   />
                 )}
               />
             </div>
 
-            <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                  <Label htmlFor="lead_scoring" className="cursor-pointer font-medium">
-                    AI Lead Scoring & Prioritization
+            <div className="flex items-center justify-between gap-2 rounded-lg border p-3 sm:p-4">
+              <div className="space-y-0.5 min-w-0">
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                  <Label htmlFor="lead_scoring" className="cursor-pointer font-medium text-sm">
+                    Lead Scoring
                   </Label>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Automatically prioritize leads: Hot (75+) · Warm (50-74) · Cold (0-49)
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Based on website quality, budget signals, urgency indicators
+                <p className="text-[11px] sm:text-xs text-muted-foreground">
+                  Hot/Warm/Cold prioritization based on quality signals
                 </p>
               </div>
               <Controller
@@ -387,25 +380,23 @@ export function AnalysisConfig({
                     checked={field.value ?? true}
                     onCheckedChange={field.onChange}
                     disabled={disabled || isLoading}
+                    className="flex-shrink-0"
                   />
                 )}
               />
             </div>
 
-            <div className="space-y-4">
-              <Label className="flex items-center space-x-2">
-                <span>Page Discovery Methods</span>
-                <Badge variant="secondary" className="text-xs">Enabled</Badge>
+            <div className="space-y-3 sm:space-y-4">
+              <Label className="flex items-center gap-2 text-sm">
+                <span>Discovery</span>
+                <Badge variant="secondary" className="text-xs">On</Badge>
               </Label>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="flex items-center space-x-2">
-                    <Search className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <Label htmlFor="use_sitemap" className="text-sm cursor-pointer">Sitemap</Label>
-                      <p className="text-xs text-muted-foreground">sitemap.xml</p>
-                    </div>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <div className="flex items-center justify-between rounded-lg border p-2.5 sm:p-3">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                    <Label htmlFor="use_sitemap" className="text-xs sm:text-sm cursor-pointer">Sitemap</Label>
                   </div>
                   <Controller
                     name="use_sitemap"
@@ -422,13 +413,10 @@ export function AnalysisConfig({
                   />
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="flex items-center space-x-2">
-                    <Globe className="w-4 h-4 text-muted-foreground" />
-                    <div>
-                      <Label htmlFor="use_navigation" className="text-sm cursor-pointer">Navigation</Label>
-                      <p className="text-xs text-muted-foreground">Menu links</p>
-                    </div>
+                <div className="flex items-center justify-between rounded-lg border p-2.5 sm:p-3">
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                    <Label htmlFor="use_navigation" className="text-xs sm:text-sm cursor-pointer">Navigation</Label>
                   </div>
                   <Controller
                     name="use_navigation"
@@ -446,10 +434,10 @@ export function AnalysisConfig({
                 </div>
               </div>
 
-              <div className="rounded-lg border p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <Label className="text-sm font-medium">Pages to Analyze</Label>
-                  <span className="text-sm font-mono bg-muted px-2 py-1 rounded">{maxPages[0]} pages</span>
+              <div className="rounded-lg border p-3 sm:p-4">
+                <div className="flex items-center justify-between mb-2 sm:mb-3">
+                  <Label className="text-xs sm:text-sm font-medium">Pages to Analyze</Label>
+                  <span className="text-xs sm:text-sm font-mono bg-muted px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">{maxPages[0]}</span>
                 </div>
                 <Slider
                   value={maxPages}
@@ -457,48 +445,39 @@ export function AnalysisConfig({
                   min={1}
                   max={15}
                   step={1}
-                  className="w-full mb-2"
+                  className="w-full"
                   disabled={disabled || isLoading}
                 />
-                <p className="text-xs text-muted-foreground">
-                  AI selects most important pages: Homepage, About, Services, Pricing, Contact
-                </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg bg-muted p-4 space-y-2">
+          <div className="rounded-lg bg-muted p-3 sm:p-4 space-y-1.5 sm:space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Estimated Total Cost</span>
-              <span className="text-2xl font-bold">{formatCurrency(estimatedCost)}</span>
+              <span className="text-xs sm:text-sm font-medium">Est. Cost</span>
+              <span className="text-lg sm:text-2xl font-bold">{formatCurrency(estimatedCost)}</span>
             </div>
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between text-xs sm:text-sm text-muted-foreground">
               <span>{prospectCount} prospect{prospectCount === 1 ? '' : 's'}</span>
-              <span>{formatCurrency(costPerLead)} per lead</span>
-            </div>
-            <div className="text-xs text-muted-foreground border-t pt-2 mt-2 space-y-1">
-              <div>✓ Intelligent multi-page discovery & analysis (homepage, about, pricing, contact, etc.)</div>
-              <div>✓ 6 AI modules: Desktop/Mobile Design, SEO, Content, Social, Accessibility</div>
-              <div>✓ Lead scoring & prioritization (Hot/Warm/Cold)</div>
-              <div>✓ Business intelligence extraction</div>
+              <span>{formatCurrency(costPerLead)}/lead</span>
             </div>
           </div>
 
           <Button
             type="submit"
             className="w-full"
-            size="lg"
+            size="default"
             disabled={disabled || prospectCount === 0 || isLoading}
           >
             {isLoading ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Analyzing...
+                <span className="text-sm">Analyzing...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-4 h-4 mr-2" />
-                Analyze {prospectCount} Prospect{prospectCount === 1 ? '' : 's'}
+                <span className="text-sm">Analyze {prospectCount}</span>
               </>
             )}
           </Button>

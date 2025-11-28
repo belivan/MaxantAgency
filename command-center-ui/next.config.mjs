@@ -1,16 +1,52 @@
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { readFileSync, existsSync } from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Only load from .env file in local development
-// Vercel provides environment variables directly via their dashboard
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  const { config } = await import('dotenv');
-  config({ path: resolve(__dirname, '../.env') });
+// PERMANENT FIX: In development, force .env.local Clerk keys to override shell environment
+// This prevents production keys from leaking via shell/IDE environment (e.g., from `vercel env pull`)
+if (process.env.NODE_ENV !== 'production') {
+  const envLocalPath = resolve(__dirname, '.env.local');
+  if (existsSync(envLocalPath)) {
+    const envContent = readFileSync(envLocalPath, 'utf-8');
+    const lines = envContent.split('\n');
+
+    for (const line of lines) {
+      // Skip comments and empty lines
+      if (line.startsWith('#') || !line.includes('=')) continue;
+
+      const [key, ...valueParts] = line.split('=');
+      const value = valueParts.join('=').trim();
+
+      // Override Clerk keys from .env.local (these are the problematic ones that leak from shell)
+      if (key.includes('CLERK') && value) {
+        process.env[key.trim()] = value;
+      }
+    }
+  }
+
+  // Verify correct keys are loaded
+  const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  if (clerkKey?.startsWith('pk_live_')) {
+    console.error('\n⚠️  ERROR: Production Clerk key detected in development!');
+    console.error('   This should not happen after .env.local override.');
+    console.error('   Check your .env.local file has correct test keys (pk_test_...)\n');
+  } else if (clerkKey?.startsWith('pk_test_')) {
+    console.log('✓ Development Clerk keys loaded from .env.local');
+  }
 }
+
+// DISABLED: Custom dotenv loading was interfering with Next.js's native .env.local loading
+// Next.js automatically loads .env.local in development, which has all required variables
+// Vercel provides environment variables directly via their dashboard for production
+//
+// if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+//   const { config } = await import('dotenv');
+//   config({ path: resolve(__dirname, '../.env') });
+// }
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {

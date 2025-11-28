@@ -333,6 +333,7 @@ app.post('/api/analyze-url', async (req, res) => {
       company_name,
       industry,
       project_id,
+      prospect_id,
       custom_prompts,
       max_pages,
       enable_deduplication,
@@ -379,6 +380,18 @@ app.post('/api/analyze-url', async (req, res) => {
       });
     }
 
+    // Fetch prospect data for contact info linking (if prospect_id provided)
+    let prospect = null;
+    if (prospect_id) {
+      try {
+        const { getProspectById } = await import('./database/supabase-client.js');
+        prospect = await getProspectById(prospect_id);
+        console.log(`[Intelligent Analysis] Linked prospect ${prospect_id} for contact info`);
+      } catch (e) {
+        console.warn(`[Intelligent Analysis] Failed to fetch prospect for contact linking:`, e.message);
+      }
+    }
+
     // Save to database - COMPLETE FIELD SET
     // Helper function to safely round scores with NaN validation
     const safeRoundScore = (score, fallback = 50, fieldName = 'score') => {
@@ -409,7 +422,7 @@ app.post('/api/analyze-url', async (req, res) => {
       company_name: result.company_name,
       industry: result.industry,
       project_id: project_id,  // Required
-      prospect_id: result.prospect_id || null,
+      prospect_id: prospect_id || null,  // From request body, not result
 
       // Grading & Scores (with NaN validation)
       overall_score: safeRoundScore(result.overall_score, 50, 'overall_score'),
@@ -481,10 +494,10 @@ app.post('/api/analyze-url', async (req, res) => {
       social_analysis_model: result.social_analysis_model || null,
       accessibility_analysis_model: result.accessibility_analysis_model || null,
 
-      // Contact Information
-      contact_email: result.contact_email || null,
-      contact_phone: result.contact_phone || null,
-      contact_name: result.contact_name || null,
+      // Contact Information (linked from prospect if available)
+      contact_email: result.contact_email || prospect?.contact_email || null,
+      contact_phone: result.contact_phone || prospect?.contact_phone || null,
+      contact_name: result.contact_name || prospect?.contact_name || null,
 
       // Technical Metadata
       tech_stack: result.tech_stack || null,

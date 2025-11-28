@@ -632,6 +632,12 @@
       "type": "timestamptz",
       "default": "now()",
       "description": "Record last update timestamp"
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Owner of this lead (FK to users.id)"
     }
   ],
 
@@ -667,6 +673,11 @@
     {
       "column": "project_id",
       "references": "projects.id",
+      "onDelete": "CASCADE"
+    },
+    {
+      "column": "user_id",
+      "references": "users.id",
       "onDelete": "CASCADE"
     }
   ],

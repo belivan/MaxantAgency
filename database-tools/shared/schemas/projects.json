@@ -44,11 +44,6 @@
       "description": "Total amount spent on this project"
     },
     {
-      "name": "budget_alert_threshold",
-      "type": "numeric(10,2)",
-      "description": "Budget threshold at which to send alerts (e.g., 80% of budget)"
-    },
-    {
       "name": "start_date",
       "type": "date",
       "description": "Project start date"
@@ -104,6 +99,12 @@
       "name": "analysis_model_selections",
       "type": "jsonb",
       "description": "AI model selections for analysis modules (design, SEO, content, social). Saved on first analysis to preserve historical accuracy."
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "index": true,
+      "description": "Owner of this project (FK to users.id)"
     }
   ],
   "indexes": [
@@ -118,6 +119,13 @@
     {
       "name": "idx_projects_created_at",
       "columns": ["created_at"]
+    }
+  ],
+  "foreignKeys": [
+    {
+      "column": "user_id",
+      "references": "users.id",
+      "onDelete": "CASCADE"
     }
   ],
   "constraints": [
@@ -136,5 +144,13 @@
       "name": "chk_projects_date_order",
       "expression": "end_date IS NULL OR start_date IS NULL OR end_date >= start_date"
     }
-  ]
+  ],
+
+  "_migration_notes": {
+    "removed_columns": [
+      "budget_alert_threshold - numeric(10,2) for budget alerts. Feature never implemented - no alert system exists"
+    ],
+    "migration_date": "2025-11-28",
+    "reason": "Schema cleanup - column was designed for future feature that was never built"
+  }
 }

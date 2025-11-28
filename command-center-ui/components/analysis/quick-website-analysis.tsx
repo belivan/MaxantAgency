@@ -9,11 +9,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Zap, Loader2, CheckCircle2, Globe, TrendingUp, AlertCircle, Award } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Zap, Loader2, AlertCircle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
@@ -158,46 +157,32 @@ export function QuickWebsiteAnalysis({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Zap className="w-5 h-5" />
-          <span>Quick Website Analysis</span>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Zap className="w-4 h-4" />
+          <span>Quick Analysis</span>
         </CardTitle>
-        <CardDescription>
-          Analyze any website instantly with AI-powered analysis
-        </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Project Warning */}
+      <CardContent className="space-y-3 pt-0">
+        {/* Warnings */}
         {!selectedProjectId && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Project Required</AlertTitle>
-            <AlertDescription>
-              Please select a project below to continue
-            </AlertDescription>
-          </Alert>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-xs text-amber-700 dark:text-amber-400">Select project first from Filters</span>
+          </div>
         )}
-
-        {/* Engine Offline Warning */}
         {engineOffline && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Analysis Engine Offline</AlertTitle>
-            <AlertDescription>
-              Please start the analysis engine (port 3001)
-            </AlertDescription>
-          </Alert>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50">
+            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+            <span className="text-xs text-red-700 dark:text-red-400">Analysis engine offline</span>
+          </div>
         )}
 
         {/* Analysis Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
           {/* URL Input */}
-          <div className="space-y-2">
-            <Label htmlFor="url">
-              Website URL <span className="text-destructive">*</span>
-            </Label>
+          <div className="space-y-1.5">
             <div className="flex gap-2">
               <Input
                 id="url"
@@ -205,12 +190,13 @@ export function QuickWebsiteAnalysis({
                 placeholder="https://example.com"
                 {...register('url')}
                 disabled={isDisabled}
-                className="flex-1"
+                className="flex-1 h-9 text-sm"
               />
               <Button
                 type="submit"
                 disabled={isDisabled}
-                size="default"
+                size="sm"
+                className="h-9 px-3"
               >
                 {isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -220,37 +206,33 @@ export function QuickWebsiteAnalysis({
               </Button>
             </div>
             {errors.url && (
-              <p className="text-sm text-destructive">{errors.url.message}</p>
+              <p className="text-xs text-destructive">{errors.url.message}</p>
             )}
-            <p className="text-xs text-muted-foreground">
-              <strong>Tip:</strong> Analysis takes 10-15 seconds and costs ~$0.03
+            <p className="text-[11px] text-muted-foreground">
+              ~15 sec · ~$0.03
             </p>
           </div>
 
           {/* Optional Fields (Collapsed by default) */}
           <details className="space-y-2">
-            <summary className="text-sm font-medium cursor-pointer hover:underline">
-              Optional: Company Details
+            <summary className="text-xs font-medium cursor-pointer hover:underline text-muted-foreground">
+              + Company Details (optional)
             </summary>
-            <div className="mt-3 space-y-3 pl-4">
-              <div className="space-y-2">
-                <Label htmlFor="company_name">Company Name</Label>
-                <Input
-                  id="company_name"
-                  placeholder="Example Company"
-                  {...register('company_name')}
-                  disabled={isDisabled}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="industry">Industry</Label>
-                <Input
-                  id="industry"
-                  placeholder="Technology"
-                  {...register('industry')}
-                  disabled={isDisabled}
-                />
-              </div>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <Input
+                id="company_name"
+                placeholder="Company"
+                {...register('company_name')}
+                disabled={isDisabled}
+                className="h-8 text-xs"
+              />
+              <Input
+                id="industry"
+                placeholder="Industry"
+                {...register('industry')}
+                disabled={isDisabled}
+                className="h-8 text-xs"
+              />
             </div>
           </details>
         </form>
@@ -290,95 +272,76 @@ export function QuickWebsiteAnalysis({
 
         {/* Results Display */}
         {result && (
-          <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+          <div className="space-y-2.5 p-3 border rounded-lg bg-muted/30">
             {/* Success Header with Grade */}
-            <div className="flex items-start gap-3">
-              <div className={`w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 ${getGradeColor(result.grade || 'F')}`}>
-                <span className="text-3xl font-bold">{result.grade || 'F'}</span>
+            <div className="flex items-start gap-2.5">
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-lg flex items-center justify-center flex-shrink-0 ${getGradeColor(result.grade || 'F')}`}>
+                <span className="text-2xl sm:text-3xl font-bold">{result.grade || 'F'}</span>
               </div>
-              <div className="flex-1 space-y-1">
-                <h3 className="font-semibold text-lg">{result.company_name}</h3>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Globe className="w-3 h-3" />
-                  <a
-                    href={result.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline truncate"
-                  >
-                    {result.website}
-                  </a>
+              <div className="flex-1 min-w-0 space-y-0.5">
+                <h3 className="font-semibold text-sm sm:text-base truncate">{result.company_name}</h3>
+                <a
+                  href={result.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] sm:text-xs text-blue-600 hover:underline truncate block"
+                >
+                  {result.website}
+                </a>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {result.industry && (
+                    <Badge variant="secondary" className="text-[10px]">{result.industry}</Badge>
+                  )}
+                  {result.priority_tier && (
+                    <Badge variant={
+                      result.priority_tier === 'hot' ? 'destructive' :
+                      result.priority_tier === 'warm' ? 'default' : 'secondary'
+                    } className="text-[10px]">{result.priority_tier.toUpperCase()}</Badge>
+                  )}
                 </div>
-                {result.industry && (
-                  <Badge variant="secondary">{result.industry}</Badge>
-                )}
               </div>
             </div>
 
-            {/* Scores */}
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="flex items-center justify-between p-2 bg-background rounded border">
-                <span className="text-muted-foreground">Overall</span>
-                <span className="font-semibold">{result.overall_score || 0}/100</span>
+            {/* Scores - Compact 2x2 Grid */}
+            <div className="grid grid-cols-4 gap-1.5 text-xs">
+              <div className="p-1.5 bg-background rounded border text-center">
+                <div className="text-muted-foreground text-[10px]">Score</div>
+                <div className="font-semibold">{result.overall_score || 0}</div>
               </div>
               {result.design_score !== undefined && (
-                <div className="flex items-center justify-between p-2 bg-background rounded border">
-                  <span className="text-muted-foreground">Design</span>
-                  <span className="font-semibold">{result.design_score}/100</span>
+                <div className="p-1.5 bg-background rounded border text-center">
+                  <div className="text-muted-foreground text-[10px]">Design</div>
+                  <div className="font-semibold">{result.design_score}</div>
                 </div>
               )}
               {result.seo_score !== undefined && (
-                <div className="flex items-center justify-between p-2 bg-background rounded border">
-                  <span className="text-muted-foreground">SEO</span>
-                  <span className="font-semibold">{result.seo_score}/100</span>
+                <div className="p-1.5 bg-background rounded border text-center">
+                  <div className="text-muted-foreground text-[10px]">SEO</div>
+                  <div className="font-semibold">{result.seo_score}</div>
                 </div>
               )}
               {result.content_score !== undefined && (
-                <div className="flex items-center justify-between p-2 bg-background rounded border">
-                  <span className="text-muted-foreground">Content</span>
-                  <span className="font-semibold">{result.content_score}/100</span>
+                <div className="p-1.5 bg-background rounded border text-center">
+                  <div className="text-muted-foreground text-[10px]">Content</div>
+                  <div className="font-semibold">{result.content_score}</div>
                 </div>
               )}
             </div>
 
-            {/* Quick Wins */}
-            {result.quick_wins && result.quick_wins.length > 0 && (
-              <div className="flex items-center gap-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
-                <Award className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-green-800 dark:text-green-200">
-                  <strong>{result.quick_wins.length} Quick Wins</strong> identified
-                </span>
-              </div>
-            )}
-
-            {/* Priority Tier */}
-            {result.priority_tier && (
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">
-                  Lead Priority: <Badge variant={
-                    result.priority_tier === 'hot' ? 'destructive' :
-                    result.priority_tier === 'warm' ? 'default' : 'secondary'
-                  }>{result.priority_tier.toUpperCase()}</Badge>
-                </span>
-              </div>
-            )}
-
-            {/* Cost & Time Info */}
-            {metadata && (
-              <div className="pt-2 border-t text-xs text-muted-foreground flex justify-between">
-                <span>Cost: ${metadata.cost.toFixed(4)}</span>
-                <span>Time: {(metadata.time / 1000).toFixed(1)}s</span>
-              </div>
-            )}
+            {/* Quick Wins & Metadata */}
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              {result.quick_wins && result.quick_wins.length > 0 ? (
+                <span className="text-green-600">{result.quick_wins.length} quick wins found</span>
+              ) : <span />}
+              {metadata && (
+                <span>${metadata.cost.toFixed(3)} · {(metadata.time / 1000).toFixed(1)}s</span>
+              )}
+            </div>
 
             {/* Success Message */}
-            <Alert className="bg-green-50 dark:bg-green-950 border-green-600">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800 dark:text-green-200">
-                <strong>{result.company_name}</strong> has been added to your leads table below.
-              </AlertDescription>
-            </Alert>
+            <div className="text-[11px] text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950 px-2 py-1.5 rounded">
+              Added to leads table
+            </div>
           </div>
         )}
       </CardContent>

@@ -112,7 +112,13 @@ export interface Lead {
   screenshot_desktop_url?: string;
   screenshot_mobile_url?: string;
 
-  // Business Intelligence (extracted from website)
+  // Google Business data (from prospect)
+  google_rating?: number;
+  google_review_count?: number;
+  services?: string[];
+  prospect_description?: string;
+
+  // Business Intelligence (from prospects table - source of truth)
   business_intelligence?: {
     years_in_business?: number;
     founded_year?: number;

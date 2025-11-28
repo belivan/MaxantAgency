@@ -152,6 +152,12 @@
       "type": "timestamp",
       "default": "now()",
       "description": "When this page analysis was last updated"
+    },
+    {
+      "name": "user_id",
+      "type": "uuid",
+      "nullable": true,
+      "description": "Owner of this page analysis (FK to users.id)"
     }
   ],
   "indexes": [
@@ -177,6 +183,12 @@
       "references": "leads.id",
       "onDelete": "CASCADE",
       "description": "Delete all page analyses when lead is deleted"
+    },
+    {
+      "column": "user_id",
+      "references": "users.id",
+      "onDelete": "CASCADE",
+      "description": "Delete all page analyses when user is deleted"
     }
   ],
   "constraints": [

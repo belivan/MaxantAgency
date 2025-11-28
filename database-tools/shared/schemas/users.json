@@ -1,0 +1,119 @@
+{
+  "table": "users",
+  "description": "Users synced from Clerk authentication with tier and usage tracking",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "primaryKey": true,
+      "default": "gen_random_uuid()",
+      "description": "Unique identifier for the user"
+    },
+    {
+      "name": "clerk_id",
+      "type": "text",
+      "required": true,
+      "description": "Clerk authentication user ID (e.g., user_2abc123...)"
+    },
+    {
+      "name": "email",
+      "type": "text",
+      "required": true,
+      "description": "User email address"
+    },
+    {
+      "name": "tier",
+      "type": "text",
+      "default": "trial",
+      "description": "User subscription tier (trial or full)"
+    },
+    {
+      "name": "usage_prospects",
+      "type": "integer",
+      "default": "0",
+      "description": "Lifetime count of prospects discovered"
+    },
+    {
+      "name": "usage_analyses",
+      "type": "integer",
+      "default": "0",
+      "description": "Lifetime count of website analyses run"
+    },
+    {
+      "name": "usage_reports",
+      "type": "integer",
+      "default": "0",
+      "description": "Lifetime count of reports generated"
+    },
+    {
+      "name": "usage_outreach",
+      "type": "integer",
+      "default": "0",
+      "description": "Lifetime count of outreach compositions"
+    },
+    {
+      "name": "stripe_customer_id",
+      "type": "text",
+      "description": "Stripe customer ID for billing (future use)"
+    },
+    {
+      "name": "stripe_subscription_id",
+      "type": "text",
+      "description": "Stripe subscription ID (future use)"
+    },
+    {
+      "name": "tier_updated_at",
+      "type": "timestamptz",
+      "description": "When the tier was last changed"
+    },
+    {
+      "name": "created_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When this user record was created"
+    },
+    {
+      "name": "updated_at",
+      "type": "timestamptz",
+      "default": "now()",
+      "description": "When this user record was last updated"
+    }
+  ],
+  "indexes": [
+    {
+      "name": "idx_users_clerk_id",
+      "columns": ["clerk_id"],
+      "unique": true
+    },
+    {
+      "name": "idx_users_email",
+      "columns": ["email"]
+    },
+    {
+      "name": "idx_users_tier",
+      "columns": ["tier"]
+    }
+  ],
+  "constraints": [
+    {
+      "type": "check",
+      "name": "chk_users_usage_prospects_positive",
+      "expression": "usage_prospects >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_users_usage_analyses_positive",
+      "expression": "usage_analyses >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_users_usage_reports_positive",
+      "expression": "usage_reports >= 0"
+    },
+    {
+      "type": "check",
+      "name": "chk_users_usage_outreach_positive",
+      "expression": "usage_outreach >= 0"
+    }
+  ]
+}

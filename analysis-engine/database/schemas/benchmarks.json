@@ -179,11 +179,6 @@
       "description": "Admin notes about why this is a good/bad benchmark"
     },
     {
-      "name": "tags",
-      "type": "jsonb",
-      "description": "Searchable tags array (e.g., ['small-business', 'mobile-first', 'e-commerce'])"
-    },
-    {
       "name": "created_at",
       "type": "timestamptz",
       "default": "now()"
@@ -215,5 +210,13 @@
       "name": "idx_benchmarks_quality",
       "columns": ["quality_flag"]
     }
-  ]
+  ],
+
+  "_migration_notes": {
+    "removed_columns": [
+      "tags - JSONB array for searchable tags. Never implemented - no code writes to or reads from this column"
+    ],
+    "migration_date": "2025-11-28",
+    "reason": "Schema cleanup - column was designed but never implemented in any code path"
+  }
 }

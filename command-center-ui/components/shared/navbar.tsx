@@ -5,6 +5,7 @@
  * Provides navigation between all 7 main tabs
  */
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -15,6 +16,7 @@ import {
   ScanSearch,
   Users,
   Mail,
+  FileText,
   BarChart3,
   Activity,
   Menu
@@ -23,6 +25,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -35,6 +38,7 @@ import {
   SignedOut,
   UserButton
 } from '@clerk/nextjs';
+import { QuotaStatus } from '@/components/shared/quota-status';
 
 interface NavItem {
   label: string;
@@ -75,6 +79,11 @@ const NAV_ITEMS: NavItem[] = [
     icon: <Mail className="w-5 h-5" />
   },
   {
+    label: 'Reports',
+    href: '/reports',
+    icon: <FileText className="w-5 h-5" />
+  },
+  {
     label: 'Analytics',
     href: '/analytics',
     icon: <BarChart3 className="w-5 h-5" />
@@ -88,6 +97,7 @@ const NAV_ITEMS: NavItem[] = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {
@@ -153,6 +163,7 @@ export function Navbar() {
                 </SignUpButton>
               </SignedOut>
               <SignedIn>
+                <QuotaStatus />
                 <UserButton afterSignOutUrl="/" />
               </SignedIn>
             </div>
@@ -173,33 +184,43 @@ export function Navbar() {
             </SignedOut>
             <SignedIn>
               <UserButton afterSignOutUrl="/" />
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                    <span className="sr-only">Open menu</span>
-                  </Button>
-                </SheetTrigger>
+              <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                {menuOpen ? (
+                  <SheetClose asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-5 w-5" />
+                      <span className="sr-only">Close menu</span>
+                    </Button>
+                  </SheetClose>
+                ) : (
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <Menu className="h-5 w-5" />
+                      <span className="sr-only">Open menu</span>
+                    </Button>
+                  </SheetTrigger>
+                )}
                 <SheetContent side="right" className="w-[280px]">
                   <SheetHeader>
                     <SheetTitle>Navigation</SheetTitle>
                   </SheetHeader>
                   <nav className="flex flex-col space-y-1 mt-4">
                     {NAV_ITEMS.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={cn(
-                          'flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium transition-colors',
-                          'hover:bg-accent hover:text-accent-foreground',
-                          isActive(item.href)
-                            ? 'bg-accent text-accent-foreground'
-                            : 'text-muted-foreground'
-                        )}
-                      >
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </Link>
+                      <SheetClose asChild key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            'flex items-center space-x-3 px-3 py-3 rounded-md text-sm font-medium transition-colors',
+                            'hover:bg-accent hover:text-accent-foreground',
+                            isActive(item.href)
+                              ? 'bg-accent text-accent-foreground'
+                              : 'text-muted-foreground'
+                          )}
+                        >
+                          {item.icon}
+                          <span>{item.label}</span>
+                        </Link>
+                      </SheetClose>
                     ))}
                   </nav>
                 </SheetContent>

@@ -1,27 +1,27 @@
 'use client';
 
 /**
- * SIMPLIFIED Prospecting Page - NO AUTO-FORKING
- * Just saves configuration to the current project
+ * Prospecting Page with Progressive Disclosure
+ * Step 1: Select Project → Step 2: Configure ICP & Generate
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import {
   ICPBriefEditor,
   EnhancedProspectConfigForm,
-  ProspectTable,
-  QuickBusinessLookup
+  QuickBusinessLookup,
+  StepIndicator,
+  ProjectSelectionCard,
+  AnimatedSection
 } from '@/components/prospecting';
 import { parseJSON } from '@/lib/utils/validation';
-import { useEngineHealth, useProspects } from '@/lib/hooks';
+import { useEngineHealth } from '@/lib/hooks';
 import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import { updateProject } from '@/lib/api';
-import type { ProspectGenerationOptions, ProspectFilters } from '@/lib/types';
+import type { ProspectGenerationOptions } from '@/lib/types';
 import type { ProspectingPrompts } from '@/lib/types/prospect';
 import { startTaskWithSSE } from '@/lib/utils/task-sse-manager';
 
@@ -43,29 +43,29 @@ export default function ProspectingPage() {
   // Generation state
   const [generatedCount, setGeneratedCount] = useState<number>(0);
 
-  // Current configuration - NO SAVED VS CURRENT TRACKING
+  // Current configuration
   const [defaultPrompts, setDefaultPrompts] = useState<ProspectingPrompts | null>(null);
   const [currentPrompts, setCurrentPrompts] = useState<ProspectingPrompts | null>(null);
   const [currentModelSelections, setCurrentModelSelections] = useState<Record<string, string> | null>(null);
 
-  // Prospect selection for intelligent analysis
-  const [selectedProspectIds, setSelectedProspectIds] = useState<string[]>([]);
-  const [filters, setFilters] = useState<ProspectFilters>({
-    status: 'ready_for_analysis',
-    limit: 10,
-    offset: 0,
-    project_id: selectedProjectId || undefined
-  });
+  // Derive current step from state
+  const currentStep = useMemo((): 1 | 2 | 3 => {
+    if (!selectedProjectId) return 1;
+    if (prospectCount === 0 && generatedCount === 0) return 2;
+    return 3;
+  }, [selectedProjectId, prospectCount, generatedCount]);
 
-  const { prospects, loading: loadingProspects, refresh: refreshProspects } = useProspects(filters);
+  // Animation visibility state
+  const [showConfiguration, setShowConfiguration] = useState(false);
 
-  // Update filters when project changes
+  // Trigger configuration section animation when project selected
   useEffect(() => {
-    setFilters(prev => ({
-      ...prev,
-      project_id: selectedProjectId || undefined,
-      offset: 0
-    }));
+    if (selectedProjectId) {
+      const timer = setTimeout(() => setShowConfiguration(true), 150);
+      return () => clearTimeout(timer);
+    } else {
+      setShowConfiguration(false);
+    }
   }, [selectedProjectId]);
 
   // Read project_id from URL params on mount
@@ -92,18 +92,15 @@ export default function ProspectingPage() {
       setIsLoadingProject(true);
 
       try {
-        // Fetch project data and prospect count in parallel
         const [projectResponse, prospectsResponse] = await Promise.all([
           fetch(`/api/projects/${selectedProjectId}`),
           fetch(`/api/projects/${selectedProjectId}/prospects`)
         ]);
 
-        // Load project data if exists
         if (projectResponse.ok) {
           const projectData = await projectResponse.json();
           const project = projectData.data;
 
-          // Pre-fill ICP brief if it exists
           if (project?.icp_brief) {
             const formattedBrief = JSON.stringify(project.icp_brief, null, 2);
             setIcpBrief(formattedBrief);
@@ -113,7 +110,6 @@ export default function ProspectingPage() {
             setIcpValid(false);
           }
 
-          // Load saved configurations
           if (project?.prospecting_model_selections) {
             setCurrentModelSelections(project.prospecting_model_selections);
           }
@@ -123,7 +119,6 @@ export default function ProspectingPage() {
           }
         }
 
-        // Check prospect count
         if (prospectsResponse.ok) {
           const prospectsData = await prospectsResponse.json();
           const count = prospectsData.data?.length || 0;
@@ -148,24 +143,34 @@ export default function ProspectingPage() {
     setCurrentModelSelections(modelSelections);
   };
 
+  // Refresh prospect count
+  const refreshProspectCount = async () => {
+    if (!selectedProjectId) return;
+    try {
+      const res = await fetch(`/api/projects/${selectedProjectId}/prospects`);
+      if (res.ok) {
+        const data = await res.json();
+        setProspectCount(data.data?.length || 0);
+      }
+    } catch (err) {
+      console.error('Failed to refresh prospect count:', err);
+    }
+  };
+
   const handleGenerate = async (config: ProspectGenerationOptions) => {
-    // Validate project selection
     if (!selectedProjectId) {
       alert('Please select a project to generate prospects');
       return;
     }
 
-    // Validate ICP brief
     const briefResult = parseJSON(icpBrief);
     if (!briefResult.success) {
       return;
     }
 
-    // Reset state
     setGeneratedCount(0);
     setIcpBriefSaved(false);
 
-    // Save configuration to project (non-blocking)
     try {
       await updateProject(selectedProjectId, {
         icp_brief: briefResult.data,
@@ -179,20 +184,17 @@ export default function ProspectingPage() {
       console.error('Failed to save configuration:', err);
     }
 
-    // Prepare request data
     const API_BASE = process.env.NEXT_PUBLIC_PROSPECTING_API || 'http://localhost:3010';
     const brief = { ...briefResult.data, count: config.count };
     const options = {
       model: config.model,
       verify: config.verify,
       projectId: selectedProjectId,
-      // Always enable iterative discovery for smarter, multi-query prospecting
       useIterativeDiscovery: true,
       maxIterations: 5,
-      maxVariationsPerIteration: 3  // Reduced from 7 to minimize redundant queries
+      maxVariationsPerIteration: 3
     };
 
-    // Start non-blocking SSE operation
     const connection = startTaskWithSSE({
       url: `${API_BASE}/api/prospect`,
       method: 'POST',
@@ -216,7 +218,6 @@ export default function ProspectingPage() {
       onMessage: (message, taskId) => {
         const event = message.data as any;
 
-        // Handle custom prospecting SSE events
         if (event.type === 'started') {
           addTaskLog(taskId, 'Prospect generation started', 'info');
         }
@@ -237,9 +238,6 @@ export default function ProspectingPage() {
           } else if (event.status === 'completed') {
             if (event.found !== undefined) {
               addTaskLog(taskId, `Found ${event.found} companies`, 'success');
-
-              // Update task total to match actual companies to be processed
-              // This prevents showing "10/1" when processing 10 companies to get 1 prospect
               if (event.name === 'google-maps-discovery' && event.found > 0) {
                 updateTask(taskId, 0, `Processing ${event.found} companies...`, event.found);
               }
@@ -249,7 +247,6 @@ export default function ProspectingPage() {
           }
         }
 
-        // Handle discovery_progress type (from iterative discovery)
         if (event.type === 'discovery_progress') {
           if (event.message) {
             const messageText = typeof event.message === 'string'
@@ -257,7 +254,6 @@ export default function ProspectingPage() {
               : JSON.stringify(event.message);
             addTaskLog(taskId, messageText, 'info');
           }
-          // Update progress if current/target are provided
           if (event.currentCount !== undefined && event.target !== undefined) {
             updateTask(taskId, event.currentCount, event.message || 'Discovering prospects...');
           }
@@ -271,21 +267,12 @@ export default function ProspectingPage() {
           updateTask(taskId, event.current || 0, msg);
           addTaskLog(taskId, msg, 'info');
 
-          // Update prospect count periodically
           if (event.current && event.current % 2 === 0 && selectedProjectId) {
-            fetch(`/api/projects/${selectedProjectId}/prospects`)
-              .then(res => res.json())
-              .then(data => {
-                const actualCount = data.data?.length || 0;
-                setProspectCount(actualCount);
-              })
-              .catch(err => console.error('Failed to update prospect count:', err));
+            refreshProspectCount();
           }
         }
 
-        // Catch-all for any other messages
         if (event.message && event.type !== 'discovery_progress' && event.type !== 'progress') {
-          // Ensure message is a string, not an object
           const messageText = typeof event.message === 'string'
             ? event.message
             : JSON.stringify(event.message);
@@ -297,7 +284,6 @@ export default function ProspectingPage() {
         const count = results?.prospects?.length || results?.saved || 0;
         setGeneratedCount(count);
 
-        // Reload prospect count
         if (selectedProjectId) {
           fetch(`/api/projects/${selectedProjectId}/prospects`)
             .then(res => res.json())
@@ -312,7 +298,6 @@ export default function ProspectingPage() {
         }
 
         addTaskLog(taskId, `Successfully generated ${count} prospects`, 'success');
-        refreshProspects();
       },
       onError: (error, taskId) => {
         console.error('Prospecting failed:', error);
@@ -323,60 +308,7 @@ export default function ProspectingPage() {
     console.log(`✓ Started prospecting task: ${connection.taskId} (non-blocking)`);
   };
 
-  const handleIntelligentAnalysis = async () => {
-    if (selectedProspectIds.length === 0) {
-      alert('Please select at least one prospect to analyze');
-      return;
-    }
-
-    const selectedProspects = prospects.filter(p => selectedProspectIds.includes(p.id));
-
-    const taskId = startTask('analysis', `Analyze ${selectedProspects.length} prospects with intelligent multi-page analysis`, selectedProspects.length);
-    addTaskLog(taskId, 'Starting intelligent multi-page analysis...', 'info');
-
-    const API_BASE = process.env.NEXT_PUBLIC_ANALYSIS_API || 'http://localhost:3001';
-
-    try {
-      for (let i = 0; i < selectedProspects.length; i++) {
-        const prospect = selectedProspects[i];
-
-        updateTask(taskId, i, `Analyzing ${prospect.company_name || prospect.website}...`);
-        addTaskLog(taskId, `[${i+1}/${selectedProspects.length}] Analyzing ${prospect.company_name || prospect.website}...`, 'info');
-
-        try {
-          const response = await fetch(`${API_BASE}/api/analyze-url-intelligent`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              url: prospect.website,
-              company_name: prospect.company_name || 'Unknown Company',
-              industry: prospect.industry || 'unknown',
-              project_id: selectedProjectId || undefined
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Failed to analyze ${prospect.company_name}: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          addTaskLog(taskId, `✓ ${prospect.company_name}: Grade ${result.data?.grade || 'N/A'} (${result.data?.overall_score || 0}/100)`, 'success');
-        } catch (error: any) {
-          addTaskLog(taskId, `✗ ${prospect.company_name}: ${error.message}`, 'error');
-        }
-      }
-
-      completeTask(taskId);
-      addTaskLog(taskId, `Completed analysis of ${selectedProspects.length} prospects`, 'success');
-      refreshProspects();
-      setSelectedProspectIds([]);
-    } catch (error: any) {
-      errorTask(taskId, `Analysis failed: ${error.message}`);
-    }
-  };
-
   const isProspectingEngineOffline = engineStatus.prospecting === 'offline';
-  const isAnalysisEngineOffline = engineStatus.analysis === 'offline';
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -387,6 +319,9 @@ export default function ProspectingPage() {
           Generate prospects using your Ideal Customer Profile brief
         </p>
       </div>
+
+      {/* Step Indicator */}
+      <StepIndicator currentStep={currentStep} />
 
       {/* Engine Offline Warning */}
       {isProspectingEngineOffline && (
@@ -399,58 +334,67 @@ export default function ProspectingPage() {
         </Alert>
       )}
 
-      {/* Configuration Info - Simple notification, no fork warning */}
-      {selectedProjectId && prospectCount > 0 && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Project Configuration</AlertTitle>
-          <AlertDescription>
-            This project has {prospectCount} existing prospects. Any configuration changes will be saved to the project.
-          </AlertDescription>
-        </Alert>
-      )}
+      {/* Step 1: Project Selection */}
+      <ProjectSelectionCard
+        selectedProjectId={selectedProjectId}
+        onProjectChange={setSelectedProjectId}
+        prospectCount={prospectCount}
+      />
 
-      {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left Column - ICP Brief */}
-        <div className="lg:col-span-2">
-          <ICPBriefEditor
-            value={icpBrief}
-            onChange={setIcpBrief}
-            onValidChange={setIcpValid}
-            showForkWarning={false} // NO FORK WARNINGS
-            prospectCount={prospectCount}
-          />
-        </div>
-
-        {/* Right Column - Quick Lookup & Enhanced Config Form */}
+      {/* Step 2: Configuration (animated reveal) */}
+      <AnimatedSection isVisible={showConfiguration} delay={0}>
         <div className="space-y-6">
-          {/* Quick Business Lookup */}
-          <QuickBusinessLookup
-            selectedProjectId={selectedProjectId}
-            disabled={false}
-            engineOffline={isProspectingEngineOffline}
-            onSuccess={refreshProspects}
-          />
+          {/* Configuration Info */}
+          {selectedProjectId && prospectCount > 0 && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Project Configuration</AlertTitle>
+              <AlertDescription>
+                This project has {prospectCount} existing prospects. Any configuration changes will be saved to the project.
+              </AlertDescription>
+            </Alert>
+          )}
 
-          {/* Enhanced Config Form */}
-          <EnhancedProspectConfigForm
-            onSubmit={handleGenerate}
-            onPromptsChange={handlePromptsChange}
-            onModelsChange={handleModelsChange}
-            isLoading={false}
-            disabled={isProspectingEngineOffline}
-            showForkWarning={false} // NO FORK WARNINGS
-            prospectCount={prospectCount}
-            isLoadingProject={isLoadingProject}
-            selectedProjectId={selectedProjectId}
-            onProjectChange={setSelectedProjectId}
-            savedModelSelections={currentModelSelections || undefined}
-            savedPrompts={currentPrompts || undefined}
-            icpValid={icpValid}
-          />
+          {/* Main Configuration Grid */}
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Left Column - ICP Brief */}
+            <div className="lg:col-span-2">
+              <ICPBriefEditor
+                value={icpBrief}
+                onChange={setIcpBrief}
+                onValidChange={setIcpValid}
+                showForkWarning={false}
+                prospectCount={prospectCount}
+              />
+            </div>
+
+            {/* Right Column - Quick Lookup & Config Form */}
+            <div className="space-y-6">
+              <QuickBusinessLookup
+                selectedProjectId={selectedProjectId}
+                disabled={false}
+                engineOffline={isProspectingEngineOffline}
+                onSuccess={refreshProspectCount}
+              />
+
+              <EnhancedProspectConfigForm
+                onSubmit={handleGenerate}
+                onPromptsChange={handlePromptsChange}
+                onModelsChange={handleModelsChange}
+                isLoading={false}
+                disabled={isProspectingEngineOffline}
+                showForkWarning={false}
+                prospectCount={prospectCount}
+                isLoadingProject={isLoadingProject}
+                selectedProjectId={selectedProjectId}
+                savedModelSelections={currentModelSelections || undefined}
+                savedPrompts={currentPrompts || undefined}
+                icpValid={icpValid}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      </AnimatedSection>
 
       {/* Success Message */}
       {generatedCount > 0 && (
@@ -467,56 +411,15 @@ export default function ProspectingPage() {
               </span>
             )}
             <a
-              href="/analysis"
+              href={`/projects/${selectedProjectId}`}
               className="underline font-medium hover:text-green-950 dark:hover:text-green-50 inline-block mt-1"
             >
-              Go to the Analysis tab →
-            </a>{' '}
-            to select and analyze them.
+              View project details →
+            </a>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* Prospects Table with Intelligent Analysis */}
-      {selectedProjectId && prospectCount > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Project Prospects ({prospectCount})</CardTitle>
-                <CardDescription>
-                  Select prospects to analyze with intelligent multi-page analysis
-                </CardDescription>
-              </div>
-              <Button
-                onClick={handleIntelligentAnalysis}
-                disabled={selectedProspectIds.length === 0 || isAnalysisEngineOffline}
-                className="gap-2"
-              >
-                <Zap className="w-4 h-4" />
-                Analyze Selected ({selectedProspectIds.length})
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isAnalysisEngineOffline && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Analysis Engine Offline</AlertTitle>
-                <AlertDescription>
-                  The analysis engine is not responding. Please start the analysis-engine service (port 3001).
-                </AlertDescription>
-              </Alert>
-            )}
-            <ProspectTable
-              prospects={prospects}
-              loading={loadingProspects}
-              selectedIds={selectedProspectIds}
-              onSelectionChange={setSelectedProspectIds}
-            />
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
