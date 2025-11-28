@@ -1,52 +1,49 @@
 /**
- * Supabase Storage Integration
- * Upload and manage report files in Supabase Storage
+ * Report Storage
  *
- * NOTE: This module handles STORAGE operations only (files, buckets).
+ * Stores reports on local filesystem, served via Caddy.
+ * Replaces previous Supabase Storage implementation.
+ *
+ * Storage structure: /opt/MaxantAgency/storage/reports/{company-slug}/
+ * Served at: https://api.mintydesign.xyz/storage/reports/...
+ *
+ * NOTE: This module handles STORAGE operations only (files).
  * For DATABASE operations (reports table), see: ../../database/supabase-client.js
  */
 
-import { getSupabaseClient } from '../../database/supabase-client.js';
-
-const BUCKET_NAME = 'reports';
+import {
+  uploadFile,
+  downloadFile,
+  downloadFileAsText,
+  deleteFile,
+  listFiles,
+  getPublicUrl,
+  ensureStorageDirectories
+} from '../../../database-tools/shared/local-storage.js';
 
 /**
- * Upload report to Supabase Storage
+ * Upload report to local storage
  *
- * @param {string} content - Report content (Markdown, HTML, etc.)
- * @param {string} storagePath - Path in storage (e.g., "reports/2025/01/company-audit.md")
+ * @param {string|Buffer} content - Report content (Markdown, HTML, PDF buffer, etc.)
+ * @param {string} storagePath - Path in storage (e.g., "company-name/FULL.pdf")
  * @param {string} contentType - MIME type (e.g., "text/markdown", "application/pdf")
  * @returns {Promise<object>} Upload result with public URL
  */
 export async function uploadReport(content, storagePath, contentType = 'text/markdown') {
   try {
-    const supabase = getSupabaseClient();
+    // Prepend reports/ to path
+    const fullPath = `reports/${storagePath}`;
 
-    // Convert string content to buffer if needed
-    const fileBuffer = typeof content === 'string'
-      ? Buffer.from(content, 'utf-8')
-      : content;
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(storagePath, fileBuffer, {
-        contentType,
-        upsert: true // Overwrite if exists
-      });
-
-    if (error) {
-      throw new Error(`Supabase Storage upload failed: ${error.message}`);
-    }
+    const result = await uploadFile(content, fullPath, contentType);
 
     console.log(`✅ Report uploaded to: ${storagePath}`);
 
     return {
       success: true,
-      path: data.path,
-      fullPath: `${BUCKET_NAME}/${data.path}`
+      path: storagePath,
+      fullPath: fullPath,
+      url: result.url
     };
-
   } catch (error) {
     console.error('❌ Report upload failed:', error);
     throw error;
@@ -54,53 +51,30 @@ export async function uploadReport(content, storagePath, contentType = 'text/mar
 }
 
 /**
- * Get signed URL for private report access
+ * Get public URL for report
+ * (No signing needed - URLs are public via Caddy)
  *
  * @param {string} storagePath - Path in storage
- * @param {number} expiresIn - Expiration time in seconds (default: 1 hour)
- * @returns {Promise<string>} Signed URL
+ * @param {number} expiresIn - Ignored (kept for API compatibility)
+ * @returns {Promise<string>} Public URL
  */
 export async function getSignedUrl(storagePath, expiresIn = 3600) {
-  try {
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .createSignedUrl(storagePath, expiresIn);
-
-    if (error) {
-      throw new Error(`Failed to create signed URL: ${error.message}`);
-    }
-
-    return data.signedUrl;
-
-  } catch (error) {
-    console.error('❌ Failed to get signed URL:', error);
-    throw error;
-  }
+  // For local storage, URLs don't expire - just return public URL
+  const fullPath = `reports/${storagePath}`;
+  return getPublicUrl(fullPath);
 }
 
 /**
- * Download report from Supabase Storage
+ * Download report from local storage
  *
  * @param {string} storagePath - Path in storage
- * @returns {Promise<string>} Report content
+ * @returns {Promise<string>} Report content as text
  */
 export async function downloadReport(storagePath) {
   try {
-    const supabase = getSupabaseClient();
-
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .download(storagePath);
-
-    if (error) {
-      throw new Error(`Failed to download report: ${error.message}`);
-    }
-
-    const text = await data.text();
-    return text;
-
+    const fullPath = `reports/${storagePath}`;
+    const content = await downloadFileAsText(fullPath);
+    return content;
   } catch (error) {
     console.error('❌ Failed to download report:', error);
     throw error;
@@ -108,26 +82,36 @@ export async function downloadReport(storagePath) {
 }
 
 /**
- * Delete report from Supabase Storage
+ * Download report as buffer (for PDFs)
+ *
+ * @param {string} storagePath - Path in storage
+ * @returns {Promise<Buffer>} Report content as buffer
+ */
+export async function downloadReportBuffer(storagePath) {
+  try {
+    const fullPath = `reports/${storagePath}`;
+    const content = await downloadFile(fullPath);
+    return content;
+  } catch (error) {
+    console.error('❌ Failed to download report:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete report from local storage
  *
  * @param {string} storagePath - Path in storage
  * @returns {Promise<boolean>} Success status
  */
 export async function deleteReport(storagePath) {
   try {
-    const supabase = getSupabaseClient();
-
-    const { error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove([storagePath]);
-
-    if (error) {
-      throw new Error(`Failed to delete report: ${error.message}`);
+    const fullPath = `reports/${storagePath}`;
+    const result = await deleteFile(fullPath);
+    if (result) {
+      console.log(`🗑️ Report deleted: ${storagePath}`);
     }
-
-    console.log(`🗑️ Report deleted: ${storagePath}`);
-    return true;
-
+    return result;
   } catch (error) {
     console.error('❌ Failed to delete report:', error);
     throw error;
@@ -137,23 +121,14 @@ export async function deleteReport(storagePath) {
 /**
  * List reports in storage
  *
- * @param {string} folderPath - Folder path (e.g., "reports/2025/01")
+ * @param {string} folderPath - Folder path (e.g., "company-name")
  * @returns {Promise<array>} List of files
  */
-export async function listReports(folderPath = 'reports') {
+export async function listReports(folderPath = '') {
   try {
-    const supabase = getSupabaseClient();
-
-    const { data, error} = await supabase.storage
-      .from(BUCKET_NAME)
-      .list(folderPath);
-
-    if (error) {
-      throw new Error(`Failed to list reports: ${error.message}`);
-    }
-
-    return data;
-
+    const fullPath = folderPath ? `reports/${folderPath}` : 'reports';
+    const files = await listFiles(fullPath);
+    return files;
   } catch (error) {
     console.error('❌ Failed to list reports:', error);
     throw error;
@@ -161,47 +136,17 @@ export async function listReports(folderPath = 'reports') {
 }
 
 /**
- * Ensure reports bucket exists
- * Creates the bucket if it doesn't exist
+ * Ensure reports storage directory exists
  *
  * @returns {Promise<boolean>} Success status
  */
 export async function ensureReportsBucket() {
   try {
-    const supabase = getSupabaseClient();
-
-    // Try to list the bucket - this will fail if it doesn't exist
-    const { data: buckets, error: listError } = await supabase.storage.listBuckets();
-
-    if (listError) {
-      console.warn('⚠️  Could not list buckets:', listError.message);
-      return false;
-    }
-
-    const bucketExists = buckets.some(bucket => bucket.name === BUCKET_NAME);
-
-    if (bucketExists) {
-      console.log(`✅ Reports bucket '${BUCKET_NAME}' exists`);
-      return true;
-    }
-
-    // Create bucket if it doesn't exist
-    console.log(`📦 Creating reports bucket '${BUCKET_NAME}'...`);
-    const { error: createError } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: false,
-      fileSizeLimit: 52428800 // 50MB
-    });
-
-    if (createError) {
-      console.warn(`⚠️  Could not create bucket: ${createError.message}`);
-      return false;
-    }
-
-    console.log(`✅ Reports bucket '${BUCKET_NAME}' created`);
+    await ensureStorageDirectories();
+    console.log(`✅ Reports storage directory ready`);
     return true;
-
   } catch (error) {
-    console.error('❌ Failed to ensure reports bucket:', error);
+    console.error('❌ Failed to ensure reports directory:', error);
     return false;
   }
 }
@@ -210,6 +155,7 @@ export default {
   uploadReport,
   getSignedUrl,
   downloadReport,
+  downloadReportBuffer,
   deleteReport,
   listReports,
   ensureReportsBucket

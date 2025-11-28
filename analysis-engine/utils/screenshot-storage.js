@@ -1,21 +1,29 @@
 /**
  * Screenshot Storage Utility
  *
- * Saves screenshots to local filesystem and/or Supabase Storage
- * Generates JSON manifests for screenshot organization
+ * Saves screenshots to local filesystem, served via Caddy.
+ * Replaces previous Supabase Storage implementation.
+ *
+ * Storage structure: /opt/MaxantAgency/storage/screenshots/{lead-id}/
+ * Served at: https://api.mintydesign.xyz/storage/screenshots/...
  */
 
 import { writeFile, mkdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
-import { createClient } from '@supabase/supabase-js';
 import sharp from 'sharp';
+import {
+  uploadFile,
+  getPublicUrl,
+  ensureStorageDirectories,
+  getStorageConfig
+} from '../../database-tools/shared/local-storage.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Screenshots directory (analysis-engine/screenshots/)
+// Local screenshots directory for temporary/QA storage
 const SCREENSHOTS_DIR = join(__dirname, '..', 'screenshots');
 
 /**
@@ -46,7 +54,7 @@ function generateScreenshotFilename(companyName = 'website', type = 'desktop') {
 }
 
 /**
- * Save screenshot buffer to local disk
+ * Save screenshot buffer to local disk (temporary/QA storage)
  *
  * @param {Buffer} screenshotBuffer - Screenshot image buffer
  * @param {string} companyName - Company name for filename
@@ -113,25 +121,11 @@ export function getScreenshotsDir() {
 }
 
 // ====================================================================
-// SUPABASE STORAGE FUNCTIONS
+// LOCAL STORAGE FUNCTIONS (Replaces Supabase Storage)
 // ====================================================================
 
 /**
- * Get Supabase client (lazy initialization)
- */
-function getSupabaseClient() {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY environment variables');
-  }
-
-  return createClient(supabaseUrl, supabaseKey);
-}
-
-/**
- * Upload screenshot to Supabase Storage
+ * Upload screenshot to local storage
  *
  * @param {Buffer} screenshotBuffer - PNG screenshot buffer
  * @param {string} leadId - Lead UUID
@@ -145,15 +139,12 @@ export async function uploadScreenshotToSupabase(screenshotBuffer, leadId, pageU
       throw new Error('Screenshot buffer is required');
     }
 
-    const supabase = getSupabaseClient();
-
-    // Compress screenshot to 80% quality for efficient storage
-    // This reduces file size by ~70-85% while maintaining visual quality
+    // Compress screenshot for efficient storage
     const compressedBuffer = await sharp(screenshotBuffer)
       .png({
         quality: 80,
-        compressionLevel: 9,  // Maximum compression
-        effort: 10            // Maximum effort for better compression
+        compressionLevel: 9,
+        effort: 10
       })
       .toBuffer();
 
@@ -164,40 +155,24 @@ export async function uploadScreenshotToSupabase(screenshotBuffer, leadId, pageU
     const timestamp = new Date().toISOString().split('T')[0];
     const randomId = Math.random().toString(36).substring(2, 8);
     const filename = `${safePage}-${viewport}-${timestamp}-${randomId}.png`;
-    const storagePath = `${leadId}/${filename}`;
+    const storagePath = `screenshots/${leadId}/${filename}`;
 
-    // Upload to Supabase Storage (using compressed buffer)
-    const { data, error } = await supabase.storage
-      .from('screenshots')
-      .upload(storagePath, compressedBuffer, {
-        contentType: 'image/png',
-        cacheControl: '31536000', // 1 year cache
-        upsert: false
-      });
-
-    if (error) {
-      console.error(`❌ Failed to upload screenshot to Supabase: ${error.message}`);
-      throw error;
-    }
-
-    // Get public URL
-    const { data: urlData } = supabase.storage
-      .from('screenshots')
-      .getPublicUrl(storagePath);
+    // Upload to local storage
+    const result = await uploadFile(compressedBuffer, storagePath, 'image/png');
 
     console.log(`📤 Uploaded ${viewport} screenshot for ${pageUrl}: ${filename}`);
 
     return {
       path: storagePath,
-      url: urlData.publicUrl,
+      url: result.url,
       width: viewport === 'desktop' ? 1920 : 375,
       height: viewport === 'desktop' ? 1080 : 812,
-      file_size: compressedBuffer.length,  // Use compressed size
+      file_size: compressedBuffer.length,
       format: 'png',
       captured_at: new Date().toISOString()
     };
   } catch (error) {
-    console.error(`❌ Supabase screenshot upload failed:`, error);
+    console.error(`❌ Screenshot upload failed:`, error);
     throw error;
   }
 }
@@ -213,7 +188,7 @@ export function isAbsoluteUrl(url) {
 }
 
 /**
- * Convert storage path to absolute Supabase URL
+ * Convert storage path to absolute URL
  * If already absolute, returns as-is
  * @param {string} pathOrUrl - Storage path or URL
  * @param {string} bucket - Storage bucket name (default: 'screenshots')
@@ -227,10 +202,10 @@ export function ensureAbsoluteUrl(pathOrUrl, bucket = 'screenshots') {
     return pathOrUrl;
   }
 
-  // Convert storage path to absolute URL
-  const supabaseUrl = process.env.SUPABASE_URL;
-  if (!supabaseUrl) {
-    console.warn('[Screenshot Storage] Cannot convert storage path to URL: SUPABASE_URL not set');
+  // Convert storage path to absolute URL using local storage
+  const config = getStorageConfig();
+  if (!config.baseUrl) {
+    console.warn('[Screenshot Storage] Cannot convert storage path to URL: STORAGE_BASE_URL not set');
     return null;
   }
 
@@ -238,7 +213,7 @@ export function ensureAbsoluteUrl(pathOrUrl, bucket = 'screenshots') {
   const cleanPath = pathOrUrl.startsWith('/') ? pathOrUrl.substring(1) : pathOrUrl;
 
   // Build absolute URL
-  return `${supabaseUrl}/storage/v1/object/public/${bucket}/${cleanPath}`;
+  return getPublicUrl(cleanPath);
 }
 
 /**
@@ -284,18 +259,20 @@ async function processBatches(items, batchSize, delayMs, processFn) {
 
 /**
  * Generate screenshots manifest from crawled pages
- * Uploads all screenshots to Supabase Storage and returns manifest
+ * Uploads all screenshots to local storage and returns manifest
  *
  * @param {Array} pages - Array of crawled pages with screenshots
  * @param {string} leadId - Lead UUID
- * @param {string} storageType - 'supabase_storage', 'local', or 'both'
+ * @param {string} storageType - 'local' (Supabase options kept for compatibility)
  * @returns {Promise<object>} Complete screenshots manifest
  */
-export async function generateScreenshotsManifest(pages, leadId, storageType = 'supabase_storage') {
+export async function generateScreenshotsManifest(pages, leadId, storageType = 'local') {
   try {
+    const config = getStorageConfig();
+
     const manifest = {
-      storage_type: storageType,
-      base_url: process.env.SUPABASE_URL ? `${process.env.SUPABASE_URL}/storage/v1/object/public/screenshots/` : null,
+      storage_type: 'local',
+      base_url: `${config.baseUrl}/screenshots/`,
       version: '1.0',
       captured_at: new Date().toISOString(),
       pages: {},
@@ -332,9 +309,9 @@ export async function generateScreenshotsManifest(pages, leadId, storageType = '
 
     console.log(`📸 Uploading ${uploadsQueue.length} screenshots in batches of 5...`);
 
-    // Process uploads in batches of 5 with 1-second delays
+    // Process uploads in batches of 5 with 100ms delays (faster since local storage)
     const BATCH_SIZE = 5;
-    const DELAY_BETWEEN_BATCHES_MS = 1000;
+    const DELAY_BETWEEN_BATCHES_MS = 100;
 
     const uploadResults = await processBatches(
       uploadsQueue,

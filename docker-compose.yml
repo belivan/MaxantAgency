@@ -42,8 +42,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - STORAGE_BASE_DIR=/opt/MaxantAgency/storage
+      - STORAGE_BASE_URL=https://api.mintydesign.xyz/storage
     env_file:
       - .env
+    volumes:
+      - ./storage:/opt/MaxantAgency/storage
     networks:
       - maksant-network
     shm_size: '2gb'
@@ -133,8 +137,12 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3003
+      - STORAGE_BASE_DIR=/opt/MaxantAgency/storage
+      - STORAGE_BASE_URL=https://api.mintydesign.xyz/storage
     env_file:
       - .env
+    volumes:
+      - ./storage:/opt/MaxantAgency/storage
     networks:
       - maksant-network
     shm_size: '2gb'

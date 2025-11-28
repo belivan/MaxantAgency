@@ -34,6 +34,14 @@ api.mintydesign.xyz {
         reverse_proxy pipeline-orchestrator:3020
     }
 
+    # Static file storage (PDFs, screenshots)
+    # Served from /opt/MaxantAgency/storage/
+    handle /storage/* {
+        uri strip_prefix /storage
+        root * /opt/MaxantAgency/storage
+        file_server
+    }
+
     # Health check endpoint
     handle /health {
         respond "OK" 200
