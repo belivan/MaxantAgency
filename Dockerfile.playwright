@@ -21,7 +21,7 @@ COPY database-tools /database-tools
 
 # Install database-tools dependencies (needed for native modules like sharp)
 WORKDIR /database-tools
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Return to app directory
 WORKDIR /app
@@ -30,7 +30,7 @@ WORKDIR /app
 COPY ${SERVICE_NAME}/package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Install Playwright browsers (Chromium)
 RUN npx playwright install chromium --with-deps
