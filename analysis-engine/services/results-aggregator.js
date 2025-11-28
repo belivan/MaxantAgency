@@ -18,9 +18,6 @@ import { generateScreenshotsManifest } from '../utils/screenshot-storage.js';
 import { countCriticalDesktopIssues } from '../analyzers/desktop-visual-analyzer.js';
 import { countCriticalMobileIssues } from '../analyzers/mobile-visual-analyzer.js';
 import { calculateTotalCost } from '../analyzers/index.js';
-// NOTE: Report synthesis has been moved to ReportEngine microservice
-// import { runReportSynthesis } from '../reports/synthesis/report-synthesis.js';
-// import { validateReportQuality, generateQAReport } from '../reports/synthesis/qa-validator.js';
 import { gradeWithAI } from '../grading/ai-grader.js';
 import { ValidationService } from './validation-service.js';
 import { selectTopIssues } from './top-issues-selector.js';

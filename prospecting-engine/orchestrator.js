@@ -29,90 +29,14 @@ import { logInfo, logError, logWarn, logStepStart, logStepComplete } from './sha
 import { costTracker } from './shared/cost-tracker.js';
 import { loadAllProspectingPrompts } from './shared/prompt-loader.js';
 import { saveLocalBackup, markAsUploaded, markAsFailed } from './utils/local-backup.js';
-
-/**
- * Classify crawl error into error type and determine website_status
- *
- * @param {string} errorMessage - Error message from scrapeWebsite or extractFromDOM
- * @returns {object} {error_type, website_status, error_message}
- */
-function classifyError(errorMessage) {
-  const msg = errorMessage.toLowerCase();
-
-  // Antibot protection (403, bot detection, cloudflare, etc.)
-  if (
-    msg.includes('403') ||
-    msg.includes('forbidden') ||
-    msg.includes('cloudflare') ||
-    msg.includes('bot') ||
-    msg.includes('captcha') ||
-    msg.includes('denied')
-  ) {
-    return {
-      error_type: 'antibot',
-      website_status: 'bot_protected',
-      error_message: errorMessage
-    };
-  }
-
-  // Timeout errors
-  if (
-    msg.includes('timeout') ||
-    msg.includes('timed out') ||
-    msg.includes('navigation timeout')
-  ) {
-    return {
-      error_type: 'timeout',
-      website_status: 'timeout',
-      error_message: errorMessage
-    };
-  }
-
-  // SSL/Certificate errors
-  if (
-    msg.includes('ssl') ||
-    msg.includes('certificate') ||
-    msg.includes('cert') ||
-    msg.includes('https')
-  ) {
-    return {
-      error_type: 'ssl',
-      website_status: 'ssl_error',
-      error_message: errorMessage
-    };
-  }
-
-  // Network errors (DNS, connection refused, etc.)
-  if (
-    msg.includes('enotfound') ||
-    msg.includes('dns') ||
-    msg.includes('connection') ||
-    msg.includes('econnrefused') ||
-    msg.includes('net::')
-  ) {
-    return {
-      error_type: 'network',
-      website_status: 'not_found',
-      error_message: errorMessage
-    };
-  }
-
-  // 404 / Not Found
-  if (msg.includes('404') || msg.includes('not found')) {
-    return {
-      error_type: 'not_found',
-      website_status: 'not_found',
-      error_message: errorMessage
-    };
-  }
-
-  // Unknown error
-  return {
-    error_type: 'unknown',
-    website_status: 'timeout', // Default to timeout for unknown errors
-    error_message: errorMessage
-  };
-}
+import { classifyError } from './shared/error-classifier.js';
+import {
+  buildProspectData,
+  calculateDaysSinceReview,
+  shouldFilterAsInactive,
+  buildModelsUsed,
+  buildFinalProspect
+} from './pipeline/pipeline-helpers.js';
 
 /**
  * Run the full prospecting pipeline
@@ -579,28 +503,14 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
         }
 
         // Build prospect object (before relevance check)
-        const prospectData = {
-          company_name: company.name,
-          industry: company.industry,
-          website: company.website,
-          website_status: websiteStatus,
-          crawl_error_details: crawlErrorDetails,
-          city: company.city,
-          state: company.state,
-          address: company.address,
-          contact_phone: company.phone,
-          contact_email: extractedData?.contact_email || null,
-          contact_name: extractedData?.contact_name || null,
-          description: extractedData?.description || null,
-          services: extractedData?.services || null,
-          google_place_id: company.googlePlaceId,
-          google_rating: company.rating,
-          google_review_count: company.reviewCount,
-          most_recent_review_date: company.mostRecentReviewDate,
-          social_profiles: socialProfiles,
-          social_metadata: socialMetadata,
-          business_intelligence: extractedData?.business_intelligence || null
-        };
+        const prospectData = buildProspectData(
+          company,
+          websiteStatus,
+          extractedData,
+          socialProfiles,
+          socialMetadata,
+          crawlErrorDetails
+        );
 
         // STEP 7: ICP Relevance Check (AI-powered)
         let icpScore = null;
@@ -647,64 +557,16 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
         // ========================================
         // QUALITY FILTER: Skip inactive/closed businesses
         // ========================================
-        // Calculate days since last review (if available)
-        let daysSinceLastReview = null;
-        if (company.mostRecentReviewDate) {
-          try {
-            const lastReviewDate = new Date(company.mostRecentReviewDate);
-            const now = Date.now();
-            daysSinceLastReview = Math.floor((now - lastReviewDate) / (1000 * 60 * 60 * 24));
-          } catch (error) {
-            logError('Failed to parse review date', error, {
-              company: company.name,
-              date: company.mostRecentReviewDate
-            });
-          }
-        }
+        const daysSinceLastReview = calculateDaysSinceReview(company.mostRecentReviewDate, company.name);
+        const filterResult = shouldFilterAsInactive(websiteStatus, daysSinceLastReview, company.rating);
 
-        // FILTER 1: Broken website + No recent activity = Likely closed
-        // A broken website with no reviews in 180+ days suggests the business is no longer operating
-        if (
-          ['ssl_error', 'timeout', 'not_found'].includes(websiteStatus) &&
-          (daysSinceLastReview === null || daysSinceLastReview > 180)
-        ) {
-          logInfo('Skipping inactive prospect (broken site + no recent reviews)', {
-            company: company.name,
-            websiteStatus,
-            daysSinceLastReview: daysSinceLastReview === null ? 'never' : daysSinceLastReview,
-            reason: 'Likely out of business - broken website with no activity'
-          });
-          results.skipped++;
-          results.filteredInactive = (results.filteredInactive || 0) + 1;
-          continue;
-        }
-
-        // FILTER 2: No website + No recent activity + Low rating
-        // No website, no recent customer engagement, and poor rating = not a viable prospect
-        if (
-          websiteStatus === 'no_website' &&
-          (daysSinceLastReview === null || daysSinceLastReview > 180) &&
-          (company.rating === null || company.rating < 3.5)
-        ) {
-          logInfo('Skipping inactive prospect (no website + no recent reviews + low rating)', {
+        if (filterResult) {
+          logInfo(`Skipping inactive prospect (${filterResult.filter})`, {
             company: company.name,
             websiteStatus,
             daysSinceLastReview: daysSinceLastReview === null ? 'never' : daysSinceLastReview,
             rating: company.rating || 'none',
-            reason: 'Not viable - no website, no activity, poor reputation'
-          });
-          results.skipped++;
-          results.filteredInactive = (results.filteredInactive || 0) + 1;
-          continue;
-        }
-
-        // FILTER 3: Parking page = Domain for sale
-        // Parking pages indicate the domain is for sale, not an active business
-        if (websiteStatus === 'parking_page') {
-          logInfo('Skipping parking page', {
-            company: company.name,
-            websiteStatus,
-            reason: 'Domain for sale, not an active business'
+            reason: filterResult.reason
           });
           results.skipped++;
           results.filteredInactive = (results.filteredInactive || 0) + 1;
@@ -712,35 +574,21 @@ export async function runProspectingPipeline(brief, options = {}, onProgress = n
         }
 
         // Track actual models used for this prospect
-        const modelsUsed = {
-          queryUnderstanding: options.modelSelections?.queryUnderstanding ||
-                             customPrompts?.queryUnderstanding?.model ||
-                             options.model ||
-                             'grok-4-fast',
-          websiteExtraction: options.modelSelections?.websiteExtraction ||
-                           customPrompts?.websiteExtraction?.model ||
-                           options.visionModel ||
-                           'gpt-4o',
-          relevanceCheck: options.modelSelections?.relevanceCheck ||
-                         customPrompts?.relevanceCheck?.model ||
-                         options.model ||
-                         'grok-4-fast'
-        };
+        const modelsUsed = buildModelsUsed(options, customPrompts);
 
         // Add relevance data to prospect
-        const prospect = {
-          ...prospectData,
-          icp_match_score: icpScore,
-          is_relevant: isRelevant,
-          icp_brief_snapshot: projectIcpBrief, // Save ICP brief snapshot for historical tracking
-          models_used: modelsUsed, // Track which models were actually used
-          prompts_snapshot: customPrompts || null, // Save prompts used
-          status: 'ready_for_analysis',
-          run_id: runId,
-          source: 'prospecting-engine',
-          discovery_cost: 0, // Will be updated at end
-          discovery_time_ms: Date.now() - startTime
-        };
+        const prospect = buildFinalProspect(
+          prospectData,
+          { icpScore, isRelevant },
+          {
+            projectIcpBrief,
+            modelsUsed,
+            customPrompts,
+            runId,
+            startTime,
+            source: 'prospecting-engine'
+          }
+        );
 
         // BACKUP WORKFLOW: Save locally FIRST, then upload to database
         let backupPath = null;
@@ -1149,39 +997,28 @@ export async function lookupSingleBusiness(query, options = {}) {
     // STEP 7: SKIPPED (No ICP relevance check)
     // ═════════════════════════════════════════════════════════════
 
-    // Build prospect object
-    const prospectData = {
-      company_name: company.name,
-      industry: company.industry,
-      website: company.website,
-      website_status: websiteStatus,
-      crawl_error_details: crawlErrorDetails,
-      city: company.city,
-      state: company.state,
-      address: company.address,
-      contact_phone: company.phone,
-      contact_email: extractedData?.contact_email || null,
-      contact_name: extractedData?.contact_name || null,
-      description: extractedData?.description || null,
-      services: extractedData?.services || null,
-      google_place_id: company.googlePlaceId,
-      google_rating: company.rating,
-      google_review_count: company.reviewCount,
-      most_recent_review_date: company.mostRecentReviewDate,
-      social_profiles: socialProfiles,
-      social_metadata: socialMetadata,
-      business_intelligence: extractedData?.business_intelligence || null,
-      icp_match_score: null, // Not applicable for single lookup
-      is_relevant: true, // Default to true (no ICP filtering)
-      icp_brief_snapshot: null, // No ICP brief
-      models_used: null, // No AI models used for query/relevance
-      prompts_snapshot: null, // No prompts
-      status: 'ready_for_analysis',
-      run_id: runId,
-      source: 'single-lookup',
-      discovery_cost: 0,
-      discovery_time_ms: Date.now() - startTime
-    };
+    // Build prospect object using helpers
+    const baseProspectData = buildProspectData(
+      company,
+      websiteStatus,
+      extractedData,
+      socialProfiles,
+      socialMetadata,
+      crawlErrorDetails
+    );
+
+    const prospectData = buildFinalProspect(
+      baseProspectData,
+      { icpScore: null, isRelevant: true }, // No ICP filtering for single lookup
+      {
+        projectIcpBrief: null,
+        modelsUsed: null,
+        customPrompts: null,
+        runId,
+        startTime,
+        source: 'single-lookup'
+      }
+    );
 
     // Save to database
     let backupPath = null;

@@ -1,0 +1,42 @@
+# Generic Dockerfile for backend engines (prospecting, outreach, pipeline)
+FROM node:20-alpine
+
+# Accept service name as build arg
+ARG SERVICE_NAME
+ENV SERVICE_NAME=${SERVICE_NAME}
+
+# Set working directory
+WORKDIR /app
+
+# Install curl for healthchecks
+RUN apk add --no-cache curl
+
+# Copy database-tools (shared dependency for all services)
+# Goes to /database-tools to match relative import paths (../database-tools)
+COPY database-tools /database-tools
+
+# Install database-tools dependencies (needed for native modules like sharp)
+WORKDIR /database-tools
+RUN npm ci --only=production
+
+# Return to app directory
+WORKDIR /app
+
+# Copy package files
+COPY ${SERVICE_NAME}/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy service files
+COPY ${SERVICE_NAME}/ ./
+
+# Expose port (will be overridden by docker-compose)
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
+
+# Start server
+CMD ["node", "server.js"]

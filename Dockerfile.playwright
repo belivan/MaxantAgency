@@ -1,0 +1,49 @@
+# Dockerfile for Playwright-based engines (analysis, report, prospecting)
+FROM mcr.microsoft.com/playwright:v1.40.0-focal
+
+# Accept service name as build arg
+ARG SERVICE_NAME
+ARG PORT=3001
+ENV SERVICE_NAME=${SERVICE_NAME}
+ENV PORT=${PORT}
+
+# Set working directory
+WORKDIR /app
+
+# Install Node.js (Playwright image has it, but ensure correct version)
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs
+
+# Copy database-tools (shared dependency for all services)
+# Goes to /database-tools to match relative import paths (../database-tools)
+COPY database-tools /database-tools
+
+# Install database-tools dependencies (needed for native modules like sharp)
+WORKDIR /database-tools
+RUN npm ci --only=production
+
+# Return to app directory
+WORKDIR /app
+
+# Copy package files
+COPY ${SERVICE_NAME}/package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Install Playwright browsers (Chromium)
+RUN npx playwright install chromium --with-deps
+
+# Copy service files
+COPY ${SERVICE_NAME}/ ./
+
+# Expose port
+EXPOSE ${PORT}
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# Start server
+CMD ["node", "server.js"]

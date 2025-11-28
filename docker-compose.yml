@@ -1,13 +1,14 @@
 version: '3.8'
 
 services:
-  # Prospecting Engine
+  # Prospecting Engine (with Playwright for scraping)
   prospecting-engine:
     build:
-      context: ./prospecting-engine
-      dockerfile: ../Dockerfile.engine
+      context: .
+      dockerfile: Dockerfile.playwright
       args:
         SERVICE_NAME: prospecting-engine
+        PORT: 3010
     container_name: maksant-prospecting
     restart: unless-stopped
     ports:
@@ -19,17 +20,21 @@ services:
       - .env
     networks:
       - maksant-network
+    shm_size: '2gb'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3010/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Analysis Engine (with Playwright)
+  # Analysis Engine (with Playwright for screenshots)
   analysis-engine:
     build:
-      context: ./analysis-engine
-      dockerfile: ../Dockerfile.analysis
+      context: .
+      dockerfile: Dockerfile.playwright
+      args:
+        SERVICE_NAME: analysis-engine
+        PORT: 3001
     container_name: maksant-analysis
     restart: unless-stopped
     ports:
@@ -41,18 +46,18 @@ services:
       - .env
     networks:
       - maksant-network
-    shm_size: '2gb'  # Playwright needs shared memory
+    shm_size: '2gb'
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Outreach Engine
+  # Outreach Engine (lightweight, no Playwright)
   outreach-engine:
     build:
-      context: ./outreach-engine
-      dockerfile: ../Dockerfile.engine
+      context: .
+      dockerfile: Dockerfile.node
       args:
         SERVICE_NAME: outreach-engine
     container_name: maksant-outreach
@@ -72,11 +77,11 @@ services:
       timeout: 10s
       retries: 3
 
-  # Pipeline Orchestrator
+  # Pipeline Orchestrator (lightweight, no Playwright)
   pipeline-orchestrator:
     build:
-      context: ./pipeline-orchestrator
-      dockerfile: ../Dockerfile.engine
+      context: .
+      dockerfile: Dockerfile.node
       args:
         SERVICE_NAME: pipeline-orchestrator
     container_name: maksant-pipeline
@@ -96,11 +101,56 @@ services:
       timeout: 10s
       retries: 3
 
-  # Command Center UI
+  # Redis (Work Queue Coordination)
+  redis:
+    image: redis:7-alpine
+    container_name: maksant-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - maksant-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - redis_data:/data
+
+  # Report Engine (with Playwright for PDF generation)
+  report-engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+      args:
+        SERVICE_NAME: report-engine
+        PORT: 3003
+    container_name: maksant-reports
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=production
+      - PORT=3003
+    env_file:
+      - .env
+    networks:
+      - maksant-network
+    shm_size: '2gb'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Command Center UI (Next.js)
   command-center-ui:
     build:
-      context: ./command-center-ui
-      dockerfile: ../Dockerfile.ui
+      context: .
+      dockerfile: Dockerfile.nextjs
+      args:
+        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
     container_name: maksant-ui
     restart: unless-stopped
     ports:
@@ -111,6 +161,7 @@ services:
       - NEXT_PUBLIC_PROSPECTING_API=http://prospecting-engine:3010
       - NEXT_PUBLIC_ANALYSIS_API=http://analysis-engine:3001
       - NEXT_PUBLIC_OUTREACH_API=http://outreach-engine:3002
+      - NEXT_PUBLIC_REPORT_API=http://report-engine:3003
       - NEXT_PUBLIC_PIPELINE_API=http://pipeline-orchestrator:3020
     env_file:
       - .env
@@ -118,7 +169,9 @@ services:
       - prospecting-engine
       - analysis-engine
       - outreach-engine
+      - report-engine
       - pipeline-orchestrator
+      - redis
     networks:
       - maksant-network
     healthcheck:
@@ -131,6 +184,5 @@ networks:
   maksant-network:
     driver: bridge
 
-# Optional: If you want to run Supabase locally instead of cloud
-# volumes:
-#   supabase_db_data:
+volumes:
+  redis_data:

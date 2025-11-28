@@ -3,6 +3,52 @@
  * Represents companies discovered during the prospecting phase
  */
 
+/**
+ * Business Intelligence data structure
+ */
+export interface BusinessIntelligence {
+  companySize?: {
+    employeeCount?: string;
+    locationCount?: number;
+    confidence?: string;
+    signals?: string[];
+  };
+  yearsInBusiness?: {
+    estimatedYears?: number;
+    foundedYear?: number;
+    confidence?: string;
+    signals?: string[];
+  };
+  pricingVisibility?: {
+    visible?: boolean;
+    priceRange?: {
+      min?: number;
+      max?: number;
+    };
+    confidence?: string;
+    signals?: string[];
+  };
+  contentFreshness?: {
+    lastUpdate?: string;
+    blogActive?: boolean;
+    postCount?: number;
+    confidence?: string;
+    signals?: string[];
+  };
+  decisionMakerAccessibility?: {
+    hasDirectEmail?: boolean;
+    hasDirectPhone?: boolean;
+    ownerName?: string;
+    confidence?: string;
+    signals?: string[];
+  };
+  premiumFeatures?: {
+    detected?: string[];
+    budgetIndicator?: 'low' | 'medium' | 'high';
+    signals?: string[];
+  };
+}
+
 export interface Prospect {
   id: string;
   company_name: string;
@@ -19,11 +65,25 @@ export interface Prospect {
 
   // Status tracking
   status: 'pending' | 'ready_for_analysis' | 'analyzed' | 'email_composed' | 'contacted';
+  website_status?: 'active' | 'inactive' | 'error' | 'unknown';
+  crawl_error_details?: {
+    error_message?: string;
+    error_code?: string;
+  };
 
   // Contact information
   contact_email?: string;
   contact_phone?: string;
   contact_name?: string;
+
+  // Business details
+  description?: string;
+  services?: string[];
+  most_recent_review_date?: string;
+  icp_match_score?: number;
+
+  // Business Intelligence
+  business_intelligence?: BusinessIntelligence;
 
   // Metadata
   project_id?: string;

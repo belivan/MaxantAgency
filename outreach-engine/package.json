@@ -7,14 +7,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node tests/run-all-tests.js",
-    "test:quick": "node tests/test-prompt-loading.js && node tests/test-phase1-integration.js",
-    "test:integration": "node tests/test-phase1-integration.js && node tests/test-phase2-integration.js && node tests/test-phase3-integration.js",
-    "test:api": "node tests/test-api-endpoints.js",
     "db:check": "node scripts/check-table-usage.js",
     "db:leads": "node scripts/check-leads.js",
-    "notion:check": "node scripts/check-notion-columns.js",
-    "notion:test": "node tests/test-notion-sync.js"
+    "notion:check": "node scripts/check-notion-columns.js"
   },
   "keywords": [
     "email",
@@ -36,7 +31,6 @@
     "googleapis": "^164.0.0",
     "nodemailer": "^7.0.9",
     "openai": "^4.75.0",
-    "playwright": "^1.40.0",
     "sharp": "^0.34.4"
   }
 }

@@ -1,8 +1,10 @@
 {
   "analysisCounts": {
-    "accessibility-analyzer": 1
+    "Dental Practice": 111,
+    "Point Of Interest": 1,
+    "Medical Practice": 1,
+    "Health": 1
   },
   "activeTests": {},
   "lastOptimization": {}
-}{}
 }

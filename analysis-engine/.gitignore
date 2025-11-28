@@ -1,0 +1,19 @@
+# Local screenshot cache
+screenshots/
+
+# Debug artifacts
+debug-logs/
+
+# Backup files
+*.backup
+*.bak
+
+# OS files
+.DS_Store
+
+# Node modules (if not in root gitignore)
+node_modules/
+
+# Environment files
+.env
+.env.local
