@@ -442,7 +442,8 @@ export async function autoGenerateReport(analysisResult, options = {}) {
     const report = await generateReport(reportData, {
       format,
       sections,
-      synthesisData  // Pass synthesis results to report generator
+      synthesisData,  // Pass synthesis results to report generator
+      report_type: 'full'  // Always generate full report with all sections including screenshots
     });
 
     // Handle local backup based on format
