@@ -29,72 +29,55 @@ import { startTaskWithSSE } from '@/lib/utils/task-sse-manager';
 // Prospecting Engine Info Component
 function ProspectingEngineInfo({ isExpanded, onToggle }: { isExpanded: boolean; onToggle: () => void }) {
   return (
-    <div className="mb-6 bg-gradient-to-br from-emerald-500/10 via-blue-500/5 to-purple-500/10 rounded-xl border border-emerald-500/20 overflow-hidden">
+    <div className="group rounded-xl border border-green-500/20 bg-gradient-to-br from-green-500/5 to-transparent hover:border-green-500/40 hover:shadow-lg hover:shadow-green-500/5 transition-all duration-300 overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full p-4 flex items-center justify-between text-left hover:bg-muted/30 transition-colors"
+        className="w-full p-5 flex items-center justify-between text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 rounded-lg">
-            <Search className="w-5 h-5 text-emerald-500" />
+          <div className="p-2 rounded-lg bg-green-500/10 group-hover:bg-green-500/20 transition-colors">
+            <Search className="w-5 h-5 text-green-500" />
           </div>
           <div>
             <h3 className="font-semibold text-foreground">Prospecting Engine</h3>
-            <p className="text-sm text-muted-foreground">7-step AI pipeline: discovery → verification → extraction → social → scoring</p>
+            <p className="text-sm text-muted-foreground">3 AI agents discover businesses, extract contacts, and score ICP fit</p>
           </div>
         </div>
         {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
       </button>
 
       {isExpanded && (
-        <div className="px-4 pb-3 border-t border-border/50">
-          <div className="pt-3 space-y-3">
-            {/* Capabilities Grid - Compact */}
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
-              <div className="p-2 bg-gradient-to-br from-red-500/10 to-orange-500/5 rounded-lg border border-red-500/20 text-center">
-                <MapPin className="w-4 h-4 text-red-500 mx-auto mb-1" />
-                <span className="text-xs font-medium text-foreground">Maps</span>
+        <div className="px-5 pb-5 border-t border-border/50">
+          <div className="pt-4 space-y-4">
+            {/* Capabilities */}
+            <div className="space-y-2 text-sm">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                <MapPin className="w-3.5 h-3.5 text-red-500" />
+                Search Google Maps by location & industry
               </div>
-              <div className="p-2 bg-gradient-to-br from-blue-500/10 to-cyan-500/5 rounded-lg border border-blue-500/20 text-center">
-                <Globe className="w-4 h-4 text-blue-500 mx-auto mb-1" />
-                <span className="text-xs font-medium text-foreground">Extract</span>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <Globe className="w-3.5 h-3.5 text-blue-500" />
+                Extract emails, phones & social profiles from websites
               </div>
-              <div className="p-2 bg-gradient-to-br from-purple-500/10 to-pink-500/5 rounded-lg border border-purple-500/20 text-center">
-                <Users className="w-4 h-4 text-purple-500 mx-auto mb-1" />
-                <span className="text-xs font-medium text-foreground">Social</span>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <Brain className="w-3.5 h-3.5 text-emerald-500" />
+                AI scores each prospect against your ICP criteria
               </div>
-              <div className="p-2 bg-gradient-to-br from-emerald-500/10 to-teal-500/5 rounded-lg border border-emerald-500/20 text-center">
-                <Brain className="w-4 h-4 text-emerald-500 mx-auto mb-1" />
-                <span className="text-xs font-medium text-foreground">ICP Score</span>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-orange-500/10 to-amber-500/5 rounded-lg border border-orange-500/20 text-center">
-                <Search className="w-4 h-4 text-orange-500 mx-auto mb-1" />
-                <span className="text-xs font-medium text-foreground">Query AI</span>
-              </div>
-              <div className="p-2 bg-gradient-to-br from-green-500/10 to-lime-500/5 rounded-lg border border-green-500/20 text-center">
-                <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto mb-1" />
-                <span className="text-xs font-medium text-foreground">Verify</span>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-purple-500" />
+                Smart deduplication - no duplicates, ever
               </div>
             </div>
 
-            {/* Key Stats - Inline */}
-            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                ~$0.02/prospect
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                8-15s each
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
-                Deduplication
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                Iterative
-              </span>
+            {/* Stats */}
+            <div className="flex flex-wrap gap-4 pt-2 text-xs">
+              <span className="px-2 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 font-medium">~$0.02/prospect</span>
+              <span className="px-2 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">8-15s each</span>
+              <span className="px-2 py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">Iterative discovery</span>
             </div>
           </div>
         </div>

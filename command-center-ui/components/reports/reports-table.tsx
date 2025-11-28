@@ -336,18 +336,18 @@ export function ReportsTable({ reports, loading, onRefresh, onDelete }: ReportsT
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[180px]">
+                  <TableHead className="min-w-[120px] sm:min-w-[180px]">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort('company_name')}
-                      className="hover:bg-transparent -ml-3"
+                      className="hover:bg-transparent -ml-3 text-xs sm:text-sm"
                     >
                       Company
                       {sortField === 'company_name' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3 sm:h-4 sm:w-4" /> : <ArrowDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
                       ) : (
-                        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                        <ArrowUpDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4 opacity-50" />
                       )}
                     </Button>
                   </TableHead>
@@ -356,17 +356,17 @@ export function ReportsTable({ reports, loading, onRefresh, onDelete }: ReportsT
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort('website_grade')}
-                      className="hover:bg-transparent -ml-3"
+                      className="hover:bg-transparent -ml-3 text-xs sm:text-sm px-1 sm:px-2"
                     >
                       Grade
                       {sortField === 'website_grade' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3 sm:h-4 sm:w-4" /> : <ArrowDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
                       ) : (
-                        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                        <ArrowUpDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4 opacity-50" />
                       )}
                     </Button>
                   </TableHead>
-                  <TableHead>Format</TableHead>
+                  <TableHead className="hidden sm:table-cell">Format</TableHead>
                   <TableHead className="hidden sm:table-cell">Size</TableHead>
                   <TableHead className="hidden md:table-cell">
                     <Button
@@ -383,30 +383,30 @@ export function ReportsTable({ reports, loading, onRefresh, onDelete }: ReportsT
                       )}
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="hidden sm:table-cell">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSort('generated_at')}
-                      className="hover:bg-transparent -ml-3"
+                      className="hover:bg-transparent -ml-3 text-xs sm:text-sm"
                     >
                       Generated
                       {sortField === 'generated_at' ? (
-                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-4 w-4" /> : <ArrowDown className="ml-1 h-4 w-4" />
+                        sortDirection === 'asc' ? <ArrowUp className="ml-1 h-3 w-3 sm:h-4 sm:w-4" /> : <ArrowDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4" />
                       ) : (
-                        <ArrowUpDown className="ml-1 h-4 w-4 opacity-50" />
+                        <ArrowUpDown className="ml-1 h-3 w-3 sm:h-4 sm:w-4 opacity-50" />
                       )}
                     </Button>
                   </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="text-right w-[80px] sm:w-auto">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAndSortedReports.map((report) => (
                   <TableRow key={report.id}>
-                    <TableCell>
-                      <div className="font-medium">{report.company_name}</div>
-                      <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                    <TableCell className="py-2 sm:py-4">
+                      <div className="font-medium text-sm sm:text-base truncate max-w-[100px] sm:max-w-none">{report.company_name}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground truncate max-w-[100px] sm:max-w-[200px]">
                         {report.website_url}
                       </div>
                     </TableCell>
@@ -415,7 +415,7 @@ export function ReportsTable({ reports, loading, onRefresh, onDelete }: ReportsT
                         {report.website_grade}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <div className="flex items-center gap-2">
                         {report.format === 'html' ? (
                           <FileCode className="h-4 w-4 text-blue-500" />
@@ -431,26 +431,28 @@ export function ReportsTable({ reports, loading, onRefresh, onDelete }: ReportsT
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                       {report.download_count}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
+                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                       {formatDistanceToNow(new Date(report.generated_at), { addSuffix: true })}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <TableCell className="text-right py-2 sm:py-4">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleDownload(report)}
                           title="Download"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         >
-                          <Download className="h-4 w-4" />
+                          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => handleDelete(report)}
                           title="Delete"
+                          className="h-7 w-7 sm:h-8 sm:w-8 p-0"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         </Button>
                       </div>
                     </TableCell>

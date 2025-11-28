@@ -80,7 +80,7 @@ export function GenerateReportModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md !top-[5rem] !translate-y-0">
         <DialogHeader>
           <DialogTitle>
             {isBatchMode ? `Generate ${selectedLeads.length} Reports` : 'Generate Report'}
@@ -120,33 +120,33 @@ export function GenerateReportModal({
           </div>
 
           {/* Format Selection */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
-              className="h-auto flex-col items-start p-4 space-y-2"
+              className="h-auto flex-col items-center p-3 sm:p-4 space-y-2"
               onClick={() => handleGenerate('html')}
               disabled={isGenerating}
             >
-              <FileCode className="h-8 w-8 text-blue-500" />
-              <div className="text-left">
-                <p className="font-semibold">HTML (Dark Theme)</p>
-                <p className="text-xs text-muted-foreground">
-                  Styled report, perfect for web viewing
+              <FileCode className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
+              <div className="text-center w-full">
+                <p className="font-semibold text-sm sm:text-base">HTML</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Styled dark theme
                 </p>
               </div>
             </Button>
 
             <Button
               variant="outline"
-              className="h-auto flex-col items-start p-4 space-y-2"
+              className="h-auto flex-col items-center p-3 sm:p-4 space-y-2"
               onClick={() => handleGenerate('markdown')}
               disabled={isGenerating}
             >
-              <FileText className="h-8 w-8 text-green-500" />
-              <div className="text-left">
-                <p className="font-semibold">Markdown</p>
-                <p className="text-xs text-muted-foreground">
-                  Clean text format, easy to edit
+              <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
+              <div className="text-center w-full">
+                <p className="font-semibold text-sm sm:text-base">Markdown</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Clean text format
                 </p>
               </div>
             </Button>

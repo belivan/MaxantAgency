@@ -68,48 +68,74 @@ export default function LandingPage() {
 
         {/* Pipeline Flow */}
         <div className="mb-16">
-          <div className="text-center mb-6">
+          <div className="text-center mb-8">
             <h2 className="text-xl font-semibold text-foreground">How It Works</h2>
             <p className="text-sm text-muted-foreground">Four simple steps, fully automatic</p>
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
+          <div className="flex items-center justify-center gap-3">
             {/* Prospecting */}
-            <div className="relative group">
-              <div className="p-4 rounded-lg border border-green-500/30 bg-green-500/5 hover:bg-green-500/10 hover:border-green-500/50 hover:scale-[1.02] transition-all duration-200 h-full flex flex-col">
-                <Search className="w-5 h-5 text-green-500 mb-2" />
-                <div className="font-medium text-sm text-foreground">Prospect</div>
-                <div className="text-xs text-muted-foreground flex-1">Find companies</div>
+            <div className="group flex-1 max-w-[160px]">
+              <div className="p-4 rounded-xl border border-green-500/30 bg-gradient-to-br from-green-500/10 to-green-500/5 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/10 transition-all duration-300 text-center">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="font-semibold text-sm text-foreground">Prospect</div>
+                <div className="text-xs text-muted-foreground mt-1">Find companies</div>
               </div>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 text-muted-foreground/50 z-10">→</div>
+            </div>
+
+            {/* Arrow 1 */}
+            <div className="flex-shrink-0 w-8 flex items-center justify-center">
+              <div className="w-full h-0.5 bg-gradient-to-r from-green-500/50 to-blue-500/50 relative">
+                <ArrowRight className="w-4 h-4 text-blue-500/70 absolute -right-2 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
             {/* Analysis */}
-            <div className="relative group">
-              <div className="p-4 rounded-lg border border-blue-500/30 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/50 hover:scale-[1.02] transition-all duration-200 h-full flex flex-col">
-                <Brain className="w-5 h-5 text-blue-500 mb-2" />
-                <div className="font-medium text-sm text-foreground">Analyze</div>
-                <div className="text-xs text-muted-foreground flex-1">Check their site</div>
+            <div className="group flex-1 max-w-[160px]">
+              <div className="p-4 rounded-xl border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-blue-500/5 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 text-center">
+                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-3">
+                  <Brain className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="font-semibold text-sm text-foreground">Analyze</div>
+                <div className="text-xs text-muted-foreground mt-1">Check their site</div>
               </div>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 text-muted-foreground/50 z-10">→</div>
+            </div>
+
+            {/* Arrow 2 */}
+            <div className="flex-shrink-0 w-8 flex items-center justify-center">
+              <div className="w-full h-0.5 bg-gradient-to-r from-blue-500/50 to-orange-500/50 relative">
+                <ArrowRight className="w-4 h-4 text-orange-500/70 absolute -right-2 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
             {/* Report */}
-            <div className="relative group">
-              <div className="p-4 rounded-lg border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10 hover:border-orange-500/50 hover:scale-[1.02] transition-all duration-200 h-full flex flex-col">
-                <FileText className="w-5 h-5 text-orange-500 mb-2" />
-                <div className="font-medium text-sm text-foreground">Report</div>
-                <div className="text-xs text-muted-foreground flex-1">Create a report</div>
+            <div className="group flex-1 max-w-[160px]">
+              <div className="p-4 rounded-xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-orange-500/5 hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/10 transition-all duration-300 text-center">
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto mb-3">
+                  <FileText className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="font-semibold text-sm text-foreground">Report</div>
+                <div className="text-xs text-muted-foreground mt-1">Create a report</div>
               </div>
-              <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 text-muted-foreground/50 z-10">→</div>
+            </div>
+
+            {/* Arrow 3 */}
+            <div className="flex-shrink-0 w-8 flex items-center justify-center">
+              <div className="w-full h-0.5 bg-gradient-to-r from-orange-500/50 to-purple-500/50 relative">
+                <ArrowRight className="w-4 h-4 text-purple-500/70 absolute -right-2 top-1/2 -translate-y-1/2" />
+              </div>
             </div>
 
             {/* Outreach */}
-            <div className="group h-full">
-              <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 hover:border-purple-500/50 hover:scale-[1.02] transition-all duration-200 h-full flex flex-col">
-                <Mail className="w-5 h-5 text-purple-500 mb-2" />
-                <div className="font-medium text-sm text-foreground">Outreach</div>
-                <div className="text-xs text-muted-foreground flex-1">Write the email</div>
+            <div className="group flex-1 max-w-[160px]">
+              <div className="p-4 rounded-xl border border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-purple-500/5 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all duration-300 text-center">
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
+                  <Mail className="w-5 h-5 text-purple-500" />
+                </div>
+                <div className="font-semibold text-sm text-foreground">Outreach</div>
+                <div className="text-xs text-muted-foreground mt-1">Write the email</div>
               </div>
             </div>
           </div>

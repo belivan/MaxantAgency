@@ -22,7 +22,6 @@ import {
   RefreshCw,
   ChevronDown,
   ChevronUp,
-  CheckSquare,
   FileText,
   Sparkles
 } from 'lucide-react';
@@ -375,95 +374,82 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
 
   return (
     <Card>
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <CardHeader className="space-y-3 pb-3">
+        {/* Main header row */}
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <CardTitle>Leads</CardTitle>
-            <CardDescription>
-              {filteredAndSortedLeads.length} lead{filteredAndSortedLeads.length !== 1 ? 's' : ''} found
-              {selectedIds.length > 0 && ` • ${selectedIds.length} selected`}
+            <CardTitle className="text-lg">Leads</CardTitle>
+            <CardDescription className="text-xs">
+              {filteredAndSortedLeads.length} found
+              {selectedIds.length > 0 && ` · ${selectedIds.length} selected`}
             </CardDescription>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Select All button - selects current page only */}
-            {!allSelectedOnPage && paginatedLeads.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleSelectAll(true)}
-                title="Select all leads on this page"
-              >
-                <CheckSquare className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Select Page ({paginatedLeads.length})</span>
-              </Button>
-            )}
-            {selectedIds.length > 0 && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedIds([])}
-                >
-                  <X className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Clear ({selectedIds.length})</span>
-                  <span className="sm:hidden">{selectedIds.length}</span>
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => setShowDeleteDialog(true)}
-                >
-                  <Trash2 className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Delete ({selectedIds.length})</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowReportModal(true)}
-                >
-                  <FileText className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Generate Report ({selectedIds.length})</span>
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => setShowOutreachModal(true)}
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  <Sparkles className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Generate Outreach ({selectedIds.length})</span>
-                </Button>
-              </>
-            )}
+          <div className="flex items-center gap-1.5">
             {onRefresh && (
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={onRefresh}
                 disabled={loading}
+                className="h-8 w-8 p-0"
               >
-                <RefreshCw className={`w-4 h-4 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             )}
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setShowFilters(!showFilters)}
-              className={hasActiveFilters ? 'border-primary' : ''}
+              className={`h-8 w-8 p-0 ${hasActiveFilters ? 'text-primary' : ''}`}
             >
-              <Filter className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Filters</span>
-              {hasActiveFilters && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                  {[filters.grade !== 'all', filters.priority !== 'all', filters.hasEmail !== 'all',
-                    filters.industry !== '', filters.city !== '', filters.project !== '',
-                    filters.search !== ''].filter(Boolean).length}
-                </Badge>
-              )}
+              <Filter className="w-4 h-4" />
             </Button>
           </div>
         </div>
+
+        {/* Selection action bar - only shows when items selected */}
+        {selectedIds.length > 0 && (
+          <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border">
+            <span className="text-xs font-medium text-muted-foreground mr-auto">
+              {selectedIds.length} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+              className="h-7 px-2 text-xs"
+            >
+              <X className="w-3 h-3 mr-1" />
+              Clear
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowReportModal(true)}
+              className="h-7 px-2 text-xs"
+            >
+              <FileText className="w-3 h-3 mr-1" />
+              Report
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => setShowOutreachModal(true)}
+              className="h-7 px-2 text-xs bg-purple-600 hover:bg-purple-700"
+            >
+              <Sparkles className="w-3 h-3 mr-1" />
+              Outreach
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              className="h-7 w-7 p-0"
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
 
         {/* Filters Panel */}
         {showFilters && (
@@ -885,7 +871,7 @@ export function LeadsTable({ leads, loading, onLeadClick, onComposeEmails, onSel
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[calc(100%-2rem)] max-w-md !top-[5rem] !translate-y-0">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {selectedIds.length} Lead{selectedIds.length !== 1 ? 's' : ''}?</AlertDialogTitle>
             <AlertDialogDescription>

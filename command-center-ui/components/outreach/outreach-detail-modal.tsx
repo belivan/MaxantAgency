@@ -20,10 +20,9 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import type { OutreachCompany } from './outreach-table';
 
 interface OutreachDetailModalProps {
@@ -67,7 +66,7 @@ export function OutreachDetailModal({
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="w-[calc(100%-2rem)] max-w-lg sm:max-w-xl lg:max-w-2xl max-h-[80vh] flex flex-col p-0 !top-[5rem] !translate-y-0">
         {/* Header */}
         <DialogHeader className="p-4 sm:p-6 pb-0">
           <div className="flex items-start justify-between gap-3">
@@ -129,8 +128,8 @@ export function OutreachDetailModal({
         </div>
 
         {/* Tabs Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col">
-          <div className="px-4 sm:px-6 pt-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          <div className="px-4 sm:px-6 pt-2 flex-shrink-0">
             <TabsList className="h-8">
               <TabsTrigger value="emails" className="text-xs h-7 px-3">
                 <Mail className="w-3.5 h-3.5 mr-1.5" />
@@ -143,7 +142,7 @@ export function OutreachDetailModal({
             </TabsList>
           </div>
 
-          <ScrollArea className="flex-1 px-4 sm:px-6 pb-4">
+          <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4">
             {/* Emails Tab */}
             <TabsContent value="emails" className="mt-3 space-y-3">
               {company.emails.length === 0 ? (
@@ -280,7 +279,7 @@ export function OutreachDetailModal({
                 })
               )}
             </TabsContent>
-          </ScrollArea>
+          </div>
         </Tabs>
       </DialogContent>
     </Dialog>
