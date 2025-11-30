@@ -194,7 +194,7 @@ export function FloatingTaskIndicator() {
             onClick={() => setIsOpen(false)}
             className="h-7 w-7 p-0"
           >
-            <ChevronDown className="w-4 h-4" />
+            <X className="w-4 h-4" />
           </Button>
         )}
       </div>

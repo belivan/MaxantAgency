@@ -1,13 +1,35 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Brain, Search, FileText, Mail, ArrowRight, ArrowDown, Zap, Check, Target, Eye, Rocket, Clock, DollarSign, TrendingUp, Sparkles } from 'lucide-react';
 import { ScreenshotCarousel } from '@/components/home/screenshot-carousel';
 
+const PAIN_POINTS = [
+  '2 hours per lead',
+  'Endless spreadsheets',
+  'Copy-paste outreach',
+  'Manual website checks',
+  'Zero personalization',
+];
+
 export default function LandingPage() {
   const { isSignedIn, isLoaded } = useAuth();
+  const [currentPainIndex, setCurrentPainIndex] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsAnimating(true);
+      setTimeout(() => {
+        setCurrentPainIndex((prev) => (prev + 1) % PAIN_POINTS.length);
+        setIsAnimating(false);
+      }, 300);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,28 +99,64 @@ export default function LandingPage() {
           </div>
 
           {/* Stats Row - More prominent */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto mb-10">
             <div className="text-center p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
-              <div className="text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">17+</div>
-              <div className="text-sm text-muted-foreground mt-1">AI Workers</div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">17+</div>
+              <div className="text-xs text-muted-foreground mt-1">AI Workers</div>
             </div>
             <div className="text-center p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
-              <div className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">$0.05</div>
-              <div className="text-sm text-muted-foreground mt-1">Per Lead</div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">$0.05</div>
+              <div className="text-xs text-muted-foreground mt-1">Per Lead</div>
             </div>
             <div className="text-center p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
-              <div className="text-3xl font-bold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">2 min</div>
-              <div className="text-sm text-muted-foreground mt-1">Per Analysis</div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">2 min</div>
+              <div className="text-xs text-muted-foreground mt-1">Per Analysis</div>
             </div>
             <div className="text-center p-4 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm">
-              <div className="text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">100%</div>
-              <div className="text-sm text-muted-foreground mt-1">Automated</div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">100%</div>
+              <div className="text-xs text-muted-foreground mt-1">Automated</div>
             </div>
           </div>
+
+          {/* Story Teaser - Inside hero */}
+          <Link href="/about" className="group block max-w-2xl mx-auto">
+            <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 px-3 py-2.5 sm:px-5 sm:py-4 hover:border-primary/30 transition-all">
+              <div className="flex items-center justify-center gap-2 sm:gap-5">
+                {/* Animated pain point */}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500/10 text-red-500 text-xs sm:text-sm shrink-0">✕</span>
+                  <span className="w-[140px] sm:w-[200px] text-xs sm:text-sm md:text-base font-medium text-foreground">
+                    <span
+                      className={`inline-block transition-all duration-300 ${
+                        isAnimating ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'
+                      }`}
+                    >
+                      {PAIN_POINTS[currentPainIndex]}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Solution */}
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary text-xs sm:text-sm shrink-0">✓</span>
+                  <span className="text-xs sm:text-sm md:text-base text-muted-foreground whitespace-nowrap">
+                    <span className="text-primary font-semibold">Automated</span>
+                  </span>
+                </div>
+
+                {/* CTA */}
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-primary/70 group-hover:text-primary transition-colors whitespace-nowrap">
+                  Our story
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </span>
+                <ArrowRight className="sm:hidden w-4 h-4 text-primary/50 group-hover:text-primary shrink-0" />
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
 
-      {/* Screenshot Carousel - Right after hero */}
+      {/* Screenshot Carousel */}
       <div className="py-16 bg-muted/30">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-10">
@@ -112,10 +170,10 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-16">
+      <div className="max-w-4xl mx-auto px-6 py-12">
 
         {/* Pipeline Flow - How It Works */}
-        <div className="mb-20">
+        <div className="mb-16">
           <div className="text-center mb-10">
             <p className="text-xs font-medium text-primary uppercase tracking-widest mb-2">The Process</p>
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">How It Works</h2>
@@ -200,8 +258,8 @@ export default function LandingPage() {
         </div>
 
         {/* Features Deep Dive - What You Get */}
-        <div className="mb-20">
-          <div className="text-center mb-12">
+        <div className="mb-16">
+          <div className="text-center mb-10">
             <p className="text-xs font-medium text-primary uppercase tracking-widest mb-2">Features</p>
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Everything You Need</h2>
             <p className="text-muted-foreground">From discovery to outreach, fully automated</p>
@@ -219,10 +277,10 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-foreground">Smart Prospecting</h3>
+                    <h3 className="text-lg font-bold text-foreground">Smart Prospecting</h3>
                     <span className="px-2 py-0.5 text-xs font-medium bg-green-500/10 text-green-500 rounded-full border border-green-500/20">3 AI Agents</span>
                   </div>
-                  <p className="text-muted-foreground mb-4">AI scours Google Maps for businesses in your target industry and location. Automatically filters out competitors, chains, and poor fits.</p>
+                  <p className="text-sm text-muted-foreground mb-4">AI scours Google Maps for businesses in your target industry and location. Automatically filters out competitors, chains, and poor fits.</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
@@ -252,10 +310,10 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-foreground">Deep Website Analysis</h3>
+                    <h3 className="text-lg font-bold text-foreground">Deep Website Analysis</h3>
                     <span className="px-2 py-0.5 text-xs font-medium bg-blue-500/10 text-blue-500 rounded-full border border-blue-500/20">6 Analyzers</span>
                   </div>
-                  <p className="text-muted-foreground mb-4">Each website gets a comprehensive audit: design, SEO, mobile, accessibility, content, and social presence. Every issue comes with screenshot evidence.</p>
+                  <p className="text-sm text-muted-foreground mb-4">Each website gets a comprehensive audit: design, SEO, mobile, accessibility, content, and social presence. Every issue comes with screenshot evidence.</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Check className="w-4 h-4 text-blue-500 flex-shrink-0" />
@@ -285,10 +343,10 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-foreground">Professional Reports</h3>
+                    <h3 className="text-lg font-bold text-foreground">Professional Reports</h3>
                     <span className="px-2 py-0.5 text-xs font-medium bg-orange-500/10 text-orange-500 rounded-full border border-orange-500/20">PDF Ready</span>
                   </div>
-                  <p className="text-muted-foreground mb-4">AI writes executive summaries, actionable recommendations, and 30/60/90 day roadmaps. Attach to emails or send as a value-first opener.</p>
+                  <p className="text-sm text-muted-foreground mb-4">AI writes executive summaries, actionable recommendations, and 30/60/90 day roadmaps. Attach to emails or send as a value-first opener.</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Check className="w-4 h-4 text-orange-500 flex-shrink-0" />
@@ -318,10 +376,10 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-xl font-bold text-foreground">Personalized Outreach</h3>
+                    <h3 className="text-lg font-bold text-foreground">Personalized Outreach</h3>
                     <span className="px-2 py-0.5 text-xs font-medium bg-purple-500/10 text-purple-500 rounded-full border border-purple-500/20">12 Variations</span>
                   </div>
-                  <p className="text-muted-foreground mb-4">AI writes multiple email and social message variations based on each lead's specific issues. Pick the tone that fits your style, hit send.</p>
+                  <p className="text-sm text-muted-foreground mb-4">AI writes multiple email and social message variations based on each lead's specific issues. Pick the tone that fits your style, hit send.</p>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Check className="w-4 h-4 text-purple-500 flex-shrink-0" />
@@ -343,8 +401,8 @@ export default function LandingPage() {
         </div>
 
         {/* Why This Works - More Visual */}
-        <div className="mb-20">
-          <div className="text-center mb-12">
+        <div>
+          <div className="text-center mb-10">
             <p className="text-xs font-medium text-primary uppercase tracking-widest mb-2">The Advantage</p>
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Why It Works</h2>
             <p className="text-muted-foreground">Built different from day one</p>
@@ -404,110 +462,80 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Our Story - Teaser */}
-        <div className="mb-20">
-          <Link href="/about" className="group block">
-            <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 md:p-8 hover:border-primary/50 transition-all">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-purple-500/10 to-transparent rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
-              <div className="relative flex flex-col md:flex-row items-center gap-6">
-                <div className="flex-shrink-0">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
-                    <span className="text-3xl">💡</span>
-                  </div>
-                </div>
-                <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors">
-                    The Story Behind This
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    It started with a designer friend spending 2+ hours per lead. There had to be a better way.
-                  </p>
-                </div>
-                <div className="flex-shrink-0">
-                  <div className="flex items-center gap-2 text-primary font-medium">
-                    <span className="hidden sm:inline">Read more</span>
-                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
+      </div>
+
+      {/* ROI Section - Full width with gradient background */}
+      <div className="py-12 bg-gradient-to-br from-muted/50 via-primary/5 to-muted/50">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-10">
+            <p className="text-xs font-medium text-primary uppercase tracking-widest mb-2">The Math</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">Your ROI Potential</h2>
+            <p className="text-muted-foreground">Numbers that make sense</p>
+          </div>
+
+          {/* Stats - 2x2 grid on mobile, 4 cols on desktop */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-10">
+            <div className="text-center p-4 rounded-xl bg-card/80 backdrop-blur-sm border border-border/50">
+              <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-2">
+                <DollarSign className="w-5 h-5 text-green-500" />
               </div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">$0.05</div>
+              <div className="text-xs text-muted-foreground mt-1">Per lead</div>
             </div>
-          </Link>
-        </div>
+            <div className="text-center p-4 rounded-xl bg-card/80 backdrop-blur-sm border border-border/50">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-2">
+                <Clock className="w-5 h-5 text-blue-500" />
+              </div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">2 min</div>
+              <div className="text-xs text-muted-foreground mt-1">Per analysis</div>
+            </div>
+            <div className="text-center p-4 rounded-xl bg-card/80 backdrop-blur-sm border border-border/50">
+              <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-2">
+                <TrendingUp className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-orange-500 to-amber-500 bg-clip-text text-transparent">50x</div>
+              <div className="text-xs text-muted-foreground mt-1">Faster</div>
+            </div>
+            <div className="text-center p-4 rounded-xl bg-card/80 backdrop-blur-sm border border-border/50">
+              <div className="w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-2">
+                <Zap className="w-5 h-5 text-purple-500" />
+              </div>
+              <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">∞</div>
+              <div className="text-xs text-muted-foreground mt-1">Scalable</div>
+            </div>
+          </div>
 
-        {/* ROI Calculator / Value Prop */}
-        <div className="mb-20">
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-muted/50 p-5 md:p-12">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-primary/10 via-purple-500/5 to-transparent rounded-full blur-3xl" />
-            <div className="relative">
-              <div className="text-center mb-6 md:mb-10">
-                <p className="text-xs font-medium text-primary uppercase tracking-widest mb-2">The Math</p>
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-1">Your ROI Potential</h2>
-                <p className="text-sm text-muted-foreground">Numbers that make sense</p>
+          {/* ROI breakdown */}
+          <div className="p-6 rounded-2xl bg-card/80 backdrop-blur-sm border border-border/50">
+            <p className="text-sm text-muted-foreground text-center mb-5">
+              Close <span className="text-foreground font-semibold">1 client/month</span> from 100 leads:
+            </p>
+
+            <div className="flex items-center justify-center gap-3 md:gap-6 flex-wrap">
+              <div className="flex flex-col items-center px-4 py-3 rounded-xl bg-muted/50 border border-border">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Cost</span>
+                <span className="text-xl md:text-2xl font-bold text-foreground">$5</span>
               </div>
 
-              {/* Stats - 2x2 grid on mobile, 4 cols on desktop */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 text-center">
-                <div className="p-3 md:p-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-2">
-                    <DollarSign className="w-5 h-5 md:w-6 md:h-6 text-green-500" />
-                  </div>
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">$0.05</div>
-                  <div className="text-xs md:text-sm text-muted-foreground">Per lead</div>
-                </div>
-                <div className="p-3 md:p-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-500/10 flex items-center justify-center mx-auto mb-2">
-                    <Clock className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />
-                  </div>
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">2 min</div>
-                  <div className="text-xs md:text-sm text-muted-foreground">Per analysis</div>
-                </div>
-                <div className="p-3 md:p-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-orange-500/10 flex items-center justify-center mx-auto mb-2">
-                    <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-orange-500" />
-                  </div>
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">50x</div>
-                  <div className="text-xs md:text-sm text-muted-foreground">Faster</div>
-                </div>
-                <div className="p-3 md:p-4">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-2">
-                    <Zap className="w-5 h-5 md:w-6 md:h-6 text-purple-500" />
-                  </div>
-                  <div className="text-2xl md:text-3xl font-bold text-foreground">∞</div>
-                  <div className="text-xs md:text-sm text-muted-foreground">Scalable</div>
-                </div>
+              <ArrowRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+
+              <div className="flex flex-col items-center px-4 py-3 rounded-xl bg-muted/50 border border-border">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Revenue</span>
+                <span className="text-xl md:text-2xl font-bold text-foreground">$1k-5k+</span>
               </div>
 
-              {/* ROI breakdown - compact on mobile */}
-              <div className="mt-5 md:mt-8 p-4 md:p-6 rounded-2xl bg-muted/50 border border-border">
-                <p className="text-xs md:text-sm text-muted-foreground text-center mb-4">
-                  Close <span className="text-foreground font-semibold">1 client/month</span> from 100 leads:
-                </p>
+              <span className="text-muted-foreground font-bold text-xl">=</span>
 
-                {/* Horizontal layout on all screens, more compact */}
-                <div className="flex items-center justify-center gap-2 md:gap-4 flex-wrap">
-                  <div className="flex flex-col items-center px-3 py-2 md:p-4 rounded-xl bg-card border border-border">
-                    <span className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Cost</span>
-                    <span className="text-lg md:text-2xl font-bold text-foreground">$5</span>
-                  </div>
-
-                  <ArrowRight className="w-4 h-4 md:w-6 md:h-6 text-muted-foreground flex-shrink-0" />
-
-                  <div className="flex flex-col items-center px-3 py-2 md:p-4 rounded-xl bg-card border border-border">
-                    <span className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wider">Revenue</span>
-                    <span className="text-lg md:text-2xl font-bold text-foreground">$1k-5k+</span>
-                  </div>
-
-                  <span className="text-muted-foreground font-bold text-lg md:text-xl">=</span>
-
-                  <div className="flex flex-col items-center px-3 py-2 md:p-4 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 border border-green-500/30">
-                    <span className="text-[10px] md:text-xs text-green-500 uppercase tracking-wider">ROI</span>
-                    <span className="text-xl md:text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">20,000%+</span>
-                  </div>
-                </div>
+              <div className="flex flex-col items-center px-4 py-3 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 border border-green-500/30">
+                <span className="text-[10px] text-green-500 uppercase tracking-wider">ROI</span>
+                <span className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">20,000%+</span>
               </div>
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-6 py-12">
 
         {/* Final CTA - Full gradient background */}
         <div className="relative overflow-hidden rounded-3xl border border-border p-8 md:p-12 text-center">

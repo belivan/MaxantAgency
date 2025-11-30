@@ -21,8 +21,8 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body>
+      <html lang="en" suppressHydrationWarning>
+        <body suppressHydrationWarning>
           <Providers>
             <div className="bg-background min-h-screen flex flex-col">
               <Navbar />
