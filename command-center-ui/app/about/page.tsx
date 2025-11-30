@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Clock, Zap, X, Check, Sparkles, Quote } from 'lucide-react';
+import { ArrowRight, Clock, Zap, X, Check, Sparkles } from 'lucide-react';
 
 export default function AboutPage() {
   return (
@@ -37,8 +37,7 @@ export default function AboutPage() {
           </p>
 
           {/* Quote callout */}
-          <div className="relative my-10 pl-6 border-l-4 border-primary/50">
-            <Quote className="absolute -left-4 -top-2 w-8 h-8 text-primary/20" />
+          <div className="my-10 pl-6 border-l-4 border-primary">
             <p className="text-xl md:text-2xl font-medium text-foreground italic leading-relaxed">
               "See this spreadsheet? 847 rows. That's every restaurant, dentist, and law firm within 50 miles. I've been working through it for three months."
             </p>
@@ -83,8 +82,7 @@ export default function AboutPage() {
           </p>
 
           {/* Quote callout */}
-          <div className="relative my-10 pl-6 border-l-4 border-primary/50">
-            <Quote className="absolute -left-4 -top-2 w-8 h-8 text-primary/20" />
+          <div className="my-10 pl-6 border-l-4 border-primary">
             <p className="text-xl md:text-2xl font-medium text-foreground italic leading-relaxed">
               "What if you didn't have to do any of this? What if you just told a system what kind of clients you want, and it handled everything else?"
             </p>

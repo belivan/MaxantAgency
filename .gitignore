@@ -86,6 +86,7 @@ analysis-results/
 *.webp
 *.bmp
 *.svg
+!**/app/icon.svg
 *.mp4
 *.avi
 *.mov
