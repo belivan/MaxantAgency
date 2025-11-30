@@ -121,35 +121,37 @@ export default function LandingPage() {
           {/* Story Teaser - Inside hero */}
           <Link href="/about" className="group block max-w-2xl mx-auto">
             <div className="relative overflow-hidden rounded-xl sm:rounded-2xl bg-card/60 backdrop-blur-sm border border-border/50 px-3 py-2.5 sm:px-5 sm:py-4 hover:border-primary/30 transition-all">
-              <div className="flex items-center justify-center gap-2 sm:gap-5">
-                {/* Animated pain point */}
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500/10 text-red-500 text-xs sm:text-sm shrink-0">✕</span>
-                  <span className="w-[140px] sm:w-[200px] text-xs sm:text-sm md:text-base font-medium text-foreground">
-                    <span
-                      className={`inline-block transition-all duration-300 ${
-                        isAnimating ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'
-                      }`}
-                    >
-                      {PAIN_POINTS[currentPainIndex]}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-5">
+                {/* Pain + Solution row */}
+                <div className="flex items-center gap-2 sm:gap-5">
+                  {/* Animated pain point */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-red-500/10 text-red-500 text-xs sm:text-sm shrink-0">✕</span>
+                    <span className="w-[140px] sm:w-[200px] text-xs sm:text-sm md:text-base font-medium text-foreground">
+                      <span
+                        className={`inline-block transition-all duration-300 ${
+                          isAnimating ? 'opacity-0 translate-y-1' : 'opacity-100 translate-y-0'
+                        }`}
+                      >
+                        {PAIN_POINTS[currentPainIndex]}
+                      </span>
                     </span>
-                  </span>
+                  </div>
+
+                  {/* Solution */}
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary text-xs sm:text-sm shrink-0">✓</span>
+                    <span className="text-xs sm:text-sm md:text-base text-muted-foreground whitespace-nowrap">
+                      <span className="text-primary font-semibold">Automated</span>
+                    </span>
+                  </div>
                 </div>
 
-                {/* Solution */}
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <span className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary text-xs sm:text-sm shrink-0">✓</span>
-                  <span className="text-xs sm:text-sm md:text-base text-muted-foreground whitespace-nowrap">
-                    <span className="text-primary font-semibold">Automated</span>
-                  </span>
-                </div>
-
-                {/* CTA */}
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-primary/70 group-hover:text-primary transition-colors whitespace-nowrap">
+                {/* CTA - on new line on mobile */}
+                <span className="inline-flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs font-medium text-primary/70 group-hover:text-primary transition-colors whitespace-nowrap">
                   Our story
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  <ArrowRight className="w-3 h-3 sm:w-3.5 sm:h-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </span>
-                <ArrowRight className="sm:hidden w-4 h-4 text-primary/50 group-hover:text-primary shrink-0" />
               </div>
             </div>
           </Link>
