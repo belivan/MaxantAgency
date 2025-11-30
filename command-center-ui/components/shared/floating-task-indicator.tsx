@@ -462,27 +462,27 @@ export function FloatingTaskIndicator() {
           </SheetContent>
         </Sheet>
       ) : (
-        /* Desktop: Fixed panel */
+        /* Desktop: Fixed panel - positioned next to sidebar */
         isOpen && (
-          <div className="fixed bottom-24 right-6 z-50 w-[28rem] max-h-[32rem] overflow-hidden rounded-lg border bg-card shadow-lg">
+          <div className="fixed bottom-4 left-60 z-50 w-[28rem] max-h-[32rem] overflow-hidden rounded-lg border bg-card shadow-lg">
             {panelContent}
           </div>
         )
       )}
 
-      {/* Floating Button - responsive position and size */}
-      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
+      {/* Floating Button - only on mobile (desktop uses sidebar) */}
+      <div className="fixed bottom-4 right-4 z-50 md:hidden">
         <Button
           onClick={toggleConsole}
           size="lg"
           className={cn(
-            'rounded-full h-12 w-12 md:h-14 md:w-14 shadow-lg transition-all',
+            'rounded-full h-12 w-12 shadow-lg transition-all',
             hasActiveTasks
               ? 'bg-primary hover:bg-primary/90 animate-pulse'
               : 'bg-primary hover:bg-primary/90'
           )}
         >
-          <MaxantLogo className={cn('w-5 h-5 md:w-6 md:h-6', hasActiveTasks && 'animate-spin')} />
+          <MaxantLogo className={cn('w-5 h-5', hasActiveTasks && 'animate-spin')} />
         </Button>
 
         {/* Badge */}

@@ -8,6 +8,7 @@
 import { ReactNode, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@clerk/nextjs';
+import { usePathname } from 'next/navigation';
 import { TaskProgressProvider } from '@/lib/contexts/task-progress-context';
 import { ConsoleProvider } from '@/lib/contexts/console-context';
 import { FetchInterceptor } from '@/lib/utils/fetch-interceptor';
@@ -26,6 +27,7 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   const [mounted, setMounted] = useState(false);
   const { isSignedIn } = useAuth();
+  const pathname = usePathname();
 
   // Only render providers after mounting on client to prevent SSR issues
   useEffect(() => {
@@ -37,14 +39,16 @@ export function Providers({ children }: ProvidersProps) {
     return <>{children}</>;
   }
 
+  const isLandingPage = pathname === '/';
+
   return (
     <TaskProgressProvider>
       <ConsoleProvider>
         <FetchInterceptor>
-          {/* Only show developer tools when signed in */}
-          {isSignedIn && <BackendLogConnector />}
+          {/* Only show developer tools when signed in and not on landing page */}
+          {isSignedIn && !isLandingPage && <BackendLogConnector />}
           {children}
-          {isSignedIn && <FloatingTaskIndicator />}
+          {isSignedIn && !isLandingPage && <FloatingTaskIndicator />}
         </FetchInterceptor>
       </ConsoleProvider>
     </TaskProgressProvider>

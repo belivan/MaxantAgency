@@ -2,14 +2,17 @@
 
 /**
  * Navigation Component
- * Desktop: Fixed sidebar on the left
- * Mobile: Top bar with hamburger menu
+ * Header: Always visible at top with logo, theme toggle, and user controls
+ * Sidebar: Fixed left sidebar with navigation (when signed in, not on landing page)
+ * Mobile: Header + slide-out menu
  */
 
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { useConsole } from '@/lib/contexts/console-context';
+import { useTaskProgress } from '@/lib/contexts/task-progress-context';
 import {
   LayoutDashboard,
   FolderKanban,
@@ -20,7 +23,9 @@ import {
   FileText,
   BarChart3,
   Activity,
-  Menu
+  Menu,
+  X,
+  Loader2
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
@@ -28,7 +33,6 @@ import {
   Sheet,
   SheetClose,
   SheetContent,
-  SheetHeader,
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
@@ -40,6 +44,18 @@ import {
   UserButton
 } from '@clerk/nextjs';
 import { QuotaStatus } from '@/components/shared/quota-status';
+
+// Custom "M" Logo Icon
+const MaxantLogo = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M3 20V4h3.5L12 13.5 17.5 4H21v16h-3V9.5L12 19 6 9.5V20H3z" />
+  </svg>
+);
 
 interface NavItem {
   label: string;
@@ -124,9 +140,17 @@ const NAV_GROUPS: NavGroup[] = [
   }
 ];
 
+// Pages that should not show sidebar (public/marketing pages)
+const PUBLIC_PAGES = ['/', '/about', '/terms', '/privacy'];
+
 export function Navbar() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const { toggleConsole, errorCount, isOpen: consoleOpen } = useConsole();
+  const { tasks, activeTasks } = useTaskProgress();
+
+  const isPublicPage = PUBLIC_PAGES.includes(pathname);
+  const hasActiveTasks = activeTasks.length > 0;
 
   const isActive = (href: string) => {
     return pathname.startsWith(href);
@@ -211,96 +235,56 @@ export function Navbar() {
 
   return (
     <>
-      {/* Desktop Sidebar - Fixed, hidden on mobile */}
-      <aside className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-56 md:border-r md:border-border md:bg-card z-50">
-        {/* Logo */}
-        <div className="flex items-center h-16 px-4 border-b border-border">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">M</span>
-            </div>
-            <span className="font-semibold text-sm">Minty Design</span>
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded">
-              BETA
-            </span>
-          </Link>
-        </div>
-
-        {/* Navigation */}
-        <div className="flex-1 overflow-y-auto py-4 px-2">
-          <SignedIn>
-            <NavigationContent />
-          </SignedIn>
-          <SignedOut>
-            <div className="px-3 py-4 text-sm text-muted-foreground">
-              Sign in to access navigation
-            </div>
-          </SignedOut>
-        </div>
-
-        {/* Bottom section - User & Theme */}
-        <div className="border-t border-border p-3 space-y-3">
-          <SignedOut>
-            <div className="space-y-2">
-              <SignInButton mode="modal">
-                <Button variant="outline" className="w-full" size="sm">Sign In</Button>
-              </SignInButton>
-              <SignUpButton mode="modal">
-                <Button className="w-full" size="sm">Sign Up</Button>
-              </SignUpButton>
-            </div>
-          </SignedOut>
-          <SignedIn>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UserButton afterSignOutUrl="/" />
-                <QuotaStatus />
+      {/* Top Header - Always visible */}
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 border-b border-border bg-card/80 backdrop-blur-md">
+        <div className="flex items-center justify-between h-full px-4">
+          {/* Logo - Always at far left */}
+          <div className={cn(
+            'flex items-center',
+            !isPublicPage && 'md:w-56 md:flex-shrink-0' // Match sidebar width when in app
+          )}>
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">M</span>
               </div>
-              <ThemeToggle />
-            </div>
-          </SignedIn>
-        </div>
-      </aside>
+              <span className="font-semibold text-sm hidden sm:inline">Minty Design</span>
+              <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded hidden sm:inline">
+                BETA
+              </span>
+            </Link>
+          </div>
 
-      {/* Mobile Top Bar - Hidden on desktop */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-50 border-b border-border bg-card">
-        <div className="flex items-center justify-between h-14 px-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">M</span>
-            </div>
-            <span className="font-semibold text-sm">Minty Design</span>
-            <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded">
-              BETA
-            </span>
-          </Link>
-
-          {/* Right side */}
-          <div className="flex items-center gap-2">
+          {/* Right side controls */}
+          <div className="flex items-center gap-3">
+            <SignedIn>
+              <QuotaStatus />
+            </SignedIn>
             <ThemeToggle />
             <SignedOut>
               <SignInButton mode="modal">
                 <Button variant="ghost" size="sm">Sign In</Button>
               </SignInButton>
+              <SignUpButton mode="modal">
+                <Button size="sm">Sign Up</Button>
+              </SignUpButton>
             </SignedOut>
             <SignedIn>
-              <QuotaStatus />
               <UserButton afterSignOutUrl="/" />
+              {/* Mobile menu trigger */}
               <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="ghost" size="icon">
+                  <Button variant="ghost" size="icon" className="md:hidden">
                     <Menu className="h-5 w-5" />
                     <span className="sr-only">Open menu</span>
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[280px] p-2" hideCloseButton>
                   <SheetTitle className="sr-only">Navigation</SheetTitle>
-                  {/* Hamburger close button at top */}
+                  {/* Close button */}
                   <div className="flex justify-end mb-4">
                     <SheetClose asChild>
                       <Button variant="ghost" size="icon">
-                        <Menu className="h-5 w-5" />
+                        <X className="h-5 w-5" />
                         <span className="sr-only">Close menu</span>
                       </Button>
                     </SheetClose>
@@ -311,8 +295,65 @@ export function Navbar() {
             </SignedIn>
           </div>
         </div>
-      </div>
+      </header>
 
+      {/* Desktop Sidebar - Below header, only when signed in and not on public pages */}
+      <SignedIn>
+        {!isPublicPage && (
+          <aside className="hidden md:flex md:flex-col md:fixed md:top-14 md:bottom-0 md:left-0 md:w-56 md:bg-card md:border-r md:border-border z-40">
+            {/* Navigation */}
+            <div className="flex-1 overflow-y-auto py-4 px-2">
+              <NavigationContent />
+            </div>
+
+            {/* Console/Tasks Button - Bottom of sidebar */}
+            <div className="border-t border-border p-3">
+              <button
+                onClick={toggleConsole}
+                className={cn(
+                  'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all',
+                  'hover:bg-accent hover:text-accent-foreground',
+                  consoleOpen
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-muted-foreground'
+                )}
+              >
+                <div className="relative">
+                  <div className={cn(
+                    'w-8 h-8 rounded-lg flex items-center justify-center transition-all',
+                    hasActiveTasks
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted'
+                  )}>
+                    {hasActiveTasks ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <MaxantLogo className="w-4 h-4" />
+                    )}
+                  </div>
+                  {/* Badge */}
+                  {(tasks.length > 0 || errorCount > 0) && (
+                    <span className={cn(
+                      'absolute -top-1 -right-1 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center',
+                      errorCount > 0 ? 'bg-red-500' : 'bg-primary'
+                    )}>
+                      {errorCount > 0 ? errorCount : tasks.length}
+                    </span>
+                  )}
+                </div>
+                <div className="flex-1 text-left">
+                  <span>Tasks & Console</span>
+                  {hasActiveTasks && (
+                    <span className="text-xs text-muted-foreground block">
+                      {activeTasks.length} running
+                    </span>
+                  )}
+                </div>
+              </button>
+            </div>
+          </aside>
+        )}
+      </SignedIn>
     </>
   );
 }

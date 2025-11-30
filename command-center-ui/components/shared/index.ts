@@ -22,3 +22,4 @@ export {
 export { LoadingOverlay } from './loading-overlay';
 export { ProjectSelector } from './project-selector';
 export { PageLayout } from './page-layout';
+export { MainContent } from './main-content';
